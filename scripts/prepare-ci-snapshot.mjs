@@ -1,0 +1,73 @@
+import { spawnSync } from 'node:child_process';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Prepare an exact source snapshot without changing the user's index, branch or
+// working tree. This script does not create a repository or push anything.
+const root = fileURLToPath(new URL('../', import.meta.url));
+const temporary = mkdtempSync(join(tmpdir(), 'cita-ci-index-'));
+const gitEnv = { ...process.env, GIT_INDEX_FILE: join(temporary, 'index') };
+const directory = join(root, '.verification');
+mkdirSync(directory, { recursive: true });
+function git(args, input) {
+	const result = spawnSync('git', args, { cwd: root, env: gitEnv, input, encoding: 'utf8', maxBuffer: 8 * 1024 ** 2 });
+	if (result.status !== 0 || result.error) throw new Error('Could not prepare isolated CI source: ' + (result.stderr || result.error?.message));
+	return result.stdout.trim();
+}
+const rootFiles = new Set(['.env.example', '.gitignore', '.npmrc', 'AGENTS.md', 'README.md',
+	'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'tsconfig.base.json',
+	'.dependency-cruiser.cjs', '.node-version', '.prettierignore']);
+const extras = [
+	'.github/workflows/refactoring-verification.yml',
+	'docs/plans/refactorizacion-cita-suite.md', 'docs/plans/refactorizacion-cita-suite.integridad.json',
+	'docs/plans/registro-refactorizacion-cita-suite.md',
+	'docs/architecture/base-de-campana.md', 'docs/architecture/verificacion.md',
+	'docs/architecture/functional-contracts.md', 'docs/architecture/refactoring-campaign.md',
+	'scripts/catalog-disposable-database.mjs', 'scripts/check-refactoring-plan.mjs',
+	'scripts/inventory-campaign.mjs', 'scripts/run-campaign-integration.mjs',
+	'scripts/run-campaign-demo.mjs', 'scripts/verify-campaign.mjs',
+	'scripts/verify-campaign-staging.mjs', 'scripts/prepare-ci-snapshot.mjs',
+	...readdirSync(join(root, 'scripts/lib')).filter(name => name.endsWith('.mjs')).map(name => 'scripts/lib/' + name)
+];
+function permitted(path) {
+	if (path.split('/').some(part => part === '.env') || path.includes('/output/') || path.includes('/dist/') || path.includes('/test-results/')) return false;
+	return rootFiles.has(path) || /^(?:apps|packages|supabase|scripts)\//.test(path);
+}
+try {
+	const tracked = git(['ls-files', '-z']).split('\0').filter(Boolean).filter(permitted);
+	const selected = [...new Set([...tracked, ...rootFiles, ...extras])].filter(path => existsSync(join(root, path))).sort();
+	const records = [];
+	const manifest = [];
+	let bytes = 0;
+	for (const path of selected) {
+		if (path.startsWith('/') || path.split('/').includes('..')) throw new Error('Invalid source path.');
+		const absolute = join(root, path);
+		const stat = lstatSync(absolute);
+		if (!stat.isFile() && !stat.isSymbolicLink()) throw new Error('Only individual source files are accepted.');
+		const contents = stat.isSymbolicLink() ? Buffer.from(readlinkSync(absolute)) : readFileSync(absolute);
+		const mode = stat.isSymbolicLink() ? '120000' : stat.mode & 0o111 ? '100755' : '100644';
+		const blob = git(['hash-object', '-w', '--stdin', '--no-filters'], contents);
+		if (!/^[0-9a-f]{40}$/.test(blob)) throw new Error('Unexpected Git object format.');
+		records.push(`${mode} ${blob}\t${path}\0`);
+		manifest.push({ path, mode, blob, bytes: contents.length });
+		bytes += contents.length;
+	}
+	git(['read-tree', '--empty']);
+	git(['update-index', '-z', '--index-info'], records.join(''));
+	const tree = git(['write-tree']);
+	const sourceRevision = git(['rev-parse', 'HEAD']);
+	const previous = spawnSync('git', ['rev-parse', '--verify', 'refs/verification/maintainability-20261015'], { cwd: root, encoding: 'utf8' });
+	const parent = previous.status === 0 ? ['-p', previous.stdout.trim()] : [];
+	const commit = git(['-c', 'commit.gpgsign=false', 'commit-tree', tree, ...parent], `Isolated verification snapshot from ${sourceRevision}\n`);
+	git(['update-ref', 'refs/verification/maintainability-20261015', commit]);
+	const sourceDigest = createHash('sha256').update(JSON.stringify(manifest)).digest('hex');
+	writeFileSync(join(directory, 'ci-source.json'), JSON.stringify({
+		commit, tree, sourceRevision, sourceDigest, bytes, files: manifest.length,
+		scope: 'Selected application source and verification contracts only. No environment credentials, private attachments, output artifacts, user index changes or production publication.',
+		manifest
+	}, null, 2) + '\n');
+	console.log(JSON.stringify({ commit, tree, sourceDigest, files: manifest.length, bytes }));
+} finally { rmSync(temporary, { recursive: true }); }

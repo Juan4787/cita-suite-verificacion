@@ -1,0 +1,76 @@
+name: Refactoring verification
+
+# Manual only. This workflow never deploys or receives production credentials.
+on:
+  workflow_dispatch:
+    inputs:
+      level:
+        description: Verification level against disposable local services
+        type: choice
+        required: true
+        default: full
+        options: [fast, full]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cita-refactoring-verification
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      ASTRO_TELEMETRY_DISABLED: '1'
+      NODE_OPTIONS: --max-old-space-size=1536
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .node-version
+      - name: Install pinned package manager and dependencies
+        run: |
+          npm install --global pnpm@10.13.1
+          pnpm install --frozen-lockfile --network-concurrency=1
+      - name: Validate hosted resources
+        if: inputs.level == 'full'
+        run: |
+          node --input-type=module - <<'JS'
+          import os from 'node:os';
+          import { statfsSync } from 'node:fs';
+          const disk = statfsSync('.');
+          if (os.totalmem() < 12 * 1024 ** 3 || os.cpus().length < 4 || disk.bavail * disk.bsize < 6 * 1024 ** 3)
+            throw new Error('Insufficient disposable runner resources. No database load started.');
+          console.log(JSON.stringify({cpu: os.cpus().length, memoryBytes: os.totalmem(), availableDiskBytes: disk.bavail * disk.bsize}));
+          JS
+      - name: Prepare disposable service images and one browser
+        if: inputs.level == 'full'
+        run: |
+          docker pull public.ecr.aws/supabase/postgres:17.6.1.166
+          docker pull public.ecr.aws/supabase/storage-api:v1.70.3
+          docker pull public.ecr.aws/supabase/postgrest:v16.1
+          docker pull public.ecr.aws/supabase/gotrue:v2.196.0
+          pnpm --filter web exec playwright install --with-deps chromium
+      - name: Verify sequentially
+        env:
+          VERIFICATION_LEVEL: ${{ inputs.level }}
+        run: |
+          case "$VERIFICATION_LEVEL" in
+            fast|full) pnpm "verify:$VERIFICATION_LEVEL" ;;
+            *) exit 2 ;;
+          esac
+      - name: Retain verification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: refactoring-verification-${{ github.run_id }}
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            .verification/
+            apps/web/test-results/
