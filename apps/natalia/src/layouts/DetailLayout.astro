@@ -1,0 +1,6 @@
+---
+import PublicLayout from './PublicLayout.astro';
+interface Props { title: string; category?: string; returnHref?: string; returnLabel?: string }
+const { title, category, returnHref = '/', returnLabel = 'Volver al sitio' } = Astro.props;
+---
+<PublicLayout title={`${title} · Dra. Natalia Frutos`}><main id="main" class="container detail-page"><a class="brand" href="/">Natalia <em>Frutos</em></a><article>{category && <p class="reader-cat">{category}</p>}<h1>{title}</h1><div class="detail-page-body"><slot/></div></article><a class="btn btn-secondary" href={returnHref}>{returnLabel}</a></main></PublicLayout>

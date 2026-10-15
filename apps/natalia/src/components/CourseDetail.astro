@@ -1,0 +1,10 @@
+---
+import type { courses } from '../lib/courses';
+interface Props { course: typeof courses[number] }
+const { course } = Astro.props;
+---
+<p class="detail-desc">{course.description}</p><p class="course-format">{course.format}</p>
+<div class="detail-price-row"><div><span class="label">Precio de referencia</span><strong>{course.price}</strong></div></div>
+<div class="availability-message"><h4>La inscripción todavía no está habilitada</h4><p>Estamos preparando el acceso a este curso. Cuando se confirmen su contenido, precio y condiciones, podrás inscribirte desde aquí.</p></div>
+<p>No ingreses datos de pago ni hagas transferencias para esta inscripción.</p>
+<div class="detail-actions"><a class="btn btn-secondary" href="/aula">Ver la presentación del aula</a><a class="link-arrow" href="/contacto">Consultar canales de contacto</a></div>

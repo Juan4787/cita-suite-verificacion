@@ -1,0 +1,42 @@
+.cita-booking-host {
+  --cita-booking-gutter: 16px;
+  box-sizing: border-box;
+  width: min(760px, calc(100% - 2 * var(--cita-booking-gutter)));
+  padding: 0;
+  border: 1px solid #ded2bf;
+  border-radius: 16px;
+  background: #f3eee5;
+  color: #1e1a16;
+  box-shadow: 0 18px 60px rgba(30, 26, 22, .2);
+  font: 16px/1.5 system-ui, sans-serif;
+  overflow: hidden;
+}
+/* Host resets must not remove centering or leave the browser's dialog width cap. */
+dialog.cita-booking-host {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  min-width: 0;
+  min-height: 0;
+  max-width: calc(100% - 2 * var(--cita-booking-gutter));
+  max-height: calc(100dvh - 2 * var(--cita-booking-gutter));
+}
+.cita-booking-host[data-color-mode=dark] { background: #1a1612; color: #efe8dc; border-color: #463e36; }
+.cita-booking-host::backdrop { background: rgba(30, 26, 22, .55); }
+.cita-booking-host:not(dialog) { width: 100%; max-width: 100%; max-height: none; box-shadow: none; }
+.cita-booking-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid #ded2bf; }
+.cita-booking-toolbar > span { min-width: 0; overflow-wrap: anywhere; }
+.cita-booking-toolbar > button { flex-shrink: 0; }
+.cita-booking-host button, .cita-booking-host a { font: inherit; min-height: 44px; cursor: pointer; }
+.cita-booking-host button { padding: 8px 14px; border: 1px solid #a94b22; border-radius: 8px; background: transparent; color: inherit; }
+.cita-booking-host button:focus-visible, .cita-booking-host a:focus-visible { outline: 2px solid #a94b22; outline-offset: 3px; }
+.cita-booking-host iframe { box-sizing: border-box; display: block; width: 100%; max-width: 100%; min-width: 0; height: 420px; border: 0; background: transparent; }
+.cita-booking-host [hidden] { display: none !important; }
+.cita-booking-feedback { padding: 24px; }
+.cita-booking-feedback p { margin: 0 0 16px; }
+.cita-booking-feedback a { display: inline-flex; align-items: center; margin: 8px 0 0 12px; color: inherit; text-decoration: underline; }
+.cita-booking-host[data-color-mode=dark] .cita-booking-toolbar { border-color: #463e36; }
+@media (max-width: 480px) {
+  .cita-booking-host { --cita-booking-gutter: 8px; border-radius: 12px; }
+  .cita-booking-feedback a { display: flex; margin: 12px 0 0; }
+}

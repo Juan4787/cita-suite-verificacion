@@ -1,0 +1,8 @@
+---
+import { referenceServices } from '../../lib/reference-content';
+import DetailLayout from '../../layouts/DetailLayout.astro';
+import ServiceDetail from '../../components/ServiceDetail.astro';
+export function getStaticPaths() { return referenceServices.map(service => ({ params: { slug: service.slug }, props: { service } })); }
+const { service } = Astro.props;
+---
+<DetailLayout title={service.title} category={service.modality} returnHref="/#areas" returnLabel="Volver a las consultas"><ServiceDetail service={service}/></DetailLayout>

@@ -1,0 +1,66 @@
+---
+import { bookingConfig } from '../lib/booking-config';
+---
+<section class="section section--tint" id="testimonios" aria-labelledby="testTitle">
+        <div class="container">
+          <div class="section-head reveal" style="margin-bottom: 36px;">
+            <div>
+              <span class="eyebrow">Experiencias reales</span>
+              <h2 id="testTitle">La voz de <em class="accent-word">quienes consultaron.</em></h2>
+            </div>
+            <p>La confianza médica no se construye con promesas, sino con tiempo dedicado, escucha atenta y mejorías progresivas.</p>
+          </div>
+
+          <div class="testimonials-structured-grid">
+            <figure class="test-card reveal" style="--d:.06s">
+              <blockquote>“Da mucho gusto ir a una consulta con Natalia. Escucha, que es esencial para cada paciente, y explica con una claridad pedagógica que nunca había visto en medicina.”</blockquote>
+              <figcaption class="test-cite">
+                <div class="test-avatar">M</div>
+                <div>
+                  <strong>Mari M.</strong>
+                  <span>Paciente en consultorio presencial · Santa Fe</span>
+                </div>
+              </figcaption>
+            </figure>
+
+            <figure class="test-card reveal" style="--d:.12s">
+              <blockquote>“No te cambio por nadie. Gracias por el tiempo, la calidez y la dedicación con la que me atendés en cada consulta. Me devolviste la tranquilidad.”</blockquote>
+              <figcaption class="test-cite">
+                <div class="test-avatar">S</div>
+                <div>
+                  <strong>Silvia D.</strong>
+                  <span>Consulta y seguimiento integral</span>
+                </div>
+              </figcaption>
+            </figure>
+
+            <figure class="test-card reveal" style="--d:.18s">
+              <blockquote>“Venía de especialista en especialista porque los análisis daban 'todo normal', pero el agotamiento no me dejaba vivir. Natalia conectó el cansancio con mi intestino y mi tiroides; por primera vez sentí que alguien miraba la película completa.”</blockquote>
+              <figcaption class="test-cite">
+                <div class="test-avatar">G</div>
+                <div>
+                  <strong>Gonzalo P.</strong>
+                  <span>Paciente virtual · Fatiga crónica y salud metabólica</span>
+                </div>
+              </figcaption>
+            </figure>
+          </div>
+
+
+          <div class="testimonials-cta-box reveal">
+            <div class="testimonials-cta-text">
+              <h4>¿Buscás una consulta médica donde realmente te escuchen?</h4>
+              <p>Atención sin apuros, con tiempo exclusivo para tu caso (75-90 min) y un plan terapéutico con seguimiento clínico continuo.</p>
+            </div>
+            <div class="testimonials-cta-actions">
+              <a class="btn btn-primary open-booking-modal-btn" href={bookingConfig.href} data-booking>
+                Reservar consulta médica
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+              </a>
+              <a class="btn btn-secondary btn-sm" href="/contacto" data-dialog="contact-dialog">
+                Consultar
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>

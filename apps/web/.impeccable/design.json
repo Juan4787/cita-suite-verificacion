@@ -1,0 +1,814 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-14T22:05:34.623354+00:00",
+  "title": "Design System: Cita Suite",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Azul de fondo",
+        "tonalRamp": [
+          "oklch(15% 0.0362 257.70)",
+          "oklch(26% 0.0362 257.70)",
+          "oklch(38% 0.0362 257.70)",
+          "oklch(49% 0.0362 257.70)",
+          "oklch(61% 0.0362 257.70)",
+          "oklch(72% 0.0362 257.70)",
+          "oklch(84% 0.0362 257.70)",
+          "oklch(95% 0.0362 257.70)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Azul de superficie",
+        "tonalRamp": [
+          "oklch(15% 0.0475 253.68)",
+          "oklch(26% 0.0475 253.68)",
+          "oklch(38% 0.0475 253.68)",
+          "oklch(49% 0.0475 253.68)",
+          "oklch(61% 0.0475 253.68)",
+          "oklch(72% 0.0475 253.68)",
+          "oklch(84% 0.0475 253.68)",
+          "oklch(95% 0.0475 253.68)"
+        ]
+      },
+      "surface-2": {
+        "role": "neutral",
+        "displayName": "Azul de segunda superficie",
+        "tonalRamp": [
+          "oklch(15% 0.0490 253.38)",
+          "oklch(26% 0.0490 253.38)",
+          "oklch(38% 0.0490 253.38)",
+          "oklch(49% 0.0490 253.38)",
+          "oklch(61% 0.0490 253.38)",
+          "oklch(72% 0.0490 253.38)",
+          "oklch(84% 0.0490 253.38)",
+          "oklch(95% 0.0490 253.38)"
+        ]
+      },
+      "surface-raised": {
+        "role": "neutral",
+        "displayName": "Azul elevado",
+        "tonalRamp": [
+          "oklch(15% 0.0571 252.27)",
+          "oklch(26% 0.0571 252.27)",
+          "oklch(38% 0.0571 252.27)",
+          "oklch(49% 0.0571 252.27)",
+          "oklch(61% 0.0571 252.27)",
+          "oklch(72% 0.0571 252.27)",
+          "oklch(84% 0.0571 252.27)",
+          "oklch(95% 0.0571 252.27)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Borde tenue",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88 / 0.1)",
+          "oklch(26% 0.0000 89.88 / 0.1)",
+          "oklch(38% 0.0000 89.88 / 0.1)",
+          "oklch(49% 0.0000 89.88 / 0.1)",
+          "oklch(61% 0.0000 89.88 / 0.1)",
+          "oklch(72% 0.0000 89.88 / 0.1)",
+          "oklch(84% 0.0000 89.88 / 0.1)",
+          "oklch(95% 0.0000 89.88 / 0.1)"
+        ]
+      },
+      "border-strong": {
+        "role": "neutral",
+        "displayName": "Borde estructural",
+        "tonalRamp": [
+          "oklch(15% 0.0682 254.20)",
+          "oklch(26% 0.0682 254.20)",
+          "oklch(38% 0.0682 254.20)",
+          "oklch(49% 0.0682 254.20)",
+          "oklch(61% 0.0682 254.20)",
+          "oklch(72% 0.0682 254.20)",
+          "oklch(84% 0.0682 254.20)",
+          "oklch(95% 0.0682 254.20)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Texto claro",
+        "tonalRamp": [
+          "oklch(15% 0.0203 264.47)",
+          "oklch(26% 0.0203 264.47)",
+          "oklch(38% 0.0203 264.47)",
+          "oklch(49% 0.0203 264.47)",
+          "oklch(61% 0.0203 264.47)",
+          "oklch(72% 0.0203 264.47)",
+          "oklch(84% 0.0203 264.47)",
+          "oklch(95% 0.0203 264.47)"
+        ]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Texto secundario",
+        "tonalRamp": [
+          "oklch(15% 0.0203 264.47 / 0.64)",
+          "oklch(26% 0.0203 264.47 / 0.64)",
+          "oklch(38% 0.0203 264.47 / 0.64)",
+          "oklch(49% 0.0203 264.47 / 0.64)",
+          "oklch(61% 0.0203 264.47 / 0.64)",
+          "oklch(72% 0.0203 264.47 / 0.64)",
+          "oklch(84% 0.0203 264.47 / 0.64)",
+          "oklch(95% 0.0203 264.47 / 0.64)"
+        ]
+      },
+      "text-subtle": {
+        "role": "neutral",
+        "displayName": "Texto tenue",
+        "tonalRamp": [
+          "oklch(15% 0.0203 264.47 / 0.42)",
+          "oklch(26% 0.0203 264.47 / 0.42)",
+          "oklch(38% 0.0203 264.47 / 0.42)",
+          "oklch(49% 0.0203 264.47 / 0.42)",
+          "oklch(61% 0.0203 264.47 / 0.42)",
+          "oklch(72% 0.0203 264.47 / 0.42)",
+          "oklch(84% 0.0203 264.47 / 0.42)",
+          "oklch(95% 0.0203 264.47 / 0.42)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Violeta de selección",
+        "tonalRamp": [
+          "oklch(15% 0.2189 292.72)",
+          "oklch(26% 0.2189 292.72)",
+          "oklch(38% 0.2189 292.72)",
+          "oklch(49% 0.2189 292.72)",
+          "oklch(61% 0.2189 292.72)",
+          "oklch(72% 0.2189 292.72)",
+          "oklch(84% 0.2189 292.72)",
+          "oklch(95% 0.2189 292.72)"
+        ]
+      },
+      "accent-strong": {
+        "role": "primary",
+        "displayName": "Violeta de acción",
+        "tonalRamp": [
+          "oklch(15% 0.2466 293.01)",
+          "oklch(26% 0.2466 293.01)",
+          "oklch(38% 0.2466 293.01)",
+          "oklch(49% 0.2466 293.01)",
+          "oklch(61% 0.2466 293.01)",
+          "oklch(72% 0.2466 293.01)",
+          "oklch(84% 0.2466 293.01)",
+          "oklch(95% 0.2466 293.01)"
+        ]
+      },
+      "accent-press": {
+        "role": "primary",
+        "displayName": "Violeta de interacción",
+        "tonalRamp": [
+          "oklch(15% 0.2412 292.58)",
+          "oklch(26% 0.2412 292.58)",
+          "oklch(38% 0.2412 292.58)",
+          "oklch(49% 0.2412 292.58)",
+          "oklch(61% 0.2412 292.58)",
+          "oklch(72% 0.2412 292.58)",
+          "oklch(84% 0.2412 292.58)",
+          "oklch(95% 0.2412 292.58)"
+        ]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Violeta suave",
+        "tonalRamp": [
+          "oklch(15% 0.2466 293.01 / 0.18)",
+          "oklch(26% 0.2466 293.01 / 0.18)",
+          "oklch(38% 0.2466 293.01 / 0.18)",
+          "oklch(49% 0.2466 293.01 / 0.18)",
+          "oklch(61% 0.2466 293.01 / 0.18)",
+          "oklch(72% 0.2466 293.01 / 0.18)",
+          "oklch(84% 0.2466 293.01 / 0.18)",
+          "oklch(95% 0.2466 293.01 / 0.18)"
+        ]
+      },
+      "accent-text": {
+        "role": "primary",
+        "displayName": "Violeta de texto",
+        "tonalRamp": [
+          "oklch(15% 0.1013 293.57)",
+          "oklch(26% 0.1013 293.57)",
+          "oklch(38% 0.1013 293.57)",
+          "oklch(49% 0.1013 293.57)",
+          "oklch(61% 0.1013 293.57)",
+          "oklch(72% 0.1013 293.57)",
+          "oklch(84% 0.1013 293.57)",
+          "oklch(95% 0.1013 293.57)"
+        ]
+      },
+      "ring": {
+        "role": "primary",
+        "displayName": "Foco violeta",
+        "tonalRamp": [
+          "oklch(15% 0.2189 292.72 / 0.65)",
+          "oklch(26% 0.2189 292.72 / 0.65)",
+          "oklch(38% 0.2189 292.72 / 0.65)",
+          "oklch(49% 0.2189 292.72 / 0.65)",
+          "oklch(61% 0.2189 292.72 / 0.65)",
+          "oklch(72% 0.2189 292.72 / 0.65)",
+          "oklch(84% 0.2189 292.72 / 0.65)",
+          "oklch(95% 0.2189 292.72 / 0.65)"
+        ]
+      },
+      "success": {
+        "role": "semantic",
+        "displayName": "Verde de éxito",
+        "tonalRamp": [
+          "oklch(15% 0.1535 163.22)",
+          "oklch(26% 0.1535 163.22)",
+          "oklch(38% 0.1535 163.22)",
+          "oklch(49% 0.1535 163.22)",
+          "oklch(61% 0.1535 163.22)",
+          "oklch(72% 0.1535 163.22)",
+          "oklch(84% 0.1535 163.22)",
+          "oklch(95% 0.1535 163.22)"
+        ]
+      },
+      "success-soft": {
+        "role": "semantic",
+        "displayName": "Éxito suave",
+        "tonalRamp": [
+          "oklch(15% 0.1535 163.22 / 0.14)",
+          "oklch(26% 0.1535 163.22 / 0.14)",
+          "oklch(38% 0.1535 163.22 / 0.14)",
+          "oklch(49% 0.1535 163.22 / 0.14)",
+          "oklch(61% 0.1535 163.22 / 0.14)",
+          "oklch(72% 0.1535 163.22 / 0.14)",
+          "oklch(84% 0.1535 163.22 / 0.14)",
+          "oklch(95% 0.1535 163.22 / 0.14)"
+        ]
+      },
+      "success-text": {
+        "role": "semantic",
+        "displayName": "Texto de éxito",
+        "tonalRamp": [
+          "oklch(15% 0.0895 164.15)",
+          "oklch(26% 0.0895 164.15)",
+          "oklch(38% 0.0895 164.15)",
+          "oklch(49% 0.0895 164.15)",
+          "oklch(61% 0.0895 164.15)",
+          "oklch(72% 0.0895 164.15)",
+          "oklch(84% 0.0895 164.15)",
+          "oklch(95% 0.0895 164.15)"
+        ]
+      },
+      "warning": {
+        "role": "semantic",
+        "displayName": "Ámbar de advertencia",
+        "tonalRamp": [
+          "oklch(15% 0.1644 84.43)",
+          "oklch(26% 0.1644 84.43)",
+          "oklch(38% 0.1644 84.43)",
+          "oklch(49% 0.1644 84.43)",
+          "oklch(61% 0.1644 84.43)",
+          "oklch(72% 0.1644 84.43)",
+          "oklch(84% 0.1644 84.43)",
+          "oklch(95% 0.1644 84.43)"
+        ]
+      },
+      "warning-soft": {
+        "role": "semantic",
+        "displayName": "Advertencia suave",
+        "tonalRamp": [
+          "oklch(15% 0.1644 84.43 / 0.14)",
+          "oklch(26% 0.1644 84.43 / 0.14)",
+          "oklch(38% 0.1644 84.43 / 0.14)",
+          "oklch(49% 0.1644 84.43 / 0.14)",
+          "oklch(61% 0.1644 84.43 / 0.14)",
+          "oklch(72% 0.1644 84.43 / 0.14)",
+          "oklch(84% 0.1644 84.43 / 0.14)",
+          "oklch(95% 0.1644 84.43 / 0.14)"
+        ]
+      },
+      "warning-text": {
+        "role": "semantic",
+        "displayName": "Texto de advertencia",
+        "tonalRamp": [
+          "oklch(15% 0.1151 95.75)",
+          "oklch(26% 0.1151 95.75)",
+          "oklch(38% 0.1151 95.75)",
+          "oklch(49% 0.1151 95.75)",
+          "oklch(61% 0.1151 95.75)",
+          "oklch(72% 0.1151 95.75)",
+          "oklch(84% 0.1151 95.75)",
+          "oklch(95% 0.1151 95.75)"
+        ]
+      },
+      "danger": {
+        "role": "semantic",
+        "displayName": "Rojo de error",
+        "tonalRamp": [
+          "oklch(15% 0.1661 22.22)",
+          "oklch(26% 0.1661 22.22)",
+          "oklch(38% 0.1661 22.22)",
+          "oklch(49% 0.1661 22.22)",
+          "oklch(61% 0.1661 22.22)",
+          "oklch(72% 0.1661 22.22)",
+          "oklch(84% 0.1661 22.22)",
+          "oklch(95% 0.1661 22.22)"
+        ]
+      },
+      "danger-strong": {
+        "role": "semantic",
+        "displayName": "Rojo de acción destructiva",
+        "tonalRamp": [
+          "oklch(15% 0.2152 27.33)",
+          "oklch(26% 0.2152 27.33)",
+          "oklch(38% 0.2152 27.33)",
+          "oklch(49% 0.2152 27.33)",
+          "oklch(61% 0.2152 27.33)",
+          "oklch(72% 0.2152 27.33)",
+          "oklch(84% 0.2152 27.33)",
+          "oklch(95% 0.2152 27.33)"
+        ]
+      },
+      "danger-press": {
+        "role": "semantic",
+        "displayName": "Rojo de interacción",
+        "tonalRamp": [
+          "oklch(15% 0.1905 27.52)",
+          "oklch(26% 0.1905 27.52)",
+          "oklch(38% 0.1905 27.52)",
+          "oklch(49% 0.1905 27.52)",
+          "oklch(61% 0.1905 27.52)",
+          "oklch(72% 0.1905 27.52)",
+          "oklch(84% 0.1905 27.52)",
+          "oklch(95% 0.1905 27.52)"
+        ]
+      },
+      "danger-soft": {
+        "role": "semantic",
+        "displayName": "Error suave",
+        "tonalRamp": [
+          "oklch(15% 0.1661 22.22 / 0.13)",
+          "oklch(26% 0.1661 22.22 / 0.13)",
+          "oklch(38% 0.1661 22.22 / 0.13)",
+          "oklch(49% 0.1661 22.22 / 0.13)",
+          "oklch(61% 0.1661 22.22 / 0.13)",
+          "oklch(72% 0.1661 22.22 / 0.13)",
+          "oklch(84% 0.1661 22.22 / 0.13)",
+          "oklch(95% 0.1661 22.22 / 0.13)"
+        ]
+      },
+      "danger-text": {
+        "role": "semantic",
+        "displayName": "Texto de error",
+        "tonalRamp": [
+          "oklch(15% 0.0593 18.33)",
+          "oklch(26% 0.0593 18.33)",
+          "oklch(38% 0.0593 18.33)",
+          "oklch(49% 0.0593 18.33)",
+          "oklch(61% 0.0593 18.33)",
+          "oklch(72% 0.0593 18.33)",
+          "oklch(84% 0.0593 18.33)",
+          "oklch(95% 0.0593 18.33)"
+        ]
+      },
+      "on-accent": {
+        "role": "neutral",
+        "displayName": "Texto sobre acento",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "field": {
+        "role": "neutral",
+        "displayName": "Superficie de campo",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88 / 0.045)",
+          "oklch(26% 0.0000 89.88 / 0.045)",
+          "oklch(38% 0.0000 89.88 / 0.045)",
+          "oklch(49% 0.0000 89.88 / 0.045)",
+          "oklch(61% 0.0000 89.88 / 0.045)",
+          "oklch(72% 0.0000 89.88 / 0.045)",
+          "oklch(84% 0.0000 89.88 / 0.045)",
+          "oklch(95% 0.0000 89.88 / 0.045)"
+        ]
+      },
+      "patient-muted": {
+        "role": "neutral",
+        "displayName": "Ayuda del paciente",
+        "tonalRamp": [
+          "oklch(15% 0.0329 260.02)",
+          "oklch(26% 0.0329 260.02)",
+          "oklch(38% 0.0329 260.02)",
+          "oklch(49% 0.0329 260.02)",
+          "oklch(61% 0.0329 260.02)",
+          "oklch(72% 0.0329 260.02)",
+          "oklch(84% 0.0329 260.02)",
+          "oklch(95% 0.0329 260.02)"
+        ]
+      },
+      "patient-field": {
+        "role": "neutral",
+        "displayName": "Campo del paciente",
+        "tonalRamp": [
+          "oklch(15% 0.0203 264.47 / 0.045)",
+          "oklch(26% 0.0203 264.47 / 0.045)",
+          "oklch(38% 0.0203 264.47 / 0.045)",
+          "oklch(49% 0.0203 264.47 / 0.045)",
+          "oklch(61% 0.0203 264.47 / 0.045)",
+          "oklch(72% 0.0203 264.47 / 0.045)",
+          "oklch(84% 0.0203 264.47 / 0.045)",
+          "oklch(95% 0.0203 264.47 / 0.045)"
+        ]
+      },
+      "patient-field-border": {
+        "role": "neutral",
+        "displayName": "Borde del campo del paciente",
+        "tonalRamp": [
+          "oklch(15% 0.0439 257.02)",
+          "oklch(26% 0.0439 257.02)",
+          "oklch(38% 0.0439 257.02)",
+          "oklch(49% 0.0439 257.02)",
+          "oklch(61% 0.0439 257.02)",
+          "oklch(72% 0.0439 257.02)",
+          "oklch(84% 0.0439 257.02)",
+          "oklch(95% 0.0439 257.02)"
+        ]
+      },
+      "patient-summary": {
+        "role": "primary",
+        "displayName": "Resumen del paciente",
+        "tonalRamp": [
+          "oklch(15% 0.2189 292.72 / 0.06)",
+          "oklch(26% 0.2189 292.72 / 0.06)",
+          "oklch(38% 0.2189 292.72 / 0.06)",
+          "oklch(49% 0.2189 292.72 / 0.06)",
+          "oklch(61% 0.2189 292.72 / 0.06)",
+          "oklch(72% 0.2189 292.72 / 0.06)",
+          "oklch(84% 0.2189 292.72 / 0.06)",
+          "oklch(95% 0.2189 292.72 / 0.06)"
+        ]
+      },
+      "patient-summary-border": {
+        "role": "primary",
+        "displayName": "Borde del resumen del paciente",
+        "tonalRamp": [
+          "oklch(15% 0.1720 297.32)",
+          "oklch(26% 0.1720 297.32)",
+          "oklch(38% 0.1720 297.32)",
+          "oklch(49% 0.1720 297.32)",
+          "oklch(61% 0.1720 297.32)",
+          "oklch(72% 0.1720 297.32)",
+          "oklch(84% 0.1720 297.32)",
+          "oklch(95% 0.1720 297.32)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Título de página",
+        "purpose": "Nombre principal de la página en el sistema compartido."
+      },
+      "title": {
+        "displayName": "Título de grupo",
+        "purpose": "Agrupaciones de trabajo."
+      },
+      "body": {
+        "displayName": "Texto base",
+        "purpose": "Base tipográfica del documento."
+      },
+      "supporting": {
+        "displayName": "Contexto breve",
+        "purpose": "Texto de apoyo bajo títulos."
+      },
+      "label": {
+        "displayName": "Etiqueta",
+        "purpose": "Nombre visible del campo."
+      },
+      "button": {
+        "displayName": "Acción",
+        "purpose": "Acciones principales y secundarias."
+      },
+      "badge": {
+        "displayName": "Estado",
+        "purpose": "Estado informativo compacto."
+      },
+      "patient-service": {
+        "displayName": "Servicio del paciente",
+        "purpose": "Servicio y profesional en el resumen final; se adapta en móvil."
+      },
+      "patient-label": {
+        "displayName": "Pregunta del paciente",
+        "purpose": "Etiqueta visible de los campos y preguntas del formulario final."
+      },
+      "patient-confirm": {
+        "displayName": "Confirmación del paciente",
+        "purpose": "Acción principal de ancho completo al terminar la reserva."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-sm",
+        "value": "0 2px 10px rgba(0, 0, 0, 0.22)",
+        "purpose": "Elevación compacta existente."
+      },
+      {
+        "name": "shadow",
+        "value": "0 18px 48px rgba(0, 0, 0, 0.28)",
+        "purpose": "Contenedores principales."
+      },
+      {
+        "name": "shadow-accent",
+        "value": "0 14px 30px rgba(124, 58, 237, 0.26)",
+        "purpose": "Acciones principales."
+      },
+      {
+        "name": "control-menu",
+        "value": "0 12px 28px #0005",
+        "purpose": "Menú y calendario elevados."
+      },
+      {
+        "name": "confirm-dialog",
+        "value": "0 18px 48px #0006",
+        "purpose": "Confirmación interior; backdrop #0009."
+      }
+    ],
+    "motion": [
+      {
+        "name": "interaction-transform",
+        "value": "140ms ease",
+        "purpose": "Desplazamiento corto de botones."
+      },
+      {
+        "name": "interaction-state",
+        "value": "160ms ease",
+        "purpose": "Tono, borde, sombra y opacidad de componentes."
+      },
+      {
+        "name": "check-state",
+        "value": "0.15s",
+        "purpose": "Cambio de casillas y radios."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0.001ms",
+        "purpose": "La media query global reduce transiciones y animaciones; no se añade coreografía."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "small-layout",
+        "value": "640px"
+      },
+      {
+        "name": "professional-question-nav",
+        "value": "480px",
+        "purpose": "Navegación de preguntas y adaptación compacta del formulario final del paciente."
+      }
+    ],
+    "sources": {
+      "designMd": "DESIGN.md",
+      "designMdSha256": "6ca7b3c6e061fdf88317b07fc0be8be20e6614967f205ee9cde1fec7038a599d",
+      "files": [
+        {
+          "path": "src/app.css",
+          "sha256": "4f9e371ba7f974d21028c09d6e68bc7b3442ffee11150870961d32b0e05fc2c1"
+        },
+        {
+          "path": "src/routes/odonto/configuracion/+page.svelte",
+          "sha256": "d4f7fc4f8ef697757acc4addd22d389a1783d94fb175c95e65acd27fd419e0c0"
+        },
+        {
+          "path": "src/routes/odonto/configuracion/reserva-online/+page.svelte",
+          "sha256": "bb2cca97a9fe147c9752d8720e2aa28703dcbd03426209fabccd7a79498d3841"
+        },
+        {
+          "path": "src/routes/odonto/configuracion/reserva-online/webs/+page.svelte",
+          "sha256": "bce9c03d3346143dccf18c2f426a5248a150522d3907848c778b63362d1b42d9"
+        },
+        {
+          "path": "src/routes/odonto/configuracion/reserva-online/webs/+page.server.ts",
+          "sha256": "01f1f7fa99edcbd66e1afb34cf75280db4b5e7a8a80b3feb160a4119d26fa9e2"
+        },
+        {
+          "path": "src/routes/odonto/configuracion/negocio/+page.svelte",
+          "sha256": "732573e3d5f6787fd235d059ff2c19a37a437839e9fc40c4177291a8d43be63a"
+        },
+        {
+          "path": "src/routes/odonto/profesionales/[professionalId]/+page.svelte",
+          "sha256": "a621d3b6456c648355aa624aecfcac86c2c26c9be3ea49e64365b4e386feb56d"
+        },
+        {
+          "path": "src/routes/odonto/profesionales/[professionalId]/preguntas/+page.svelte",
+          "sha256": "e99af4a015929ab86d245bd397b34837f9a59140af9d637d61c94e65b5be8a9a"
+        },
+        {
+          "path": "src/routes/odonto/profesionales/[professionalId]/aranceles/+page.svelte",
+          "sha256": "468a5c9a42dbc87f40fc4e295ccd585250c58a5cdaa00dfcbd1f9756238eb087"
+        },
+        {
+          "path": "src/lib/booking/BookingShareLink.svelte",
+          "sha256": "71b59318996349f5d2240e7a1631b52c2b57b9deb591ca3212ee87df9c81c750"
+        },
+        {
+          "path": "src/lib/booking/ProfessionalBookingFormEditor.svelte",
+          "sha256": "bf68932251ca97e3fef6bea0d33bd1de8cd0b53354c7ae0763b8866b1f5517ca"
+        },
+        {
+          "path": "src/lib/booking/BookingQuestionDetails.svelte",
+          "sha256": "5599c95cbf8dd5f93229bfc3ab4c3f01b99fc1ad8e6c0ce14c93483cc5a43e86"
+        },
+        {
+          "path": "src/lib/booking/PricePolicyEditor.svelte",
+          "sha256": "aaada0fc7baa908dd7ba3c51ddaacc9ab7515bb1bc61a6311490add0eb7a11f3"
+        },
+        {
+          "path": "src/lib/ui/styled-controls.ts",
+          "sha256": "4c79ccae481a47a97423de4bac53609cec65d1647f75e2381bc3d5804283d044"
+        },
+        {
+          "path": "src/lib/ui/confirm-action.ts",
+          "sha256": "a27093d2245190c5b55346966b96f147ed7ef12759740bf7a2a0cc3689380c95"
+        },
+        {
+          "path": "src/lib/server/booking-profile-config.ts",
+          "sha256": "d34fc2c46221cc64c50c50f331b7b8ce938fa6265d69314038fa21b4e9f00aec"
+        },
+        {
+          "path": "src/lib/booking/BookingAppearance.svelte",
+          "sha256": "083d9530ee9c08fea79d3ba58535708a454968dbb4c19f5457667170ccb863f2"
+        },
+        {
+          "path": "src/lib/booking/PublicBookingFlow.svelte",
+          "sha256": "958459148ad043371a19544eaebbdcc48104e98233a5d16e24d98f45a13783d9"
+        },
+        {
+          "path": "src/lib/booking/PublicBookingIntakeField.svelte",
+          "sha256": "be1dd53325e6236dcde8a30a0d2c2529a75d78af98d3a49f6221c3540d428daf"
+        },
+        {
+          "path": "src/lib/booking/BookingBirthDateInput.svelte",
+          "sha256": "0a948d79a42c39e44a298f2a97564b86407c8c0b1f845850c04a68d6d75b99c0"
+        },
+        {
+          "path": "src/lib/booking/patient-booking.css",
+          "sha256": "eac5ea28c3723b00c7629070174ef55347a4329819b687a2d456b5b3d33c9cd7"
+        },
+        {
+          "path": "src/lib/booking/BookingInstallation.svelte",
+          "sha256": "334e0df376139f5c27364b21151780812baa0dcece02cf86471aa47a7e92458b"
+        },
+        {
+          "path": "src/lib/booking/booking-installation.ts",
+          "sha256": "f2a1f61411870eb8d454e3aa7a19b44f6404a4cfe32384f2ad73cc5988b41b1a"
+        },
+        {
+          "path": "src/routes/odonto/configuracion/reserva-online/+page.server.ts",
+          "sha256": "67296f72d4fc29478c5d53d82fd858df53ab92b000856488b299444ebe743606"
+        },
+        {
+          "path": "static/booking/embed-v1.js",
+          "sha256": "86cd3ecd341a1aea5145bdf7934c378a41302388caa8002c0d774124f0663203"
+        },
+        {
+          "path": "static/booking/embed-v1.css",
+          "sha256": "b1e34abf3b46f15e9cd85fad8304b0577d5017ecb5c3d054408bf6315a9ea165"
+        }
+      ],
+      "rampNote": "Las rampas OKLCH son previsualizaciones sintéticas de oscuro a claro; no sustituyen los colores normativos del frontmatter.",
+      "previewNote": "Los snippets representan el aspecto del componente; la interacción de formulario sigue en las fuentes de la app."
+    }
+  },
+  "components": [
+    {
+      "name": "Acción principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Variante compartida con foco, hover, active y bloqueo al guardar.",
+      "html": "<button type=\"button\" class=\"ds-btn-primary\">Guardar reglas</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:var(--tap,2.75rem);max-width:100%;border-radius:var(--radius,1rem);padding:.7rem 1.25rem;font-size:.95rem;font-weight:700;line-height:1;white-space:normal;overflow-wrap:anywhere;cursor:pointer;transition:transform 140ms ease,box-shadow 160ms ease,background-color 160ms ease,border-color 160ms ease,opacity 160ms ease;font-family:Inter,system-ui,-apple-system,sans-serif;border:0;background:var(--accent-strong,#7c3aed);color:#fff;box-shadow:var(--shadow-accent,0 14px 30px rgba(124,58,237,.26));}.ds-btn-primary:hover:not(:disabled){background:var(--accent-press,#6d28d9);transform:translateY(-1px)}.ds-btn-primary:focus-visible{outline:2px solid var(--accent-text,#c4b5fd);outline-offset:3px;}.ds-btn-primary:active:not(:disabled){transform:translateY(0) scale(.99)}.ds-btn-primary:disabled{cursor:not-allowed;opacity:.45;transform:none;box-shadow:none}@media(prefers-reduced-motion:reduce){.ds-btn-primary{transition:none}}"
+    },
+    {
+      "name": "Acción secundaria",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Variante compartida con foco, hover, active y bloqueo al guardar.",
+      "html": "<button type=\"button\" class=\"ds-btn-secondary\">Ver como paciente</button>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:var(--tap,2.75rem);max-width:100%;border-radius:var(--radius,1rem);padding:.7rem 1.25rem;font-size:.95rem;font-weight:700;line-height:1;white-space:normal;overflow-wrap:anywhere;cursor:pointer;transition:transform 140ms ease,box-shadow 160ms ease,background-color 160ms ease,border-color 160ms ease,opacity 160ms ease;font-family:Inter,system-ui,-apple-system,sans-serif;border:1px solid var(--border,rgba(255,255,255,.1));background:rgba(255,255,255,.05);color:var(--text,#eaf1ff);}.ds-btn-secondary:hover:not(:disabled){border-color:rgba(139,92,246,.55);background:rgba(255,255,255,.09);transform:translateY(-1px)}.ds-btn-secondary:focus-visible{outline:2px solid var(--accent-text,#c4b5fd);outline-offset:3px;}.ds-btn-secondary:active:not(:disabled){transform:translateY(0) scale(.99)}.ds-btn-secondary:disabled{cursor:not-allowed;opacity:.45;transform:none;box-shadow:none}@media(prefers-reduced-motion:reduce){.ds-btn-secondary{transition:none}}"
+    },
+    {
+      "name": "Acción destructiva",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Variante compartida con foco, hover, active y bloqueo al guardar.",
+      "html": "<button type=\"button\" class=\"ds-btn-danger\">Eliminar</button>",
+      "css": ".ds-btn-danger{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:var(--tap,2.75rem);max-width:100%;border-radius:var(--radius,1rem);padding:.7rem 1.25rem;font-size:.95rem;font-weight:700;line-height:1;white-space:normal;overflow-wrap:anywhere;cursor:pointer;transition:transform 140ms ease,box-shadow 160ms ease,background-color 160ms ease,border-color 160ms ease,opacity 160ms ease;font-family:Inter,system-ui,-apple-system,sans-serif;border:0;background:var(--danger-strong,#dc2626);color:#fff;}.ds-btn-danger:hover:not(:disabled){background:var(--danger-press,#b91c1c);transform:translateY(-1px)}.ds-btn-danger:focus-visible{outline:2px solid var(--accent-text,#c4b5fd);outline-offset:3px;}.ds-btn-danger:active:not(:disabled){transform:translateY(0) scale(.99)}.ds-btn-danger:disabled{cursor:not-allowed;opacity:.45;transform:none;box-shadow:none}@media(prefers-reduced-motion:reduce){.ds-btn-danger{transition:none}}"
+    },
+    {
+      "name": "Campo de texto",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Etiqueta visible, foco violeta, placeholder secundario y estado inválido.",
+      "html": "<label class=\"ds-field-label\">Condiciones de cancelación<input class=\"ds-field\" placeholder=\"Opcional\" /></label>",
+      "css": ".ds-field-label{display:block;color:var(--text-muted,rgba(234,241,255,.64));font-size:.9rem;font-weight:700;font-family:Inter,system-ui,-apple-system,sans-serif;}.ds-field{margin-top:.45rem;width:100%;min-height:var(--tap,2.75rem);border-radius:var(--radius,1rem);border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.045);padding:.75rem 1rem;color:var(--text,#eaf1ff);font-size:1rem;transition:border-color 160ms ease,box-shadow 160ms ease,background-color 160ms ease;font-family:Inter,system-ui,-apple-system,sans-serif;}.ds-field::placeholder{color:var(--text-muted,rgba(234,241,255,.64))}.ds-field:focus{border-color:var(--accent,#8b5cf6);box-shadow:0 0 0 3px var(--accent-soft,rgba(124,58,237,.18))}.ds-field:focus-visible{outline:2px solid var(--accent-text,#c4b5fd);outline-offset:3px;}.ds-field[aria-invalid=\"true\"]{border-color:var(--danger,#f87171)}.ds-field:disabled{cursor:not-allowed;opacity:.55}"
+    },
+    {
+      "name": "Navegación del profesional",
+      "kind": "nav",
+      "description": "Patrón de preguntas: destinos del profesional y página actual; se reorganiza en móvil.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Configuración del profesional\"><a href=\"#perfil\">Perfil</a><a href=\"#servicios\">Servicios y aranceles</a><a href=\"#horarios\">Horarios</a><span aria-current=\"page\">Preguntas al paciente</span></nav>",
+      "css": ".ds-nav{display:flex;flex-wrap:wrap;gap:.5rem;border-bottom:1px solid rgba(255,255,255,.12);color:var(--text,#eaf1ff);font-family:Inter,system-ui,-apple-system,sans-serif;}.ds-nav a,.ds-nav span{padding:.875rem 1rem;min-height:2.75rem;font-size:.9375rem;text-decoration:none;color:inherit}.ds-nav span{color:var(--accent,#8b5cf6);border-bottom:2px solid currentColor}.ds-nav a:hover{background:rgba(255,255,255,.05)}.ds-nav a:focus-visible{outline:2px solid var(--accent-text,#c4b5fd);outline-offset:3px;}.ds-nav a:active{background:var(--accent-soft,rgba(124,58,237,.18))}@media(max-width:480px){.ds-nav{display:grid;grid-template-columns:1fr 1fr}.ds-nav a,.ds-nav span{padding:.75rem .5rem}}"
+    },
+    {
+      "name": "Estado de éxito",
+      "kind": "chip",
+      "refersTo": "badge-success",
+      "description": "Estado informativo con etiqueta; no simula una acción.",
+      "html": "<span class=\"ds-badge\">Reservas activadas</span>",
+      "css": ".ds-badge{display:inline-flex;max-width:100%;width:fit-content;align-items:center;gap:.35rem;border-radius:999px;background:var(--success-soft,rgba(52,211,153,.14));padding:.4rem .8rem;color:var(--success-text,#a7f3d0);font-size:.78rem;font-weight:700;white-space:normal;overflow-wrap:anywhere;font-family:Inter,system-ui,-apple-system,sans-serif;}"
+    },
+    {
+      "name": "Grupo de trabajo",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Contenedor compartido; las listas interiores pueden usar filas sin tarjetas adicionales.",
+      "html": "<section class=\"ds-card\"><h2 class=\"ds-card-title\">Reglas para reservar</h2><p class=\"ds-card-text\">Configuración de la agenda del consultorio.</p></section>",
+      "css": ".ds-card{border:1px solid var(--border-strong,#244062);border-radius:var(--radius-lg,1.4rem);padding:1.25rem;color:var(--text,#eaf1ff);background:radial-gradient(circle at top left,rgba(124,58,237,.14),transparent 32rem),linear-gradient(150deg,var(--surface,#0b1d32) 0%,#071626 100%);box-shadow:var(--shadow,0 18px 48px rgba(0,0,0,.28));font-family:Inter,system-ui,-apple-system,sans-serif;}.ds-card-title{font-size:1.15rem;font-weight:700;letter-spacing:-.01em}.ds-card-text{color:var(--text-muted,rgba(234,241,255,.64));font-size:.95rem;line-height:1.55}@media(min-width:640px){.ds-card{padding:1.5rem}}"
+    },
+    {
+      "name": "Selector progresivo",
+      "kind": "custom",
+      "refersTo": "control-menu",
+      "description": "Vista del trigger y de su menú; la acción Svelte conserva el select original y su validación.",
+      "html": "<div class=\"ds-select\"><button type=\"button\" class=\"ds-select-trigger\" role=\"combobox\" aria-expanded=\"true\" aria-controls=\"ds-select-options\" aria-label=\"¿Hasta cuándo pueden reservar?\"><span>Próximos 30 días</span><span class=\"ds-select-icon\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m7 10 5 5 5-5\"/></svg></span></button><div class=\"ds-select-menu\" id=\"ds-select-options\" role=\"listbox\" aria-label=\"¿Hasta cuándo pueden reservar?\"><div class=\"ds-select-option\" role=\"option\" aria-selected=\"false\">Próximos 15 días</div><div class=\"ds-select-option\" role=\"option\" aria-selected=\"true\">Próximos 30 días</div></div></div>",
+      "css": ".ds-select{color:var(--text,#eaf1ff);font-family:Inter,system-ui,-apple-system,sans-serif;}.ds-select-trigger{width:100%;min-height:var(--tap,2.75rem);border-radius:var(--radius,1rem);border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.045);padding:.75rem 1rem;color:var(--text,#eaf1ff);font-size:1rem;transition:border-color 160ms ease,box-shadow 160ms ease,background-color 160ms ease;font-family:Inter,system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:space-between;gap:.75rem;text-align:left;cursor:pointer;font-weight:400}.ds-select-trigger[aria-expanded=\"true\"]{border-color:var(--accent,#8b5cf6)}.ds-select-trigger:focus-visible{outline:2px solid var(--accent-text,#c4b5fd);outline-offset:3px;}.ds-select-trigger:disabled{opacity:.55;cursor:not-allowed}.ds-select-icon{width:1.1rem;height:1.1rem;color:var(--text-muted,rgba(234,241,255,.64));flex-shrink:0}.ds-select-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.ds-select-menu{margin-top:6px;padding:.4rem;border:1px solid var(--border-strong,#244062);border-radius:.75rem;background:var(--surface-raised,#102842);color:var(--text,#eaf1ff);box-shadow:0 12px 28px #0005;font-size:1rem}.ds-select-option{padding:.65rem .75rem;min-height:var(--tap,2.75rem);border-radius:.45rem;cursor:pointer;overflow-wrap:anywhere}.ds-select-option:hover{background:#213c5b}.ds-select-option[aria-selected=\"true\"]{background:var(--accent-soft,rgba(124,58,237,.18));color:#e2d6ff;font-weight:600}.ds-select-option[aria-disabled=\"true\"]{opacity:.45;cursor:not-allowed}"
+    },
+    {
+      "name": "Selección de mes",
+      "kind": "custom",
+      "refersTo": "control-menu",
+      "description": "Muestra un estado seleccionado del calendario real. Los límites y la navegación pertenecen a styledDate.",
+      "html": "<section class=\"ds-calendar\" aria-label=\"Mes de referencia\"><h3 class=\"ds-calendar-heading\">2026</h3><div class=\"ds-calendar-months\"><button class=\"ds-calendar-value\" aria-pressed=\"false\">septiembre</button><button class=\"ds-calendar-value\" aria-pressed=\"true\">octubre</button><button class=\"ds-calendar-value\" aria-pressed=\"false\">noviembre</button></div></section>",
+      "css": ".ds-calendar{padding:.4rem;border:1px solid var(--border-strong,#244062);border-radius:.75rem;background:var(--surface-raised,#102842);color:var(--text,#eaf1ff);box-shadow:0 12px 28px #0005;font-family:Inter,system-ui,-apple-system,sans-serif;}.ds-calendar-heading{padding:.2rem;font-size:.9rem;font-weight:600}.ds-calendar-months{display:grid;grid-template-columns:repeat(3,1fr);gap:.25rem}.ds-calendar-value{border:0;background:transparent;color:inherit;min-height:2.5rem;border-radius:.5rem;font-size:.9rem;text-transform:capitalize;cursor:pointer;font-family:Inter,system-ui,-apple-system,sans-serif;}.ds-calendar-value:hover:not(:disabled){background:#213c5b}.ds-calendar-value[aria-pressed=\"true\"]{background:var(--accent-strong,#7c3aed);color:white}.ds-calendar-value:focus-visible{outline:2px solid var(--accent-text,#c4b5fd);outline-offset:-2px}.ds-calendar-value:disabled{opacity:.3;cursor:not-allowed}"
+    },
+    {
+      "name": "Confirmación de descarte",
+      "kind": "custom",
+      "refersTo": "confirm-dialog",
+      "description": "Vista del diálogo interior: cancelar conserva borrador; aceptar descarta antes de navegar.",
+      "html": "<section class=\"ds-dialog\" role=\"dialog\" aria-labelledby=\"ds-dialog-title\"><h2 id=\"ds-dialog-title\">Cambios sin guardar</h2><p>Tenés reglas sin guardar.</p><div class=\"ds-dialog-actions\"><button class=\"ds-dialog-cancel\">Seguir editando</button><button class=\"ds-dialog-accept\">Descartar cambios</button></div></section>",
+      "css": ".ds-dialog{width:min(30rem,calc(100vw - 2rem));padding:1.5rem;border:1px solid var(--border-strong,#244062);border-radius:1rem;background:var(--surface-raised,#102842);color:var(--text,#eaf1ff);box-shadow:0 18px 48px #0006;font-family:Inter,system-ui,-apple-system,sans-serif;}.ds-dialog h2{font-size:1.25rem;font-weight:650}.ds-dialog p{margin-top:.75rem;color:#c5d1e2;line-height:1.6}.ds-dialog-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.65rem;margin-top:1.5rem}.ds-dialog-actions button{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:var(--tap,2.75rem);max-width:100%;border-radius:var(--radius,1rem);padding:.7rem 1.25rem;font-size:.95rem;font-weight:700;line-height:1;white-space:normal;overflow-wrap:anywhere;cursor:pointer;transition:transform 140ms ease,box-shadow 160ms ease,background-color 160ms ease,border-color 160ms ease,opacity 160ms ease;font-family:Inter,system-ui,-apple-system,sans-serif;}.ds-dialog-cancel{border:1px solid var(--border,rgba(255,255,255,.1));background:rgba(255,255,255,.05);color:var(--text,#eaf1ff)}.ds-dialog-accept{border:0;background:var(--accent-strong,#7c3aed);color:#fff;box-shadow:var(--shadow-accent,0 14px 30px rgba(124,58,237,.26))}.ds-dialog-accept:hover{background:var(--accent-press,#6d28d9)}.ds-dialog-cancel:hover{background:rgba(255,255,255,.09)}.ds-dialog-actions button:focus-visible{outline:2px solid var(--accent-text,#c4b5fd);outline-offset:3px;}.ds-dialog-actions button:active{transform:scale(.99)}"
+    },
+    {
+      "name": "Confirmación del paciente",
+      "kind": "custom",
+      "refersTo": "patient-form",
+      "description": "Variante final: resumen, campo amplio, respuesta explícita y confirmación. La muestra no incorpora datos del consultorio.",
+      "html": "<section class=\"ds-patient-form\" aria-label=\"Formulario final\"><section class=\"ds-patient-summary\"><div class=\"ds-patient-heading\"><p class=\"ds-patient-context\">Estás reservando</p><span class=\"ds-patient-price\">Arancel vigente</span><h2>Servicio y profesional seleccionados</h2></div></section><label class=\"ds-patient-label\" for=\"ds-patient-name\">Nombre y apellido<span class=\"ds-patient-required\" aria-hidden=\"true\">*</span></label><input id=\"ds-patient-name\" class=\"ds-patient-input\" aria-label=\"Nombre y apellido\" autocomplete=\"name\" required /><fieldset class=\"ds-patient-question\"><legend class=\"ds-patient-label\">Pregunta configurada<span class=\"ds-patient-required\" aria-hidden=\"true\">*</span></legend><div class=\"ds-patient-answers\"><label class=\"ds-patient-answer\"><input type=\"radio\" name=\"ds-patient-answer\" value=\"true\" required /><span>Sí</span></label><label class=\"ds-patient-answer\"><input type=\"radio\" name=\"ds-patient-answer\" value=\"false\" checked required /><span>No</span></label></div></fieldset><button type=\"button\" class=\"ds-patient-confirm\">Confirmar reserva</button></section>",
+      "css": ".ds-patient-form{padding:1.5rem;border:1px solid var(--border-strong,#244062);border-radius:1.5rem;background:var(--bg,#0b1626);color:var(--text,#eaf1ff);box-shadow:none;font-family:Inter,system-ui,-apple-system,sans-serif}.ds-patient-summary{padding:1.1rem 1.2rem;border:1px solid var(--patient-summary-border,#8056c9);border-radius:1rem;background:var(--patient-summary-bg,rgba(139,92,246,.06))}.ds-patient-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.6rem 1rem;align-items:center}.ds-patient-context{margin:0;color:var(--accent-text,#c4b5fd);font-size:.85rem;font-weight:650}.ds-patient-price{max-width:10rem;padding:.4rem .7rem;border-radius:.6rem;background:var(--patient-field-bg,rgba(234,241,255,.045));font-size:1.1rem;font-weight:650;line-height:1.35;font-variant-numeric:tabular-nums}.ds-patient-heading h2{grid-column:1/-1;margin:0;font-size:1.4rem;line-height:1.35;font-weight:650;overflow-wrap:anywhere}.ds-patient-label{display:flex;align-items:baseline;gap:.4rem;margin:1.7rem 0 .65rem;font-size:1rem;line-height:1.45;font-weight:600}.ds-patient-required{color:var(--accent-text,#c4b5fd);font-weight:750}.ds-patient-input{width:100%;min-height:3.1rem;padding:.75rem 1rem;border:1px solid var(--patient-field-border,#52637b);border-radius:1.8rem;background:var(--patient-field-bg,rgba(234,241,255,.045));color:inherit;font:inherit;font-size:1rem;line-height:1.45}.ds-patient-input:focus{border-color:var(--accent,#8b5cf6);box-shadow:0 0 0 3px var(--accent-soft,rgba(124,58,237,.18))}.ds-patient-input:focus-visible{outline:2px solid var(--accent,#8b5cf6);outline-offset:2px}.ds-patient-input:disabled{opacity:.6;cursor:not-allowed}.ds-patient-question{margin:1.4rem 0 0;padding:0;border:0;min-width:0}.ds-patient-question .ds-patient-label{width:100%;margin:0 0 .65rem}.ds-patient-answers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}.ds-patient-answer{position:relative;display:flex;align-items:center;justify-content:center;min-height:3.1rem;padding:.65rem .6rem;border:1px solid var(--patient-field-border,#52637b);border-radius:1.2rem;background:var(--patient-field-bg,rgba(234,241,255,.045));font-weight:600;cursor:pointer}.ds-patient-answer input{position:absolute;width:1px;height:1px;opacity:0;margin:0;padding:0}.ds-patient-answer:hover{border-color:var(--accent,#8b5cf6)}.ds-patient-answer:has(input:checked){border:2px solid var(--accent,#8b5cf6);padding:calc(.65rem - 1px) calc(.6rem - 1px);background:var(--accent-soft,rgba(124,58,237,.18))}.ds-patient-answer:has(input:focus-visible){outline:2px solid var(--accent,#8b5cf6);outline-offset:3px}.ds-patient-answer:has(input:disabled){opacity:.55;cursor:not-allowed}.ds-patient-confirm{display:flex;align-items:center;justify-content:center;width:100%;min-height:3.5rem;margin-top:1.9rem;padding:.7rem 1.25rem;border:0;border-radius:1.8rem;background:var(--accent-strong,#7c3aed);color:var(--on-accent,#fff);box-shadow:var(--shadow-accent,0 14px 30px rgba(124,58,237,.26));font:inherit;font-size:1.15rem;font-weight:700;line-height:1;cursor:pointer;transition:transform 140ms ease,background-color 160ms ease}.ds-patient-confirm:hover:not(:disabled){background:var(--accent-press,#6d28d9);transform:translateY(-1px)}.ds-patient-confirm:focus-visible{outline:2px solid var(--accent-text,#c4b5fd);outline-offset:3px}.ds-patient-confirm:active:not(:disabled){transform:translateY(0) scale(.99)}.ds-patient-confirm:disabled{opacity:.45;cursor:not-allowed;box-shadow:none;transform:none}@media(max-width:480px){.ds-patient-form{padding:1.1rem;border-radius:1.2rem}.ds-patient-summary{padding:.9rem}.ds-patient-heading{column-gap:.6rem}.ds-patient-heading h2{font-size:1.15rem}.ds-patient-price{max-width:7rem;padding:.35rem .5rem;font-size:1rem}}@media(prefers-reduced-motion:reduce){.ds-patient-confirm{transition:none}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Cita Suite: claridad para trabajar",
+    "overview": "Se conserva la identidad existente: Inter, fondos azul oscuro y acento violeta. La precisión de los controles, la jerarquía de texto y los estados hacen reconocible el sistema. Esta frase describe el trabajo del producto; no introduce una identidad comercial nueva.\n\nLa interfaz permite encontrar una tarea y completarla con campos visibles, agrupaciones cortas y opciones secundarias progresivas. Este documento registra los estilos compartidos y los patrones implementados en configuración de reservas y confirmación del paciente; no certifica una renovación de todas las páginas de la aplicación.",
+    "keyCharacteristics": [
+      "Una familia tipográfica para títulos, datos y controles.",
+      "Superficies oscuras con diferencias de tono, bordes y elevación suave.",
+      "Violeta para acciones principales, foco y selección; estados con texto propio.",
+      "Controles consistentes, nombres cotidianos y adaptación estructural al celular."
+    ],
+    "rules": [
+      {
+        "name": "Estado legible",
+        "body": "La persona debe poder reconocer un estado por su texto, sin depender sólo del color.",
+        "section": "colors"
+      },
+      {
+        "name": "Respuesta explícita",
+        "body": "Una pregunta binaria conserva respuestas independientes para Sí y No. Si es opcional, permite volver a Sin responder; vacío y No representan datos diferentes.",
+        "section": "components"
+      },
+      {
+        "name": "Instalación explícita",
+        "body": "Guardar la configuración autoriza el dominio; colocar el código instala la agenda. “Autorizado” describe el permiso configurado y no acredita que la web tenga un turnero funcionando.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "**Do** conservar Inter y los tokens compartidos del sistema oscuro existente.",
+      "**Do** usar etiquetas visibles, foco reconocible y texto para comunicar cada estado.",
+      "**Do** agrupar por tarea y plegar opciones secundarias después de los campos principales.",
+      "**Do** conservar la semántica, validación y datos del formulario al mejorar sus controles.",
+      "**Do** aplicar la variante `patient-*` dentro de la confirmación del paciente y conservar el tema de su integración."
+    ],
+    "donts": [
+      "**Don't** inventar datos reales, tarifas, contactos ni promesas de marca.",
+      "**Don't** compensar una estructura confusa con párrafos de instrucciones.",
+      "**Don't** dejar menús, calendarios o confirmaciones interiores con acabado nativo cuando están mejorados con JavaScript.",
+      "**Don't** convertir patrones de esta entrega en afirmaciones sobre páginas que no se revisaron."
+    ]
+  }
+}

@@ -1,0 +1,56 @@
+---
+import { bookingConfig } from '../lib/booking-config';
+---
+<header class="site-header" id="siteHeader">
+    <div class="container header-inner">
+      <a href="#inicio" class="brand" id="brandLogoLink" aria-label="Dra. Natalia Frutos, inicio">
+        <span class="brand-name">Natalia <em>Frutos</em></span>
+        <span class="brand-meta">Médica de Familia · MP 8492</span>
+      </a>
+
+      <nav class="main-nav" aria-label="Principal">
+        <ul>
+          <li><a href="#senales">Señales</a></li>
+          <li><a href="#areas">Áreas de atención</a></li>
+          <li><a href="#como-trabajo">Mi enfoque</a></li>
+          <li><a href="#sobre-mi">Sobre mí</a></li>
+          <li><a href="#cursos">Cursos</a></li>
+          <li><a href="#notas">Notas</a></li>
+          <li><a href="#contacto">Contacto</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+
+        <button class="icon-btn" id="theme-toggle" type="button" aria-label="Cambiar tema">
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+        <a class="btn btn-primary btn-sm public-cta-btn open-booking-modal-btn" href={bookingConfig.href} data-booking>Reservar consulta</a>
+        <button class="icon-btn menu-btn" id="menu-toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h16M4 16h16"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <noscript><nav class="no-js-nav container" aria-label="Navegación sin JavaScript"><a href="#senales">Señales</a><a href="#areas">Áreas de atención</a><a href="#como-trabajo">Mi enfoque</a><a href="#sobre-mi">Sobre mí</a><a href="#cursos">Cursos</a><a href="#notas">Notas</a><a href="#contacto">Contacto</a></nav></noscript>
+
+  <div class="mobile-menu" id="mobile-menu" role="dialog" aria-modal="true" aria-label="Menú principal" hidden>
+    <button class="icon-btn mobile-menu-close" id="menu-close" type="button" aria-label="Cerrar menú">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <ul>
+      <li><a href="#senales">Señales tempranas <span>01</span></a></li>
+      <li><a href="#areas">Áreas de atención <span>02</span></a></li>
+      <li><a href="#como-trabajo">Mi enfoque <span>03</span></a></li>
+      <li><a href="#sobre-mi">Sobre mí <span>04</span></a></li>
+      <li><a href="#cursos">Cursos online <span>05</span></a></li>
+      <li><a href="#notas">Notas <span>06</span></a></li>
+      <li><a href="#contacto">Contacto <span>07</span></a></li>
+    </ul>
+    <div class="mobile-menu-foot">
+      <a class="btn btn-primary btn-lg btn-block open-booking-modal-btn" href={bookingConfig.href} data-booking>Reservar consulta</a>
+      <a class="btn btn-secondary btn-lg btn-block" href="/contacto" data-dialog="contact-dialog">Consultar</a>
+    </div>
+  </div>

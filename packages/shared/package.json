@@ -1,0 +1,20 @@
+{
+	"name": "@turnos-saas/shared",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"check": "tsc --noEmit"
+	},
+	"exports": {
+		".": "./src/index.ts",
+		"./appointment-status": "./src/appointment-status.ts",
+		"./dates": "./src/dates.ts",
+		"./messaging": "./src/messaging.ts",
+		"./phone": "./src/phone.ts",
+		"./booking-integration": "./src/booking-integration.ts"
+	},
+	"devDependencies": {
+		"typescript": "^5.9.3"
+	}
+}

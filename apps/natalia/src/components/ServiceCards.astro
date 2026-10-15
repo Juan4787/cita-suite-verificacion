@@ -1,0 +1,17 @@
+---
+import { referenceServices } from '../lib/reference-content';
+import BookingLink from './BookingLink.astro';
+---
+<div class="services-commercial-grid" id="publicServicesList">
+  {referenceServices.map(s => <article class="service-card">
+    <div class="service-card-header">
+      <div class="service-card-meta-line"><span class="service-modality-badge">{s.modality}</span><span class="service-duration-badge"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{s.duration}</span></div>
+      <h3 class="service-card-title">{s.title}</h3><p class="service-card-desc">{s.description}</p>
+      <div class="service-card-tags">{s.tags.map(tag => <span class="service-pill">{tag}</span>)}</div>
+    </div>
+    <div class="service-card-footer"><div class="service-price-block"><div class="service-price-amount">{s.price}</div><span class="service-price-sub">{s.duration} · {s.modality}</span></div>
+      <div class="service-card-actions"><BookingLink class="btn btn-primary btn-block" label={s.ctaText}/><a class="service-view-detail-btn" href={`/consultas/${s.slug}`} data-dialog={`service-${s.id}`}>Ver detalle clínico y preparación →</a></div>
+    </div>
+  </article>)}
+</div>
+<p class="reference-notice">Valores y duraciones de referencia de la maqueta. Consultá las prestaciones y los aranceles vigentes en la agenda al reservar.</p>

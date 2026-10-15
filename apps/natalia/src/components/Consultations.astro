@@ -1,0 +1,45 @@
+---
+import ServiceCards from './ServiceCards.astro';
+---
+<section class="section" id="areas" aria-labelledby="areasTitle">
+        <div class="container">
+          <div class="section-head reveal">
+            <div>
+              <span class="eyebrow">Áreas de atención</span>
+              <h2 id="areasTitle">Distintas herramientas, <em class="accent-word">una sola mirada.</em></h2>
+            </div>
+            <p>
+              No hay protocolos enlatados. Estas son las consultas clínicas desde las que abordo tu salud;
+              en la primera entrevista acordamos el plan indicado para tu momento vital.
+            </p>
+          </div>
+
+
+          <div class="services-guide-card reveal">
+            <div class="services-guide-badge">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              <span>¿No sabés cuál elegir?</span>
+            </div>
+            <p class="services-guide-text">
+              Si nunca consultaste con Natalia, empezá siempre por la <strong>Consulta Médica Integrativa</strong> para hacer la historia clínica exhaustiva y ordenar los análisis bioquímicos. Si tenés dudas puntuales, podés consultar los canales de contacto disponibles.
+            </p>
+            <a class="btn btn-secondary btn-sm services-guide-wa-btn" href="/contacto" data-dialog="contact-dialog">
+              Consultar
+            </a>
+          </div>
+
+
+          <ServiceCards/><div id="public-catalogue" aria-live="polite"></div>
+
+          <div class="services-footer-banner reveal">
+            <div class="services-footer-info">
+              <span class="banner-pill">Modalidad dual</span>
+              <p>Todas las consultas pueden realizarse de forma presencial (Santa Fe) o virtual (todo el país y exterior con historia clínica digital).</p>
+            </div>
+            <a class="link-arrow" href="/contacto" data-dialog="contact-dialog">
+              ¿Tenés dudas sobre cuál consulta elegir? Escribime
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+        </div>
+      </section>

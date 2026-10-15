@@ -1,0 +1,8 @@
+---
+import { courses } from '../../lib/courses';
+import DetailLayout from '../../layouts/DetailLayout.astro';
+import CourseDetail from '../../components/CourseDetail.astro';
+export function getStaticPaths() { return courses.map(course => ({ params: { id: course.id }, props: { course } })); }
+const { course } = Astro.props;
+---
+<DetailLayout title={course.name} returnHref="/#cursos" returnLabel="Volver a los cursos"><CourseDetail course={course}/></DetailLayout>

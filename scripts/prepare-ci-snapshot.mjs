@@ -37,8 +37,20 @@ function permitted(path) {
 	return rootFiles.has(path) || /^(?:apps|packages|supabase|scripts)\//.test(path);
 }
 try {
-	const tracked = git(['ls-files', '-z']).split('\0').filter(Boolean).filter(permitted);
-	const selected = [...new Set([...tracked, ...rootFiles, ...extras])].filter(path => existsSync(join(root, path))).sort();
+	// Enumerate using the real index before building the independent one. An
+	// empty temporary index cannot tell us which application files are tracked.
+	const listing = spawnSync('git', ['ls-files', '-z'], { cwd: root, env: process.env, encoding: 'utf8' });
+	if (listing.status !== 0) throw new Error('Could not enumerate the actual source checkout.');
+	const tracked = listing.stdout.split('\0').filter(Boolean).filter(permitted);
+	const untracked = spawnSync('git', ['ls-files', '--others', '--exclude-standard', '-z', '--',
+		'apps/web/src', 'apps/web/e2e', 'apps/natalia/src', 'packages/shared/src', 'supabase/migrations', 'supabase/tests', 'scripts/lib'],
+		{ cwd: root, env: process.env, encoding: 'utf8' });
+	if (untracked.status !== 0) throw new Error('Could not enumerate scoped new source files.');
+	const newSource = untracked.stdout.split('\0').filter(Boolean).filter(permitted).filter(path => /\.(?:ts|svelte|js|mjs|sql|sh|astro|css|json)$/.test(path));
+	const selected = [...new Set([...tracked, ...newSource, ...rootFiles, ...extras])].filter(path => existsSync(join(root, path))).sort();
+	for (const required of ['apps/web/src/hooks.server.ts', 'apps/web/src/lib/server/supabase.ts',
+		'apps/natalia/src/pages/index.astro', 'packages/shared/src/database.types.ts', 'supabase/config.toml'])
+		if (!selected.includes(required)) throw new Error('Incomplete CI source snapshot: ' + required);
 	const records = [];
 	const manifest = [];
 	let bytes = 0;

@@ -1,0 +1,940 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-14T04:11:35.757028Z",
+  "title": "Design System: Web Natalia",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Terracota de acción",
+        "tonalRamp": [
+          "oklch(15% 0.13490 42.087)",
+          "oklch(27% 0.13490 42.087)",
+          "oklch(39% 0.13490 42.087)",
+          "oklch(51% 0.13490 42.087)",
+          "oklch(63% 0.13490 42.087)",
+          "oklch(75% 0.13490 42.087)",
+          "oklch(87% 0.13490 42.087)",
+          "oklch(95% 0.13490 42.087)"
+        ]
+      },
+      "accent-hover": {
+        "role": "primary",
+        "displayName": "Terracota de interacción",
+        "tonalRamp": [
+          "oklch(15% 0.11978 41.844)",
+          "oklch(27% 0.11978 41.844)",
+          "oklch(39% 0.11978 41.844)",
+          "oklch(51% 0.11978 41.844)",
+          "oklch(63% 0.11978 41.844)",
+          "oklch(75% 0.11978 41.844)",
+          "oklch(87% 0.11978 41.844)",
+          "oklch(95% 0.11978 41.844)"
+        ]
+      },
+      "accent-text": {
+        "role": "primary",
+        "displayName": "Terracota editorial",
+        "tonalRamp": [
+          "oklch(15% 0.11978 41.844)",
+          "oklch(27% 0.11978 41.844)",
+          "oklch(39% 0.11978 41.844)",
+          "oklch(51% 0.11978 41.844)",
+          "oklch(63% 0.11978 41.844)",
+          "oklch(75% 0.11978 41.844)",
+          "oklch(87% 0.11978 41.844)",
+          "oklch(95% 0.11978 41.844)"
+        ]
+      },
+      "on-accent": {
+        "role": "neutral",
+        "displayName": "Tinta sobre terracota",
+        "tonalRamp": [
+          "oklch(15% 0.01299 71.334)",
+          "oklch(27% 0.01299 71.334)",
+          "oklch(39% 0.01299 71.334)",
+          "oklch(51% 0.01299 71.334)",
+          "oklch(63% 0.01299 71.334)",
+          "oklch(75% 0.01299 71.334)",
+          "oklch(87% 0.01299 71.334)",
+          "oklch(95% 0.01299 71.334)"
+        ]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Terracota suave",
+        "tonalRamp": [
+          "oklch(15% 0.13490 42.087)",
+          "oklch(27% 0.13490 42.087)",
+          "oklch(39% 0.13490 42.087)",
+          "oklch(51% 0.13490 42.087)",
+          "oklch(63% 0.13490 42.087)",
+          "oklch(75% 0.13490 42.087)",
+          "oklch(87% 0.13490 42.087)",
+          "oklch(95% 0.13490 42.087)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Papel cálido",
+        "tonalRamp": [
+          "oklch(15% 0.01314 82.402)",
+          "oklch(27% 0.01314 82.402)",
+          "oklch(39% 0.01314 82.402)",
+          "oklch(51% 0.01314 82.402)",
+          "oklch(63% 0.01314 82.402)",
+          "oklch(75% 0.01314 82.402)",
+          "oklch(87% 0.01314 82.402)",
+          "oklch(95% 0.01314 82.402)"
+        ]
+      },
+      "paper-2": {
+        "role": "neutral",
+        "displayName": "Papel alternado",
+        "tonalRamp": [
+          "oklch(15% 0.02067 81.780)",
+          "oklch(27% 0.02067 81.780)",
+          "oklch(39% 0.02067 81.780)",
+          "oklch(51% 0.02067 81.780)",
+          "oklch(63% 0.02067 81.780)",
+          "oklch(75% 0.02067 81.780)",
+          "oklch(87% 0.02067 81.780)",
+          "oklch(95% 0.02067 81.780)"
+        ]
+      },
+      "paper-3": {
+        "role": "neutral",
+        "displayName": "Papel fotográfico",
+        "tonalRamp": [
+          "oklch(15% 0.02889 79.459)",
+          "oklch(27% 0.02889 79.459)",
+          "oklch(39% 0.02889 79.459)",
+          "oklch(51% 0.02889 79.459)",
+          "oklch(63% 0.02889 79.459)",
+          "oklch(75% 0.02889 79.459)",
+          "oklch(87% 0.02889 79.459)",
+          "oklch(95% 0.02889 79.459)"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Papel de tarjeta",
+        "tonalRamp": [
+          "oklch(15% 0.00856 84.572)",
+          "oklch(27% 0.00856 84.572)",
+          "oklch(39% 0.00856 84.572)",
+          "oklch(51% 0.00856 84.572)",
+          "oklch(63% 0.00856 84.572)",
+          "oklch(75% 0.00856 84.572)",
+          "oklch(87% 0.00856 84.572)",
+          "oklch(95% 0.00856 84.572)"
+        ]
+      },
+      "night": {
+        "role": "neutral",
+        "displayName": "Cierre nocturno",
+        "tonalRamp": [
+          "oklch(15% 0.01446 67.045)",
+          "oklch(27% 0.01446 67.045)",
+          "oklch(39% 0.01446 67.045)",
+          "oklch(51% 0.01446 67.045)",
+          "oklch(63% 0.01446 67.045)",
+          "oklch(75% 0.01446 67.045)",
+          "oklch(87% 0.01446 67.045)",
+          "oklch(95% 0.01446 67.045)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta principal",
+        "tonalRamp": [
+          "oklch(15% 0.00987 67.279)",
+          "oklch(27% 0.00987 67.279)",
+          "oklch(39% 0.00987 67.279)",
+          "oklch(51% 0.00987 67.279)",
+          "oklch(63% 0.00987 67.279)",
+          "oklch(75% 0.00987 67.279)",
+          "oklch(87% 0.00987 67.279)",
+          "oklch(95% 0.00987 67.279)"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Tinta de lectura",
+        "tonalRamp": [
+          "oklch(15% 0.01735 67.246)",
+          "oklch(27% 0.01735 67.246)",
+          "oklch(39% 0.01735 67.246)",
+          "oklch(51% 0.01735 67.246)",
+          "oklch(63% 0.01735 67.246)",
+          "oklch(75% 0.01735 67.246)",
+          "oklch(87% 0.01735 67.246)",
+          "oklch(95% 0.01735 67.246)"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Tinta auxiliar",
+        "tonalRamp": [
+          "oklch(15% 0.02254 72.313)",
+          "oklch(27% 0.02254 72.313)",
+          "oklch(39% 0.02254 72.313)",
+          "oklch(51% 0.02254 72.313)",
+          "oklch(63% 0.02254 72.313)",
+          "oklch(75% 0.02254 72.313)",
+          "oklch(87% 0.02254 72.313)",
+          "oklch(95% 0.02254 72.313)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Divisor suave",
+        "tonalRamp": [
+          "oklch(15% 0.00987 67.279)",
+          "oklch(27% 0.00987 67.279)",
+          "oklch(39% 0.00987 67.279)",
+          "oklch(51% 0.00987 67.279)",
+          "oklch(63% 0.00987 67.279)",
+          "oklch(75% 0.00987 67.279)",
+          "oklch(87% 0.00987 67.279)",
+          "oklch(95% 0.00987 67.279)"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Divisor fuerte",
+        "tonalRamp": [
+          "oklch(15% 0.00987 67.279)",
+          "oklch(27% 0.00987 67.279)",
+          "oklch(39% 0.00987 67.279)",
+          "oklch(51% 0.00987 67.279)",
+          "oklch(63% 0.00987 67.279)",
+          "oklch(75% 0.00987 67.279)",
+          "oklch(87% 0.00987 67.279)",
+          "oklch(95% 0.00987 67.279)"
+        ]
+      },
+      "dark-accent": {
+        "role": "primary",
+        "displayName": "Terracota de acción · oscuro",
+        "tonalRamp": [
+          "oklch(15% 0.13930 42.866)",
+          "oklch(27% 0.13930 42.866)",
+          "oklch(39% 0.13930 42.866)",
+          "oklch(51% 0.13930 42.866)",
+          "oklch(63% 0.13930 42.866)",
+          "oklch(75% 0.13930 42.866)",
+          "oklch(87% 0.13930 42.866)",
+          "oklch(95% 0.13930 42.866)"
+        ]
+      },
+      "dark-accent-hover": {
+        "role": "primary",
+        "displayName": "Terracota de interacción · oscuro",
+        "tonalRamp": [
+          "oklch(15% 0.12446 43.929)",
+          "oklch(27% 0.12446 43.929)",
+          "oklch(39% 0.12446 43.929)",
+          "oklch(51% 0.12446 43.929)",
+          "oklch(63% 0.12446 43.929)",
+          "oklch(75% 0.12446 43.929)",
+          "oklch(87% 0.12446 43.929)",
+          "oklch(95% 0.12446 43.929)"
+        ]
+      },
+      "dark-accent-text": {
+        "role": "primary",
+        "displayName": "Terracota editorial · oscuro",
+        "tonalRamp": [
+          "oklch(15% 0.12446 43.929)",
+          "oklch(27% 0.12446 43.929)",
+          "oklch(39% 0.12446 43.929)",
+          "oklch(51% 0.12446 43.929)",
+          "oklch(63% 0.12446 43.929)",
+          "oklch(75% 0.12446 43.929)",
+          "oklch(87% 0.12446 43.929)",
+          "oklch(95% 0.12446 43.929)"
+        ]
+      },
+      "dark-on-accent": {
+        "role": "neutral",
+        "displayName": "Tinta sobre terracota · oscuro",
+        "tonalRamp": [
+          "oklch(15% 0.01007 67.210)",
+          "oklch(27% 0.01007 67.210)",
+          "oklch(39% 0.01007 67.210)",
+          "oklch(51% 0.01007 67.210)",
+          "oklch(63% 0.01007 67.210)",
+          "oklch(75% 0.01007 67.210)",
+          "oklch(87% 0.01007 67.210)",
+          "oklch(95% 0.01007 67.210)"
+        ]
+      },
+      "dark-accent-soft": {
+        "role": "primary",
+        "displayName": "Terracota suave · oscuro",
+        "tonalRamp": [
+          "oklch(15% 0.13930 42.866)",
+          "oklch(27% 0.13930 42.866)",
+          "oklch(39% 0.13930 42.866)",
+          "oklch(51% 0.13930 42.866)",
+          "oklch(63% 0.13930 42.866)",
+          "oklch(75% 0.13930 42.866)",
+          "oklch(87% 0.13930 42.866)",
+          "oklch(95% 0.13930 42.866)"
+        ]
+      },
+      "dark-paper": {
+        "role": "neutral",
+        "displayName": "Papel cálido · oscuro",
+        "tonalRamp": [
+          "oklch(15% 0.01007 67.210)",
+          "oklch(27% 0.01007 67.210)",
+          "oklch(39% 0.01007 67.210)",
+          "oklch(51% 0.01007 67.210)",
+          "oklch(63% 0.01007 67.210)",
+          "oklch(75% 0.01007 67.210)",
+          "oklch(87% 0.01007 67.210)",
+          "oklch(95% 0.01007 67.210)"
+        ]
+      },
+      "dark-paper-2": {
+        "role": "neutral",
+        "displayName": "Papel alternado · oscuro",
+        "tonalRamp": [
+          "oklch(15% 0.01219 67.159)",
+          "oklch(27% 0.01219 67.159)",
+          "oklch(39% 0.01219 67.159)",
+          "oklch(51% 0.01219 67.159)",
+          "oklch(63% 0.01219 67.159)",
+          "oklch(75% 0.01219 67.159)",
+          "oklch(87% 0.01219 67.159)",
+          "oklch(95% 0.01219 67.159)"
+        ]
+      },
+      "dark-paper-3": {
+        "role": "neutral",
+        "displayName": "Papel fotográfico · oscuro",
+        "tonalRamp": [
+          "oklch(15% 0.01643 67.020)",
+          "oklch(27% 0.01643 67.020)",
+          "oklch(39% 0.01643 67.020)",
+          "oklch(51% 0.01643 67.020)",
+          "oklch(63% 0.01643 67.020)",
+          "oklch(75% 0.01643 67.020)",
+          "oklch(87% 0.01643 67.020)",
+          "oklch(95% 0.01643 67.020)"
+        ]
+      },
+      "dark-card": {
+        "role": "neutral",
+        "displayName": "Papel de tarjeta · oscuro",
+        "tonalRamp": [
+          "oklch(15% 0.01315 61.945)",
+          "oklch(27% 0.01315 61.945)",
+          "oklch(39% 0.01315 61.945)",
+          "oklch(51% 0.01315 61.945)",
+          "oklch(63% 0.01315 61.945)",
+          "oklch(75% 0.01315 61.945)",
+          "oklch(87% 0.01315 61.945)",
+          "oklch(95% 0.01315 61.945)"
+        ]
+      },
+      "dark-night": {
+        "role": "neutral",
+        "displayName": "Cierre nocturno · oscuro",
+        "tonalRamp": [
+          "oklch(15% 0.00789 67.258)",
+          "oklch(27% 0.00789 67.258)",
+          "oklch(39% 0.00789 67.258)",
+          "oklch(51% 0.00789 67.258)",
+          "oklch(63% 0.00789 67.258)",
+          "oklch(75% 0.00789 67.258)",
+          "oklch(87% 0.00789 67.258)",
+          "oklch(95% 0.00789 67.258)"
+        ]
+      },
+      "dark-ink": {
+        "role": "neutral",
+        "displayName": "Tinta principal · oscuro",
+        "tonalRamp": [
+          "oklch(15% 0.01772 81.331)",
+          "oklch(27% 0.01772 81.331)",
+          "oklch(39% 0.01772 81.331)",
+          "oklch(51% 0.01772 81.331)",
+          "oklch(63% 0.01772 81.331)",
+          "oklch(75% 0.01772 81.331)",
+          "oklch(87% 0.01772 81.331)",
+          "oklch(95% 0.01772 81.331)"
+        ]
+      },
+      "dark-ink-2": {
+        "role": "neutral",
+        "displayName": "Tinta de lectura · oscuro",
+        "tonalRamp": [
+          "oklch(15% 0.02341 78.193)",
+          "oklch(27% 0.02341 78.193)",
+          "oklch(39% 0.02341 78.193)",
+          "oklch(51% 0.02341 78.193)",
+          "oklch(63% 0.02341 78.193)",
+          "oklch(75% 0.02341 78.193)",
+          "oklch(87% 0.02341 78.193)",
+          "oklch(95% 0.02341 78.193)"
+        ]
+      },
+      "dark-ink-3": {
+        "role": "neutral",
+        "displayName": "Tinta auxiliar · oscuro",
+        "tonalRamp": [
+          "oklch(15% 0.02629 77.372)",
+          "oklch(27% 0.02629 77.372)",
+          "oklch(39% 0.02629 77.372)",
+          "oklch(51% 0.02629 77.372)",
+          "oklch(63% 0.02629 77.372)",
+          "oklch(75% 0.02629 77.372)",
+          "oklch(87% 0.02629 77.372)",
+          "oklch(95% 0.02629 77.372)"
+        ]
+      },
+      "dark-line": {
+        "role": "neutral",
+        "displayName": "Divisor suave · oscuro",
+        "tonalRamp": [
+          "oklch(15% 0.01772 81.331)",
+          "oklch(27% 0.01772 81.331)",
+          "oklch(39% 0.01772 81.331)",
+          "oklch(51% 0.01772 81.331)",
+          "oklch(63% 0.01772 81.331)",
+          "oklch(75% 0.01772 81.331)",
+          "oklch(87% 0.01772 81.331)",
+          "oklch(95% 0.01772 81.331)"
+        ]
+      },
+      "dark-line-strong": {
+        "role": "neutral",
+        "displayName": "Divisor fuerte · oscuro",
+        "tonalRamp": [
+          "oklch(15% 0.01772 81.331)",
+          "oklch(27% 0.01772 81.331)",
+          "oklch(39% 0.01772 81.331)",
+          "oklch(51% 0.01772 81.331)",
+          "oklch(63% 0.01772 81.331)",
+          "oklch(75% 0.01772 81.331)",
+          "oklch(87% 0.01772 81.331)",
+          "oklch(95% 0.01772 81.331)"
+        ]
+      },
+      "booking-surface": {
+        "role": "neutral",
+        "displayName": "Superficie de reserva · reserva",
+        "tonalRamp": [
+          "oklch(15% 0.01184 79.785)",
+          "oklch(27% 0.01184 79.785)",
+          "oklch(39% 0.01184 79.785)",
+          "oklch(51% 0.01184 79.785)",
+          "oklch(63% 0.01184 79.785)",
+          "oklch(75% 0.01184 79.785)",
+          "oklch(87% 0.01184 79.785)",
+          "oklch(95% 0.01184 79.785)"
+        ]
+      },
+      "booking-dark-surface": {
+        "role": "neutral",
+        "displayName": "Superficie de reserva · oscuro · reserva",
+        "tonalRamp": [
+          "oklch(15% 0.01219 67.159)",
+          "oklch(27% 0.01219 67.159)",
+          "oklch(39% 0.01219 67.159)",
+          "oklch(51% 0.01219 67.159)",
+          "oklch(63% 0.01219 67.159)",
+          "oklch(75% 0.01219 67.159)",
+          "oklch(87% 0.01219 67.159)",
+          "oklch(95% 0.01219 67.159)"
+        ]
+      },
+      "booking-dark-on-accent": {
+        "role": "neutral",
+        "displayName": "Tinta sobre terracota · oscuro · reserva",
+        "tonalRamp": [
+          "oklch(15% 0.00987 67.279)",
+          "oklch(27% 0.00987 67.279)",
+          "oklch(39% 0.00987 67.279)",
+          "oklch(51% 0.00987 67.279)",
+          "oklch(63% 0.00987 67.279)",
+          "oklch(75% 0.00987 67.279)",
+          "oklch(87% 0.00987 67.279)",
+          "oklch(95% 0.00987 67.279)"
+        ]
+      },
+      "booking-border-strong": {
+        "role": "neutral",
+        "displayName": "Borde de reserva · reserva",
+        "tonalRamp": [
+          "oklch(15% 0.00987 67.279)",
+          "oklch(27% 0.00987 67.279)",
+          "oklch(39% 0.00987 67.279)",
+          "oklch(51% 0.00987 67.279)",
+          "oklch(63% 0.00987 67.279)",
+          "oklch(75% 0.00987 67.279)",
+          "oklch(87% 0.00987 67.279)",
+          "oklch(95% 0.00987 67.279)"
+        ]
+      },
+      "booking-dark-border": {
+        "role": "neutral",
+        "displayName": "Divisor de reserva · oscuro · reserva",
+        "tonalRamp": [
+          "oklch(15% 0.01652 79.350)",
+          "oklch(27% 0.01652 79.350)",
+          "oklch(39% 0.01652 79.350)",
+          "oklch(51% 0.01652 79.350)",
+          "oklch(63% 0.01652 79.350)",
+          "oklch(75% 0.01652 79.350)",
+          "oklch(87% 0.01652 79.350)",
+          "oklch(95% 0.01652 79.350)"
+        ]
+      },
+      "night-ink": {
+        "role": "neutral",
+        "displayName": "Tinta principal nocturna"
+      },
+      "night-ink-2": {
+        "role": "neutral",
+        "displayName": "Tinta de lectura nocturna y pie"
+      },
+      "night-line": {
+        "role": "neutral",
+        "displayName": "Divisor nocturno"
+      },
+      "moss": {
+        "role": "secondary",
+        "displayName": "Musgo de listas clínicas"
+      },
+      "mustard": {
+        "role": "tertiary",
+        "displayName": "Mostaza editorial de cursos"
+      },
+      "contact-surface": {
+        "role": "primary",
+        "displayName": "Terracota de contacto"
+      },
+      "contact-ink": {
+        "role": "neutral",
+        "displayName": "Tinta clara de contacto"
+      },
+      "contact-cream": {
+        "role": "neutral",
+        "displayName": "Crema de acciones y foco de contacto"
+      },
+      "contact-button-ink": {
+        "role": "neutral",
+        "displayName": "Tinta del botón crema"
+      },
+      "course-control-ink": {
+        "role": "neutral",
+        "displayName": "Crema del control fotográfico de curso"
+      },
+      "course-card-surface": {
+        "role": "neutral",
+        "displayName": "Superficie translúcida de curso"
+      },
+      "course-card-hover": {
+        "role": "neutral",
+        "displayName": "Superficie de curso al hover"
+      },
+      "dark-night-ink-2": {
+        "role": "neutral",
+        "displayName": "Tinta de lectura nocturna y pie · oscuro"
+      },
+      "dark-night-line": {
+        "role": "neutral",
+        "displayName": "Divisor nocturno · oscuro"
+      },
+      "dark-moss": {
+        "role": "secondary",
+        "displayName": "Musgo de listas clínicas · oscuro"
+      },
+      "dark-mustard": {
+        "role": "tertiary",
+        "displayName": "Mostaza editorial de cursos · oscuro"
+      },
+      "dark-contact-surface": {
+        "role": "primary",
+        "displayName": "Terracota de contacto · oscuro"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "display",
+        "purpose": "Titular principal editorial, con peso 350 conservado del CSS incumbente."
+      },
+      "headline": {
+        "displayName": "headline",
+        "purpose": "Títulos de sección; escala editorial fluida."
+      },
+      "title": {
+        "displayName": "title",
+        "purpose": "Rol tipográfico extraído del CSS implementado."
+      },
+      "body": {
+        "displayName": "body",
+        "purpose": "Lectura pública corriente en Hanken Grotesk."
+      },
+      "lead": {
+        "displayName": "lead",
+        "purpose": "Introducciones, cuerpo sobre la profesional y detalles de consulta."
+      },
+      "label": {
+        "displayName": "label",
+        "purpose": "Botones públicos; no eyebrows."
+      },
+      "navigation": {
+        "displayName": "navigation",
+        "purpose": "Enlaces pequeños del encabezado público."
+      },
+      "small": {
+        "displayName": "small",
+        "purpose": "Lectura auxiliar, metadatos y avisos de referencia."
+      },
+      "caption": {
+        "displayName": "caption",
+        "purpose": "Pie, metadatos compactos y rótulos auxiliares."
+      },
+      "booking-title": {
+        "displayName": "booking-title",
+        "purpose": "Título del formulario del motor compartido."
+      },
+      "button-large": {
+        "displayName": "button-large",
+        "purpose": "Acciones grandes del hero y contacto."
+      },
+      "eyebrow": {
+        "displayName": "eyebrow",
+        "purpose": "Rótulos en mayúsculas y espaciados fijados por la referencia."
+      },
+      "consultation-title": {
+        "displayName": "consultation-title",
+        "purpose": "Títulos de las cuatro consultas editoriales restauradas."
+      },
+      "course-title": {
+        "displayName": "course-title",
+        "purpose": "Título del curso principal sobre fondo nocturno."
+      },
+      "editorial-title": {
+        "displayName": "editorial-title",
+        "purpose": "Títulos de tarjetas de notas y cursos secundarios."
+      },
+      "testimonial": {
+        "displayName": "testimonial",
+        "purpose": "Citas cursivas de los tres testimonios suministrados."
+      },
+      "dialog-title": {
+        "displayName": "dialog-title",
+        "purpose": "Encabezados de los paneles; variante móvil de 1.45rem."
+      },
+      "reader": {
+        "displayName": "reader",
+        "purpose": "Cuerpo de las notas completas con interlineado amplio y capitular editorial."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-1",
+        "value": "0 1px 2px rgba(46, 30, 16, 0.06), 0 2px 10px rgba(46, 30, 16, 0.05)",
+        "purpose": "Señales, enfoque, consultas, notas, testimonios, consultorio y etiqueta del retrato."
+      },
+      {
+        "name": "shadow-2",
+        "value": "0 2px 6px rgba(46, 30, 16, 0.06), 0 18px 40px -12px rgba(46, 30, 16, 0.18)",
+        "purpose": "Retratos y hover de señales, consultas y notas."
+      },
+      {
+        "name": "dark-shadow-1",
+        "value": "0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 10px rgba(0, 0, 0, 0.2)",
+        "purpose": "Variante oscura de shadow-1."
+      },
+      {
+        "name": "dark-shadow-2",
+        "value": "0 2px 6px rgba(0, 0, 0, 0.3), 0 18px 40px -12px rgba(0, 0, 0, 0.55)",
+        "purpose": "Variante oscura de shadow-2."
+      },
+      {
+        "name": "header",
+        "value": "0 2px 10px rgba(30, 26, 22, 0.04)",
+        "purpose": "Encabezado fijo claro."
+      },
+      {
+        "name": "dark-header",
+        "value": "0 2px 12px rgba(0, 0, 0, 0.25)",
+        "purpose": "Encabezado fijo oscuro."
+      },
+      {
+        "name": "booking-accent",
+        "value": "0 6px 18px rgba(169,75,34,.16)",
+        "purpose": "Acción principal Natalia clara; alcance del adaptador."
+      },
+      {
+        "name": "booking-dark-accent",
+        "value": "0 6px 18px rgba(224,122,79,.12)",
+        "purpose": "Acción principal Natalia oscura; alcance del adaptador."
+      },
+      {
+        "name": "shadow-3",
+        "value": "0 30px 80px -20px rgba(30, 18, 8, 0.35)",
+        "purpose": "Fotografía principal de curso y paneles públicos restaurados."
+      },
+      {
+        "name": "dark-shadow-3",
+        "value": "0 30px 80px -20px rgba(0, 0, 0, 0.7)",
+        "purpose": "Variante oscura de la fotografía de curso y los paneles."
+      },
+      {
+        "name": "testimonials-cta",
+        "value": "0 4px 18px rgba(0, 0, 0, 0.03)",
+        "purpose": "Llamada de acción de testimonios."
+      },
+      {
+        "name": "faq-help",
+        "value": "0 4px 20px rgba(0, 0, 0, 0.03)",
+        "purpose": "Llamada de ayuda al pie de las preguntas."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Transiciones de los componentes públicos."
+      },
+      {
+        "name": "hero-in",
+        "value": "650ms",
+        "purpose": "Entrada única del titular; contenido visible desde opacidad .7."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "none",
+        "purpose": "La regla final desactiva animaciones y transiciones."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "contrast-columns",
+        "value": "600px"
+      },
+      {
+        "name": "credentials",
+        "value": "640px"
+      },
+      {
+        "name": "hero-facts",
+        "value": "680px"
+      },
+      {
+        "name": "compact-header-dialogs-footer-and-course-specs",
+        "value": "760px"
+      },
+      {
+        "name": "signals-and-secondary-courses",
+        "value": "768px"
+      },
+      {
+        "name": "testimonials-cta",
+        "value": "800px"
+      },
+      {
+        "name": "institutional-strip",
+        "value": "820px"
+      },
+      {
+        "name": "contact",
+        "value": "860px"
+      },
+      {
+        "name": "methods-consultations-notes-testimonials-and-catalogue",
+        "value": "900px"
+      },
+      {
+        "name": "method-contrast",
+        "value": "960px"
+      },
+      {
+        "name": "hero-about-main-course-and-section-heads",
+        "value": "1024px"
+      },
+      {
+        "name": "main-navigation",
+        "value": "1180px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón público primary",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Variante editorial pública; no abre un motor de reserva en el panel de documentación.",
+      "html": "<button type=\"button\" class=\"ds-btn-primary\">Reservar consulta<svg aria-hidden=\"true\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M5 12h14M13 5l7 7-7 7\"/></svg></button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 24px;border-radius:var(--r-pill,999px);border:1px solid var(--line-strong,rgba(30,26,22,.26));font-family:var(--sans,'Hanken Grotesk',system-ui,sans-serif);font-size:.98rem;font-weight:600;line-height:1;letter-spacing:.005em;white-space:nowrap;text-decoration:none;cursor:pointer;transition:background-color .25s var(--ease,cubic-bezier(.22,1,.36,1)),color .25s var(--ease,cubic-bezier(.22,1,.36,1)),border-color .25s var(--ease,cubic-bezier(.22,1,.36,1)),transform .25s var(--ease,cubic-bezier(.22,1,.36,1));background:var(--accent,#A94B22);border-color:var(--accent,#A94B22);color:var(--on-accent,#FFF8F0);}.ds-btn-primary:hover{background:var(--accent-hover,#8E3D1A);border-color:var(--accent-hover,#8E3D1A);}.ds-btn-primary:focus-visible{outline:3px solid var(--accent,#A94B22);outline-offset:5px;}.ds-btn-primary:active{transform:translateY(1px)}.ds-btn-primary:disabled{opacity:.45;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-btn-primary{animation:none!important;transition:none!important}}"
+    },
+    {
+      "name": "Botón público secondary",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Variante editorial pública; no abre un motor de reserva en el panel de documentación.",
+      "html": "<button type=\"button\" class=\"ds-btn-secondary\">Conocer mi método<svg aria-hidden=\"true\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M5 12h14M13 5l7 7-7 7\"/></svg></button>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 24px;border-radius:var(--r-pill,999px);border:1px solid var(--line-strong,rgba(30,26,22,.26));font-family:var(--sans,'Hanken Grotesk',system-ui,sans-serif);font-size:.98rem;font-weight:600;line-height:1;letter-spacing:.005em;white-space:nowrap;text-decoration:none;cursor:pointer;transition:background-color .25s var(--ease,cubic-bezier(.22,1,.36,1)),color .25s var(--ease,cubic-bezier(.22,1,.36,1)),border-color .25s var(--ease,cubic-bezier(.22,1,.36,1)),transform .25s var(--ease,cubic-bezier(.22,1,.36,1));background:transparent;color:var(--ink,#1E1A16);}.ds-btn-secondary:hover{background:var(--ink,#1E1A16);border-color:var(--ink,#1E1A16);color:var(--paper,#F3EEE5);}.ds-btn-secondary:focus-visible{outline:3px solid var(--accent,#A94B22);outline-offset:5px;}.ds-btn-secondary:active{transform:translateY(1px)}.ds-btn-secondary:disabled{opacity:.45;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-btn-secondary{animation:none!important;transition:none!important}}"
+    },
+    {
+      "name": "Botón público ghost",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Acción terciaria de cierre o ayuda, con fondo suave al hover.",
+      "html": "<button type=\"button\" class=\"ds-btn-ghost\">Cerrar</button>",
+      "css": ".ds-btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 12px;border-radius:var(--r-pill,999px);border:1px solid transparent;font-family:var(--sans,'Hanken Grotesk',system-ui,sans-serif);font-size:.98rem;font-weight:600;line-height:1;letter-spacing:.005em;white-space:nowrap;text-decoration:none;cursor:pointer;transition:background-color .25s var(--ease,cubic-bezier(.22,1,.36,1)),color .25s var(--ease,cubic-bezier(.22,1,.36,1)),border-color .25s var(--ease,cubic-bezier(.22,1,.36,1)),transform .25s var(--ease,cubic-bezier(.22,1,.36,1));background:transparent;color:var(--ink,#1E1A16);}.ds-btn-ghost:hover{background:var(--accent-soft,rgba(169,75,34,.09));}.ds-btn-ghost:focus-visible{outline:3px solid var(--accent,#A94B22);outline-offset:5px;}.ds-btn-ghost:active{transform:translateY(1px)}.ds-btn-ghost:disabled{opacity:.45;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-btn-ghost{animation:none!important;transition:none!important}}"
+    },
+    {
+      "name": "Navegación pública",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Enlaces del encabezado; sin seguimiento automático de sección.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Principal\"><a href=\"#senales\">Señales</a><a href=\"#areas\">Consultas</a><a href=\"#como-trabajo\">Mi enfoque</a></nav>",
+      "css": ".ds-nav{display:flex;gap:4px;font-family:var(--sans,'Hanken Grotesk',system-ui,sans-serif)}.ds-nav a{position:relative;padding:8px 12px;font-size:.94rem;font-weight:500;color:var(--ink-2,#463E36);text-decoration:none;transition:color .2s var(--ease,cubic-bezier(.22,1,.36,1))}.ds-nav a::after{content:'';position:absolute;left:12px;right:12px;bottom:4px;height:1px;background:var(--accent,#A94B22);transform:scaleX(0);transform-origin:left;transition:transform .35s var(--ease,cubic-bezier(.22,1,.36,1))}.ds-nav a:hover,.ds-nav a[aria-current='true']{color:var(--ink,#1E1A16)}.ds-nav a:hover::after,.ds-nav a[aria-current='true']::after{transform:scaleX(1)}.ds-nav a:focus-visible{ outline:3px solid var(--accent,#A94B22);outline-offset:5px;}@media(prefers-reduced-motion:reduce){.ds-nav{animation:none!important;transition:none!important}}"
+    },
+    {
+      "name": "Tarjeta de señales",
+      "kind": "card",
+      "refersTo": "signal-card",
+      "description": "Tarjeta informativa editorial existente.",
+      "html": "<div class=\"ds-signal\"><span class=\"ds-signal-num\">01</span><p class=\"ds-signal-text\">Dormís, pero no descansás.</p></div>",
+      "css": ".ds-signal{display:flex;align-items:flex-start;gap:20px;padding:24px 28px;background:var(--card,#FBF8F2);border:1px solid var(--line,rgba(30,26,22,.13));border-radius:var(--r-m,12px);box-shadow:var(--shadow-1,0 1px 2px rgba(46,30,16,.06),0 2px 10px rgba(46,30,16,.05));transition:transform .25s var(--ease,cubic-bezier(.22,1,.36,1)),border-color .25s var(--ease,cubic-bezier(.22,1,.36,1)),box-shadow .25s var(--ease,cubic-bezier(.22,1,.36,1))}.ds-signal:hover{transform:translateY(-2px);border-color:var(--line-strong,rgba(30,26,22,.26));box-shadow:var(--shadow-2,0 2px 6px rgba(46,30,16,.06),0 18px 40px -12px rgba(46,30,16,.18))}.ds-signal-num{font-family:var(--serif,'Newsreader',Georgia,serif);font-style:italic;font-size:1.6rem;font-weight:700;line-height:1;min-width:32px;color:var(--accent,#A94B22)}.ds-signal-text{margin:0;font-family:var(--serif,'Newsreader',Georgia,serif);font-size:1.25rem;line-height:1.4;font-weight:500;color:var(--ink,#1E1A16)}@media(prefers-reduced-motion:reduce){.ds-signal,.ds-signal-text,.ds-signal-num{animation:none!important;transition:none!important}}"
+    },
+    {
+      "name": "Tarjeta de enfoque",
+      "kind": "card",
+      "refersTo": "method-card",
+      "description": "Contenedor editorial de los momentos del enfoque.",
+      "html": "<article class=\"ds-method\"><h3>Plan y seguimiento</h3><p>Un plan acordado con vos, adaptado a tus tiempos y tu vida real.</p></article>",
+      "css": ".ds-method{display:flex;flex-direction:column;background:var(--card,#FBF8F2);border:1px solid var(--line,rgba(30,26,22,.13));border-radius:var(--r-l,20px);padding:32px 28px;box-shadow:var(--shadow-1,0 1px 2px rgba(46,30,16,.06),0 2px 10px rgba(46,30,16,.05));transition:transform .3s var(--ease,cubic-bezier(.22,1,.36,1)),border-color .3s var(--ease,cubic-bezier(.22,1,.36,1))}.ds-method:hover{transform:translateY(-3px);border-color:var(--line-strong,rgba(30,26,22,.26))}.ds-method h3{font-family:var(--serif,'Newsreader',Georgia,serif);font-size:1.35rem;font-weight:400;line-height:1.22;color:var(--ink,#1E1A16);margin:0 0 10px}.ds-method p{font-family:var(--sans,'Hanken Grotesk',system-ui,sans-serif);font-size:.9rem;line-height:1.55;color:var(--ink-2,#463E36);margin:0}@media(prefers-reduced-motion:reduce){.ds-method{animation:none!important;transition:none!important}}"
+    },
+    {
+      "name": "Pregunta desplegable",
+      "kind": "custom",
+      "refersTo": "faq",
+      "description": "Summary nativo con hover sin cambio de padding.",
+      "html": "<details class=\"ds-faq\"><summary>¿Cómo elijo mi turno?<span class=\"ds-pm\" aria-hidden=\"true\"></span></summary><div class=\"ds-faq-answer\">Abrí el turnero, elegí una prestación y un horario disponible y completá los datos de la reserva.</div></details>",
+      "css": ".ds-faq{border-bottom:1px solid var(--line,rgba(30,26,22,.13));transition:background-color .2s ease}.ds-faq summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:24px 16px;cursor:pointer;font-family:var(--serif,'Newsreader',Georgia,serif);font-size:1.32rem;color:var(--ink,#1E1A16);line-height:1.35;border-radius:var(--r-s,6px);transition:color .2s,background-color .2s}.ds-faq summary::-webkit-details-marker{display:none}.ds-faq summary:hover{color:var(--accent-text,#8E3D1A);background:var(--paper-2,#EAE2D4)}.ds-faq[open] summary{color:var(--accent-text,#8E3D1A);background:rgba(169,75,34,.04)}.ds-faq summary:focus-visible{outline:3px solid var(--accent,#A94B22);outline-offset:5px;}.ds-pm{position:relative;width:34px;height:34px;flex-shrink:0;border-radius:50%;border:1px solid var(--line-strong,rgba(30,26,22,.26));background:var(--paper,#F3EEE5)}.ds-pm::before,.ds-pm::after{content:'';position:absolute;left:50%;top:50%;width:14px;height:1.6px;background:currentColor;transform:translate(-50%,-50%);transition:transform .35s var(--ease,cubic-bezier(.22,1,.36,1))}.ds-pm::after{transform:translate(-50%,-50%) rotate(90deg)}.ds-faq[open] .ds-pm{background:var(--ink,#1E1A16);border-color:var(--ink,#1E1A16);color:var(--paper,#F3EEE5)}.ds-faq[open] .ds-pm::after{transform:translate(-50%,-50%)}.ds-faq-answer{padding:4px 40px 24px 16px;font-family:var(--sans,'Hanken Grotesk',system-ui,sans-serif);color:var(--ink-2,#463E36);font-size:1.02rem;line-height:1.6}@media(prefers-reduced-motion:reduce){.ds-faq,.ds-pm,.ds-faq-answer{animation:none!important;transition:none!important}}"
+    },
+    {
+      "name": "Campo de reserva",
+      "kind": "input",
+      "refersTo": "booking-input",
+      "description": "Campo del adaptador operativo, sin datos reales.",
+      "html": "<label class=\"ds-booking-field\">Comentario adicional (opcional)<input class=\"ds-booking-input\" type=\"text\" placeholder=\"\" /></label>",
+      "css": ".ds-booking-field{display:grid;gap:.5rem;color:var(--text-muted,var(--ink-2,#463E36));font-family:'Hanken Grotesk',system-ui,sans-serif}.ds-booking-input{width:100%;min-height:var(--tap,2.75rem);border-radius:var(--radius,1rem);border:1px solid var(--border,var(--line,rgba(30,26,22,.13)));background:var(--paper,#F3EEE5);padding:.75rem 1rem;color:var(--text,var(--ink,#1E1A16));font:inherit;font-size:1rem;color-scheme:inherit;caret-color:var(--accent,#A94B22);outline:none;transition:border-color 160ms ease,box-shadow 160ms ease,background-color 160ms ease}.ds-booking-input:focus,.ds-booking-input:focus-visible{border-color:var(--accent,#A94B22);box-shadow:0 0 0 3px var(--accent-soft,rgba(169,75,34,.09))}.ds-booking-input:disabled{cursor:not-allowed;opacity:.55}@media(prefers-reduced-motion:reduce){.ds-booking-input,.ds-booking-field{animation:none!important;transition:none!important}}"
+    },
+    {
+      "name": "Acción principal de reserva",
+      "kind": "button",
+      "refersTo": "booking-primary",
+      "description": "Variante operativa Natalia con sombra cálida local al adaptador.",
+      "html": "<button type=\"button\" class=\"ds-booking-primary\">Guardar información</button>",
+      "css": ".ds-booking-primary{display:inline-flex;max-width:100%;min-height:var(--tap,2.75rem);align-items:center;justify-content:center;gap:.5rem;border-radius:var(--radius,1rem);padding:.7rem 1.25rem;font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:.95rem;font-weight:700;line-height:1;white-space:normal;overflow-wrap:anywhere;cursor:pointer;background:var(--accent-strong,var(--accent-text,#8E3D1A));border:0;color:var(--on-accent,#FFF8F0);box-shadow:var(--shadow-accent,0 6px 18px rgba(169,75,34,.16));transition:transform 140ms ease,box-shadow 160ms ease,background-color 160ms ease,border-color 160ms ease,opacity 160ms ease}.ds-booking-primary:hover{background:var(--accent,#A94B22);transform:translateY(-1px)}.ds-booking-primary:focus-visible{outline:2px solid var(--accent,#A94B22);outline-offset:3px}.ds-booking-primary:active{transform:translateY(0) scale(.99)}.ds-booking-primary:disabled{cursor:not-allowed;opacity:.45;transform:none;box-shadow:none}@media(prefers-reduced-motion:reduce){.ds-booking-primary{animation:none!important;transition:none!important}}"
+    },
+    {
+      "name": "Badge de reserva",
+      "kind": "chip",
+      "refersTo": "booking-badge",
+      "description": "Etiqueta informativa existente; no es un filtro.",
+      "html": "<span class=\"ds-booking-badge\">Reserva online</span>",
+      "css": ".ds-booking-badge{display:inline-flex;max-width:100%;width:fit-content;align-items:center;gap:.35rem;border-radius:999px;background:var(--accent-soft,rgba(169,75,34,.09));padding:.4rem .8rem;color:var(--accent-strong,var(--accent-text,#8E3D1A));font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:.78rem;font-weight:700;white-space:normal;overflow-wrap:anywhere}"
+    },
+    {
+      "name": "Contacto terracota",
+      "kind": "custom",
+      "refersTo": "contact-primary",
+      "description": "Cierre público con las dos acciones, tinta clara y foco crema final; conserva la variante terracota oscura.",
+      "html": "<section class=\"ds-contact\"><span class=\"ds-contact-eyebrow\">Contacto y reservas</span><p class=\"ds-contact-intro\">Consultá la agenda o los canales disponibles.</p><div class=\"ds-contact-actions\"><button type=\"button\" class=\"ds-contact-primary\">Reservar consulta</button><button type=\"button\" class=\"ds-contact-secondary\">Consultar</button></div></section>",
+      "css": ".ds-contact{background:#A5481F;color:#F6E9DC;padding:32px;font-family:var(--sans,'Hanken Grotesk',system-ui,sans-serif)}:host-context(.dark) .ds-contact{background:#5A2A14}.ds-contact-eyebrow{font-size:.8rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#F6E9DC}.ds-contact-intro{font-size:1.05rem;line-height:1.55;color:#F6E9DC;margin:20px 0 28px;max-width:32em}.ds-contact-actions{display:flex;flex-wrap:wrap;gap:14px}.ds-contact-primary,.ds-contact-secondary{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 30px;border-radius:var(--r-pill,999px);font-family:inherit;font-size:1.02rem;font-weight:600;line-height:1;letter-spacing:.005em;border:1px solid;cursor:pointer;transition:background-color .25s var(--ease,cubic-bezier(.22,1,.36,1)),color .25s var(--ease,cubic-bezier(.22,1,.36,1)),border-color .25s var(--ease,cubic-bezier(.22,1,.36,1)),transform .25s var(--ease,cubic-bezier(.22,1,.36,1))}.ds-contact-primary{background:#FFF6EC;color:#7E3415;border-color:#FFF6EC}.ds-contact-primary:hover{background:#241E18;color:#FFF6EC;border-color:#241E18}.ds-contact-secondary{background:transparent;color:#FFF6EC;border-color:rgba(255,246,236,.5)}.ds-contact-secondary:hover{background:#FFF6EC;color:#7E3415;border-color:#FFF6EC}.ds-contact :focus-visible{outline:3px solid #FFF6EC;outline-offset:5px}.ds-contact button:active{transform:translateY(1px)}@media(prefers-reduced-motion:reduce){.ds-contact button{animation:none!important;transition:none!important}}"
+    },
+    {
+      "name": "Tarjeta de consulta editorial",
+      "kind": "card",
+      "refersTo": "consultation-card",
+      "description": "Variante restaurada con etiqueta y detalle editorial; no representa una prestación del catálogo operativo.",
+      "html": "<article class=\"ds-consultation\"><span class=\"ds-consultation-badge\">Consulta</span><h3>Información de la consulta</h3><p>El detalle presenta el contenido de referencia. La disponibilidad se consulta en la agenda.</p><a href=\"#\" class=\"ds-consultation-detail\">Ver detalle</a></article>",
+      "css": ".ds-consultation{display:flex;flex-direction:column;gap:14px;background:var(--card,#FBF8F2);color:var(--ink,#1E1A16);border:1px solid var(--line,rgba(30,26,22,.13));border-radius:var(--r-l,20px);padding:clamp(28px,4vw,36px);box-shadow:var(--shadow-1,0 1px 2px rgba(46,30,16,.06),0 2px 10px rgba(46,30,16,.05));transition:transform .3s var(--ease,cubic-bezier(.22,1,.36,1)),border-color .3s var(--ease,cubic-bezier(.22,1,.36,1)),box-shadow .3s var(--ease,cubic-bezier(.22,1,.36,1))}.ds-consultation:hover{transform:translateY(-3px);border-color:var(--accent,#A94B22);box-shadow:var(--shadow-2,0 2px 6px rgba(46,30,16,.06),0 18px 40px -12px rgba(46,30,16,.18))}.ds-consultation-badge{align-self:flex-start;background:var(--accent-soft,rgba(169,75,34,.09));color:var(--accent-text,#8E3D1A);border-radius:var(--r-pill,999px);padding:4px 12px;font-family:var(--sans,'Hanken Grotesk',system-ui,sans-serif);font-size:.76rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}.ds-consultation h3{font-family:var(--serif,'Newsreader',Georgia,serif);font-size:clamp(1.4rem,1.2rem + .6vw,1.75rem);font-weight:400;line-height:1.2;margin:0}.ds-consultation p{font-family:var(--sans,'Hanken Grotesk',system-ui,sans-serif);font-size:.98rem;line-height:1.55;color:var(--ink-2,#463E36);margin:0}.ds-consultation-detail{font-family:var(--sans,'Hanken Grotesk',system-ui,sans-serif);font-size:.86rem;font-weight:600;color:var(--accent-text,#8E3D1A);padding:6px 0;text-align:center;text-decoration:none}.ds-consultation-detail:hover{text-decoration:underline;opacity:.85}.ds-consultation-detail:focus-visible{outline:3px solid var(--accent,#A94B22);outline-offset:5px}@media(prefers-reduced-motion:reduce){.ds-consultation,.ds-consultation-detail{animation:none!important;transition:none!important}}"
+    },
+    {
+      "name": "Curso secundario nocturno",
+      "kind": "card",
+      "refersTo": "course-card",
+      "description": "Tarjeta translúcida sobre fondo nocturno; comunica información con inscripción, pago y acceso pendientes.",
+      "html": "<div class=\"ds-course-world\"><article class=\"ds-course-card\"><h4>Información del curso</h4><p>Consultá la presentación del programa. La inscripción y el acceso de estudiantes están pendientes.</p><a href=\"#\">Ver programa</a></article></div>",
+      "css": ".ds-course-world{padding:24px;background:var(--night,#241E18)}.ds-course-card{display:flex;flex-direction:column;background:rgba(255,255,255,.03);color:var(--night-ink,#F1EADF);border:1px solid var(--night-line,rgba(241,234,223,.14));border-radius:var(--r-l,20px);padding:28px;transition:transform .2s var(--ease,cubic-bezier(.22,1,.36,1)),border-color .2s var(--ease,cubic-bezier(.22,1,.36,1)),background-color .2s var(--ease,cubic-bezier(.22,1,.36,1))}.ds-course-card:hover{transform:translateY(-3px);border-color:rgba(224,122,79,.4);background:rgba(255,255,255,.05)}.ds-course-card h4{font-family:var(--serif,'Newsreader',Georgia,serif);font-size:1.35rem;font-weight:400;line-height:1.25;color:var(--night-ink,#F1EADF);margin:0 0 10px}.ds-course-card p{font-family:var(--sans,'Hanken Grotesk',system-ui,sans-serif);font-size:.95rem;line-height:1.55;color:var(--night-ink-2,#BDB1A0);margin:0 0 22px}.ds-course-card a{display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;min-height:38px;color:var(--night-ink,#F1EADF);background:transparent;border:1px solid var(--night-line,rgba(241,234,223,.14));border-radius:var(--r-pill,999px);padding:0 16px;font-family:var(--sans,'Hanken Grotesk',system-ui,sans-serif);font-size:.88rem;font-weight:600;text-decoration:none;transition:background-color .25s,color .25s,transform .25s}.ds-course-card a:hover{background:var(--night-ink,#F1EADF);color:var(--night,#241E18);border-color:var(--night-ink,#F1EADF)}.ds-course-card a:focus-visible{outline:3px solid var(--accent,#A94B22);outline-offset:5px}.ds-course-card a:active{transform:translateY(1px)}@media(prefers-reduced-motion:reduce){.ds-course-card,.ds-course-card a{animation:none!important;transition:none!important}}"
+    },
+    {
+      "name": "Tarjeta de nota",
+      "kind": "card",
+      "refersTo": "editorial-card",
+      "description": "Acceso editorial a una nota completa, disponible como lector nativo o ruta estática.",
+      "html": "<article class=\"ds-editorial\"><span class=\"ds-editorial-cat\">Notas</span><h3>Lectura clínica</h3><p>Una introducción a la nota. El lector conserva el texto completo.</p><a href=\"#\">Leer nota</a></article>",
+      "css": ".ds-editorial{display:flex;flex-direction:column;background:var(--card,#FBF8F2);border:1px solid var(--line,rgba(30,26,22,.13));border-radius:var(--r-l,20px);padding:32px 28px;box-shadow:var(--shadow-1,0 1px 2px rgba(46,30,16,.06),0 2px 10px rgba(46,30,16,.05));transition:transform .3s var(--ease,cubic-bezier(.22,1,.36,1)),border-color .3s var(--ease,cubic-bezier(.22,1,.36,1)),box-shadow .3s var(--ease,cubic-bezier(.22,1,.36,1))}.ds-editorial:hover{transform:translateY(-3px);border-color:var(--accent,#A94B22);box-shadow:var(--shadow-2,0 2px 6px rgba(46,30,16,.06),0 18px 40px -12px rgba(46,30,16,.18))}.ds-editorial-cat{font-family:var(--sans,'Hanken Grotesk',system-ui,sans-serif);font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-text,#8E3D1A);margin-bottom:16px}.ds-editorial h3{font-family:var(--serif,'Newsreader',Georgia,serif);font-size:1.35rem;font-weight:400;line-height:1.25;color:var(--ink,#1E1A16);margin:0 0 12px}.ds-editorial p{font-family:var(--sans,'Hanken Grotesk',system-ui,sans-serif);font-size:.94rem;line-height:1.55;color:var(--ink-2,#463E36);margin:0 0 24px}.ds-editorial a{font-family:var(--sans,'Hanken Grotesk',system-ui,sans-serif);font-size:.88rem;font-weight:600;color:var(--accent-text,#8E3D1A);border-top:1px solid var(--line,rgba(30,26,22,.13));padding-top:18px;text-decoration:none;transition:transform .2s}.ds-editorial a:hover{transform:translateX(3px)}.ds-editorial a:focus-visible{outline:3px solid var(--accent,#A94B22);outline-offset:5px}@media(prefers-reduced-motion:reduce){.ds-editorial,.ds-editorial a{animation:none!important;transition:none!important}}"
+    },
+    {
+      "name": "Panel de lectura pública",
+      "kind": "custom",
+      "refersTo": "reader-dialog",
+      "description": "Panel del diálogo nativo: encabezado separado, cuerpo completo con capitular y cierre visible; también existe ruta estática.",
+      "html": "<section class=\"ds-reader-panel\" role=\"dialog\" aria-labelledby=\"ds-reader-title\"><header class=\"ds-reader-header\"><h3 id=\"ds-reader-title\">Lectura completa</h3><button class=\"ds-reader-close\" type=\"button\" aria-label=\"Cerrar nota\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M6 6l12 12M18 6L6 18\"/></svg></button></header><div class=\"ds-reader-body\"><p>La lectura conserva el contenido completo de la presentación, con el ritmo editorial y la capitular de Newsreader.</p><p>Los detalles siguen disponibles en su destino estático cuando no se abre el diálogo.</p></div></section>",
+      "css": ".ds-reader-panel{width:100%;max-width:720px;max-height:calc(100dvh - 48px);display:flex;flex-direction:column;background:var(--paper,#F3EEE5);color:var(--ink,#1E1A16);border-radius:var(--r-l,20px);box-shadow:var(--shadow-3,0 30px 80px -20px rgba(30,18,8,.35));overflow:hidden}.ds-reader-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:26px 28px 20px;border-bottom:1px solid var(--line,rgba(30,26,22,.13))}.ds-reader-header h3{font-family:var(--serif,'Newsreader',Georgia,serif);font-size:1.7rem;font-weight:400;line-height:1.1;color:var(--ink,#1E1A16);margin:0}.ds-reader-close{width:40px;height:40px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line,rgba(30,26,22,.13));color:var(--ink-2,#463E36);background:transparent;cursor:pointer;transition:background-color .2s var(--ease,cubic-bezier(.22,1,.36,1)),color .2s var(--ease,cubic-bezier(.22,1,.36,1)),transform .3s var(--ease,cubic-bezier(.22,1,.36,1))}.ds-reader-close svg{width:16px;height:16px}.ds-reader-close:hover{background:var(--ink,#1E1A16);color:var(--paper,#F3EEE5);transform:rotate(90deg)}.ds-reader-close:focus-visible{outline:3px solid var(--accent,#A94B22);outline-offset:5px}.ds-reader-body{padding:26px 28px 28px;overflow-y:auto;overscroll-behavior:contain;font-family:var(--sans,'Hanken Grotesk',system-ui,sans-serif);font-size:1.12rem;line-height:1.8;color:var(--ink-2,#463E36)}.ds-reader-body p{margin:0}.ds-reader-body p + p{margin-top:1em}.ds-reader-body > p:first-child::first-letter{font-family:var(--serif,'Newsreader',Georgia,serif);float:left;font-size:3.6em;line-height:.85;padding:.06em .1em 0 0;color:var(--accent-text,#8E3D1A)}@media(max-width:760px){.ds-reader-panel{border-radius:var(--r-l,20px) var(--r-l,20px) 0 0;max-height:94dvh}.ds-reader-header{padding:20px 20px 16px}.ds-reader-header h3{font-size:1.45rem}.ds-reader-body{padding:20px}}@media(prefers-reduced-motion:reduce){.ds-reader-close{animation:none!important;transition:none!important}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Papel, tinta y terracota de WEB NATALIA",
+    "overview": "Este sistema documenta la migración y extensión del mundo incumbente de WEB NATALIA. Conserva sus papeles cálidos, tinta, terracota, pareja Newsreader/Hanken Grotesk, fotografías suministradas y retratos en arco. El nombre de esta guía describe esos materiales ya aprobados; no propone una identidad nueva ni un concepto generado.\n\nLa composición combina títulos editoriales, texto legible y aire entre bloques. La superficie pública se entrega con Astro, TypeScript y Tailwind en un artefacto estático, sin hidratación de componentes. La reserva y la información posterior continúan en el motor de Cita Suite mediante un adaptador visual Natalia; el panel de gestión conserva su propio sistema.\n\nLa referencia pública completa se conserva: diez secciones en su orden original, cuatro consultas con sus detalles clínicos, tres cursos, tres notas completas, tres testimonios suministrados, tres cajas de credenciales, diez entradas de formación, seis preguntas, encabezado y pie completos. Esta restauración extiende la guía anterior; no autoriza quitar contenido por rendimiento ni sustituir la identidad suministrada. Los detalles editoriales se presentan mediante diálogos nativos y destinos estáticos equivalentes.\n\nLos valores de esta guía son una extracción del código terminado. La autoridad de ejecución sigue siendo src/styles/public.css y, para los formularios públicos, apps/web/src/lib/booking/BookingAppearance.svelte junto con apps/web/src/app.css. No convierten la maqueta ni las fixtures locales en horarios, prestaciones, precios o datos de contacto confirmados.",
+    "keyCharacteristics": [
+      "Papel y tinta cálidos con variantes claras y oscuras ya implementadas.",
+      "Titulares Newsreader, lectura y controles Hanken Grotesk.",
+      "Fotografía existente, recorte en arco y superficies de baja profundidad.",
+      "Ritmo editorial completo, tarjetas de consulta y lectura, cursos sobre fondo nocturno y cierre terracota.",
+      "Continuidad visual de Natalia en los formularios públicos y separación del panel Cita Suite."
+    ],
+    "rules": [
+      {
+        "name": "The Continuidad Rule",
+        "body": "Heredar el mundo de WEB NATALIA y aplicar sus variantes por rol; una extensión local no autoriza una identidad nueva.",
+        "section": "colors"
+      },
+      {
+        "name": "The Legibilidad de Contacto Rule",
+        "body": "Conservar el terracota y el contenido de contacto con su tinta clara y foco crema; las excepciones de referencia no permiten ocultar texto ni foco.",
+        "section": "colors"
+      },
+      {
+        "name": "The Pareja Tipográfica Rule",
+        "body": "Usar Newsreader en títulos editoriales y Hanken Grotesk en lectura y controles, conservando las familias y alternativas declaradas.",
+        "section": "typography"
+      },
+      {
+        "name": "The Ámbito de Reserva Rule",
+        "body": "La sombra cálida del botón de reserva se aplica sólo dentro del adaptador Natalia; no reemplaza los tokens del panel Cita Suite.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do conservar la pareja tipográfica, la paleta por roles, el arco y las fotografías existentes.",
+      "Do conservar las diez secciones, los detalles completos y los destinos estáticos de la referencia pública.",
+      "Do preservar las excepciones fijadas por la referencia: eyebrows en mayúsculas, numeración, tarjetas, textura de papel, arcos y radios incumbentes; mantener legibilidad y foco visible.",
+      "Do distinguir la web estática del adaptador de reservas y verificar ambos temas cuando se cambie un componente público.",
+      "Do mantener el contenido visible, el foco reconocible y la reducción de movimiento implementada.",
+      "Do conservar el enlace de reserva alternativo y el estado pendiente mientras falte configuración operativa."
+    ],
+    "donts": [
+      "Don't extender el tema Natalia al panel autenticado de Cita Suite.",
+      "Don't presentar datos de la maqueta o de fixtures como prestaciones, horarios, aranceles o contactos reales.",
+      "Don't tratar `/aula` como acceso autenticado ni mostrar éxito de inscripción, pago o envío de mensajes mientras permanezcan pendientes.",
+      "Don't usar IDs editoriales como IDs del catálogo ni perder la prestación elegida al abrir una reserva.",
+      "Don't incorporar WhatsApp ni superficies de carga de estudios, PDFs o imágenes en esta entrega."
+    ]
+  }
+}

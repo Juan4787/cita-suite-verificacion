@@ -1,0 +1,51 @@
+---
+import { bookingConfig } from '../lib/booking-config';
+---
+<section class="hero" id="inicio">
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <h1 class="reveal" style="--d:.08s">
+              <span class="line">El cuerpo</span>
+              <span class="line">no funciona</span>
+              <span class="line"><em>por partes.</em></span>
+            </h1>
+
+            <p class="lead reveal" style="--d:.16s">
+              Soy Natalia Frutos, médica de familia. Si hace tiempo sentís que tu cuerpo te pasa factura
+              (en el sueño, la energía, la digestión o el estrés), no lo tratemos con respuestas aisladas.
+              Busquemos la causa real para recuperar tu equilibrio de forma sostenible.
+            </p>
+
+            <div class="hero-actions reveal" style="--d:.24s">
+              <a class="btn btn-primary btn-lg open-booking-modal-btn" href={bookingConfig.href} data-booking>
+                Reservar consulta médica
+                <svg class="icon-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+              </a>
+              <a href="#como-trabajo" class="btn btn-secondary btn-lg hero-btn-method">
+                Conocer mi método
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 13l7 7 7-7"/></svg>
+              </a>
+            </div>
+
+            <dl class="hero-facts reveal" style="--d:.32s">
+              <div><dt>Santa Fe y Virtual</dt><dd>consultorio y telemedicina a todo el país</dd></div>
+              <div><dt>+10 años</dt><dd>de formación médica continua</dd></div>
+              <div><dt>Enfoque PNIE</dt><dd>visión integrativa y ortomolecular</dd></div>
+            </dl>
+          </div>
+
+          <figure class="hero-figure reveal" style="--d:.2s">
+            <div class="arch hero-arch">
+              <img src="/images/natalia-640.webp" srcset="/images/natalia-400.webp 400w, /images/natalia-640.webp 640w, /images/natalia-960.webp 960w" sizes="(max-width:1024px) 80vw, 42vw" width="960" height="1440" decoding="async" alt="Dra. Natalia Soledad Frutos · Médica de familia con enfoque integrativo" fetchpriority="high">
+              <div class="hero-doctor-badge">
+                <span class="badge-dr-name">Dra. Natalia Frutos</span>
+                <span class="badge-dr-sub">Médica de Familia · MP 8492</span>
+              </div>
+            </div>
+            <figcaption>
+              <em>Atención presencial en Santa Fe y consultas virtuales a todo el país</em>
+              <span>Consultorio y Telemedicina</span>
+            </figcaption>
+          </figure>
+        </div>
+      </section>

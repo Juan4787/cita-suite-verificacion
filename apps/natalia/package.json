@@ -1,0 +1,24 @@
+{
+  "name": "natalia",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro check && astro build && node scripts/check-build.mjs && node scripts/check-public.mjs",
+    "check": "astro check",
+    "preview": "astro preview",
+    "check:assets": "node scripts/check-build.mjs",
+    "check:public": "node scripts/check-public.mjs",
+    "test:browser": "node scripts/test-public-browser.mjs"
+  },
+  "dependencies": {
+    "astro": "7.3.8"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@tailwindcss/vite": "4.3.3",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3"
+  }
+}

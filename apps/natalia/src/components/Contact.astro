@@ -1,0 +1,45 @@
+---
+import { bookingConfig } from '../lib/booking-config';
+---
+<section class="section contact" id="contacto" aria-labelledby="contactoTitle">
+        <div class="container">
+          <div class="contact-compact-card">
+            <div class="contact-header-wrap">
+              <span class="eyebrow">Contacto y reservas</span>
+              <h2 id="contactoTitle">Si algo no termina de cerrar, <em>empecemos por entenderlo.</em></h2>
+              <p class="contact-intro-text">
+                Una medicina que escucha, estudia y mira el cuadro completo.
+                Reservá tu turno online o contactate para coordinar tu consulta.
+              </p>
+              <div class="contact-actions-row">
+                <a class="btn btn-cream btn-lg open-booking-modal-btn" href={bookingConfig.href} data-booking>
+                  Reservar consulta
+                  <svg class="icon-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                </a>
+                <a class="btn btn-outline-cream btn-lg" href="/contacto" data-dialog="contact-dialog">
+                  Consultar
+                </a>
+              </div>
+            </div>
+
+            <div class="contact-info-grid">
+              <div class="contact-info-item">
+                <span class="contact-info-label">Modalidad</span>
+                <strong>Presencial y Virtual</strong>
+                <span>Consultorio en Santa Fe y atención remota a todo el país</span>
+              </div>
+              <div class="contact-info-item" data-site-row="hours">
+                <span class="contact-info-label">Días y Horarios</span>
+                <strong><a href={bookingConfig.href} data-booking>Consultar disponibilidad</a></strong>
+                <span>Atención programada con turno previo</span>
+              </div>
+              <div class="contact-info-item" data-public-contact="section" aria-live="polite"><span class="contact-info-label">Contacto</span><strong><a href="/contacto" data-dialog="contact-dialog">Consultar canales disponibles</a></strong><span>Para turnos y consultas</span></div>
+              <div class="contact-info-item">
+                <span class="contact-info-label">Instagram</span>
+                <strong><a href="https://www.instagram.com/natalia.frutos.doc/" target="_blank" rel="noopener">@natalia.frutos.doc</a></strong>
+                <span>Contenido y reflexiones clínicas</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>

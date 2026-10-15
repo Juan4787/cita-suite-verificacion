@@ -1,0 +1,11 @@
+---
+import type { referenceServices } from '../lib/reference-content';
+import BookingLink from './BookingLink.astro';
+interface Props { service: typeof referenceServices[number] }
+const { service: s } = Astro.props;
+---
+<p class="detail-desc">{s.description}</p><h4 class="detail-subtitle">Qué incluye</h4>
+<ul class="service-features-list">{s.features.map(feature => <li><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg><span>{feature}</span></li>)}</ul>
+<div class="detail-price-row"><div><span class="label">Honorarios de referencia</span><strong>{s.price}</strong></div><div class="right"><span class="label">Duración de referencia</span><strong>{s.duration}</strong></div></div>
+<p class="reference-notice">La agenda muestra las prestaciones, duraciones y aranceles que habilite el consultorio. Elegí allí la consulta disponible para tu caso.</p>
+<BookingLink class="btn btn-primary btn-lg btn-block" label="Pedir turno"/>

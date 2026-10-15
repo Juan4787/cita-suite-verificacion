@@ -1,0 +1,42 @@
+---
+import { bookingConfig } from '../lib/booking-config';
+import { referenceServices } from '../lib/reference-content';
+---
+<footer class="site-footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <span class="brand-name">Natalia <em>Frutos</em></span>
+            <p>Médica generalista y de familia (MP 8492). Formación en medicina integrativa y ortomolecular, fitoterapia clínica y medicina del estrés. Consultas presenciales en Santa Fe y virtuales a todo el país.</p>
+          </div>
+          <div class="footer-col">
+            <h4>Navegación</h4>
+            <ul>
+              <li><a href="#senales">Señales</a></li>
+              <li><a href="#areas">Áreas de atención</a></li>
+              <li><a href="#como-trabajo">Mi enfoque</a></li>
+              <li><a href="#sobre-mi">Sobre mí</a></li>
+              <li><a href="#cursos">Cursos online</a></li>
+              <li><a href="#notas">Notas</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Consultas</h4>
+            <ul>{referenceServices.map(s => <li><a href={`/consultas/${s.slug}`} data-dialog={`service-${s.id}`}>{s.title}</a></li>)}</ul>
+          </div>
+          <div class="footer-col">
+            <h4>Contacto</h4>
+            <ul>
+              <li><a class="open-booking-modal-btn" href={bookingConfig.href} data-booking>Reservar consulta</a></li>
+              <li><a href="/contacto" data-dialog="contact-dialog">Contacto</a></li>
+              <li><a href="https://www.instagram.com/natalia.frutos.doc/" target="_blank" rel="noopener">Instagram profesional</a></li>
+              <li><a href="#preguntas">Preguntas frecuentes</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>© <span id="yearNow">2026</span> Dra. Natalia Soledad Frutos · Matrícula Provincial 8492 (Santa Fe)</span>
+          <span>La información de este sitio tiene fines educativos y no reemplaza el criterio médico individualizado.</span>
+        </div>
+      </div>
+    </footer>

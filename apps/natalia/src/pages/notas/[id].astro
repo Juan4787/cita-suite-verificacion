@@ -1,0 +1,8 @@
+---
+import { referenceArticles } from '../../lib/reference-content';
+import DetailLayout from '../../layouts/DetailLayout.astro';
+import BookingLink from '../../components/BookingLink.astro';
+export function getStaticPaths() { return Object.entries(referenceArticles).map(([id, article]) => ({ params: { id }, props: { article } })); }
+const { article } = Astro.props;
+---
+<DetailLayout title={article.title} category={article.category} returnHref="/#notas" returnLabel="Volver a las notas"><div class="reader-body" set:html={article.content}/><p class="article-disclaimer">Contenido educativo. No reemplaza una consulta ni una indicación médica individual.</p><BookingLink label="Hablarlo en consulta"/></DetailLayout>

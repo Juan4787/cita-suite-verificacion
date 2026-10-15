@@ -1,0 +1,17 @@
+---
+import { bookingConfig } from '../lib/booking-config';
+import PublicLayout from '../layouts/PublicLayout.astro';
+---
+<PublicLayout title="Reservar consulta · Dra. Natalia Frutos">
+  {bookingConfig.configured && <script slot="head" is:inline define:vars={{ bookingHref: bookingConfig.href }}>
+    // Apply the site's already-restored preference before the no-JS meta redirect.
+    const target = new URL(bookingHref);
+    target.searchParams.set('color_mode', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    window.location.replace(target.href);
+  </script>}
+  {bookingConfig.configured && <noscript slot="head"><meta http-equiv="refresh" content={`0;url=${bookingConfig.href}`} /></noscript>}
+  <main id="main" class="container booking-page"><h1>Reservar una consulta</h1>
+    {bookingConfig.configured ? <><p role="status">Abriendo la agenda del consultorio…</p><a class="btn btn-primary" href={bookingConfig.href} data-booking>Ir al turnero</a></> : <p>La reserva online todavía no está habilitada.</p>}
+    <a class="btn btn-secondary" href="/">Volver al sitio</a>
+  </main>
+</PublicLayout>

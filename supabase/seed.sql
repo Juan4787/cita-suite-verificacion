@@ -1,0 +1,1 @@
+-- Seed data will be added once the multi-tenant schema is introduced.
