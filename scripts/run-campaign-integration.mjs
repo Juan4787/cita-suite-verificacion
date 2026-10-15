@@ -101,6 +101,9 @@ try {
 	if (!membership.ok || !Array.isArray(memberships) || memberships.length !== 1)
 		throw new Error(`Authenticated RLS membership was not verified (HTTP ${membership.status}, rows ${Array.isArray(memberships) ? memberships.length : 'invalid'}).`);
 	await run('node', ['scripts/catalog-disposable-database.mjs']);
+	// Stage 2 bootstrap exports the reconstructed contract for review; this
+	// becomes --check after importing that initial generated file.
+	await run('node', ['scripts/generate-database-types.mjs', '--export']);
 	const address = spawnSync('docker', ['inspect', '--format', '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}', database], { encoding: 'utf8' });
 	// Inspect the specific network: concatenating addresses of a multi-network container is invalid.
 	const details = spawnSync('docker', ['inspect', database], { encoding: 'utf8' });
@@ -119,7 +122,8 @@ try {
 		CITA_SUITE_TEST_BUSINESS_ID: runtime.businessId, MASTER_EMAIL: 'master@cita-suite-test.local',
 		E2E_MASTER_PASSWORD: 'E2eMasterLocal!2026', PUBLIC_SITE_URL: runtime.appOrigin,
 		MP_ACCESS_TOKEN: '', MP_WEBHOOK_SECRET: '', E2E_VALIDATE_MP_REDIRECT: 'false',
-		PLAYWRIGHT_JSON_OUTPUT_NAME: join(evidence, diagnostic ? 'browser-diagnostic.json' : 'browser.json')
+		PLAYWRIGHT_JSON_OUTPUT_NAME: join(evidence, diagnostic ? 'browser-diagnostic.json' : 'browser.json'),
+		PLAYWRIGHT_OUTPUT_DIR: join(evidence, 'browser-artifacts')
 	};
 	// Local production-mode coverage. Demo and real external OAuth require distinct
 	// profiles; they must be reported separately, never counted as local passes.

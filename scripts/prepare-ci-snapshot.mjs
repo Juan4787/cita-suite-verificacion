@@ -31,6 +31,8 @@ const extras = [
 	'scripts/run-campaign-demo.mjs', 'scripts/verify-campaign.mjs',
 	'scripts/verify-campaign-staging.mjs', 'scripts/prepare-ci-snapshot.mjs',
 	'scripts/prepare-ci-services.mjs',
+	'scripts/test-verification-evidence.py',
+	'scripts/generate-database-types.mjs',
 	'scripts/package-verification-evidence.py', 'scripts/collect-verification-evidence.py',
 	...readdirSync(join(root, 'scripts/lib')).filter(name => name.endsWith('.mjs')).map(name => 'scripts/lib/' + name)
 ];

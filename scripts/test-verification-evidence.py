@@ -1,0 +1,73 @@
+"""Exercise evidence recovery using disposable files, including hostile archives."""
+import base64
+import hashlib
+import io
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import tarfile
+import tempfile
+import unittest
+import zipfile
+
+SCRIPTS = Path(__file__).resolve().parent
+
+
+class EvidenceTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="cita-evidence-test-")
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        (self.root / "scripts").mkdir()
+        shutil.copy(SCRIPTS / "package-verification-evidence.py", self.root / "scripts")
+
+    def collect(self, content, name="result"):
+        logs = self.root / (name + ".zip")
+        with zipfile.ZipFile(logs, "w") as bundle:
+            bundle.writestr("job.txt", content)
+        return subprocess.run(["python3", str(SCRIPTS / "collect-verification-evidence.py"),
+                               str(logs), str(self.root / name)], capture_output=True, text=True)
+
+    def test_round_trip_redacts_credentials_and_preserves_failed_status(self):
+        (self.root / ".verification").mkdir()
+        payload = {"ok": False, "token": "eyJabc.def.ghi", "link": "/turno/" + "a" * 64}
+        (self.root / ".verification/failed.json").write_text(json.dumps(payload))
+        packed = subprocess.run(["python3", str(self.root / "scripts/package-verification-evidence.py")],
+                                capture_output=True, text=True, check=True).stdout
+        result = self.collect(packed)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        recovered = json.loads((self.root / "result/.verification/failed.json").read_text())
+        self.assertIs(recovered["ok"], False)
+        self.assertEqual(recovered["token"], "[redacted-jwt]")
+        self.assertEqual(recovered["link"], "/turno/[redacted]")
+        self.assertNotEqual(self.collect(packed).returncode, 0, "must not overwrite prior evidence")
+        corrupted = packed.replace("CITA_EVIDENCE_CHUNK ", "CITA_EVIDENCE_CHUNK A", 1)
+        self.assertNotEqual(self.collect(corrupted, "corrupt").returncode, 0)
+        self.assertFalse((self.root / "corrupt").exists())
+
+    def test_traversal_is_rejected_before_any_file_is_extracted(self):
+        data = io.BytesIO()
+        with tarfile.open(fileobj=data, mode="w:gz") as bundle:
+            for name in [".verification/valid.json", ".verification/../../escaped.json"]:
+                member = tarfile.TarInfo(name)
+                member.size = 2
+                bundle.addfile(member, io.BytesIO(b"{}"))
+        archive = data.getvalue()
+        content = "CITA_EVIDENCE_SHA256 " + hashlib.sha256(archive).hexdigest() + "\n"
+        content += "CITA_EVIDENCE_CHUNK " + base64.b64encode(archive).decode() + "\n"
+        content += "CITA_EVIDENCE_COMPLETE 2 4\n"
+        self.assertNotEqual(self.collect(content).returncode, 0)
+        self.assertFalse((self.root / "result").exists())
+        self.assertFalse((self.root / "escaped.json").exists())
+
+    def test_absent_evidence_cannot_be_packaged_as_success(self):
+        result = subprocess.run(["python3", str(self.root / "scripts/package-verification-evidence.py")],
+                                capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn("CITA_EVIDENCE_COMPLETE", result.stdout)
+        self.assertNotEqual(self.collect("unfinished log").returncode, 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

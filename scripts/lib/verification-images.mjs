@@ -4,7 +4,8 @@ export const verificationImages = [
 	'public.ecr.aws/supabase/postgres:17.6.1.166',
 	'public.ecr.aws/supabase/storage-api:v1.70.3',
 	'public.ecr.aws/supabase/postgrest:v16.1',
-	'public.ecr.aws/supabase/gotrue:v2.196.0'
+	'public.ecr.aws/supabase/gotrue:v2.196.0',
+	'public.ecr.aws/supabase/postgres-meta:v0.98.0'
 ];
 
 // Only registry/transport failures are retryable. Missing images, bad tags and

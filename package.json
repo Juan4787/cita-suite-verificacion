@@ -22,7 +22,7 @@
 		"preflight:staging": "pnpm --filter web preflight:staging",
 		"supabase:start": "supabase start",
 		"supabase:stop": "supabase stop",
-		"supabase:types": "supabase gen types typescript --local > packages/shared/src/database.types.ts",
+		"supabase:types": "node scripts/generate-database-types.mjs --write",
 		"supabase:db:reset": "supabase db reset"
 	},
 	"dependencies": {

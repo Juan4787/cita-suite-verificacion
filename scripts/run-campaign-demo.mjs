@@ -25,7 +25,8 @@ const env = {
 	PUBLIC_ODONTO_SUPABASE_URL: 'http://127.0.0.1:1', PUBLIC_ODONTO_SUPABASE_ANON_KEY: '',
 	ADMIN_SUPABASE_URL: '', ADMIN_SUPABASE_ANON_KEY: '', ADMIN_SUPABASE_SERVICE_ROLE_KEY: '',
 	MP_ACCESS_TOKEN: '', MP_WEBHOOK_SECRET: '', VAPID_PUBLIC_KEY: '', VAPID_PRIVATE_KEY: '',
-	PLAYWRIGHT_JSON_OUTPUT_NAME: join(evidence, 'browser-demo.json')
+	PLAYWRIGHT_JSON_OUTPUT_NAME: join(evidence, 'browser-demo.json'),
+	PLAYWRIGHT_OUTPUT_DIR: join(evidence, 'browser-artifacts')
 };
 const app = spawn('pnpm', ['--filter', 'web', 'dev', '--host', '127.0.0.1', '--port', '5179', '--strictPort'],
 	{ cwd: root, env, detached: true, stdio: ['ignore', log, log] });

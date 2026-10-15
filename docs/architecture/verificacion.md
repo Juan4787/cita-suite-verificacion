@@ -51,6 +51,10 @@ El preflight rechaza los dominios de producción conocidos, el proyecto configur
 
 El workflow de GitHub fija acciones por SHA y comprueba recursos antes de levantar servicios. Su presencia local no acredita una corrida hospedada. Tampoco una prueba en contenedores acredita capacidad de Supabase alojado o límites reales de Cloudflare. Esas evidencias siguen sus criterios propios y deben adjuntarse antes del cierre de campaña.
 
+`prepare-ci-services.mjs` deja un recibo de preparación desde el inicio. Las imágenes fijadas se descargan de una en una; sólo fallos transitorios admiten hasta cuatro reintentos con espera creciente. Un rechazo persistente o un tag inexistente detiene la corrida antes de las pruebas. El recibo de preparación nunca equivale a aprobación de la aplicación.
+
 La campaña usa temporalmente `Juan4787/cita-suite-verificacion`, un repositorio público auxiliar sin conexión de despliegue ni secretos, con runners estándar gratuitos. El repositorio original conserva su integración Cloudflare sin modificaciones. `prepare-ci-snapshot.mjs` prepara una copia del código necesario mediante un índice independiente: no cambia el índice, la rama ni los archivos del usuario. Excluye adjuntos, archivos `.env`, evidencias y documentos ajenos; registra huellas y contenido exacto en `.verification/ci-source.json`.
 
 Los resultados y capturas sintéticos se empaquetan con tamaño acotado y SHA-256 en los logs del workflow. No se habilita almacenamiento facturable de artifacts ni cachés. Los logs no consumen la cuota de artifacts según la [documentación de GitHub](https://docs.github.com/en/billing/concepts/product-billing/github-actions). Tras descargar el ZIP de logs, `python3 scripts/collect-verification-evidence.py <logs.zip> <directorio-nuevo>` comprueba integridad y rutas antes de recuperar la evidencia; no sobrescribe resultados anteriores.
+
+`python3 scripts/test-verification-evidence.py` comprueba el circuito completo con archivos descartables: conserva el estado fallido, oculta tokens, rechaza alteraciones y rutas que escapan del destino, y no sobrescribe evidencia anterior. Está incluido en la verificación rápida.

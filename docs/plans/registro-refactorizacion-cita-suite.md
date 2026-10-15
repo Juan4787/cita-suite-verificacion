@@ -13,8 +13,8 @@ Después de cada compactación y antes de cada etapa: releer íntegramente el pl
 | Etapa | Estado y condiciones pendientes |
 |---|---|
 | 0. Base real y preservación | Cerrada localmente: rama, estado previo, inventario efectivo, matriz funcional, proveedores y destinos documentados. Accesos pendientes se mantienen como bloqueos explícitos de las etapas remotas. |
-| 1. Verificación confiable | En ejecución: tipos, 1.108 pruebas unitarias, fronteras, 24 suites SQL y siete carreras aprobadas. Auth/Storage reales ya comprobados. Falta cerrar el recorrido completo de navegador, Natalia, demo y la validación de release. |
-| 2. Tipos, contexto y aislamiento | No iniciada. |
+| 1. Verificación confiable | Base completa aprobada en CI `38825775890`: tipos, 1.108 unidades, fronteras/guardas, 24 suites SQL, siete carreras, Auth/Storage, 25 casos de navegador, dos de demo y Natalia nativa escritorio/móvil. Mecanismos de fallo deliberado y rechazo de omisiones comprobados. Release remoto permanece pendiente del staging separado y los accesos; no se lo considera aprobado por esta corrida. |
+| 2. Tipos, contexto y aislamiento | En ejecución: comienza por generación reproducible desde la reconstrucción descartable. |
 | 3. Capacidades y cuotas | No iniciada. |
 | 4. Disponibilidad, reservas y aranceles | No iniciada. |
 | 5. Áreas e interfaz | No iniciada. |
@@ -98,10 +98,9 @@ Corrección preparada: asignar las funciones del fixture al propietario correcto
 
 ## Próximo trabajo, en orden
 
-1. Trasladar la verificación de integración pesada a CI aislado: la medición local mostró agotamiento de RAM/swap. No reiniciarla en esta máquina.
-2. Corregir cualquier falla restante de navegador, Natalia o demo antes de cerrar la base de verificación.
-3. Completar las comprobaciones de fallo deliberado y de release sin confundir preparación con evidencia remota.
-4. Releer el plan y sólo entonces iniciar la etapa 2. Continuar todas las etapas restantes, capacidad y auditoría final sin declarar cierres parciales como campaña terminada.
+1. Completar la etapa 2: generación de tipos desde la base reconstruida, clientes activos, validación JSON y contexto/autorización por petición.
+2. Continuar capacidades/cuotas, disponibilidad/aranceles, áreas/interfaz y tareas según el plan íntegro.
+3. Completar staging, capacidad, release y auditoría transversal. Los bloqueos de acceso no convierten esas pruebas en aprobadas.
 
 ## Actualización del 15 de octubre — continuación verificada
 
@@ -137,5 +136,8 @@ Corrección preparada: asignar las funciones del fixture al propietario correcto
 - Workflow manual registrado y ejecutado en el repositorio auxiliar: [corrida 38825130254](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/38825130254), fuente `6015b87c6e0020a1137584ada7e9ba15f5467df6`. Instalación y comprobación de recursos aprobadas. La descarga de PostgreSQL terminó, pero ECR rechazó la de Storage con `toomanyrequests: Rate exceeded`. **No se ejecutaron pruebas de aplicación.** Registro conservado en `.verification/remote-first-failure.log`.
 - Se incorporaron reintentos secuenciales acotados para errores transitorios de transporte/registro, con esperas de 15, 30, 60 y 120 segundos. No se cambian las imágenes ni se reintentan errores permanentes. La preparación deja recibo fallido desde el comienzo, aun si no puede iniciar pruebas. Dos pruebas unitarias comprobaron recuperación, límite de cinco intentos y rechazo inmediato de un tag inexistente; ambas aprobaron. Integridad del plan comprobada nuevamente.
 - El guardado de evidencias de la primera corrida también falló porque no se había generado ningún recibo antes del rechazo del registro; esto no constituye un segundo defecto de la aplicación. El nuevo recibo de preparación permite conservar esa distinción en futuros fallos.
+- Segunda corrida externa iniciada: [38825775890](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/38825775890), fuente `ccb30d4a0f03315128085da3a350392907da5850`. Preparación de imágenes/navegador aprobada; pruebas secuenciales en ejecución. Tres pruebas adicionales del empaquetado/recuperación aprobaron localmente con archivos descartables: conservación del fallo y redacción de credenciales, rechazo de alteración/rutas inseguras y rechazo de evidencia ausente. Se incorporaron al comando rápido para la próxima copia de CI; no se atribuyen a esta fuente anterior.
+- Resultado definitivo de esa corrida: **aprobado**, recibo `df638b05-e5e8-45a1-9fb0-f02cbefd3f5f`, 23:50:40–23:54:22 UTC. Los 25 casos productivos locales y dos de demo aprobaron sin omisiones, fallos ni reintentos. Natalia aprobó navegación nativa en escritorio/móvil, gestión en Cita Suite, tema Natalia, recuperación sin duplicación y compatibilidad del recibo anterior. Evidencia recuperada en `.verification/remote-38825775890/`; paquete SHA-256 `b3e8ccf676cd9008f47dba664eeb51e8a3bbd1e99845c6494e8df23f387ddc46`. ZIP de logs y revisión remota comprobados. No es un despliegue real ni prueba de capacidad alojada.
+- Antes de iniciar la etapa 2 se releyó el plan íntegro y se contrastó este registro. No se modifica ni reduce su alcance: la validación de release/staging remoto sigue exigida para el cierre final y requiere el entorno separado pendiente.
 
 Antes de finalizar, transformar cada condición del plan original en una fila con resultado, evidencia y limitación. Ninguna fila pendiente equivale a aprobada. Este apartado todavía no constituye esa auditoría final.
