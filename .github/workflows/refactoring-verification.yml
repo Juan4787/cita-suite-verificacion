@@ -50,10 +50,7 @@ jobs:
       - name: Prepare disposable service images and one browser
         if: inputs.level == 'full'
         run: |
-          docker pull public.ecr.aws/supabase/postgres:17.6.1.166
-          docker pull public.ecr.aws/supabase/storage-api:v1.70.3
-          docker pull public.ecr.aws/supabase/postgrest:v16.1
-          docker pull public.ecr.aws/supabase/gotrue:v2.196.0
+          node scripts/prepare-ci-services.mjs
           pnpm --filter web exec playwright install --with-deps chromium
       - name: Verify sequentially
         env:

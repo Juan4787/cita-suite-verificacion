@@ -132,4 +132,10 @@ Corrección preparada: asignar las funciones del fixture al propietario correcto
 
 ## Comprobación final obligatoria
 
+### CI externo: primera ejecución y corrección de preparación
+
+- Workflow manual registrado y ejecutado en el repositorio auxiliar: [corrida 38825130254](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/38825130254), fuente `6015b87c6e0020a1137584ada7e9ba15f5467df6`. Instalación y comprobación de recursos aprobadas. La descarga de PostgreSQL terminó, pero ECR rechazó la de Storage con `toomanyrequests: Rate exceeded`. **No se ejecutaron pruebas de aplicación.** Registro conservado en `.verification/remote-first-failure.log`.
+- Se incorporaron reintentos secuenciales acotados para errores transitorios de transporte/registro, con esperas de 15, 30, 60 y 120 segundos. No se cambian las imágenes ni se reintentan errores permanentes. La preparación deja recibo fallido desde el comienzo, aun si no puede iniciar pruebas. Dos pruebas unitarias comprobaron recuperación, límite de cinco intentos y rechazo inmediato de un tag inexistente; ambas aprobaron. Integridad del plan comprobada nuevamente.
+- El guardado de evidencias de la primera corrida también falló porque no se había generado ningún recibo antes del rechazo del registro; esto no constituye un segundo defecto de la aplicación. El nuevo recibo de preparación permite conservar esa distinción en futuros fallos.
+
 Antes de finalizar, transformar cada condición del plan original en una fila con resultado, evidencia y limitación. Ninguna fila pendiente equivale a aprobada. Este apartado todavía no constituye esa auditoría final.
