@@ -1,4 +1,4 @@
-name: Refactoring verification
+name: Verificación de Cita Suite
 
 # Manual only. This workflow never deploys or receives production credentials.
 on:
