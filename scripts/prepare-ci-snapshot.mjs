@@ -30,6 +30,7 @@ const extras = [
 	'scripts/inventory-campaign.mjs', 'scripts/run-campaign-integration.mjs',
 	'scripts/run-campaign-demo.mjs', 'scripts/verify-campaign.mjs',
 	'scripts/verify-campaign-staging.mjs', 'scripts/prepare-ci-snapshot.mjs',
+	'scripts/package-verification-evidence.py', 'scripts/collect-verification-evidence.py',
 	...readdirSync(join(root, 'scripts/lib')).filter(name => name.endsWith('.mjs')).map(name => 'scripts/lib/' + name)
 ];
 function permitted(path) {

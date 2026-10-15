@@ -65,12 +65,6 @@ jobs:
           esac
       - name: Retain verification evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: refactoring-verification-${{ github.run_id }}
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 7
-          path: |
-            .verification/
-            apps/web/test-results/
+        # Standard public runners and their logs are free. Keep the evidence in
+        # bounded logs rather than consuming the account's billed artifact pool.
+        run: python3 scripts/package-verification-evidence.py
