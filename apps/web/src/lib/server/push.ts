@@ -1,3 +1,4 @@
+import { readChoice, isRecord } from './contracts';
 import { InvalidDataContractError } from './contracts';
 // Recordatorios Web Push para navegadores compatibles (este flujo nunca se ofrece en iOS).
 //
@@ -87,12 +88,12 @@ export const isValidPushTestRequestKey = (value: string) =>
 	/^[A-Za-z0-9:_-]{16,180}$/.test(value);
 
 export const isValidSubscriptionPayload = (raw: unknown): raw is PushSubscriptionPayload => {
-	const candidate = raw as PushSubscriptionPayload | null;
+	const candidate = isRecord(raw) ? raw : null;
 	if (
 		!candidate ||
 		typeof candidate.endpoint !== 'string' ||
 		candidate.endpoint.length > 2048 ||
-		!candidate.keys ||
+		!isRecord(candidate.keys) ||
 		typeof candidate.keys.p256dh !== 'string' ||
 		candidate.keys.p256dh.length === 0 ||
 		candidate.keys.p256dh.length > 512 ||
@@ -152,14 +153,7 @@ export const saveAppointmentPushSubscription = async (
 		})
 		.single();
 	if (error) throw error;
-	const saved = data as
-		| {
-				subscription_id: string;
-				endpoint: string;
-				verification_confirmed_at: string | null;
-				provider_gone: boolean;
-		  }
-		| null;
+	const saved = data;
 	if (!saved?.subscription_id) throw new Error('PUSH_SUBSCRIPTION_NOT_SAVED');
 
 	await writeAuditLog(supabase, {
@@ -849,7 +843,8 @@ export const sendDuePushReminders = async (
 	let sent = 0;
 	let failed = 0;
 
-	for (const claimed of (claimedRows ?? []) as ClaimedReminder[]) {
+	for (const claimedRow of claimedRows ?? []) {
+		const claimed = { ...claimedRow, reminder_kind: readChoice(claimedRow.reminder_kind, ['24h', '2h'], 'pushClaim.reminderKind') };
 		try {
 			// Revalidación con el estado vivo: el claim pudo correr justo antes de una
 			// cancelación o reprogramación.

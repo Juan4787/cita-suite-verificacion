@@ -101,7 +101,7 @@ export const getViewerPatientDataRevision = async (
 		.rpc('get_patient_data_revision', { p_business_id: businessId })
 		.maybeSingle();
 	if (error) throw error;
-	const row = (data as ViewerRevisionRow | null) ?? null;
+	const row = data ?? null;
 	const returnedBusinessId = String(row?.business_id ?? '').trim();
 	const revision = normalizeRevision(row?.patients_revision);
 	const topic = String(row?.realtime_topic ?? '').trim();

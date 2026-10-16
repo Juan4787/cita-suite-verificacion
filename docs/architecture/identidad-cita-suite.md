@@ -26,3 +26,8 @@ Fuente normativa: ampliación del 16 de octubre en `docs/plans/refactorizacion-c
 ## Pendientes de cierre
 
 Inventario completo por proveedor, disponibilidad de nombres, referencias activas/históricas, ensayos de cambio y reversión, compatibilidad de direcciones/callbacks/orígenes, versión exacta de artefactos y autorización de entrega cuando afecte producción. Este documento no declara cumplida la unificación.
+
+
+## Staging Supabase identificado por el usuario
+
+El 16 de octubre el usuario informó el proyecto **Staging 455** (`ikaudqoilclfnztkxubz`, `https://ikaudqoilclfnztkxubz.supabase.co`), creado en la cuenta disponible de su hermano para pruebas. Destino objetivo: **Cita Suite Staging**, conservando ref/URLs. No renombrado ni migrado todavía. Producción conserva `yjzferwuzbtgpmdnzlcb`; ningún comando de staging puede inferir su destino de la vinculación CLI de producción. Acceso/contenido/plan se verificarán antes de escribir.

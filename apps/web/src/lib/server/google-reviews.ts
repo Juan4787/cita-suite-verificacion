@@ -155,7 +155,7 @@ export const sendDueGoogleReviewRequests = async (
 	});
 	if (error) throw error;
 
-	const claimed = (data ?? []) as ClaimedGoogleReviewRequest[];
+	const claimed = data ?? [];
 	let sent = 0;
 	let failed = 0;
 	let invalidated = 0;
@@ -186,13 +186,7 @@ export const sendDueGoogleReviewRequests = async (
 				})
 				.maybeSingle();
 			if (prepareError) throw prepareError;
-			const snapshot = prepared as
-				| {
-						notification_title: string;
-						notification_body: string;
-						notification_action_label: string;
-				  }
-				| null;
+			const snapshot = prepared;
 			if (!snapshot || !(await requestStillClaimed(supabase, request))) {
 				invalidated += 1;
 				continue;

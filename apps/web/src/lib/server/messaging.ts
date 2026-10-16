@@ -3,7 +3,7 @@ import { env as publicEnv } from '$env/dynamic/public';
 import { PUBLIC_SITE_URL_FALLBACK } from '$lib/constants';
 import crypto from 'crypto';
 import type { CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
-import { readJson, readRecord, readArray, isRecord } from './contracts';
+import { readJson, readRecord, readArray, isRecord, readChoice, readText, readNullableText, readBoolean, readFiniteNumber } from './contracts';
 import { writeAuditLog } from './audit';
 import { getBusinessAccessState, type BusinessSubscriptionRow } from './commercial-access';
 import { hmacSha256HexMatches } from './hmac';
@@ -98,6 +98,37 @@ export type MessageDispatch = {
 	max_attempts: number;
 };
 
+function parseMessagingAccount(value: unknown): MessagingAccount {
+	const row = readRecord(value, 'messagingAccount');
+	return { id: readText(row.id, 'messagingAccount.id'), business_id: readText(row.business_id, 'messagingAccount.business'),
+		provider: readChoice(row.provider, ['mock', 'meta_cloud', 'bsp'], 'messagingAccount.provider'),
+		status: readChoice(row.status, ['pending', 'active', 'paused', 'error'], 'messagingAccount.status'),
+		phone_number: readNullableText(row.phone_number, 'messagingAccount.phone'), phone_number_id: readNullableText(row.phone_number_id, 'messagingAccount.phoneId'),
+		waba_id: readNullableText(row.waba_id, 'messagingAccount.wabaId'), display_name: readNullableText(row.display_name, 'messagingAccount.displayName'),
+		access_token_secret_name: readNullableText(row.access_token_secret_name, 'messagingAccount.secretName'),
+		bot_enabled: readBoolean(row.bot_enabled, 'messagingAccount.botEnabled'), reminders_enabled: readBoolean(row.reminders_enabled, 'messagingAccount.remindersEnabled'),
+		last_error: readNullableText(row.last_error, 'messagingAccount.lastError') };
+}
+function parseMessageTemplate(value: unknown): MessageTemplate {
+	const row = readRecord(value, 'messageTemplate');
+	return { id: readText(row.id, 'messageTemplate.id'), business_id: readText(row.business_id, 'messageTemplate.business'),
+		provider: readChoice(row.provider, ['mock', 'meta_cloud', 'bsp'], 'messageTemplate.provider'),
+		provider_template_id: readNullableText(row.provider_template_id, 'messageTemplate.providerId'), name: readText(row.name, 'messageTemplate.name'),
+		category: readChoice(row.category, ['utility', 'marketing', 'authentication', 'service'], 'messageTemplate.category'),
+		language: readText(row.language, 'messageTemplate.language'), status: readChoice(row.status, ['draft', 'pending', 'approved', 'rejected', 'paused'], 'messageTemplate.status'),
+		body: readText(row.body, 'messageTemplate.body') };
+}
+function parseMessageDispatch(value: unknown): MessageDispatch {
+	const row = readRecord(value, 'messageDispatch');
+	return { id: readText(row.id, 'messageDispatch.id'), business_id: readText(row.business_id, 'messageDispatch.business'),
+		appointment_id: readNullableText(row.appointment_id, 'messageDispatch.appointment'), patient_id: readNullableText(row.patient_id, 'messageDispatch.patient'),
+		messaging_account_id: readNullableText(row.messaging_account_id, 'messageDispatch.account'), template_id: readNullableText(row.template_id, 'messageDispatch.template'),
+		provider: readChoice(row.provider, ['mock', 'meta_cloud', 'bsp'], 'messageDispatch.provider'), provider_message_id: readNullableText(row.provider_message_id, 'messageDispatch.providerId'),
+		type: readChoice(row.type, MESSAGE_DISPATCH_TYPES, 'messageDispatch.type'), to_phone_e164: readText(row.to_phone_e164, 'messageDispatch.phone'),
+		status: readChoice(row.status, MESSAGE_DISPATCH_STATUSES, 'messageDispatch.status'), template_variables: row.template_variables,
+		message_body: readNullableText(row.message_body, 'messageDispatch.body'), attempts: readFiniteNumber(row.attempts, 'messageDispatch.attempts'), max_attempts: readFiniteNumber(row.max_attempts, 'messageDispatch.maxAttempts') };
+}
+
 export type SendTemplateInput = {
 	account: MessagingAccount;
 	to: string;
@@ -125,8 +156,11 @@ export interface MessagingProvider {
 const toWhatsAppRecipient = (phoneE164: string) => phoneE164.replace(/\D/g, '');
 
 export const getPublicSiteUrl = () => {
-	const publicSiteUrl = (publicEnv as Record<string, string | undefined>).PUBLIC_SITE_URL;
-	const privateSiteUrl = (env as Record<string, string | undefined>).PUBLIC_SITE_URL;
+	const publicSiteUrl = publicEnv.PUBLIC_SITE_URL;
+	// Cloudflare legacy bindings may expose a public key through the private
+	// environment object; Svelte's generated type deliberately excludes it.
+	const legacySiteUrl = readRecord(env, 'serverEnvironment').PUBLIC_SITE_URL;
+	const privateSiteUrl = typeof legacySiteUrl === 'string' ? legacySiteUrl : undefined;
 	const raw = publicSiteUrl?.trim() || privateSiteUrl?.trim() || PUBLIC_SITE_URL_FALLBACK;
 	try {
 		const parsed = new URL(raw);
@@ -315,7 +349,7 @@ export const loadActiveMessagingAccount = async (
 		.limit(1)
 		.maybeSingle();
 	if (error) throw error;
-	return (data as MessagingAccount | null) ?? null;
+	return data ? parseMessagingAccount(data) : null;
 };
 
 export const loadReminderTemplate = async (
@@ -331,7 +365,7 @@ export const loadReminderTemplate = async (
 		.limit(1)
 		.maybeSingle();
 	if (error) throw error;
-	return (data as MessageTemplate | null) ?? null;
+	return data ? parseMessageTemplate(data) : null;
 };
 
 export const loadBotReplyTemplate = async (
@@ -348,7 +382,7 @@ export const loadBotReplyTemplate = async (
 		.limit(1)
 		.maybeSingle();
 	if (error) throw error;
-	return (data as MessageTemplate | null) ?? null;
+	return data ? parseMessageTemplate(data) : null;
 };
 
 export const ensureMockMessagingSetup = async (supabase: CitaSupabaseClient, businessId: string) => {
@@ -505,7 +539,7 @@ const canBusinessUseOperationalMessaging = async (supabase: CitaSupabaseClient, 
 		return true;
 	}
 
-	return getBusinessAccessState((data as BusinessSubscriptionRow | null) ?? null, {
+	return getBusinessAccessState(data ?? null, {
 		legacyFallback: false
 	}).canUseBusiness;
 };
@@ -683,7 +717,8 @@ export const processQueuedMessageDispatches = async (
 	let failed = 0;
 	let skipped = 0;
 
-	for (const dispatch of (claimed ?? []) as MessageDispatch[]) {
+	for (const value of readArray(claimed, 'messageDispatchClaims')) {
+		const dispatch = parseMessageDispatch(value);
 		try {
 			if (!(await canBusinessUseOperationalMessaging(supabase, dispatch.business_id))) {
 				await skipDispatch(supabase, dispatch, 'BUSINESS_ACCESS_RESTRICTED', now);
@@ -692,7 +727,7 @@ export const processQueuedMessageDispatches = async (
 			}
 
 			if (!dispatch.messaging_account_id) throw new Error('MESSAGING_ACCOUNT_NOT_ACTIVE');
-			const { data: account, error: accountError } = await supabase
+			const { data: accountData, error: accountError } = await supabase
 				.from('messaging_accounts')
 				.select(
 					'id, business_id, provider, status, phone_number, phone_number_id, waba_id, display_name, access_token_secret_name, bot_enabled, reminders_enabled, last_error'
@@ -701,6 +736,7 @@ export const processQueuedMessageDispatches = async (
 				.eq('id', dispatch.messaging_account_id)
 				.maybeSingle();
 			if (accountError) throw accountError;
+			const account = accountData ? parseMessagingAccount(accountData) : null;
 			if (!account || account.status !== 'active') throw new Error('MESSAGING_ACCOUNT_NOT_ACTIVE');
 
 			let template: MessageTemplate | null = null;
@@ -712,7 +748,7 @@ export const processQueuedMessageDispatches = async (
 					.eq('id', dispatch.template_id)
 					.maybeSingle();
 				if (templateError) throw templateError;
-				template = (templateData as MessageTemplate | null) ?? null;
+				template = templateData ? parseMessageTemplate(templateData) : null;
 			}
 
 			if (dispatch.appointment_id) {
@@ -741,21 +777,19 @@ export const processQueuedMessageDispatches = async (
 				continue;
 			}
 
-			const provider = providerForAccount(account as MessagingAccount);
-			const variables = Array.isArray(dispatch.template_variables)
-				? (dispatch.template_variables as string[])
-				: [];
+			const provider = providerForAccount(account);
+			const variables = readArray(dispatch.template_variables ?? [], 'messageDispatch.variables').map(value => readText(value, 'messageDispatch.variable'));
 			const result =
 				dispatch.type === 'appointment_reminder_24h' && template
 					? await provider.sendTemplate({
-							account: account as MessagingAccount,
+							account: account,
 							to: communicationPhone,
 							templateName: template.name,
 							language: template.language,
 							variables
 						})
 					: await provider.sendFreeForm({
-							account: account as MessagingAccount,
+							account: account,
 							to: communicationPhone,
 							text: dispatch.message_body ?? ''
 						});
@@ -830,7 +864,7 @@ export const applyProviderMessageStatus = async (
 	if (error) throw error;
 	if (!dispatch) return { updated: false };
 
-	const currentStatus = String(dispatch.status) as MessageDispatchStatus;
+	const currentStatus = readChoice(dispatch.status, MESSAGE_DISPATCH_STATUSES, 'messageDispatch.status');
 	if (input.status !== 'failed' && providerStatusRank[currentStatus] > providerStatusRank[input.status]) {
 		return { updated: false };
 	}
@@ -1009,9 +1043,7 @@ export const processWhatsAppWebhookPayload = async (
 				events += 1;
 
 				try {
-					const accountRow = account as
-						| (MessagingAccount & { businesses?: { id: string; name: string; slug: string; is_active: boolean } })
-						| null;
+					const accountRow = account ? { ...parseMessagingAccount(account), businesses: account.businesses } : null;
 					if (!accountRow?.business_id) throw new Error('MESSAGING_ACCOUNT_NOT_FOUND');
 					const textBody = readRecord(message.text ?? {}, 'messagingWebhook.text').body;
 					const text = textBody ? String(textBody) : '';

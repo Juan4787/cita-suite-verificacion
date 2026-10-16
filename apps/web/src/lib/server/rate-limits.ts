@@ -98,7 +98,7 @@ const consumeRateLimit = async (
 		throw error;
 	}
 
-	const row = Array.isArray(data) ? (data[0] as RateLimitRpcRow | undefined) : (data as RateLimitRpcRow | null);
+	const row = Array.isArray(data) ? data[0] : data;
 	if (!row || typeof row.allowed !== 'boolean') {
 		throw new Error('RATE_LIMIT_INVALID_RESPONSE');
 	}

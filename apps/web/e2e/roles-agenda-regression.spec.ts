@@ -450,12 +450,8 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await expect(pendingPage).toHaveURL(/\/odonto\/mis-turnos/);
 		await pendingContext.close();
 		await assertOwnerIdentity(page, admin, fixture);
-		// Restablece explícitamente la sesión dueña antes de continuar con las
-		// verificaciones administrativas; evita que una implementación de auth o
-		// un navegador compartido contamine la segunda mitad del flujo.
-		await page.context().clearCookies();
-		await login(page, fixture);
-		await assertOwnerIdentity(page, admin, fixture);
+		// Keep the original session: logging in again here could conceal a
+		// cross-context identity regression caused by accepting the invitation.
 
 		const { data: acceptedInvite } = await admin
 			.from('business_user_invites')

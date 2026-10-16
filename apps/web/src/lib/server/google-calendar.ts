@@ -1,4 +1,4 @@
-import { isRecord, readNullableText, readFiniteNumber } from './contracts';
+import { isRecord, readNullableText, readFiniteNumber, readChoice } from './contracts';
 import { env } from '$env/dynamic/private';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import crypto from 'node:crypto';
@@ -668,7 +668,7 @@ const loadEventLink = async (
 			connection_id: String(event.connection_id),
 			calendar_id: String(event.calendar_id),
 			event_id: event.event_id ? String(event.event_id) : null,
-			sync_status: String(event.sync_status) as GoogleCalendarSyncStatus,
+			sync_status: readChoice(event.sync_status, ['pending_create', 'pending_update', 'pending_delete', 'active', 'deleted', 'detached', 'needs_reconnect', 'failed'], 'googleCalendar.syncStatus'),
 			synced_sequence: Number(event.synced_sequence),
 			attempt_count: Number(event.attempt_count ?? 0),
 			claimed_at: event.claimed_at ? String(event.claimed_at) : null
@@ -973,7 +973,7 @@ export const loadGoogleCalendarUiState = async (
 	if (!data || String(data.sync_status) === 'detached') {
 		return { available, state: 'none', current: false, reminderLabel };
 	}
-	const status = String(data.sync_status) as GoogleCalendarSyncStatus;
+	const status = readChoice(data.sync_status, ['pending_create', 'pending_update', 'pending_delete', 'active', 'deleted', 'detached', 'needs_reconnect', 'failed'], 'googleCalendar.syncStatus');
 	if (status === 'deleted') {
 		return { available, state: 'removed', current: false, reminderLabel };
 	}

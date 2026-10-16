@@ -1,3 +1,4 @@
+import { readRecord } from './contracts';
 import {isHttpError,isRedirect,type RequestEvent} from '@sveltejs/kit';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { getOdontoContext } from './odonto-context';
@@ -7,7 +8,7 @@ import {CLINICAL_DOCUMENT_MAX_BYTES,CLINICAL_DOCUMENT_MIMES,hasPdfHeader,hasPdfE
 export async function readClinicalJson(request:Request){
  const reader=request.body?.getReader();if(!reader)throw new ClinicalFileHttpError(400,'No pudimos leer los datos del archivo.',{code:'INVALID_REQUEST'});
  const decoder=new TextDecoder();let text='';let count=0;
- try{while(true){const {done,value}=await reader.read();if(done)break;count+=value.byteLength;if(count>4096)throw new ClinicalFileHttpError(400,'Los datos del archivo son demasiado extensos.',{code:'INVALID_REQUEST'});text+=decoder.decode(value,{stream:true});}text+=decoder.decode();const data=JSON.parse(text);if(!data||typeof data!=='object'||Array.isArray(data))throw new Error('invalid');return data as Record<string,unknown>;}catch(cause){if(cause instanceof ClinicalFileHttpError)throw cause;throw new ClinicalFileHttpError(400,'Revisá los datos del archivo antes de enviar.',{code:'INVALID_REQUEST'});}finally{await reader.cancel().catch(()=>undefined);}
+ try{while(true){const {done,value}=await reader.read();if(done)break;count+=value.byteLength;if(count>4096)throw new ClinicalFileHttpError(400,'Los datos del archivo son demasiado extensos.',{code:'INVALID_REQUEST'});text+=decoder.decode(value,{stream:true});}text+=decoder.decode();const data:unknown=JSON.parse(text);return readRecord(data,'clinicalFile.request');}catch(cause){if(cause instanceof ClinicalFileHttpError)throw cause;throw new ClinicalFileHttpError(400,'Revisá los datos del archivo antes de enviar.',{code:'INVALID_REQUEST'});}finally{await reader.cancel().catch(()=>undefined);}
 }
 
 export const CLINICAL_FILES_BUCKET = 'patient-clinical-files';
@@ -475,7 +476,7 @@ export const verifyStoredClinicalImage = async ({
 		);
 	}
 
-	return { bytes: Number(info.size), mimeType: info.contentType as ClinicalFileMime };
+	return { bytes: Number(info.size), mimeType: expectedMime };
 };
 
 export const verifyStoredClinicalThumbnail = async ({

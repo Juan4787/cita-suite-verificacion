@@ -39,6 +39,12 @@ export function readFiniteNumber(value: unknown, contract: string): number {
 	return value;
 }
 
+export function readChoice<const Choices extends readonly string[]>(value: unknown, choices: Choices, contract: string): Choices[number] {
+	const choice = choices.find(choice => choice === value);
+	if (choice === undefined) throw new InvalidDataContractError(contract);
+	return choice;
+}
+
 /** Validate actual JSON instead of asserting that arbitrary objects are JSON. */
 export function readJson(value: unknown, contract: string, depth = 0): Json {
 	if (depth > 64) throw new InvalidDataContractError(contract);

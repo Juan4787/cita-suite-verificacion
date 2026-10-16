@@ -370,7 +370,7 @@ const runAtomicAppointmentRpc = async (
 		});
 	const { data, error } = replayOnly ? await rpc.maybeSingle() : await rpc.single();
 	if (error) throw error;
-	const appointment = data as AtomicAppointmentResult | null;
+	const appointment = data;
 	if (!appointment?.id) {
 		if (replayOnly) return null;
 		throw new Error('APPOINTMENT_NOT_CREATED');
@@ -465,9 +465,10 @@ export const updateAppointmentStatus = async (
 		.maybeSingle();
 	if (loadError) throw loadError;
 	if (!appointment) throw new Error('APPOINTMENT_NOT_FOUND');
+	if (!isAppointmentStatus(appointment.status)) throw new Error('APPOINTMENT_STATUS_INVALID');
 
 	assertCanTransitionAppointment({
-		currentStatus: appointment.status as AppointmentStatus,
+		currentStatus: appointment.status,
 		nextStatus: input.status,
 		startsAt: new Date(appointment.starts_at),
 		endsAt: new Date(appointment.ends_at),
@@ -538,7 +539,8 @@ export const rescheduleAppointment = async (
 		.maybeSingle();
 	if (loadError) throw loadError;
 	if (!appointment) throw new Error('APPOINTMENT_NOT_FOUND');
-	if (isTerminalAppointmentStatus(appointment.status as AppointmentStatus)) {
+	if (!isAppointmentStatus(appointment.status)) throw new Error('APPOINTMENT_STATUS_INVALID');
+	if (isTerminalAppointmentStatus(appointment.status)) {
 		throw new Error('APPOINTMENT_CANNOT_RESCHEDULE');
 	}
 

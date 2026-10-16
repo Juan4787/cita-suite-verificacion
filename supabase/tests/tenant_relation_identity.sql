@@ -37,13 +37,13 @@ declare
 begin
  insert into auth.users(id,email) values(owner_a,'relation-a-'||owner_a||'@example.test'),(owner_b,'relation-b-'||owner_b||'@example.test');
  insert into public.businesses(id,name,slug,industry) values(a,'Synthetic relations A','relation-a-'||a,'other'),(b,'Synthetic relations B','relation-b-'||b,'other');
- insert into public.business_users(business_id,user_id,role,status) values(a,owner_a,'owner','active'),(b,owner_b,'owner','active');
+ insert into public.business_users(business_id,user_id,role,status,accepted_at) values(a,owner_a,'owner','active',now()),(b,owner_b,'owner','active',now());
  insert into public.patients(id,business_id,owner_id,full_name) values(pa,a,owner_a,'Synthetic A'),(pb,b,owner_b,'Synthetic B');
  insert into public.professionals(id,business_id,name) values(pra,a,'Synthetic A'),(prb,b,'Synthetic B');
  insert into public.services(id,business_id,name,duration_minutes) values(service_a,a,'Synthetic A',30),(service_b,b,'Synthetic B',30);
- insert into public.appointments(id,business_id,patient_id,professional_id,service_id,starts_at,ends_at,blocking_starts_at,blocking_ends_at,status,source,service_name_snapshot,professional_name_snapshot,duration_minutes_snapshot)
- values(aa,a,pa,pra,service_a,starts,starts+interval '30 minutes',starts,starts+interval '30 minutes','reserved','manual','Synthetic A','Synthetic A',30),
- (ab,b,pb,prb,service_b,starts,starts+interval '30 minutes',starts,starts+interval '30 minutes','reserved','manual','Synthetic B','Synthetic B',30);
+ insert into public.appointments(id,business_id,patient_id,professional_id,service_id,starts_at,ends_at,blocking_starts_at,blocking_ends_at,status,source,service_name_snapshot,professional_name_snapshot,duration_minutes_snapshot,patient_name_at_booking)
+ values(aa,a,pa,pra,service_a,starts,starts+interval '30 minutes',starts,starts+interval '30 minutes','reserved','manual','Synthetic A','Synthetic A',30,'Synthetic A'),
+ (ab,b,pb,prb,service_b,starts,starts+interval '30 minutes',starts,starts+interval '30 minutes','reserved','manual','Synthetic B','Synthetic B',30,'Synthetic B');
  insert into public.clinical_entries(id,business_id,patient_id,entry_type,description) values(ea,a,pa,'Consulta','Synthetic A'),(eb,b,pb,'Consulta','Synthetic B');
  insert into public.clinical_entry_costs(id,business_id,clinical_entry_id,amount) values(cost,a,ea,15000.50);
  insert into public.patient_clinical_profiles(id,business_id,patient_id) values(profile,a,pa);

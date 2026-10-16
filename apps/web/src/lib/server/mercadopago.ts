@@ -1,6 +1,7 @@
 import { env } from '$env/dynamic/private';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { hmacSha256HexMatches } from './hmac';
+import { readJson, readRecord, readArray, readText, readBoolean, readFiniteNumber, InvalidDataContractError } from './contracts';
 
 export const MP_API_BASE = 'https://api.mercadopago.com';
 
@@ -96,7 +97,7 @@ export const verifyMpWebhookSignature = (
 
 export type MpApiResult<T> = { ok: boolean; status: number; data: T | null };
 
-const mpGet = async <T>(path: string, fetchFn: FetchLike): Promise<MpApiResult<T>> => {
+const mpGet = async <T>(path: string, fetchFn: FetchLike, decode: (value: unknown) => T): Promise<MpApiResult<T>> => {
 	const token = env.MP_ACCESS_TOKEN?.trim();
 	if (!token) {
 		throw new Error('Falta configurar MP_ACCESS_TOKEN.');
@@ -109,11 +110,12 @@ const mpGet = async <T>(path: string, fetchFn: FetchLike): Promise<MpApiResult<T
 	});
 	let data: T | null = null;
 	try {
-		data = (await response.json()) as T;
+		const payload: unknown = await response.json();
+		data = response.ok ? decode(payload) : null;
 	} catch {
 		data = null;
 	}
-	return { ok: response.ok, status: response.status, data };
+	return { ok: response.ok && data !== null, status: response.status, data };
 };
 
 export type MpPayment = {
@@ -150,28 +152,66 @@ export type MpPreapproval = {
 	} | null;
 };
 
+const optionalText = (value: unknown, key: string) => value == null ? value : readText(value, 'mercadoPago.' + key);
+const optionalNumber = (value: unknown, key: string) => value == null ? value : readFiniteNumber(value, 'mercadoPago.' + key);
+function providerId(value: unknown): string | number {
+	if (typeof value === 'string' && value) return value;
+	if (typeof value === 'number' && Number.isFinite(value)) return value;
+	throw new InvalidDataContractError('mercadoPago.id');
+}
+function paymentFields(row: Record<string, unknown>) {
+	return { id: providerId(row.id), status: row.status == null ? undefined : readText(row.status, 'mercadoPago.status'),
+		external_reference: optionalText(row.external_reference, 'reference'), transaction_amount: optionalNumber(row.transaction_amount, 'amount'),
+		currency_id: optionalText(row.currency_id, 'currency') };
+}
+function parseMpPayment(value: unknown): MpPayment {
+	const row = readRecord(value, 'mercadoPago.payment');
+	return { ...paymentFields(row), status_detail: row.status_detail == null ? undefined : readText(row.status_detail, 'mercadoPago.statusDetail'),
+		metadata: row.metadata == null ? row.metadata : readRecord(row.metadata, 'mercadoPago.metadata'),
+		live_mode: row.live_mode === undefined ? undefined : readBoolean(row.live_mode, 'mercadoPago.liveMode') };
+}
+function parseMpAuthorizedPayment(value: unknown): MpAuthorizedPayment {
+	const row = readRecord(value, 'mercadoPago.authorizedPayment');
+	const nested = row.payment == null ? null : readRecord(row.payment, 'mercadoPago.nestedPayment');
+	return { ...paymentFields(row), preapproval_id: optionalText(row.preapproval_id, 'preapprovalId'),
+		payment: nested === null ? null : { id: nested.id === undefined ? undefined : providerId(nested.id),
+			status: nested.status == null ? undefined : readText(nested.status, 'mercadoPago.nestedStatus'),
+			status_detail: nested.status_detail == null ? undefined : readText(nested.status_detail, 'mercadoPago.nestedDetail') } };
+}
+function parseMpPreapproval(value: unknown): MpPreapproval {
+	const row = readRecord(value, 'mercadoPago.preapproval');
+	const recurring = row.auto_recurring == null ? null : readRecord(row.auto_recurring, 'mercadoPago.recurring');
+	return { id: readText(row.id, 'mercadoPago.preapproval.id'),
+		status: row.status == null ? undefined : readText(row.status, 'mercadoPago.status'),
+		external_reference: optionalText(row.external_reference, 'reference'), payer_email: optionalText(row.payer_email, 'email'),
+		next_payment_date: optionalText(row.next_payment_date, 'nextDate'), init_point: optionalText(row.init_point, 'initPoint'),
+		auto_recurring: recurring === null ? null : { transaction_amount: optionalNumber(recurring.transaction_amount, 'amount'), currency_id: optionalText(recurring.currency_id, 'currency') } };
+}
+
 export const getPayment = (id: string, fetchFn: FetchLike) =>
-	mpGet<MpPayment>(`/v1/payments/${encodeURIComponent(id)}`, fetchFn);
+	mpGet(`/v1/payments/${encodeURIComponent(id)}`, fetchFn, parseMpPayment);
 
 export const getAuthorizedPayment = (id: string, fetchFn: FetchLike) =>
-	mpGet<MpAuthorizedPayment>(`/authorized_payments/${encodeURIComponent(id)}`, fetchFn);
+	mpGet(`/authorized_payments/${encodeURIComponent(id)}`, fetchFn, parseMpAuthorizedPayment);
 
 export const getPreapproval = (id: string, fetchFn: FetchLike) =>
-	mpGet<MpPreapproval>(`/preapproval/${encodeURIComponent(id)}`, fetchFn);
+	mpGet(`/preapproval/${encodeURIComponent(id)}`, fetchFn, parseMpPreapproval);
 
 export const searchAuthorizedPayments = (preapprovalId: string, fetchFn: FetchLike) =>
 	// limit explícito: el default de MP es más chico y una suscripción de años
 	// no debe dejar cobros viejos fuera de la página que revisa la conciliación.
 	mpGet<{ results?: MpAuthorizedPayment[] }>(
 		`/authorized_payments/search?preapproval_id=${encodeURIComponent(preapprovalId)}&limit=50`,
-		fetchFn
+		fetchFn,
+		value => { const row = readRecord(value, 'mercadoPago.search'); return { results: row.results === undefined ? undefined : readArray(row.results, 'mercadoPago.results').map(parseMpAuthorizedPayment) }; }
 	);
 
 const mpSend = async <T>(
 	method: 'POST' | 'PUT',
 	path: string,
 	body: Record<string, unknown>,
-	fetchFn: FetchLike
+	fetchFn: FetchLike,
+	decode: (value: unknown) => T
 ): Promise<MpApiResult<T>> => {
 	const token = env.MP_ACCESS_TOKEN?.trim();
 	if (!token) {
@@ -192,11 +232,12 @@ const mpSend = async <T>(
 	});
 	let data: T | null = null;
 	try {
-		data = (await response.json()) as T;
+		const payload: unknown = await response.json();
+		data = response.ok ? decode(payload) : null;
 	} catch {
 		data = null;
 	}
-	return { ok: response.ok, status: response.status, data };
+	return { ok: response.ok && data !== null, status: response.status, data };
 };
 
 export const MP_SUBSCRIPTION_REASON = 'Cita Suite — Suscripción mensual';
@@ -257,7 +298,7 @@ export const createPreapproval = (
 			},
 			status: 'pending'
 		},
-		fetchFn
+		fetchFn, parseMpPreapproval
 	);
 
 export const cancelPreapproval = (fetchFn: FetchLike, preapprovalId: string) =>
@@ -265,7 +306,7 @@ export const cancelPreapproval = (fetchFn: FetchLike, preapprovalId: string) =>
 		'PUT',
 		`/preapproval/${encodeURIComponent(preapprovalId)}`,
 		{ status: 'cancelled' },
-		fetchFn
+		fetchFn, parseMpPreapproval
 	);
 
 // ---------------------------------------------------------------------------
@@ -340,8 +381,8 @@ const callGrantAccess = async (admin: CitaSupabaseClient, opts: GrantCallOverrid
 	const row = Array.isArray(data) ? data[0] : data;
 	return {
 		applied: Boolean(row?.applied),
-		grantId: (row?.grant_id as string | undefined) ?? null,
-		statusAfter: (row?.status_after as string | undefined) ?? null
+		grantId: row?.grant_id ?? null,
+		statusAfter: row?.status_after ?? null
 	};
 };
 
@@ -487,7 +528,7 @@ const findBusinessByPreapproval = async (
 	if (error) {
 		throw new Error(`No se pudo buscar la suscripción ${preapprovalId}: ${error.message}`);
 	}
-	return (data?.business_id as string | undefined) ?? null;
+	return data?.business_id ?? null;
 };
 
 // ---------------------------------------------------------------------------
@@ -561,9 +602,9 @@ const creditOutcomeResult = (
 
 const resolvePaymentBusinessId = (payment: MpPayment): string | null => {
 	const external = payment.external_reference?.trim();
-	if (isUuid(external)) return external as string;
+	if (isUuid(external)) return external;
 	const metaBusiness = payment.metadata?.business_id;
-	if (isUuid(metaBusiness)) return metaBusiness as string;
+	if (isUuid(metaBusiness)) return metaBusiness;
 	return null;
 };
 
@@ -818,7 +859,7 @@ export const confirmMpSubscriptionForBusiness = async (
 
 	for (const row of rows ?? []) {
 		if (Date.now() > deadline) break;
-		const preapprovalId = (row as { preapproval_id: string }).preapproval_id;
+		const preapprovalId = row.preapproval_id;
 		const { ok, data: preapproval } = await getPreapproval(preapprovalId, fetchFn);
 		if (!ok || !preapproval) continue;
 		await upsertMpSubscription(admin, preapproval);
@@ -1014,11 +1055,7 @@ export const reconcileMercadoPago = async (
 		throw new Error(`No se pudieron leer suscripciones para conciliar: ${error.message}`);
 	}
 
-	for (const row of (rows ?? []) as Array<{
-		business_id: string;
-		preapproval_id: string;
-		status: string;
-	}>) {
+	for (const row of rows ?? []) {
 		if (Date.now() > deadline) {
 			summary.details.push('Presupuesto de tiempo agotado; continúa en la próxima corrida.');
 			break;
@@ -1167,4 +1204,4 @@ export const reconcileMercadoPago = async (
 
 	return summary;
 };
-import { readJson } from './contracts';
+

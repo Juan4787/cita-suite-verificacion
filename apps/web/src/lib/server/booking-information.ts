@@ -4,7 +4,7 @@ import type { CitaSupabaseClient } from '$lib/types/database';
 import { parsePublicPatientFields, validateBookingIntakeAnswers } from '@turnos-saas/shared/booking-integration';
 import { createSupabaseAdminClient } from './supabase';
 import { hashRateLimitSubject } from './rate-limits';
-import { readBoolean, readRecord, readText } from './contracts';
+import { readBoolean, readRecord, readText, isRecord } from './contracts';
 
 export const bookingInformationEnabled = () => env.BOOKING_INFORMATION_ENABLED === 'true';
 export const privateInformationHeaders = { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', 'x-content-type-options': 'nosniff' };
@@ -31,7 +31,7 @@ export async function informationContext(event: RequestEvent) {
 }
 
 export function informationErrorMessage(cause: unknown) {
-  const message = String((cause as { message?: string })?.message ?? '');
+  const message = cause instanceof Error ? cause.message : isRecord(cause) ? String(cause.message ?? '') : '';
   if (message.includes('BOOKING_INFORMATION_CHANGED')) return 'Las preguntas o las respuestas cambiaron. Recargá la página y revisá tus datos antes de continuar.';
   if (message.includes('BOOKING_INFORMATION_REQUEST_CONFLICT')) return 'Este envío ya se usó con otros datos. Revisá lo que quedó guardado antes de iniciar otro.';
   if (message.includes('BOOKING_PROFILE_DATA_INVALID')) return 'Revisá la edad o fecha de nacimiento ingresada antes de confirmar.';

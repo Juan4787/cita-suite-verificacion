@@ -1,3 +1,4 @@
+import { isRecord } from './contracts';
 import { env } from '$env/dynamic/private';
 import crypto from 'node:crypto';
 
@@ -63,7 +64,8 @@ export const decodePatientListCursor = (
 		if (value.length > 1024) return null;
 		const [encoded, signature, extra] = value.split('.');
 		if (!encoded || !signature || extra || !safeEqual(signature, sign(encoded, expected))) return null;
-		const parsed = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')) as PatientListCursor;
+		const parsed: unknown = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'));
+		if (!isRecord(parsed) || typeof parsed.rank !== 'number' || typeof parsed.snapshotAt !== 'string' || typeof parsed.activityAt !== 'string' || typeof parsed.id !== 'string') return null;
 		if (
 			parsed.v !== VERSION ||
 			!Number.isInteger(parsed.rank) ||
@@ -76,7 +78,7 @@ export const decodePatientListCursor = (
 		) {
 			return null;
 		}
-		return parsed;
+		return { v: VERSION, rank: parsed.rank, snapshotAt: parsed.snapshotAt, activityAt: parsed.activityAt, id: parsed.id };
 	} catch {
 		return null;
 	}

@@ -33,7 +33,7 @@ import { isLikelyPhoneE164, normalizePhoneE164 } from './phone';
 import { sanitizePublicImageUrl } from './public-image';
 import type { IntegratedBookingInput } from './booking-integrations';
 import type { BookingModality, BookingModalityWindow } from '@turnos-saas/shared/booking-integration';
-import { loadIntegratedAvailabilityRows } from './integrated-availability';
+import { loadIntegratedAvailabilityRows, parseIntegratedAvailabilityRows } from './integrated-availability';
 
 export type PublicService = {
 	id: string;
@@ -222,8 +222,8 @@ export const getPublicBusinessBySlug = async (
 	if (error) throw error;
 	if (!data) return null;
 	return {
-		...(data as PublicBookingBusiness),
-		logo_url: sanitizePublicImageUrl((data as PublicBookingBusiness).logo_url)
+		...data,
+		logo_url: sanitizePublicImageUrl(data.logo_url)
 	};
 };
 
@@ -248,7 +248,7 @@ export const canUsePublicBusiness = async (
 		return false;
 	}
 
-	return getBusinessAccessState((data as BusinessSubscriptionRow | null) ?? null, {
+	return getBusinessAccessState(data ?? null, {
 		businessCreatedAt
 	}).allowedCapabilities.canUsePublicBooking;
 };
@@ -272,7 +272,7 @@ const getPublicBusinessSubscription = async (
 		return { subscription: null, lookupFailed: true };
 	}
 	return {
-		subscription: (data as BusinessSubscriptionRow | null) ?? null,
+		subscription: data ?? null,
 		lookupFailed: false
 	};
 };
@@ -611,16 +611,17 @@ const loadPublicAvailabilitySnapshot = async (
 		if (blocksResult.error) throw blocksResult.error;
 	}
 
-	const services = (servicesResult.data ?? []) as PublicAvailabilityService[];
-	const professionals = ((professionalsResult.data ?? []) as PublicAvailabilityProfessional[]).filter(
+	const parsed = parseIntegratedAvailabilityRows({
+		services: servicesResult.data ?? [], professionals: professionalsResult.data ?? [], assignments: assignmentsResult.data ?? [],
+		rules: rulesResult.data ?? [], exceptions: exceptionsResult.data ?? [], blocks: blocksResults.flatMap(result => result.data ?? [])
+	});
+	const services = parsed.services;
+	const professionals = parsed.professionals.filter(
 		hasVisibleProfessionalName
 	);
 	const serviceIds = new Set(services.map((service) => service.id));
 	const availableProfessionalIds = new Set(professionals.map((professional) => professional.id));
-	const assignments = ((assignmentsResult.data ?? []) as Array<{
-		service_id: string;
-		professional_id: string;
-	}>).filter(
+	const assignments = parsed.assignments.filter(
 		(assignment) =>
 			serviceIds.has(assignment.service_id) &&
 			availableProfessionalIds.has(assignment.professional_id)
@@ -634,18 +635,17 @@ const loadPublicAvailabilitySnapshot = async (
 		services,
 		professionals,
 		assignments,
-		rules: ((rulesResult.data ?? []) as AvailabilityRuleRow[]).filter((rule) =>
+		rules: parsed.rules.filter((rule) =>
 			assignedProfessionalIds.has(rule.professional_id)
 		),
-		exceptions: ((exceptionsResult.data ?? []) as AvailabilityExceptionRow[]).filter(
+		exceptions: parsed.exceptions.filter(
 			(exception) =>
 				exception.professional_id === null ||
 				assignedProfessionalIds.has(exception.professional_id)
 		),
 		blocks: [
 			...new Map(
-				blocksResults
-					.flatMap((result) => (result.data ?? []) as AvailabilityAppointmentBlockRow[])
+				parsed.blocks
 					.filter((block) => assignedProfessionalIds.has(block.professional_id))
 					.map((block) => [block.id, block] as const)
 			).values()
@@ -972,7 +972,7 @@ export const assertPublicBookingPatientPolicy = async (
 	// RPC will create a new row; it must never select an arbitrary first result.
 	// The contact bucket below is anti-abuse only and does not resolve identity.
 	const patient =
-		exactMatches.length === 1 ? (exactMatches[0] as { id: string; blocked?: boolean }) : null;
+		exactMatches.length === 1 ? exactMatches[0] : null;
 	if (patient?.blocked) throw new Error('PUBLIC_BOOKING_BLOCKED_PATIENT');
 
 	const { data: count, error } = await supabase.rpc(
@@ -1022,7 +1022,7 @@ export const createPublicBooking = async (
 			.select(PUBLIC_BUSINESS_SELECT).eq('id', business.id)
 			.single();
 		if (error) throw error;
-		business = data as PublicBookingBusiness;
+		business = data;
 		availabilityRevision = Number(data.booking_availability_revision);
 		if (!Number.isSafeInteger(availabilityRevision) || availabilityRevision < 1) throw new Error('BOOKING_AVAILABILITY_CHANGED');
 	}

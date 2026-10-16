@@ -1,3 +1,4 @@
+import { parseIntegratedAvailabilityRows } from './integrated-availability';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import type { BookingModality, BookingModalityWindow } from '@turnos-saas/shared/booking-integration';
 import { loadIntegratedAvailabilityRows } from './integrated-availability';
@@ -172,15 +173,16 @@ export const getAvailabilitySlots = async (
 	if (exceptionsError) throw exceptionsError;
 	if (blocksError) throw blocksError;
 
+	const validated = parseIntegratedAvailabilityRows({ services: [], professionals: [], assignments: [], rules: rules ?? [], exceptions: exceptions ?? [], blocks: blocks ?? [] });
 	return calculateAvailabilitySlots({
 		modality: input.modality,
 		modalityWindows: input.modalityWindows,
 		business,
 		service,
 		professionals,
-		rules: (rules ?? []) as AvailabilityRuleRow[],
-		exceptions: (exceptions ?? []) as AvailabilityExceptionRow[],
-		blocks: (blocks ?? []) as AvailabilityAppointmentBlockRow[],
+		rules: validated.rules,
+		exceptions: validated.exceptions,
+		blocks: validated.blocks,
 		fromDate: dates[0],
 		toDate: dates[dates.length - 1],
 		publicOnly,

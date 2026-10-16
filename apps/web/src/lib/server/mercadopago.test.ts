@@ -13,6 +13,8 @@ import {
 	creditApprovedPayment,
 	getMercadoPagoApiConfigIssue,
 	getMercadoPagoEnvironment,
+	getPayment,
+	getPreapproval,
 	getSubscriptionAmountArs,
 	logMpWebhookEvent,
 	logMpWebhookEventOnce,
@@ -1437,5 +1439,16 @@ describe('upsertMpSubscription: detección de doble suscripción autorizada', ()
 			(c) => (c.payload as { action?: string }).action === 'duplicate_authorized'
 		);
 		expect(dup).toBeUndefined();
+	});
+});
+
+
+describe('provider response contracts', () => {
+	it('does not accept an amount or identifier with the wrong type as a valid provider result', async () => {
+		envState.privateEnv.MP_ACCESS_TOKEN = 'synthetic-token';
+		const payment = await getPayment('123', vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: 123, status: 'approved', transaction_amount: '500' }), { status: 200 })));
+		expect(payment).toEqual({ ok: false, status: 200, data: null });
+		const preapproval = await getPreapproval('123', vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: 123, status: 'authorized' }), { status: 200 })));
+		expect(preapproval).toEqual({ ok: false, status: 200, data: null });
 	});
 });
