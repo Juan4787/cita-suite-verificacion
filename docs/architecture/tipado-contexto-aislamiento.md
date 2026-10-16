@@ -41,6 +41,12 @@ Las capacidades son acumulativas: un rol permitido no habilita un consultorio in
 
 La vigencia histórica se calcula por fechas, permiso comercial y archivo; una etiqueta `restricted` atrasada no prolonga el acceso hasta que corra mantenimiento. No se amplían los helpers de escritura para conceder lectura histórica. La recepción no recibe historia oculta en HTML/JSON: el cargador no la consulta, la paginación la deniega y SQL aplica la misma separación.
 
+## Resolución de objetos en funciones privilegiadas
+
+Un `search_path` configurado puede seguir buscando primero tablas temporales si no sitúa explícitamente `pg_temp` al final. La prueba de suplantación de tablas de vínculos bajo un rol SQL autenticado reprodujo el bypass y la pérdida del vínculo legítimo en CI `38892229141`. Esto distingue una propiedad de seguridad de PostgreSQL de una explotación remota: la prueba SQL no demuestra que la API permita crear esas tablas ni que alguien lo haya hecho.
+
+El borrador `20261016012000_security_definer_resolution.sql` conserva el orden de los esquemas confiables existentes y deja `pg_temp` último en las funciones privilegiadas propias de `public`/`private`. No altera cuerpos, firmas, propietarios, permisos de ejecución ni datos. Excluye funciones pertenecientes a extensiones y rechaza configuraciones desconocidas. Las funciones nuevas deberán declarar también una resolución segura y permisos explícitos; la suite comprueba deriva. Reproducción confirmada; corrección pendiente de comparación positiva en CI. El registro conserva revisiones y resultados separados. [Criterio oficial de PostgreSQL](https://www.postgresql.org/docs/17/sql-createfunction.html#SQL-CREATEFUNCTION-SECURITY).
+
 ## Evidencia y cierre
 
 - Generación oficial y SQL se comprueban sobre la base descartable; no describen el esquema remoto de producción.
