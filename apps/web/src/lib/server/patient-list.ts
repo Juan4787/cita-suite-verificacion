@@ -1,3 +1,5 @@
+import type { Patient } from '$lib/types';
+import { InvalidDataContractError } from './contracts';
 import { env } from '$env/dynamic/private';
 import { resolveActiveBusiness } from '$lib/server/business';
 import { readDemoDb } from '$lib/server/demo-store';
@@ -25,7 +27,7 @@ type CountsSource = 'rpc' | 'fallback_planned';
 
 export type PatientListData = {
 	businessId: string | null;
-	patients: any[];
+	patients: Array<Pick<Patient, 'id' | 'full_name' | 'dni' | 'phone' | 'archived_at' | 'created_at' | 'updated_at' | 'last_entry_at'> & { professional_archived_at?: string | null }>;
 	query: string;
 	showArchived: boolean;
 	demo: boolean;
@@ -245,13 +247,14 @@ export const loadPatientList = async ({
 			throw kitError(500, 'No se pudieron cargar los totales de pacientes.');
 		}
 
-		const rows = (Array.isArray(patientsResult.data) ? patientsResult.data : []) as Array<any>;
+		if (patientsResult.data === null) throw new InvalidDataContractError('patientList.rows');
+		const rows = patientsResult.data;
 		const hasMore = rows.length > PAGE_SIZE;
 		const patients = hasMore ? rows.slice(0, PAGE_SIZE) : rows;
 		const last = patients.at(-1);
-		const countRow = (Array.isArray(countsResult.data) ? countsResult.data[0] : countsResult.data) as
-			| { total_count?: number; active_count?: number; archived_count?: number }
-			| null;
+    const countRow = countsResult.data?.[0] ?? null;
+    if (includeCounts && !countRow) throw new InvalidDataContractError('patientList.counts');
+
 		const canAccessRadiographTrash =
 			(context.role === 'owner' || context.role === 'admin') &&
 			context.access.allowedCapabilities.canViewExistingClinicalNotes &&

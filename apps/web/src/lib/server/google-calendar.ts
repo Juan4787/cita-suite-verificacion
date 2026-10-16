@@ -1,3 +1,4 @@
+import { isRecord, readNullableText, readFiniteNumber } from './contracts';
 import { env } from '$env/dynamic/private';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import crypto from 'node:crypto';
@@ -332,7 +333,7 @@ const timeoutSignal = (milliseconds: number) => {
 	return { signal: controller.signal, clear: () => clearTimeout(timeout) };
 };
 
-const safeJson = async (response: Response): Promise<any> => {
+const safeJson = async (response: Response): Promise<unknown> => {
 	try {
 		return await response.json();
 	} catch {
@@ -343,7 +344,7 @@ const safeJson = async (response: Response): Promise<any> => {
 const postGoogleToken = async (
 	params: URLSearchParams,
 	fetchFn: typeof fetch
-): Promise<GoogleTokenResponse> => {
+): Promise<GoogleTokenResponse & { access_token: string }> => {
 	const timer = timeoutSignal(GOOGLE_REQUEST_TIMEOUT_MS);
 	try {
 		const response = await fetchFn(GOOGLE_TOKEN_ENDPOINT, {
@@ -352,8 +353,9 @@ const postGoogleToken = async (
 			body: params,
 			signal: timer.signal
 		});
-		const body = (await safeJson(response)) as GoogleTokenResponse | null;
-		if (!response.ok || !body?.access_token) {
+		const payload = await safeJson(response);
+		const body = isRecord(payload) ? payload : null;
+		if (!response.ok || typeof body?.access_token !== 'string' || !body.access_token) {
 			if (body?.error === 'invalid_grant') {
 				throw new GoogleCalendarRemoteError('authorization', 'oauth_revoked', response.status);
 			}
@@ -371,7 +373,13 @@ const postGoogleToken = async (
 			}
 			throw new GoogleCalendarRemoteError('permanent', 'oauth_rejected', response.status);
 		}
-		return body;
+    return {
+      access_token: body.access_token,
+      refresh_token: readNullableText(body.refresh_token, 'googleToken.refreshToken') ?? undefined,
+      scope: readNullableText(body.scope, 'googleToken.scope') ?? undefined,
+      token_type: readNullableText(body.token_type, 'googleToken.tokenType') ?? undefined,
+      ...(body.expires_in === undefined ? {} : { expires_in: readFiniteNumber(body.expires_in, 'googleToken.expiresIn') })
+    };
 	} catch (error) {
 		if (error instanceof GoogleCalendarRemoteError) throw error;
 		throw new GoogleCalendarRemoteError('transient', 'oauth_network');
@@ -394,9 +402,7 @@ const exchangeAuthorizationCode = async (
 		grant_type: 'authorization_code',
 		redirect_uri: config.redirectUri
 	});
-	return (await postGoogleToken(params, fetchFn)) as GoogleTokenResponse & {
-		access_token: string;
-	};
+	return postGoogleToken(params, fetchFn);
 };
 
 const loadGoogleSubject = async (accessToken: string, fetchFn: typeof fetch): Promise<string> => {
@@ -406,7 +412,8 @@ const loadGoogleSubject = async (accessToken: string, fetchFn: typeof fetch): Pr
 			headers: { authorization: `Bearer ${accessToken}` },
 			signal: timer.signal
 		});
-		const body = await safeJson(response);
+		const payload = await safeJson(response);
+		const body = isRecord(payload) ? payload : null;
 		if (!response.ok || typeof body?.sub !== 'string' || !body.sub) {
 			if (response.status === 401) {
 				throw new GoogleCalendarRemoteError('authorization', 'oauth_identity_rejected', 401);
@@ -521,10 +528,16 @@ export const googleCalendarEventResource = (
 export const deterministicGoogleCalendarEventId = (appointmentId: string): string =>
 	`cs${crypto.createHash('sha256').update(`cita-suite:${appointmentId}`).digest('hex').slice(0, 40)}`;
 
-const googleErrorReason = (body: any): string =>
-	String(body?.error?.errors?.[0]?.reason ?? body?.error?.status ?? '').trim();
+const googleErrorReason = (body: unknown): string => {
+  const row = isRecord(body) ? body : null;
+  const error = isRecord(row?.error) ? row.error : null;
+  const errors: unknown[] = Array.isArray(error?.errors) ? error.errors : [];
+  const first = isRecord(errors[0]) ? errors[0] : null;
+  const reason = first?.reason ?? error?.status;
+  return typeof reason === 'string' ? reason.trim() : '';
+};
 
-const classifyGoogleApiError = (response: Response, body: any): GoogleCalendarRemoteError => {
+const classifyGoogleApiError = (response: Response, body: unknown): GoogleCalendarRemoteError => {
 	const reason = googleErrorReason(body);
 	if (response.status === 401) {
 		return new GoogleCalendarRemoteError('authorization', 'calendar_authorization_expired', 401);
@@ -553,7 +566,7 @@ const googleCalendarRequest = async (
 	accessToken: string,
 	fetchFn: typeof fetch,
 	options: { method?: string; body?: unknown } = {}
-): Promise<any> => {
+): Promise<unknown> => {
 	const timer = timeoutSignal(GOOGLE_REQUEST_TIMEOUT_MS);
 	try {
 		const response = await fetchFn(`${GOOGLE_CALENDAR_API}${path}`, {
@@ -816,7 +829,8 @@ export const processGoogleCalendarEvent = async (
 					fetchFn,
 					{ method: 'POST', body: { ...resource, id: deterministicId } }
 				);
-				googleEventId = String(created?.id ?? deterministicId);
+				if (!isRecord(created) || typeof created.id !== 'string' || !created.id) throw new GoogleCalendarRemoteError('transient', 'calendar_response_invalid');
+				googleEventId = created.id;
 			} catch (error) {
 				if (!(error instanceof GoogleCalendarRemoteError) || error.category !== 'conflict') {
 					throw error;
@@ -827,7 +841,8 @@ export const processGoogleCalendarEvent = async (
 					accessToken,
 					fetchFn
 				);
-				googleEventId = String(existing?.id ?? deterministicId);
+				if (!isRecord(existing) || typeof existing.id !== 'string' || !existing.id) throw new GoogleCalendarRemoteError('transient', 'calendar_response_invalid');
+				googleEventId = existing.id;
 			}
 		} else {
 			await googleCalendarRequest(
@@ -893,7 +908,7 @@ export const processGoogleCalendarSyncJobs = async (
 		claim_limit: limit
 	});
 	if (error) throw error;
-	const ids = (data ?? []).map((row: any) => String(row.event_row_id));
+	const ids = (data ?? []).map((row) => String(row.event_row_id));
 	const result = { configured: true, claimed: ids.length, active: 0, deleted: 0, retrying: 0, attention: 0 };
 	for (const id of ids) {
 		try {

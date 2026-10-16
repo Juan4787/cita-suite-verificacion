@@ -1,3 +1,4 @@
+import { InvalidDataContractError, readArray, readFiniteNumber, readRecord, readText } from './contracts';
 import { env } from "$env/dynamic/private";
 import { createSupabaseAdminClient } from "$lib/server/supabase";
 import { getOdontoContext } from "$lib/server/odonto-context";
@@ -25,10 +26,13 @@ export const legacyPublicPracticeActions: Actions = {
         message: "No pudimos revisar las cargas abandonadas. Probá nuevamente.",
       });
     let removed = 0;
-    for (const item of (data ?? []) as any[]) {
+    for (const value of readArray(data, 'expiredClinicalUploads')) {
+      const item = readRecord(value, 'expiredClinicalUpload');
+      const bucket = readText(item.bucket, 'expiredClinicalUpload.bucket');
+      const paths = readArray(item.paths, 'expiredClinicalUpload.paths').map(path => readText(path, 'expiredClinicalUpload.path'));
       const { error: removeError } = await admin.storage
-        .from(item.bucket)
-        .remove(item.paths);
+        .from(bucket)
+        .remove(paths);
       if (removeError)
         return fail(503, {
           message:
@@ -144,7 +148,7 @@ export async function loadPublicPracticeSettings(
     .single();
   if (row.error || !row.data)
     error(503, "No pudimos cargar esta configuración. Volvé a intentar.");
-  let budget: any = null;
+  let budget: ReturnType<typeof parseStorageBudget> | null = null;
   if (documents) {
     const response = await context.supabase.rpc("get_clinical_storage_budget", {
       p_business_id: context.business.business.id,
@@ -154,7 +158,7 @@ export async function loadPublicPracticeSettings(
         503,
         "No pudimos consultar el espacio para archivos. Volvé a intentar.",
       );
-    budget = response.data;
+    budget = parseStorageBudget(response.data);
   }
   return { settings: row.data, budget };
 }
@@ -223,4 +227,18 @@ export async function savePublicPracticePart(
   } catch {
     return fail(400, { message: "Revisá los campos antes de guardar." });
   }
+}
+
+
+export function parseStorageBudget(value: unknown) {
+  const row = readRecord(value, 'clinicalStorageBudget');
+  const bytes = (key: string) => {
+    const value = readFiniteNumber(row[key], 'clinicalStorageBudget.' + key);
+    if (!Number.isSafeInteger(value) || value < 0) throw new InvalidDataContractError('clinicalStorageBudget.' + key);
+    return value;
+  };
+  const percentage = readFiniteNumber(row.percentage, 'clinicalStorageBudget.percentage');
+  if (percentage < 0) throw new InvalidDataContractError('clinicalStorageBudget.percentage');
+  return { used_bytes: bytes('used_bytes'), reserved_bytes: bytes('reserved_bytes'), max_bytes: bytes('max_bytes'),
+    database_bytes: bytes('database_bytes'), monthly_authorized_download_bytes: bytes('monthly_authorized_download_bytes'), percentage };
 }

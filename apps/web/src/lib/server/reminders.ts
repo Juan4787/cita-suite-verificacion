@@ -389,10 +389,10 @@ export const loadReminderCandidates = async (
 	const mapsLink = resolveMapsUrl({ address: business.address, maps_url: business.maps_url });
 
 	const candidates: ReminderCandidate[] = [];
-	for (const row of appointments as any[]) {
+	for (const row of appointments) {
 		const patient = row.patients;
 		if (patient?.blocked) continue;
-		const googleCalendar = googleCalendarByAppointment.get(String(row.id)) as any;
+		const googleCalendar = googleCalendarByAppointment.get(String(row.id));
 		const coverage = classifyReminderCoverage({
 			calendar_action_status: String(row.calendar_action_status ?? 'not_offered'),
 			calendar_update_required_at: row.calendar_update_required_at ?? null,

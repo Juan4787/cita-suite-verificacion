@@ -65,7 +65,7 @@ const selectRevision = async (admin: CitaSupabaseClient, businessId: string) => 
 		.eq('business_id', businessId)
 		.maybeSingle();
 	if (error) throw error;
-	return (data as RevisionRow | null) ?? null;
+	return data ?? null;
 };
 
 export const getPatientDataRevision = async (
@@ -81,7 +81,7 @@ export const getPatientDataRevision = async (
 			.insert({ business_id: businessId })
 			.select('patients_revision, realtime_topic_token')
 			.single();
-		if (!error) return toRevision((data as RevisionRow | null) ?? null);
+		if (!error) return toRevision(data ?? null);
 		if (error.code !== '23505') throw error;
 
 		return toRevision(await selectRevision(admin, businessId));

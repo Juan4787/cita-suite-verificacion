@@ -6,7 +6,7 @@ import {
 } from './patient-list';
 
 const rows = (label: string) => ({
-	patients: [{ id: label }],
+	patients: [{ id: label, full_name: 'Paciente sintético' }],
 	query: '' as const,
 	showArchived: false,
 	demo: false,
@@ -42,7 +42,7 @@ describe('stable patient list revision', () => {
 
 		expect(result).toMatchObject({
 			businessId: 'business-1',
-			patients: [{ id: 'next-page' }],
+			patients: rows('next-page').patients,
 			cacheable: false,
 			revision: null,
 			cacheScope: null
@@ -89,7 +89,7 @@ describe('stable patient list revision', () => {
 			businessId: 'business-1'
 		});
 
-		expect(result.patients).toEqual([{ id: 'current' }]);
+		expect(result.patients).toEqual(rows('current').patients);
 		expect(result.revision).toBe('21');
 		expect(loadRows).toHaveBeenCalledTimes(2);
 	});

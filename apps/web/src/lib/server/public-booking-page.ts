@@ -1,3 +1,4 @@
+import { isRecord } from './contracts';
 import { bookingInformationEnabled, loadProfessionalBookingSchema, informationErrorMessage } from './booking-information';
 import {type PriceQuote} from '$lib/booking/pricing';
 import { parsePriceQuote, parseServicePriceLabels } from './price-contracts';
@@ -18,7 +19,7 @@ import {
 	publicHash,
 	verifyTurnstileIfConfigured
 } from '$lib/server/public-booking';
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, redirect, isRedirect } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { BookingIntegration } from './booking-integrations';
 import { assertIntegrationSelection, bookingPresentation, intakeAnswersFromForm, integratedBookingErrorMessage } from './booking-integrations';
@@ -186,8 +187,8 @@ export const loadPublicBookingPage = async ({ params, fetch, url, setHeaders }: 
 			presentation: integration ? { ...bookingPresentation(integration), compact: framed && integration.theme === 'natalia' && integration.professionalIds.length === 1 } : null,
 			demo: false
 		};
-	} catch (error: any) {
-		if (error?.status && error?.location) throw error;
+	} catch (error) {
+		if (isRedirect(error)) throw error;
 		console.error('Error cargando reserva publica', error);
 		return {
 			state: {
@@ -373,15 +374,19 @@ export const submitPublicBookingPage = async ({ request, params, fetch, url, get
 				throw redirect(303, '/embed/v1/' + integration.publicKey + '/turno/' + result.appointment.confirmation_token + '?' + context);
 			}
 			throw redirect(303, `/turno/${result.appointment.confirmation_token}?creado=1`);
-		} catch (error: any) {
-			if (error?.status && error?.location) throw error;
+		} catch (error) {
+			if (isRedirect(error)) throw error;
 			const integrationMessage = integratedBookingErrorMessage(error);
 			if (integration) console.error('Error creando reserva integrada', { code: getPublicBookingErrorCode(error) });
 			else console.error('Error creando reserva publica', error);
 			return fail(400, {
-				message: String(error?.message??'').includes('PRICE_') ? 'El arancel cambió mientras reservabas. Actualizá la página, revisá el precio para tu fecha y confirmá nuevamente.' : /BOOKING_(INFORMATION|PROFILE|INTAKE)/.test(String(error?.message ?? '')) ? informationErrorMessage(error) : integrationMessage ?? getPublicBookingErrorMessage(error),
-				uncertain: Boolean(!/PRICE_|SCHEDULE_SERVICE|SCHEDULE_BLOCKED/.test(String(error?.message??'')) && integration && ((!integrationMessage && getPublicBookingErrorCode(error) === 'PUBLIC_BOOKING_UNEXPECTED') || String(error?.message ?? '').includes('APPOINTMENT_IDEMPOTENCY_CONFLICT'))),
+				message: publicErrorMessage(error).includes('PRICE_') ? 'El arancel cambió mientras reservabas. Actualizá la página, revisá el precio para tu fecha y confirmá nuevamente.' : /BOOKING_(INFORMATION|PROFILE|INTAKE)/.test(publicErrorMessage(error)) ? informationErrorMessage(error) : integrationMessage ?? getPublicBookingErrorMessage(error),
+				uncertain: Boolean(!/PRICE_|SCHEDULE_SERVICE|SCHEDULE_BLOCKED/.test(publicErrorMessage(error)) && integration && ((!integrationMessage && getPublicBookingErrorCode(error) === 'PUBLIC_BOOKING_UNEXPECTED') || publicErrorMessage(error).includes('APPOINTMENT_IDEMPOTENCY_CONFLICT'))),
 				values: valuesFromForm(form)
 			});
 		}
 };
+
+
+const publicErrorMessage = (cause: unknown): string =>
+  cause instanceof Error ? cause.message : isRecord(cause) && typeof cause.message === 'string' ? cause.message : '';

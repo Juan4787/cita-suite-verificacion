@@ -22,7 +22,7 @@ function setup(canManage = true) {
   };
   client = {
     from: vi.fn(() => builder),
-    rpc: vi.fn().mockResolvedValue({ error: null, data: { used_bytes: 0 } }),
+    rpc: vi.fn().mockResolvedValue({ error: null, data: { used_bytes: 0, reserved_bytes: 0, max_bytes: 700000000, database_bytes: 0, monthly_authorized_download_bytes: 0, percentage: 0 } }),
   };
   getContext.mockResolvedValue({
     supabase: client,

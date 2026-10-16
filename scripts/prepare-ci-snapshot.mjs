@@ -25,7 +25,7 @@ const extras = [
 	'docs/plans/refactorizacion-cita-suite.md', 'docs/plans/refactorizacion-cita-suite.integridad.json',
 	'docs/plans/registro-refactorizacion-cita-suite.md',
 	'docs/architecture/base-de-campana.md', 'docs/architecture/verificacion.md',
-	'docs/architecture/identidad-cita-suite.md',
+	'docs/architecture/identidad-cita-suite.md', 'docs/architecture/relaciones-entre-consultorios.md',
 	'docs/archive/administrativo-inactivo/README.md', 'docs/archive/administrativo-inactivo/integridad.json',
 	...JSON.parse(readFileSync(join(root, 'docs/archive/administrativo-inactivo/integridad.json'), 'utf8')).map(entry => entry.archive),
 	'docs/architecture/functional-contracts.md', 'docs/architecture/refactoring-campaign.md',
@@ -35,7 +35,7 @@ const extras = [
 	'scripts/verify-campaign-staging.mjs', 'scripts/prepare-ci-snapshot.mjs',
 	'scripts/prepare-ci-services.mjs',
 	'scripts/test-verification-evidence.py',
-	'scripts/generate-database-types.mjs',
+	'scripts/generate-database-types.mjs', 'scripts/run-campaign-type-generation.mjs',
 	'scripts/package-verification-evidence.py', 'scripts/collect-verification-evidence.py',
 	...readdirSync(join(root, 'scripts/lib')).filter(name => name.endsWith('.mjs')).map(name => 'scripts/lib/' + name)
 ];

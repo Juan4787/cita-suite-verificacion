@@ -66,3 +66,12 @@ La campaña usa temporalmente `Juan4787/cita-suite-verificacion`, un repositorio
 Los resultados y capturas sintéticos se empaquetan con tamaño acotado y SHA-256 en los logs del workflow. No se habilita almacenamiento facturable de artifacts ni cachés. Los logs no consumen la cuota de artifacts según la [documentación de GitHub](https://docs.github.com/en/billing/concepts/product-billing/github-actions). Tras descargar el ZIP de logs, `python3 scripts/collect-verification-evidence.py <logs.zip> <directorio-nuevo>` comprueba integridad y rutas antes de recuperar la evidencia; no sobrescribe resultados anteriores.
 
 `python3 scripts/test-verification-evidence.py` comprueba el circuito completo con archivos descartables: conserva el estado fallido, oculta tokens, rechaza alteraciones y rutas que escapan del destino, y no sobrescribe evidencia anterior. Está incluido en la verificación rápida.
+
+
+### Generación independiente al cambiar migraciones
+
+El perfil manual `types` del workflow prepara exclusivamente la base/Storage descartables, reconstruye todas las migraciones y exporta dos generaciones idénticas. No depende de que la aplicación anterior compile contra un esquema nuevo: permite revisar e incorporar los tipos antes de ejecutar `verify:full`, que continúa exigiendo `--check`. No omite ese control ni permite reemplazarlo por una conversión.
+
+El recibo `.verification/type-generation.json` identifica expresamente `types-generation-only` y `fullVerification: false`; las suites SQL, Auth y navegador no se consideran ejecutadas. El perfil no usa proyectos vinculados, contraseñas remotas ni datos reales. Al terminar o interrumpirse limpia únicamente contenedores con las dos etiquetas de propiedad correctas y redes internas con el identificador exacto de corrida; un fallo de limpieza hace fallar el recibo.
+
+La generación independiente todavía debe ensayarse en el workflow sobre una revisión exacta antes de considerarse comprobada. El primer arranque exportado de la etapa 2 ya fue incorporado; la comparación completa sigue pendiente de la nueva corrida full, y no se conserva una excepción que permita aprobar con tipos diferentes.

@@ -1,3 +1,4 @@
+import { InvalidDataContractError } from './contracts';
 // Recordatorios Web Push para navegadores compatibles (este flujo nunca se ofrece en iOS).
 //
 // Confiabilidad del envío: claim atómico vía RPC claim_due_push_reminders
@@ -10,7 +11,7 @@ import { env as publicEnv } from '$env/dynamic/public';
 import webpush from 'web-push';
 import crypto from 'node:crypto';
 import { isIP } from 'node:net';
-import type { CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
+import type { CitaRow, CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
 import { writeAuditLog } from './audit';
 import { formatInTimeZone } from '$lib/utils/format';
 import { isActiveAppointmentStatus } from '$lib/utils/appointment-visibility';
@@ -190,7 +191,9 @@ const receiptTokenMatches = (token: string, expectedHash: string) => {
 	return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
 };
 
-const deliveryState = (row: any, now: Date): PushDeliveryState => {
+type DeliveryRow = Pick<CitaRow<'push_delivery_attempts'>, 'id' | 'kind' | 'user_confirmed_at' | 'clicked_at' | 'user_reported_missing_at' | 'superseded_at' | 'failed_at' | 'displayed_at' | 'expires_at' | 'received_at' | 'accepted_at' | 'created_at'>;
+
+const deliveryState = (row: DeliveryRow, now: Date): PushDeliveryState => {
 	if (row.user_confirmed_at) return 'confirmed';
 	if (row.clicked_at) return 'clicked';
 	if (row.user_reported_missing_at) return 'missing';
@@ -203,13 +206,17 @@ const deliveryState = (row: any, now: Date): PushDeliveryState => {
 	return 'pending';
 };
 
-const toDeliveryStatus = (row: any, now = new Date()): PushDeliveryStatus => ({
+const toDeliveryStatus = (row: DeliveryRow, now = new Date()): PushDeliveryStatus => {
+  const kind = (['test', '24h', '2h', 'reschedule', 'review'] as const).find(kind => kind === row.kind);
+  if (!kind) throw new InvalidDataContractError('pushDelivery.kind');
+  return ({
 	deliveryId: String(row.id),
 	state: deliveryState(row, now),
-	kind: row.kind as PushDeliveryKind,
+	kind,
 	createdAt: String(row.created_at),
 	expiresAt: String(row.expires_at)
 });
+};
 
 export const getPushDeliveryStatus = async (
 	supabase: CitaSupabaseClient,
@@ -669,7 +676,6 @@ export const sendReschedulePushNotice = async (
 		.eq('business_id', input.businessId)
 		.maybeSingle();
 	if (appointmentError) throw appointmentError;
-	const business = (appointment as any)?.businesses;
 	if (
 		!appointment ||
 		!isActiveAppointmentStatus(appointment.status) ||
@@ -677,6 +683,7 @@ export const sendReschedulePushNotice = async (
 	) {
 		return { configured: true, sent: 0, failed: 0, deadEndpoints: 0 };
 	}
+	const business = appointment.businesses;
 
 	const { data: subscriptions, error: subscriptionsError } = await supabase
 		.from('push_subscriptions')
@@ -707,7 +714,7 @@ export const sendReschedulePushNotice = async (
 	let failed = 0;
 	let deadEndpoints = 0;
 	for (const subscription of subscriptions) {
-		const device = (subscription as any).push_devices;
+		const device = subscription.push_devices;
 		try {
 			const tracked = await sendTrackedPush(supabase, {
 				businessId: input.businessId,
@@ -855,7 +862,6 @@ export const sendDuePushReminders = async (
 				.eq('business_id', claimed.business_id)
 				.maybeSingle();
 			if (appointmentError) throw appointmentError;
-			const business = (appointment as any)?.businesses;
 			if (
 				!appointment ||
 				!isActiveAppointmentStatus(appointment.status) ||
@@ -865,6 +871,7 @@ export const sendDuePushReminders = async (
 				continue;
 			}
 
+			const business = appointment.businesses;
 			const { dateLabel, timeLabel } = formatInTimeZone(
 				String(appointment.starts_at),
 				String(business.timezone)

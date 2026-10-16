@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { fixturePath } from './lib/fixture-path.mjs';
 import { acquireVerificationLock } from './lib/verification-lock.mjs';
 import { assertBrowserReport } from './lib/browser-report.mjs';
+import { cleanupFixtureResources } from './lib/fixture-cleanup.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -40,17 +41,8 @@ async function run(command, args, options = {}) {
 }
 
 function cleanupDatabase() {
-	const resources = spawnSync('docker', ['ps', '-aq', '--filter', 'label=com.cita-suite.fixture-run=' + runId], { encoding: 'utf8' });
-	if (resources.status !== 0) { process.exitCode = 1; return; }
-	for (const name of resources.stdout.trim().split(/\s+/).filter(Boolean)) {
-		const inspected = spawnSync('docker', ['inspect', '--format', '{{index .Config.Labels "com.cita-suite.booking-fixture"}}', name], { encoding: 'utf8' });
-		if (inspected.status !== 0 || inspected.stdout.trim() !== 'true') { process.exitCode = 1; continue; }
-		if (spawnSync('docker', ['rm', '-f', '-v', name], { stdio: 'ignore' }).status !== 0) process.exitCode = 1;
-	}
-	const networks = spawnSync('docker', ['network', 'ls', '-q', '--filter', 'label=com.cita-suite.fixture-run=' + runId], { encoding: 'utf8' });
-	if (networks.status !== 0) { process.exitCode = 1; return; }
-	for (const network of networks.stdout.trim().split(/\s+/).filter(Boolean))
-		if (spawnSync('docker', ['network', 'rm', network], { stdio: 'ignore' }).status !== 0) process.exitCode = 1;
+  try { cleanupFixtureResources(runId); }
+  catch (error) { console.error(error.message); process.exitCode = 1; }
 }
 
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
