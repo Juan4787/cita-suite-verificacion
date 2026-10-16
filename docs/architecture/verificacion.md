@@ -61,7 +61,7 @@ Ante el agotamiento de transferencia de ECR en runners compartidos, la descarga 
 
 El comando `pnpm supabase:types` exige esa base reconstruida en CI; ya no redirige la salida de un proceso a un archivo que podría quedar truncado si falla. `--check` detecta deriva frente a las migraciones. Durante el primer arranque de la etapa 2 se utiliza `--export` para recuperar el contrato generado; esa excepción tiene como responsable a la campaña y se elimina al incorporar el archivo inicial, antes de cerrar la etapa.
 
-La campaña usa temporalmente `Juan4787/cita-suite-verificacion`, un repositorio público auxiliar sin conexión de despliegue ni secretos, con runners estándar gratuitos. El repositorio original conserva su integración Cloudflare sin modificaciones. `prepare-ci-snapshot.mjs` prepara una copia del código necesario mediante un índice independiente: no cambia el índice, la rama ni los archivos del usuario. Excluye adjuntos, archivos `.env`, evidencias y documentos ajenos; registra huellas y contenido exacto en `.verification/ci-source.json`.
+La campaña usa temporalmente `Juan4787/cita-suite-verificacion`, un repositorio público auxiliar sin conexión de despliegue ni credenciales de producción, con runners estándar gratuitos. El repositorio original conserva su integración Cloudflare sin modificaciones. `prepare-ci-snapshot.mjs` prepara una copia del código necesario mediante un índice independiente: no cambia el índice, la rama ni los archivos del usuario. Excluye adjuntos, archivos `.env`, evidencias y documentos ajenos; registra huellas y contenido exacto en `.verification/ci-source.json`.
 
 Los resultados y capturas sintéticos se empaquetan con tamaño acotado y SHA-256 en los logs del workflow. No se habilita almacenamiento facturable de artifacts ni cachés. Los logs no consumen la cuota de artifacts según la [documentación de GitHub](https://docs.github.com/en/billing/concepts/product-billing/github-actions). Tras descargar el ZIP de logs, `python3 scripts/collect-verification-evidence.py <logs.zip> <directorio-nuevo>` comprueba integridad y rutas antes de recuperar la evidencia; no sobrescribe resultados anteriores.
 
@@ -75,3 +75,12 @@ El perfil manual `types` del workflow prepara exclusivamente la base/Storage des
 El recibo `.verification/type-generation.json` identifica expresamente `types-generation-only` y `fullVerification: false`; las suites SQL, Auth y navegador no se consideran ejecutadas. El perfil no usa proyectos vinculados, contraseñas remotas ni datos reales. Al terminar o interrumpirse limpia únicamente contenedores con las dos etiquetas de propiedad correctas y redes internas con el identificador exacto de corrida; un fallo de limpieza hace fallar el recibo.
 
 La generación independiente todavía debe ensayarse en el workflow sobre una revisión exacta antes de considerarse comprobada. El primer arranque exportado de la etapa 2 ya fue incorporado; la comparación completa sigue pendiente de la nueva corrida full, y no se conserva una excepción que permita aprobar con tipos diferentes.
+
+
+### Preparación del staging identificado
+
+Destino autorizado: `ikaudqoilclfnztkxubz` (nombre actual **Staging 455**, región `us-west-2`). La sesión habitual accede como Developer; no se eleva a Owner/Admin. Producción sigue siendo `yjzferwuzbtgpmdnzlcb`, región `sa-east-1`. Esa diferencia regional deberá quedar explícita al medir el comportamiento alojado; no se trasladan datos para ocultarla.
+
+Las conexiones de staging se guardan con permisos 0600 en `~/.config/cita-suite/staging/`, fuera del proyecto, y se suministran explícitamente. No se toma `SUPABASE_DB_URL` ni el vínculo CLI predeterminado. La línea de staging que el usuario agregó a `.env` se trasladó a esa configuración privada conservando los demás bytes del archivo. Ninguna credencial se copia al código, al snapshot ni a evidencia.
+
+El workflow manual `staging-connectivity.yml` ejecuta sólo una inspección SQL de lectura en el proyecto exacto autorizado, con `default_transaction_read_only=on`, tiempo acotado y sin imprimir cadenas o errores del driver. Comparte exclusión con las verificaciones de campaña. El único secreto configurado en el repositorio auxiliar es `CITA_STAGING_DATABASE_URL`, exclusivo de ese staging. Este workflow no aplica migraciones, despliega, carga datos ni acredita capacidad o release.
