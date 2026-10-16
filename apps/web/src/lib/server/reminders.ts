@@ -1,3 +1,4 @@
+import { readChoice } from '$lib/contracts/json';
 // Sección Recordatorios: turnos próximos SIN cobertura de recordatorio registrada,
 // para refuerzo manual por WhatsApp desde recepción.
 //
@@ -21,7 +22,7 @@
 
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { bookingContextsAvailable } from './booking-integration-flags';
-import type { BookingModality } from '@turnos-saas/shared/booking-integration';
+import { BOOKING_MODALITIES, type BookingModality } from '@turnos-saas/shared/booking-integration';
 import { ACTIVE_APPOINTMENT_STATUSES } from '$lib/utils/appointment-visibility';
 import { formatInTimeZone } from '$lib/utils/format';
 import { publicAppointmentUrl } from './messaging';
@@ -368,7 +369,7 @@ export const loadReminderCandidates = async (
 	if (dispatchResult.error) throw dispatchResult.error;
 	if (googleCalendarResult.error) throw googleCalendarResult.error;
 	if (bookingContextResult.error) throw bookingContextResult.error;
-	const modalitiesByAppointment = new Map((bookingContextResult.data ?? []).map((row) => [String(row.appointment_id), row.modality as BookingModality]));
+	const modalitiesByAppointment = new Map((bookingContextResult.data ?? []).map((row) => [String(row.appointment_id), readChoice(row.modality, BOOKING_MODALITIES, 'reminders.modality')]));
 	const pushRows = pushResult.data;
 	const dispatchRows = dispatchResult.data;
 	const googleCalendarRows = googleCalendarResult.data;

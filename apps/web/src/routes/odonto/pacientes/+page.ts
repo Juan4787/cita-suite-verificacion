@@ -1,4 +1,6 @@
 import { browser } from '$app/environment';
+import { isRecord, InvalidDataContractError } from '$lib/contracts/json';
+import { parsePatientListData } from '$lib/contracts/patient-list';
 import {
 	acceptPatientListSnapshot,
 	getCurrentVerifiedPatientRevision,
@@ -31,10 +33,16 @@ const fetchPatientList = async (
 		payload = null;
 	}
 	if (!response.ok) {
-		const message = String((payload as { message?: unknown } | null)?.message ?? '').trim();
+		const message = isRecord(payload) && typeof payload.message === 'string' ? payload.message.trim() : '';
 		throw kitError(response.status, message || 'No se pudieron cargar los pacientes.');
 	}
-	return payload as PatientListSnapshot;
+	try {
+		return parsePatientListData(payload);
+	} catch (error) {
+		if (error instanceof InvalidDataContractError)
+			throw kitError(503, 'No pudimos cargar la lista completa de pacientes. Volvé a intentar.');
+		throw error;
+	}
 };
 
 export const load: PageLoad = async ({ fetch, url, depends, parent }) => {

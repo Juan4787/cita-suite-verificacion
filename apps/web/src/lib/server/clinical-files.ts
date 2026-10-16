@@ -1,4 +1,4 @@
-import { readRecord } from './contracts';
+import { readRecord } from '$lib/contracts/json';
 import {isHttpError,isRedirect,type RequestEvent} from '@sveltejs/kit';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { getOdontoContext } from './odonto-context';

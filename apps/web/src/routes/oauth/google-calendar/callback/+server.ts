@@ -1,4 +1,4 @@
-import { isRecord } from '$lib/server/contracts';
+import { isRecord } from '$lib/contracts/json';
 import {
 	authorizeGoogleCalendarAppointment,
 	consumeGoogleCalendarOAuthAttempt,

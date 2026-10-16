@@ -1,5 +1,5 @@
-import { readChoice, isRecord } from './contracts';
-import { InvalidDataContractError } from './contracts';
+import { readChoice, isRecord } from '$lib/contracts/json';
+import { InvalidDataContractError } from '$lib/contracts/json';
 // Recordatorios Web Push para navegadores compatibles (este flujo nunca se ofrece en iOS).
 //
 // Confiabilidad del envío: claim atómico vía RPC claim_due_push_reminders

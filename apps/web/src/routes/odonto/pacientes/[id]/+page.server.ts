@@ -1,4 +1,4 @@
-import { isRecord } from '$lib/server/contracts';
+import { isRecord } from '$lib/contracts/json';
 import { readClinicalEntryAmount } from '$lib/server/clinical-entry-costs';
 import { bookingInformationEnabled } from '$lib/server/booking-information';
 import { env } from '$env/dynamic/private';

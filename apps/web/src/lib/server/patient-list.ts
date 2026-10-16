@@ -1,5 +1,4 @@
-import type { Patient } from '$lib/types';
-import { InvalidDataContractError } from './contracts';
+import { InvalidDataContractError } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
 import { resolveActiveBusiness } from '$lib/server/business';
 import { readDemoDb } from '$lib/server/demo-store';
@@ -23,30 +22,9 @@ import { error as kitError, redirect, type Cookies } from '@sveltejs/kit';
 export { normalizePatientListQuery } from '$lib/utils/patient-list-query';
 
 const PAGE_SIZE = 30;
-type CountsSource = 'rpc' | 'fallback_planned';
 
-export type PatientListData = {
-	businessId: string | null;
-	patients: Array<Pick<Patient, 'id' | 'full_name' | 'dni' | 'phone' | 'archived_at' | 'created_at' | 'updated_at' | 'last_entry_at'> & { professional_archived_at?: string | null }>;
-	query: string;
-	showArchived: boolean;
-	demo: boolean;
-	canCreatePatient: boolean;
-	canAccessRadiographTrash: boolean;
-	totalCount: number;
-	activeCount: number;
-	archivedCount: number;
-	countsIncluded: boolean;
-	countsSource: CountsSource;
-	hasMore: boolean;
-	nextCursor: string | null;
-	snapshotAt: string | null;
-	pageSize: number;
-	cacheable: boolean;
-	revision: string | null;
-	cacheScope: string | null;
-	loadedAt: string;
-};
+export type { PatientListData } from '$lib/contracts/patient-list';
+import type { PatientListData } from '$lib/contracts/patient-list';
 
 type LoadPatientListOptions = {
 	locals: App.Locals;

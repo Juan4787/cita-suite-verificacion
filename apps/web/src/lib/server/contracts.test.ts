@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { InvalidDataContractError, readJson } from './contracts';
+import { InvalidDataContractError, readJson } from '$lib/contracts/json';
 import { parsePatientBookingProfile } from './patient-booking-profile';
 import { parseIntegratedAvailabilityRows } from './integrated-availability';
 

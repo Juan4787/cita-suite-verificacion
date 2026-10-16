@@ -1,6 +1,6 @@
 import type { PriceQuote } from '$lib/booking/pricing';
 import { formatQuotedPrice } from '$lib/booking/pricing';
-import { InvalidDataContractError, readArray, readBoolean, readFiniteNumber, readJson, readRecord, readText } from './contracts';
+import { InvalidDataContractError, readArray, readBoolean, readFiniteNumber, readJson, readRecord, readText } from '$lib/contracts/json';
 
 export function parsePriceQuote(value: unknown): PriceQuote | null {
   if (value === null || value === undefined) return null;

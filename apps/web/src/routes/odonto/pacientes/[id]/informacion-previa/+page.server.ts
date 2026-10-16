@@ -3,7 +3,7 @@ import { getOdontoContext } from '$lib/server/odonto-context';
 import { resolvePatientPermissions } from '$lib/server/patient-permissions';
 import { bookingInformationEnabled, privateInformationHeaders } from '$lib/server/booking-information';
 import { parsePublicPatientFields } from '@turnos-saas/shared/booking-integration';
-import { isRecord, readRecord } from '$lib/server/contracts';
+import { isRecord, readRecord } from '$lib/contracts/json';
 import type { PageServerLoad } from './$types';
 
 function displayProfileValue(value: unknown): string {

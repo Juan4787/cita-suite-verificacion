@@ -118,4 +118,4 @@ export const actions: Actions = {
     }
   },
 };
-import { readRecord, readText } from '$lib/server/contracts';
+import { readRecord, readText } from '$lib/contracts/json';

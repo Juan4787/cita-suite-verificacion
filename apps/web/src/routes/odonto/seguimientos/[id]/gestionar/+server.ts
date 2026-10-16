@@ -1,4 +1,4 @@
-import { readRecord } from '$lib/server/contracts';
+import { readRecord } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
 import { getOdontoContext } from '$lib/server/odonto-context';
 import { createSupabaseAdminClient } from '$lib/server/supabase';

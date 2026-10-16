@@ -5,6 +5,26 @@ begin;
 set local lock_timeout='5s';
 set local statement_timeout='60s';
 
+-- Access is determined by actual validity dates, not the last scheduler label.
+-- This matches getBusinessAccessState even if maintenance has not run yet.
+create or replace function public.business_allows_owner_restricted_read(target_business_id uuid)
+returns boolean
+language sql
+security definer
+set search_path='pg_catalog'
+as $function$
+ select coalesce((
+  select bs.archived_at is null and bs.commercial_access_enabled=true and (
+   bs.is_permanent=true
+   or (bs.paid_until is not null and now()<=bs.paid_until)
+   or (bs.grace_until is not null and now()<=bs.grace_until)
+   or (bs.restricted_until is not null and now()<=bs.restricted_until)
+  ) from public.business_subscriptions bs where bs.business_id=target_business_id
+ ),public.business_allows_operation(target_business_id));
+$function$;
+revoke execute on function public.business_allows_owner_restricted_read(uuid) from public,anon;
+grant execute on function public.business_allows_owner_restricted_read(uuid) to authenticated,service_role;
+
 -- Direct table writes must not grant reception a capability denied by the
 -- application and the clinical RPC. Professional writes remain on safe RPCs.
 alter policy clinical_entries_business_operator_insert on public.clinical_entries

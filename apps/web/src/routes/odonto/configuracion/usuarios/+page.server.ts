@@ -1,4 +1,4 @@
-import { readArray, readRecord } from '$lib/server/contracts';
+import { readArray, readRecord } from '$lib/contracts/json';
 import {
 	BUSINESS_ROLES,
 	demoBusinessContext,

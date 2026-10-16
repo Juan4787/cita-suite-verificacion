@@ -820,4 +820,4 @@ export const actions: Actions = {
 		throw redirect(303, '/odonto/configuracion/usuarios');
 	}
 };
-import { readJson } from '$lib/server/contracts';
+import { readJson } from '$lib/contracts/json';

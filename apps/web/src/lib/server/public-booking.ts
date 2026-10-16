@@ -34,7 +34,7 @@ import { sanitizePublicImageUrl } from './public-image';
 import type { IntegratedBookingInput } from './booking-integrations';
 import type { BookingModality, BookingModalityWindow } from '@turnos-saas/shared/booking-integration';
 import { loadIntegratedAvailabilityRows, parseIntegratedAvailabilityRows } from './integrated-availability';
-import { isRecord } from './contracts';
+import { isRecord } from '$lib/contracts/json';
 
 export type PublicService = {
 	id: string;
@@ -1284,4 +1284,4 @@ export function getPublicBookingErrorCode(error: unknown): PublicBookingErrorCod
 
 export const getPublicBookingErrorMessage = (error: unknown) =>
 	PUBLIC_BOOKING_ERROR_MESSAGES[getPublicBookingErrorCode(error)];
-import { readJson } from './contracts';
+import { readJson } from '$lib/contracts/json';

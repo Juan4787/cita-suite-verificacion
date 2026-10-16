@@ -1,5 +1,5 @@
 import { BOOKING_MODALITIES } from '@turnos-saas/shared/booking-integration';
-import { InvalidDataContractError, readArray, readFiniteNumber, readNullableText, readRecord, readText } from './contracts';
+import { InvalidDataContractError, readArray, readFiniteNumber, readNullableText, readRecord, readText } from '$lib/contracts/json';
 
 export function parsePublicContact(value: unknown) {
   const row = readRecord(value, 'publicContact');

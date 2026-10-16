@@ -286,4 +286,4 @@ export const commercialAccessMessage = (state: BusinessAccessState) => {
 
 export const publicBusinessUnavailableMessage =
 	'La reserva online no está disponible en este momento. Contactá al consultorio.';
-import { InvalidDataContractError, readBoolean, readFiniteNumber, readNullableText, readRecord, readText } from './contracts';
+import { InvalidDataContractError, readBoolean, readFiniteNumber, readNullableText, readRecord, readText } from '$lib/contracts/json';

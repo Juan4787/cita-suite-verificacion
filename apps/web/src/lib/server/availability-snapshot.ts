@@ -5,7 +5,7 @@ import type {
 } from '$lib/availability/snapshot';
 import type { Business } from './business';
 import { parseIntegratedAvailabilityRows } from './integrated-availability';
-import { readRecord, readText, InvalidDataContractError } from './contracts';
+import { readRecord, readText, InvalidDataContractError } from '$lib/contracts/json';
 
 const SNAPSHOT_TTL_MS = 20_000;
 const SNAPSHOT_MAX_DAYS = 31;

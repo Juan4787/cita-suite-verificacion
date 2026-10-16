@@ -1,4 +1,4 @@
-import { isRecord, readNullableText, readFiniteNumber, readChoice } from './contracts';
+import { isRecord, readNullableText, readFiniteNumber, readChoice } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import crypto from 'node:crypto';

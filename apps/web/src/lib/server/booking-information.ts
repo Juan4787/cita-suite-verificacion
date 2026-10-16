@@ -4,7 +4,7 @@ import type { CitaSupabaseClient } from '$lib/types/database';
 import { parsePublicPatientFields, validateBookingIntakeAnswers } from '@turnos-saas/shared/booking-integration';
 import { createSupabaseAdminClient } from './supabase';
 import { hashRateLimitSubject } from './rate-limits';
-import { readBoolean, readRecord, readText, isRecord } from './contracts';
+import { readBoolean, readRecord, readText, isRecord } from '$lib/contracts/json';
 
 export const bookingInformationEnabled = () => env.BOOKING_INFORMATION_ENABLED === 'true';
 export const privateInformationHeaders = { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', 'x-content-type-options': 'nosniff' };

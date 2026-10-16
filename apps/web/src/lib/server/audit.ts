@@ -1,6 +1,6 @@
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { createSupabaseAdminClient } from './supabase';
-import { readJson } from './contracts';
+import { readJson } from '$lib/contracts/json';
 
 export const writeAuditLog = async (
 	supabase: CitaSupabaseClient,

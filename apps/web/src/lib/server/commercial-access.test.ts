@@ -114,6 +114,22 @@ describe('getBusinessAccessState', () => {
 		expect(state.allowedCapabilities.canUsePublicBooking).toBe(false);
 	});
 
+	it('cierra la lectura al vencer las fechas aunque el programador todavía conserve la etiqueta restricted', () => {
+		const state = getBusinessAccessState({
+			...baseSubscription,
+			commercial_access_enabled: true,
+			subscription_status: 'restricted',
+			paid_until: isoFromNow(-72),
+			grace_until: isoFromNow(-48),
+			restricted_until: isoFromNow(-1),
+			archived_at: null
+		}, { now });
+		expect(state.commercialStatus).toBe('archived');
+		expect(state.canEnterApp).toBe(false);
+		expect(state.allowedCapabilities.canViewExistingClinicalNotes).toBe(false);
+		expect(state.allowedCapabilities.canViewExistingCosts).toBe(false);
+	});
+
 	it('deja sólo el estado de suscripción en archived', () => {
 		const state = getBusinessAccessState(
 			{

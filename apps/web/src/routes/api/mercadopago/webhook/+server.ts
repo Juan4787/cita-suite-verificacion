@@ -1,4 +1,4 @@
-import { readRecord } from '$lib/server/contracts';
+import { readRecord } from '$lib/contracts/json';
 import {
 	logMpWebhookEvent,
 	processMpWebhookEvent,

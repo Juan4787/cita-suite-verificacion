@@ -53,7 +53,7 @@ const loadMpSubscription = async (
 		console.error('Error cargando suscripción de Mercado Pago', error);
 		return null;
 	}
-	return pickRelevantMpSubscription((data ?? []) as MpSubscriptionView[]);
+	return pickRelevantMpSubscription(data ?? []);
 };
 
 export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {

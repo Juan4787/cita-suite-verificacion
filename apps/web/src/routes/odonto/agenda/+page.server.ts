@@ -25,7 +25,7 @@ import {
 	isActiveAppointmentStatus
 } from '$lib/utils/appointment-visibility';
 import { resolveCommunicationPhoneDecision } from '$lib/utils/communication-phone';
-import { isRecord } from '$lib/server/contracts';
+import { isRecord } from '$lib/contracts/json';
 import type { CitaRow } from '$lib/types/database';
 import type { AvailabilitySnapshot } from '$lib/availability/snapshot';
 import { fail, redirect, isRedirect } from '@sveltejs/kit';

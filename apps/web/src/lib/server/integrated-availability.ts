@@ -1,6 +1,6 @@
 import type { CitaSupabaseClient } from '$lib/types/database';
 import type { AvailabilityServiceRow, AvailabilityProfessionalRow, AvailabilityRuleRow, AvailabilityExceptionRow, AvailabilityAppointmentBlockRow } from '$lib/availability/calculate';
-import { InvalidDataContractError, readArray, readBoolean, readFiniteNumber, readNullableText, readRecord, readText } from './contracts';
+import { InvalidDataContractError, readArray, readBoolean, readFiniteNumber, readNullableText, readRecord, readText } from '$lib/contracts/json';
 
 export type IntegratedAvailabilityRows = {
 	services: Array<AvailabilityServiceRow & { description: string | null; price_label: string | null; sort_order: number }>;

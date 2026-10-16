@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { InvalidDataContractError } from './contracts';
+import { InvalidDataContractError } from '$lib/contracts/json';
 import { parsePriceQuote, parseServicePriceLabels } from './price-contracts';
 import { parsePublicCatalogue, parsePublicContactResponse } from './public-catalogue';
 

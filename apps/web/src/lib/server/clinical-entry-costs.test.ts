@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readClinicalEntryAmount } from './clinical-entry-costs';
-import { InvalidDataContractError } from './contracts';
+import { InvalidDataContractError } from '$lib/contracts/json';
 
 describe('clinical cost relationship migration compatibility', () => {
   it('keeps legacy arrays and composite one-to-one objects equivalent, including zero', () => {

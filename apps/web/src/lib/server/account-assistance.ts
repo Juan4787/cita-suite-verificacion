@@ -1,4 +1,4 @@
-import { readRecord } from './contracts';
+import { readRecord } from '$lib/contracts/json';
 import { MASTER_EMAIL } from './supabase';
 import type { BusinessRole } from './business';
 import type { CitaSupabaseClient } from '$lib/types/database';

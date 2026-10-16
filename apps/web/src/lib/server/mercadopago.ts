@@ -1,7 +1,7 @@
 import { env } from '$env/dynamic/private';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { hmacSha256HexMatches } from './hmac';
-import { readJson, readRecord, readArray, readText, readBoolean, readFiniteNumber, InvalidDataContractError } from './contracts';
+import { readJson, readRecord, readArray, readText, readBoolean, readFiniteNumber, InvalidDataContractError } from '$lib/contracts/json';
 
 export const MP_API_BASE = 'https://api.mercadopago.com';
 

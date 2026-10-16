@@ -7,7 +7,7 @@ import {
 	getClinicalFileRequestContext,
 	requireClinicalFileTrashView
 } from '$lib/server/clinical-files';
-import { readArray, readRecord } from '$lib/server/contracts';
+import { readArray, readRecord } from '$lib/contracts/json';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 

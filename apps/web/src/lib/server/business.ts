@@ -14,7 +14,7 @@ import {
 	RateLimitExceededError
 } from './rate-limits';
 import { isEmailAlreadyAssociatedWithOtherBusinessError } from './business-email-association';
-import { InvalidDataContractError, readArray, readBoolean, readFiniteNumber, readNullableText, readRecord, readText } from './contracts';
+import { InvalidDataContractError, readArray, readBoolean, readFiniteNumber, readNullableText, readRecord, readText } from '$lib/contracts/json';
 
 export const BUSINESS_ROLES = ['owner', 'admin', 'reception', 'professional', 'readonly'] as const;
 export type BusinessRole = (typeof BUSINESS_ROLES)[number];

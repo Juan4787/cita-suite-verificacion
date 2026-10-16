@@ -749,7 +749,7 @@ test.describe('Archivos clínicos privados', () => {
 		await expect(receptionPage.getByText('Panorámica compartida del equipo')).toHaveCount(0);
 		await expect(receptionPage.getByRole('button', { name: 'Añadir documento' })).toHaveCount(0);
 		await receptionPage.goto(`/odonto/pacientes/${fixture.patientId}?tab=historial`);
-		await expect(receptionPage.getByRole('heading', { name: fixture.patientName })).toBeVisible();
+		await expect(receptionPage.getByRole('main').getByRole('heading', { name: fixture.patientName })).toBeVisible();
 		await expect(receptionPage.getByRole('button', { name: 'Historial', exact: true })).toHaveCount(0);
 		await expect(receptionPage.getByText(privateClinicalDescription)).toHaveCount(0);
 		await expect(receptionPage.getByRole('heading', { name: 'Datos del paciente', exact: true })).toBeVisible();

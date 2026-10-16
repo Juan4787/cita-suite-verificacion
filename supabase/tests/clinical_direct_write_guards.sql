@@ -1,6 +1,6 @@
 -- Real RLS/RPC checks with simulated Auth claims; synthetic transaction only.
 begin;
-select extensions.plan(29);
+select extensions.plan(34);
 create temporary table clinical_write_fixture (
  owner_id uuid, reception_id uuid, professional_user uuid, a uuid, b uuid,
  patient_id uuid, foreign_patient uuid, professional_id uuid, foreign_professional uuid,
@@ -69,6 +69,18 @@ select extensions.is((select amount from public.clinical_entry_costs where clini
 with changed as (update public.clinical_entries set description='Rejected restricted update' where id=(select entry_id from clinical_write_fixture) returning id)
  select extensions.is(count(*),0::bigint,'restricted reading does not enable direct writes') from changed;
 select extensions.throws_ok($test$select public.create_clinical_entry_safely(a,patient_id,'Consulta','Rejected restricted RPC') from clinical_write_fixture$test$,'P0001','BUSINESS_ACCESS_RESTRICTED','restricted reading does not enable clinical creation RPC');
+reset role;
+select set_config('request.jwt.claim.sub','',true);
+-- Maintenance may be delayed: an expired window must close direct reading
+-- without depending on subscription_status being refreshed by a scheduler.
+update public.business_subscriptions set restricted_until=now()-interval '1 hour' where business_id=(select a from clinical_write_fixture);
+set local role authenticated;
+select set_config('request.jwt.claim.sub',(select owner_id::text from clinical_write_fixture),true);
+select extensions.is(public.business_allows_owner_restricted_read((select a from clinical_write_fixture)),false,'expired historical access ignores a stale restricted label');
+select extensions.is((select count(*) from public.patients where business_id=(select a from clinical_write_fixture)),0::bigint,'expired historical access closes basic patient reading');
+select extensions.is((select count(*) from public.clinical_entries where business_id=(select a from clinical_write_fixture)),0::bigint,'expired historical access closes clinical history');
+select extensions.is((select count(*) from public.patient_clinical_profiles where business_id=(select a from clinical_write_fixture)),0::bigint,'expired historical access closes the clinical profile');
+select extensions.is((select count(*) from public.clinical_entry_costs where business_id=(select a from clinical_write_fixture)),0::bigint,'expired historical access closes historical costs');
 reset role;
 select set_config('request.jwt.claim.sub','',true);
 update public.business_subscriptions set subscription_status='archived',archived_at=now() where business_id=(select a from clinical_write_fixture);

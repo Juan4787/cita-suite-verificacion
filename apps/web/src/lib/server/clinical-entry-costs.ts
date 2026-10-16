@@ -1,4 +1,4 @@
-import { readFiniteNumber, readRecord } from './contracts';
+import { readFiniteNumber, readRecord } from '$lib/contracts/json';
 
 /**
  * PostgREST returns an array for the legacy single-column FK, and an object

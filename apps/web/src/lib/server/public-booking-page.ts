@@ -1,4 +1,4 @@
-import { isRecord } from './contracts';
+import { isRecord } from '$lib/contracts/json';
 import { bookingInformationEnabled, loadProfessionalBookingSchema, informationErrorMessage } from './booking-information';
 import {type PriceQuote} from '$lib/booking/pricing';
 import { parsePriceQuote, parseServicePriceLabels } from './price-contracts';
@@ -320,7 +320,7 @@ export const submitPublicBookingPage = async ({ request, params, fetch, url, get
 			if ((integration || bookingInformationEnabled()) && (!/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(serviceId) || professionalIds.some((id) => !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(id)) || slotStartsAt.length > 35 || !Number.isFinite(new Date(slotStartsAt).getTime()))) throw new Error('BOOKING_FORM_INVALID');
 			if ((integration || bookingInformationEnabled()) && (rawPatientName.length > 200 || patientPhone.length > 50 || patientEmail.length > 254 || note.length > 2000 || professionalIds.length > 16)) throw new Error('BOOKING_FORM_INVALID');
 			const modality = String(form.get('modality') ?? '');
-			if (integration) assertIntegrationSelection(integration, { serviceId, professionalIds, modality });
+			const selectedModality = integration ? assertIntegrationSelection(integration, { serviceId, professionalIds, modality }) : null;
 			const supabase = await createSupabaseAdminClient('odonto', fetch);
             let patientSchema;
             if (bookingInformationEnabled()) {
@@ -357,10 +357,10 @@ export const submitPublicBookingPage = async ({ request, params, fetch, url, get
 				ipHash: publicHash(ip),
 				userAgent,
                 bookingInformation: patientSchema ? { schemaHash: String(form.get('patient_schema_hash') ?? ''), answers: intakeAnswers!, priceQuoteHash: String(form.get('price_quote_hash') ?? '') } : undefined,
-				bookingIntegration: integration ? {
+				bookingIntegration: integration && selectedModality ? {
 					integrationId: integration.id, integrationRevision, entryPoint,
 					modalityWindows: integration.modalityWindows,
-					modality: modality as import('@turnos-saas/shared/booking-integration').BookingModality,
+					modality: selectedModality,
 					intakeAnswers: intakeAnswers!
 				} : undefined
 			});

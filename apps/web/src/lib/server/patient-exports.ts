@@ -19,7 +19,7 @@ import {
 	RateLimitUnavailableError
 } from './rate-limits';
 import { createSupabaseAdminClient, getUserIdFromAccessToken, type AuthTokens } from './supabase';
-import { readJson } from './contracts';
+import { readJson } from '$lib/contracts/json';
 
 export const PATIENT_EXPORT_ERROR_CODES = [
 	'EXPORT_INVALID_REQUEST',

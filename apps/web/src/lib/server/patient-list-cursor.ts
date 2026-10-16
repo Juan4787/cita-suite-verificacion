@@ -1,4 +1,4 @@
-import { isRecord } from './contracts';
+import { isRecord } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
 import crypto from 'node:crypto';
 

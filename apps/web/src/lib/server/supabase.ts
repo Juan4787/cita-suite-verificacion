@@ -1,4 +1,4 @@
-import { readRecord } from './contracts';
+import { readRecord } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
 import type { Cookies } from '@sveltejs/kit';

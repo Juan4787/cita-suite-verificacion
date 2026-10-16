@@ -3,7 +3,7 @@ import { env as publicEnv } from '$env/dynamic/public';
 import { PUBLIC_SITE_URL_FALLBACK } from '$lib/constants';
 import crypto from 'crypto';
 import type { CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
-import { readJson, readRecord, readArray, isRecord, readChoice, readText, readNullableText, readBoolean, readFiniteNumber } from './contracts';
+import { readJson, readRecord, readArray, isRecord, readChoice, readText, readNullableText, readBoolean, readFiniteNumber } from '$lib/contracts/json';
 import { writeAuditLog } from './audit';
 import { getBusinessAccessState, type BusinessSubscriptionRow } from './commercial-access';
 import { hmacSha256HexMatches } from './hmac';

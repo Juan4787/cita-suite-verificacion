@@ -1,4 +1,4 @@
-import { InvalidDataContractError, readArray, readFiniteNumber, readRecord, readText } from './contracts';
+import { InvalidDataContractError, readArray, readFiniteNumber, readRecord, readText } from '$lib/contracts/json';
 import { env } from "$env/dynamic/private";
 import { createSupabaseAdminClient } from "$lib/server/supabase";
 import { getOdontoContext } from "$lib/server/odonto-context";

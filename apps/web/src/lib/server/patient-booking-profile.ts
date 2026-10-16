@@ -1,4 +1,4 @@
-import { InvalidDataContractError, readNullableText, readRecord, readText } from './contracts';
+import { InvalidDataContractError, readNullableText, readRecord, readText } from '$lib/contracts/json';
 
 export function parsePatientBookingProfile(value: unknown): {
 	fields: { label: string; value: string | boolean }[];

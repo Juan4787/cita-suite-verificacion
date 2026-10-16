@@ -1,7 +1,6 @@
 import {
 	COMMERCIAL_STATUSES,
-	getBusinessAccessState,
-	type BusinessSubscriptionRow
+	getBusinessAccessState
 } from '$lib/server/commercial-access';
 import {
 	cancelPreapproval,
@@ -243,7 +242,7 @@ const buildMasterData = async (
 	}
 
 	const subscriptionsByBusinessId = new Map(
-		((subscriptionsRes.data ?? []) as BusinessSubscriptionRow[]).map((subscription) => [
+		(subscriptionsRes.data ?? []).map((subscription) => [
 			subscription.business_id,
 			subscription
 		])
@@ -268,7 +267,7 @@ const buildMasterData = async (
 	}
 
 	const mpSubsByBusinessId = new Map<string, MpSubscriptionRow[]>();
-	for (const sub of (mpSubsRes.data ?? []) as MpSubscriptionRow[]) {
+	for (const sub of mpSubsRes.data ?? []) {
 		const businessId = String(sub.business_id);
 		const list = mpSubsByBusinessId.get(businessId) ?? [];
 		list.push(sub);
