@@ -1486,10 +1486,10 @@ export type Database = {
           },
           {
             foreignKeyName: "clinical_entries_patient_id_fkey"
-            columns: ["patient_id"]
+            columns: ["business_id", "patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
-            referencedColumns: ["id"]
+            referencedColumns: ["business_id", "id"]
           },
         ]
       }
@@ -1534,10 +1534,10 @@ export type Database = {
           },
           {
             foreignKeyName: "clinical_entry_costs_clinical_entry_id_fkey"
-            columns: ["clinical_entry_id"]
-            isOneToOne: false
+            columns: ["business_id", "clinical_entry_id"]
+            isOneToOne: true
             referencedRelation: "clinical_entries"
-            referencedColumns: ["id"]
+            referencedColumns: ["business_id", "id"]
           },
         ]
       }
@@ -1667,10 +1667,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "follow_ups_assigned_professional_id_fkey"
-            columns: ["assigned_professional_id"]
+            columns: ["business_id", "assigned_professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
-            referencedColumns: ["id"]
+            referencedColumns: ["business_id", "id"]
           },
           {
             foreignKeyName: "follow_ups_business_id_fkey"
@@ -1681,10 +1681,10 @@ export type Database = {
           },
           {
             foreignKeyName: "follow_ups_patient_id_fkey"
-            columns: ["patient_id"]
+            columns: ["business_id", "patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
-            referencedColumns: ["id"]
+            referencedColumns: ["business_id", "id"]
           },
         ]
       }
@@ -1921,17 +1921,17 @@ export type Database = {
           },
           {
             foreignKeyName: "google_review_requests_push_delivery_id_fkey"
-            columns: ["push_delivery_id"]
+            columns: ["business_id", "push_delivery_id"]
             isOneToOne: false
             referencedRelation: "push_delivery_attempts"
-            referencedColumns: ["id"]
+            referencedColumns: ["business_id", "id"]
           },
           {
             foreignKeyName: "google_review_requests_push_subscription_id_fkey"
-            columns: ["push_subscription_id"]
+            columns: ["business_id", "push_subscription_id"]
             isOneToOne: false
             referencedRelation: "push_subscriptions"
-            referencedColumns: ["id"]
+            referencedColumns: ["business_id", "id"]
           },
         ]
       }
@@ -2400,10 +2400,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "mp_webhook_events_credited_grant_id_fkey"
-            columns: ["credited_grant_id"]
+            columns: ["business_id", "credited_grant_id"]
             isOneToOne: false
             referencedRelation: "access_grants"
-            referencedColumns: ["id"]
+            referencedColumns: ["business_id", "id"]
           },
         ]
       }
@@ -2463,10 +2463,10 @@ export type Database = {
           },
           {
             foreignKeyName: "patient_clinical_profiles_patient_id_fkey"
-            columns: ["patient_id"]
-            isOneToOne: false
+            columns: ["business_id", "patient_id"]
+            isOneToOne: true
             referencedRelation: "patients"
-            referencedColumns: ["id"]
+            referencedColumns: ["business_id", "id"]
           },
         ]
       }
@@ -2579,17 +2579,17 @@ export type Database = {
           },
           {
             foreignKeyName: "patient_profile_change_events_changed_by_professional_id_fkey"
-            columns: ["changed_by_professional_id"]
+            columns: ["business_id", "changed_by_professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
-            referencedColumns: ["id"]
+            referencedColumns: ["business_id", "id"]
           },
           {
             foreignKeyName: "patient_profile_change_events_patient_id_fkey"
-            columns: ["patient_id"]
+            columns: ["business_id", "patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
-            referencedColumns: ["id"]
+            referencedColumns: ["business_id", "id"]
           },
         ]
       }
@@ -2704,10 +2704,10 @@ export type Database = {
           },
           {
             foreignKeyName: "patient_radiographs_patient_id_fkey"
-            columns: ["patient_id"]
+            columns: ["business_id", "patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
-            referencedColumns: ["id"]
+            referencedColumns: ["business_id", "id"]
           },
         ]
       }
@@ -2909,17 +2909,17 @@ export type Database = {
           },
           {
             foreignKeyName: "professional_patient_links_patient_id_fkey"
-            columns: ["patient_id"]
+            columns: ["business_id", "patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
-            referencedColumns: ["id"]
+            referencedColumns: ["business_id", "id"]
           },
           {
             foreignKeyName: "professional_patient_links_professional_id_fkey"
-            columns: ["professional_id"]
+            columns: ["business_id", "professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
-            referencedColumns: ["id"]
+            referencedColumns: ["business_id", "id"]
           },
         ]
       }
@@ -3195,17 +3195,17 @@ export type Database = {
           },
           {
             foreignKeyName: "push_delivery_attempts_google_review_request_id_fkey"
-            columns: ["google_review_request_id"]
+            columns: ["business_id", "google_review_request_id"]
             isOneToOne: false
             referencedRelation: "google_review_requests"
-            referencedColumns: ["id"]
+            referencedColumns: ["business_id", "id"]
           },
           {
             foreignKeyName: "push_delivery_attempts_subscription_id_fkey"
-            columns: ["subscription_id"]
+            columns: ["business_id", "subscription_id"]
             isOneToOne: false
             referencedRelation: "push_subscriptions"
-            referencedColumns: ["id"]
+            referencedColumns: ["business_id", "id"]
           },
         ]
       }
@@ -3303,10 +3303,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "push_subscriptions_appointment_id_fkey"
-            columns: ["appointment_id"]
+            columns: ["business_id", "appointment_id"]
             isOneToOne: false
             referencedRelation: "appointments"
-            referencedColumns: ["id"]
+            referencedColumns: ["business_id", "id"]
           },
           {
             foreignKeyName: "push_subscriptions_business_id_fkey"

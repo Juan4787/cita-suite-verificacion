@@ -163,4 +163,6 @@ alter table public.push_subscriptions
     references public.appointments(business_id,id) ON DELETE CASCADE not valid;
 alter table public.push_subscriptions validate constraint push_subscriptions_appointment_id_fkey;
 
+-- Deliver only after commit, so HTTP embeds observe the validated relationships.
+notify pgrst, 'reload schema';
 commit;
