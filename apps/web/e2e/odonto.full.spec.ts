@@ -350,6 +350,9 @@ test.describe('Dental Suite - flujo operativo completo', () => {
 		const today = ['year', 'month', 'day'].map(type => dateParts.find(part => part.type === type)?.value ?? '').join('-');
 		expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 		const dayLinks = section(page, 'Elegí un día').getByRole('link');
+		// The loading skeleton uses the same heading, but has no day links.
+		// Locator evaluation does not wait for navigation/data to finish.
+		await expect(dayLinks.first()).toBeVisible();
 		const futureDayIndex = await dayLinks.evaluateAll((links, today) => links.findIndex(link => {
 			const date = new URL(link.getAttribute('href') ?? '', window.location.href).searchParams.get('date');
 			return date !== null && date > today;

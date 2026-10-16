@@ -2,6 +2,8 @@
 
 Fuente normativa: ampliación del 16 de octubre en `docs/plans/refactorizacion-cita-suite.md`. Estado: inventario inicial y preparación; **ningún recurso externo renombrado**. No sustituye el inventario final ni sus criterios de cierre.
 
+Plan Workers confirmado por el usuario el 16 de octubre: **Free**. La lectura de facturación por API no estuvo autorizada (403); la fuente del dato comercial es el usuario. La etapa 6 debe medir este perfil, incluidos CPU, subpeticiones y capacidad de cron, sin asumir Paid ni contratarlo.
+
 | Recurso | Estado observado | Objetivo | Dependencias y condición de aplicación |
 |---|---|---|---|
 | Producto | Cita Suite | Cita Suite | Preservar marcas de consultorios y Natalia. Revisar manifest, títulos, correo/push y documentación. |
@@ -31,3 +33,10 @@ Inventario completo por proveedor, disponibilidad de nombres, referencias activa
 ## Staging Supabase identificado por el usuario
 
 El 16 de octubre el usuario informó el proyecto **Staging 455** (`ikaudqoilclfnztkxubz`, `https://ikaudqoilclfnztkxubz.supabase.co`), creado en la cuenta disponible de su hermano para pruebas. Destino objetivo: **Cita Suite Staging**, conservando ref/URLs. No renombrado ni migrado todavía. Producción conserva `yjzferwuzbtgpmdnzlcb`; ningún comando de staging puede inferir su destino de la vinculación CLI de producción. Acceso/contenido/plan se verificarán antes de escribir.
+
+
+## Accesos comprobados durante la preparación
+
+Cloudflare coincide actualmente con `52b358653379c162b5a07b10ae5e84b3`; se comprobó por lectura el Worker `app` y su versión en tráfico. GitHub permite el CI auxiliar aislado. El staging Supabase `Staging 455` es accesible como Developer y la inspección SQL remota confirmó que está vacío antes de migraciones.
+
+Vercel CLI `64.0.2` / Node `22.23.2`: `whoami` aprobó el 16 de octubre como `juan-altamira`, recibo `.verification/vercel-current-identity.log`. Esto comprueba autenticación, no permisos de cada proyecto ni un despliegue. No se cambió ningún proyecto, vínculo ni dominio. Los destinos/artefactos se comprobarán de nuevo en su etapa de staging/release.
