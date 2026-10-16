@@ -16,7 +16,7 @@ declare
 begin
  insert into auth.users(id,email) values(owner_id,owner_id||'@example.test'),(reception_id,reception_id||'@example.test'),(professional_user,professional_user||'@example.test');
  insert into public.businesses(id,name,slug,industry) values(a,'Synthetic clinical A',a::text,'other'),(b,'Synthetic clinical B',b::text,'other');
- update public.business_subscriptions set commercial_access_enabled=true,is_permanent=true,subscription_status='active',archived_at=null where business_id in(a,b);
+ update public.business_subscriptions set commercial_access_enabled=true,is_permanent=true,subscription_status='active',paid_until=null,grace_until=null,restricted_until=null,archived_at=null where business_id in(a,b);
  insert into public.business_users(business_id,user_id,role,status,accepted_at) values(a,owner_id,'owner','active',now()),(a,reception_id,'reception','active',now()),(a,professional_user,'professional','active',now());
  insert into public.professionals(id,business_id,name) values(pro,a,'Synthetic author'),(foreign_pro,b,'Synthetic foreign author');
  insert into public.professional_users(business_id,user_id,professional_id) values(a,professional_user,pro);

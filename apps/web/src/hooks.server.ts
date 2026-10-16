@@ -101,9 +101,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const moduleCookie = parseModule(event.cookies.get('sb-module'));
 	const accessToken = event.cookies.get('sb-access-token');
 	const refreshToken = event.cookies.get('sb-refresh-token');
+	// These entry points authenticate their own booking token, provider state,
+	// signature or job credential. Unrelated user cookies must neither identify
+	// their actor nor prevent their authorization from running.
+	const path = event.url.pathname;
+	const independentAuthorization = ['/reservar/', '/embed/v1/', '/turno/', '/api/public/', '/internal/jobs/']
+		.some(prefix => path.startsWith(prefix)) ||
+		['/api/mercadopago/webhook', '/api/whatsapp/webhook', '/oauth/google-calendar/callback'].includes(path);
 
 	event.locals.auth =
-		moduleCookie && accessToken && refreshToken
+		!independentAuthorization && moduleCookie && accessToken && refreshToken
 			? { module: moduleCookie, access_token: accessToken, refresh_token: refreshToken }
 			: null;
 
@@ -116,7 +123,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	};
 
 	const isDemo = env.DEMO_MODE === 'true';
-	if (event.locals.auth && !isDemo && !event.url.pathname.startsWith('/embed/v1/')) {
+	if (event.locals.auth && !isDemo) {
 		try {
 			const supabase = await createSupabaseServerClient(
 				event.locals.auth.module,

@@ -55,6 +55,21 @@ describe('hooks auth validation', () => {
 		mocks.isMasterEmail.mockReturnValue(false);
 	});
 
+	it('keeps public tokens and internal authentication independent of stale user cookies', async () => {
+		mocks.createSupabaseServerClient.mockRejectedValue(new Error('invalid old user session'));
+		for (const path of ['/reservar/clinic', '/embed/v1/integration', '/turno/token/push', '/api/public/contacto/integration', '/internal/jobs/send-push-reminders', '/api/mercadopago/webhook', '/oauth/google-calendar/callback']) {
+			const event = makeEvent();
+			event.url = new URL('https://app.test' + path);
+			const resolve = vi.fn(async () => new Response('independent authorization'));
+			const response = await handle({ event, resolve } as never);
+			expect(response.status).toBe(200);
+			expect(resolve).toHaveBeenCalledOnce();
+			expect(event.locals).toMatchObject({ auth: null, verifiedUser: null });
+			expect(event.cookies.delete).not.toHaveBeenCalled();
+		}
+		expect(mocks.createSupabaseServerClient).not.toHaveBeenCalled();
+	});
+
 	it('rechaza un access token no vencido si Supabase Auth no lo valida', async () => {
 		const event = makeEvent();
 		const resolve = vi.fn(async () => new Response('ok'));

@@ -21,7 +21,8 @@ const rootFiles = new Set(['.env.example', '.gitignore', '.npmrc', 'AGENTS.md', 
 	'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'tsconfig.base.json',
 	'.dependency-cruiser.cjs', '.node-version', '.prettierignore']);
 const extras = [
-	'.github/workflows/refactoring-verification.yml',
+	'.github/workflows/refactoring-verification.yml', '.github/workflows/staging-connectivity.yml',
+	'scripts/inspect-staging-database.mjs',
 	'docs/plans/refactorizacion-cita-suite.md', 'docs/plans/refactorizacion-cita-suite.integridad.json',
 	'docs/plans/registro-refactorizacion-cita-suite.md',
 	'docs/architecture/base-de-campana.md', 'docs/architecture/verificacion.md',

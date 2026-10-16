@@ -1,0 +1,23 @@
+name: Comprobar acceso al staging
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cita-refactoring-verification
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version-file: .node-version
+      - name: Inspect the dedicated database without writing
+        env:
+          CITA_STAGING_DATABASE_URL: ${{ secrets.CITA_STAGING_DATABASE_URL }}
+        run: node scripts/inspect-staging-database.mjs
