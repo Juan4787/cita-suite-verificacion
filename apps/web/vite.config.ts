@@ -8,6 +8,6 @@ export default defineConfig({
 		maxWorkers: 1,
 		fileParallelism: false,
 		passWithNoTests: false,
-		exclude: ['e2e/**', 'node_modules/**', '.svelte-kit/**', 'build/**', '**/*.client.test.ts']
+		exclude: ['e2e/**', 'node_modules/**', '.svelte-kit/**', 'build/**', '**/*.client.test.ts', '**/*.office.test.ts']
 	}
 });

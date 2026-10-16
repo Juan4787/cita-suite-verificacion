@@ -27,7 +27,7 @@ describe('patient list HTTP contract', () => {
 
 	it.each([
 		{ patients: undefined }, { patients: null }, { patients: [{}] },
-		{ hasMore: 'false' }, { totalCount: -1 }, { activeCount: 1.5 },
+		{ hasMore: 'false' }, { hasMore: true, nextCursor: null }, { totalCount: -1 }, { activeCount: 1.5 },
 		{ cacheScope: null }, { revision: null }, { businessId: null },
 		{ countsSource: 'unknown' }, { pageSize: 0 }
 	])('rejects incomplete or contradictory successful responses: %j', overrides => {

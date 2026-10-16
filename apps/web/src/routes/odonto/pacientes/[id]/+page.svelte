@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/stores';
 	import { invalidate, replaceState } from '$app/navigation';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import FollowUpComposer from '$lib/components/seguimientos/FollowUpComposer.svelte';
 	import DateTimePartsInput from '$lib/components/DateTimePartsInput.svelte';
@@ -67,7 +67,9 @@
 	let showDeleteConfirm = $state($page.url.searchParams.has('eliminar'));
 	let showMobileActions = $state(false);
 	let showFollowUpModal = $state(false);
-	let tab = $state<'historial' | 'datos' | 'radiografias'>('historial');
+	let tab = $state<'historial' | 'datos' | 'radiografias'>(
+		untrack(() => data.permissions.canReadClinicalHistory ? 'historial' : 'datos')
+	);
 	let filterType = $state<'Todos' | 'Consulta' | 'Tratamiento'>('Todos');
 	let onlyWithNote = $state(false);
 	let timelineSearch = $state('');

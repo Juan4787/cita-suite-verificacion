@@ -7,7 +7,7 @@ El [plan aprobado](../plans/refactorizacion-cita-suite.md) fija los criterios; e
 | Comando | Alcance exigido |
 |---|---|
 | `pnpm verify:fast` | Integridad del plan, inventario, tipos compartidos/Svelte/Natalia, pruebas del propio verificador, dependencias y unidades de servidor/cliente. |
-| `pnpm verify:full` | Lo anterior; compilación estática de Natalia, reconstrucción SQL, todas las suites SQL y carreras, GoTrue/PostgREST/Storage reales, navegador, reserva nativa de Natalia y perfil demo separado. |
+| `pnpm verify:full` | Lo anterior; reapertura nativa del Excel exportado en LibreOffice, compilación estática de Natalia, reconstrucción SQL, todas las suites SQL y carreras, GoTrue/PostgREST/Storage reales, navegador, reserva nativa de Natalia y perfil demo separado. |
 | `pnpm verify:release` | Exige primero un staging explícito y ajeno a producción. Ejecuta el nivel completo, construye los artefactos para ese staging y comprueba identidad/artefactos y navegador remoto. No despliega. |
 
 Se utiliza Node fijado en `.node-version`, pnpm fijado en `package.json` y el lockfile. Todas las suites, compilaciones y navegadores se ejecutan secuencialmente, con un único trabajador. Las dos conexiones de una carrera SQL pertenecen a un solo escenario controlado; no habilitan suites paralelas. `verify:full`, `verify:release`, la demo y los diagnósticos de navegador sólo arrancan en un runner estándar hospedado de GitHub con recursos comprobados. La ejecución local de esos recorridos quedó deshabilitada después de medir agotamiento de RAM y swap. `verify:fast` comprueba la memoria disponible antes de cada proceso.
@@ -84,3 +84,10 @@ Destino autorizado: `ikaudqoilclfnztkxubz` (nombre actual **Staging 455**, regi�
 Las conexiones de staging se guardan con permisos 0600 en `~/.config/cita-suite/staging/`, fuera del proyecto, y se suministran explícitamente. No se toma `SUPABASE_DB_URL` ni el vínculo CLI predeterminado. La línea de staging que el usuario agregó a `.env` se trasladó a esa configuración privada conservando los demás bytes del archivo. Ninguna credencial se copia al código, al snapshot ni a evidencia.
 
 El workflow manual `staging-connectivity.yml` ejecuta sólo una inspección SQL de lectura en el proyecto exacto autorizado, con `default_transaction_read_only=on`, tiempo acotado y sin imprimir cadenas o errores del driver. Comparte exclusión con las verificaciones de campaña. El único secreto configurado en el repositorio auxiliar es `CITA_STAGING_DATABASE_URL`, exclusivo de ese staging. Este workflow no aplica migraciones, despliega, carga datos ni acredita capacidad o release.
+
+
+## Unidades sin omisiones y apertura nativa de exportaciones
+
+`run-campaign-unit-tests.mjs` ejecuta los perfiles completos `server` y `client` con un trabajador, cero reintentos y `.only` prohibido. Conserva el reporte JSON en la corrida y lo contrasta con sus resultados individuales: un código de salida cero no alcanza si hubo casos omitidos, pendientes, interrumpidos o contadores incompatibles. Las pruebas deliberadas de `unit-report.test.mjs` comprueban ese rechazo.
+
+La apertura nativa de XLSX se clasifica como integración, no como unidad portable opcional. Todos los archivos `src/**/*.office.test.ts` se ejecutan obligatoriamente en `verify:full`/`verify:release` mediante el perfil `office`. No hay `runIf` por disponibilidad del ejecutable. El entorno alojado instala LibreOffice Calc `4:24.2.7-0ubuntu0.24.04.7`, registra versiones de Calc/core/common y SHA-256 de `soffice.bin` en `office-toolchain.log`, y usa un perfil temporal exclusivo. Su ausencia, fallo, timeout o falta de pruebas rechaza la verificación. No se instala ni ejecuta esta dependencia pesada en la máquina local.

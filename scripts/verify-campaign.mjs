@@ -18,13 +18,14 @@ const steps = [
 	['shared-types', 'pnpm', ['--filter', '@turnos-saas/shared', 'check']],
 	['web-types', 'pnpm', ['--filter', 'web', 'check']],
 	['natalia-types', 'pnpm', ['--filter', 'natalia', 'check']],
-	['verification-runner-tests', 'node', ['--test', '--test-concurrency=1', 'scripts/lib/verification-lock.test.mjs', 'scripts/lib/architecture.test.mjs', 'scripts/lib/e2e-environment.test.mjs', 'scripts/lib/browser-report.test.mjs', 'scripts/lib/verification-process.test.mjs', 'scripts/lib/staging-environment.test.mjs', 'scripts/lib/verification-resources.test.mjs', 'scripts/lib/verification-images.test.mjs', 'scripts/lib/fixture-cleanup.test.mjs', 'scripts/lib/staging-connection.test.mjs']],
+	['verification-runner-tests', 'node', ['--test', '--test-concurrency=1', 'scripts/lib/verification-lock.test.mjs', 'scripts/lib/architecture.test.mjs', 'scripts/lib/e2e-environment.test.mjs', 'scripts/lib/browser-report.test.mjs', 'scripts/lib/unit-report.test.mjs', 'scripts/lib/verification-process.test.mjs', 'scripts/lib/staging-environment.test.mjs', 'scripts/lib/verification-resources.test.mjs', 'scripts/lib/verification-images.test.mjs', 'scripts/lib/fixture-cleanup.test.mjs', 'scripts/lib/staging-connection.test.mjs']],
 	['evidence-recovery-tests', 'python3', ['scripts/test-verification-evidence.py']],
 	['architecture', 'pnpm', ['check:architecture']],
-	['server-tests', 'pnpm', ['--filter', 'web', 'test']],
-	['client-tests', 'pnpm', ['--filter', 'web', 'test:client']]
+	['server-tests', 'node', ['scripts/run-campaign-unit-tests.mjs', 'server']],
+	['client-tests', 'node', ['scripts/run-campaign-unit-tests.mjs', 'client']]
 ];
 if (level !== 'fast') steps.push(
+	['native-office-export', 'node', ['scripts/run-campaign-unit-tests.mjs', 'office']],
 	['database-auth-storage-browser', 'node', ['scripts/run-campaign-integration.mjs']],
 	['demo-browser', 'node', ['scripts/run-campaign-demo.mjs']]
 );

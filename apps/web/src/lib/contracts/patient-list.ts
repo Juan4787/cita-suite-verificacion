@@ -47,6 +47,9 @@ export function parsePatientListData(value: unknown): PatientListData {
 	if (pageSize === 0) throw new InvalidDataContractError(contract);
 	const loadedAt = readText(row.loadedAt, contract);
 	if (!Number.isFinite(Date.parse(loadedAt))) throw new InvalidDataContractError(contract);
+	const hasMore = readBoolean(row.hasMore, contract);
+	const nextCursor = readNullableText(row.nextCursor, contract);
+	if (hasMore && !nextCursor) throw new InvalidDataContractError(contract);
 	return {
 		businessId, cacheable, revision, cacheScope, pageSize, loadedAt,
 		patients: readArray(row.patients, contract).map(value => {
@@ -75,8 +78,8 @@ export function parsePatientListData(value: unknown): PatientListData {
 		archivedCount: readCount(row.archivedCount),
 		countsIncluded: readBoolean(row.countsIncluded, contract),
 		countsSource: readChoice(row.countsSource, ['rpc', 'fallback_planned'], contract),
-		hasMore: readBoolean(row.hasMore, contract),
-		nextCursor: readNullableText(row.nextCursor, contract),
+		hasMore,
+		nextCursor,
 		snapshotAt: readNullableText(row.snapshotAt, contract)
 	};
 }
