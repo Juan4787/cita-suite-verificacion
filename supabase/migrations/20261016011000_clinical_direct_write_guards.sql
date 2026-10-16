@@ -1,5 +1,6 @@
 -- Preserve clinical authorship and enforce existing clinical write roles at SQL.
--- Historical data/read policies and safe professional RPCs are unchanged.
+-- Historical records and safe professional RPCs are preserved. Read policies
+-- enforce the declared roles and retain authorized restricted historical read.
 begin;
 set local lock_timeout='5s';
 set local statement_timeout='60s';
@@ -17,6 +18,20 @@ alter policy clinical_entries_business_operator_update on public.clinical_entrie
   and exists (select 1 from public.patients p where p.id=clinical_entries.patient_id and p.business_id=clinical_entries.business_id));
 alter policy clinical_entries_business_operator_delete on public.clinical_entries
  using (business_id is not null and public.user_can_operate_business(business_id) and public.user_business_role(business_id) in ('owner','admin'));
+
+-- The role offered in Equipo explicitly excludes clinical history for
+-- reception. Preserve every other existing reader and its historical scope.
+alter policy clinical_entries_role_scoped_select on public.clinical_entries
+ using (business_id is not null and public.user_can_read_patient(business_id,patient_id)
+  and coalesce(public.user_business_role(business_id),'') <> 'reception');
+
+-- Historical read permissions do not grant write capability. Do not broaden
+-- user_can_view_costs/user_can_read_clinical_patient, which write RPCs also use.
+alter policy patient_clinical_profiles_select on public.patient_clinical_profiles
+ using (public.user_can_read_clinical_patient(business_id,patient_id)
+  or (public.user_business_role(business_id) in ('owner','admin') and public.user_can_read_basic_patient(business_id,patient_id)));
+alter policy clinical_entry_costs_select on public.clinical_entry_costs
+ using (public.user_business_role(business_id) in ('owner','admin') and public.business_allows_owner_restricted_read(business_id));
 
 CREATE OR REPLACE FUNCTION public.set_clinical_entry_actor_fields()
  RETURNS trigger
@@ -78,7 +93,7 @@ begin
 	end if;
 	return new;
 end;
-$function$
+$function$;
 
 revoke all on function public.set_clinical_entry_actor_fields() from public,anon,authenticated;
 grant execute on function public.set_clinical_entry_actor_fields() to service_role;

@@ -1,7 +1,7 @@
 import { env } from '$env/dynamic/private';
 import { readDemoDb } from '$lib/server/demo-store';
-import { resolveActiveBusiness } from '$lib/server/business';
-import { createSupabaseServerClient } from '$lib/server/supabase';
+import { getOdontoContext } from '$lib/server/odonto-context';
+import { resolvePatientPermissions } from '$lib/server/patient-permissions';
 import { json, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
@@ -39,16 +39,10 @@ export const GET: RequestHandler = async ({ params, url, locals, fetch, cookies 
 		});
 	}
 
-	const supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);
-	const context = await resolveActiveBusiness({
-		supabase,
-		accessToken: locals.auth.access_token,
-		cookies,
-		membershipCache: 'fresh'
-	});
-	if (!context) {
-		return json({ message: 'No se pudo resolver el negocio activo.' }, { status: 500 });
-	}
+	const { supabase, business: context } = await getOdontoContext({ locals, fetch, cookies });
+	if (!resolvePatientPermissions(context).canReadClinicalHistory)
+		return json({ message: 'Tu usuario no puede consultar la historia clínica.' }, { status: 403 });
+
 	let query = supabase
 		.from('clinical_entries')
 		.select('id, created_at, entry_type, description, teeth, internal_note, created_by_user_id, locked_after')

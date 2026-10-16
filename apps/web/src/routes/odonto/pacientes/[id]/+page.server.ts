@@ -422,6 +422,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, dep
 			businessTimeZone: 'America/Argentina/Buenos_Aires',
 			hasMoreEntries: false,
 			permissions: {
+				canReadClinicalHistory: true,
 				canReadClinicalProfile: true,
 				canEditClinicalProfile: true,
 				canViewCosts: true,
@@ -491,26 +492,28 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, dep
 					.eq('business_id', context.business.id)
 					.maybeSingle()
 			: Promise.resolve({ data: null, error: null }),
+		permissions.canReadClinicalHistory
+			? supabase
+					.from('clinical_entries')
+					.select(
+						'id, created_at, entry_type, description, teeth, internal_note, created_by_user_id, locked_after, clinical_entry_costs(amount)'
+					)
+					.eq('patient_id', params.id)
+					.eq('business_id', context.business.id)
+					.is('archived_at', null)
+					.order('created_at', { ascending: false })
+					.order('id', { ascending: false })
+					.limit(ENTRIES_PAGE_SIZE + 1)
+			: Promise.resolve({ data: [], error: null }),
 		supabase
-			.from('clinical_entries')
-			.select(
-				'id, created_at, entry_type, description, teeth, internal_note, created_by_user_id, locked_after, clinical_entry_costs(amount)'
-			)
+			.from('appointments')
+			.select('id, starts_at, ends_at, status, source, service_name_snapshot, professional_name_snapshot')
 			.eq('patient_id', params.id)
 			.eq('business_id', context.business.id)
-			.is('archived_at', null)
-			.order('created_at', { ascending: false })
-			.order('id', { ascending: false })
-			.limit(ENTRIES_PAGE_SIZE + 1),
-			supabase
-				.from('appointments')
-				.select('id, starts_at, ends_at, status, source, service_name_snapshot, professional_name_snapshot')
-				.eq('patient_id', params.id)
-				.eq('business_id', context.business.id)
-				.in('status', [...ACTIVE_APPOINTMENT_STATUSES])
-				.gte('starts_at', nowIso)
-				.order('starts_at', { ascending: true })
-				.limit(12),
+			.in('status', [...ACTIVE_APPOINTMENT_STATUSES])
+			.gte('starts_at', nowIso)
+			.order('starts_at', { ascending: true })
+			.limit(12),
 		context.role === 'professional' && currentProfessional
 			? admin
 					.from('professional_patient_links')

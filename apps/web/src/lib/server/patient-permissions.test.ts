@@ -109,3 +109,39 @@ describe('patient export permissions', () => {
 		).toBe(false);
 	});
 });
+
+describe('clinical history permissions', () => {
+	it('keeps reception operational without clinical history or profile access', () => {
+		const permissions = resolvePatientPermissions(context({ role: 'reception' }));
+		expect(permissions.canEditPatient).toBe(true);
+		expect(permissions.canCreateAppointment).toBe(true);
+		expect(permissions.canReadClinicalHistory).toBe(false);
+		expect(permissions.canReadClinicalProfile).toBe(false);
+	});
+
+	it('preserves readonly history without granting clinical profile or writes', () => {
+		const permissions = resolvePatientPermissions(context({ role: 'readonly' }));
+		expect(permissions.canReadClinicalHistory).toBe(true);
+		expect(permissions.canReadClinicalProfile).toBe(false);
+		expect(permissions.canCreateClinicalEntry).toBe(false);
+	});
+
+	it('preserves historical reading for restricted owners and admins only', () => {
+		const access = { ...context().access, canUseBusiness: false, canEnterApp: true };
+		for (const role of ['owner', 'admin'] as const) {
+			expect(resolvePatientPermissions(context({ role, access })).canReadClinicalHistory).toBe(true);
+		}
+		for (const role of ['professional', 'readonly', 'reception'] as const) {
+			expect(resolvePatientPermissions(context({ role, access })).canReadClinicalHistory).toBe(false);
+		}
+	});
+
+	it('closes history when application access or the capability is unavailable', () => {
+		const access = { ...context().access, canUseBusiness: false, canEnterApp: false };
+		expect(resolvePatientPermissions(context({ access })).canReadClinicalHistory).toBe(false);
+		access.canUseBusiness = true;
+		access.canEnterApp = true;
+		access.allowedCapabilities = { ...access.allowedCapabilities, canViewExistingClinicalNotes: false };
+		expect(resolvePatientPermissions(context({ access })).canReadClinicalHistory).toBe(false);
+	});
+});

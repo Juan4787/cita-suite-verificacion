@@ -667,13 +667,24 @@ test.describe('Archivos clínicos privados', () => {
 		expect(audit.every((row) => row.result === 'success')).toBe(true);
 	});
 
-	test('la lista pagina y busca globalmente, conserva contexto y recepción no descubre imágenes', async ({
+	test('la lista pagina y busca globalmente, conserva contexto y recepción no descubre documentos ni historia clínica', async ({
 		page,
 		browser
 	}) => {
 		if (!fixture) throw new Error('Fixture no preparado.');
 
 		await login(page, fixture.ownerEmail);
+		const privateClinicalDescription = 'Historia clínica sintética reservada al equipo clínico';
+		await must(adminClient().from('clinical_entries').insert({
+			business_id: fixture.businessId,
+			patient_id: fixture.patientId,
+			owner_id: fixture.ownerUserId,
+			created_by_user_id: fixture.ownerUserId,
+			entry_type: 'Consulta',
+			description: privateClinicalDescription
+		}));
+		await page.goto(`/odonto/pacientes/${fixture.patientId}?tab=historial`);
+		await expect(page.getByText(privateClinicalDescription, { exact: true })).toBeVisible();
 		await page.goto(`/odonto/pacientes/${fixture.patientId}?tab=radiografias`);
 		await uploadFixtureImage(page, clinicalExample.filename, clinicalExample.description);
 		await page.goto('/odonto/pacientes');
@@ -737,6 +748,17 @@ test.describe('Archivos clínicos privados', () => {
 		await expect(receptionPage.getByText('Tu rol no permite ver documentos clínicos.')).toBeVisible();
 		await expect(receptionPage.getByText('Panorámica compartida del equipo')).toHaveCount(0);
 		await expect(receptionPage.getByRole('button', { name: 'Añadir documento' })).toHaveCount(0);
+		await receptionPage.goto(`/odonto/pacientes/${fixture.patientId}?tab=historial`);
+		await expect(receptionPage.getByRole('heading', { name: fixture.patientName })).toBeVisible();
+		await expect(receptionPage.getByRole('button', { name: 'Historial', exact: true })).toHaveCount(0);
+		await expect(receptionPage.getByText(privateClinicalDescription)).toHaveCount(0);
+		await expect(receptionPage.getByRole('heading', { name: 'Datos del paciente', exact: true })).toBeVisible();
+		const deniedHistory = await receptionPage.request.get(`/odonto/pacientes/${fixture.patientId}/historial`);
+		expect(deniedHistory.status()).toBe(403);
+		expect(await deniedHistory.text()).not.toContain(privateClinicalDescription);
+		await receptionPage.setViewportSize({ width: 1280, height: 900 });
+		await expect(receptionPage.getByRole('button', { name: 'Historial', exact: true })).toHaveCount(0);
+		await expect(receptionPage.getByText(privateClinicalDescription)).toHaveCount(0);
 		await receptionContext.close();
 	});
 });

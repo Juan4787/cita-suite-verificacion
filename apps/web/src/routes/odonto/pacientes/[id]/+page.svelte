@@ -33,6 +33,7 @@
 			bookingInformationEnabled?: boolean;
 			hasMoreEntries?: boolean;
 			permissions: {
+				canReadClinicalHistory: boolean;
 				canReadClinicalProfile: boolean;
 				canEditClinicalProfile: boolean;
 				canViewCosts: boolean;
@@ -90,6 +91,7 @@
 	const requestedDelete = $derived.by(() => $page.url.searchParams.has('eliminar'));
 	const permissions = $derived(
 		data.permissions ?? {
+			canReadClinicalHistory: false,
 			canReadClinicalProfile: true,
 			canEditClinicalProfile: true,
 			canViewCosts: true,
@@ -135,8 +137,9 @@
 			requestedTab === 'datos' ||
 			requestedTab === 'radiografias'
 		) {
-			tab = requestedTab;
+			tab = requestedTab === 'historial' && !permissions.canReadClinicalHistory ? 'datos' : requestedTab;
 		}
+		if (!permissions.canReadClinicalHistory && tab === 'historial') tab = 'datos';
 	});
 	$effect(() => {
 		if (requestedDelete) {
@@ -284,6 +287,7 @@
 	};
 
 	const selectTab = (nextTab: 'historial' | 'datos' | 'radiografias') => {
+		if (nextTab === 'historial' && !permissions.canReadClinicalHistory) return;
 		tab = nextTab;
 		const url = new URL($page.url);
 		if (nextTab === 'historial') url.searchParams.delete('tab');
@@ -611,6 +615,7 @@ const preventEnterSubmit = (event: KeyboardEvent) => {
 				</svg>
 				Atrás
 			</a>
+			{#if permissions.canReadClinicalHistory}
 			<button
 				class={`w-full rounded-full px-2 py-2 text-center text-xs font-semibold transition sm:px-4 sm:text-sm md:w-auto ${
 					tab === 'historial'
@@ -621,6 +626,7 @@ const preventEnterSubmit = (event: KeyboardEvent) => {
 			>
 				Historial
 			</button>
+			{/if}
 			<button
 				class={`w-full rounded-full px-2 py-2 text-center text-xs font-semibold transition sm:px-4 sm:text-sm md:w-auto ${
 					tab === 'datos'
@@ -677,7 +683,7 @@ const preventEnterSubmit = (event: KeyboardEvent) => {
 		</div>
 	</div>
 
-	{#if tab === 'historial'}
+	{#if tab === 'historial' && permissions.canReadClinicalHistory}
 		<div class="ux-card">
 			<div class="flex flex-col gap-3 text-sm sm:flex-row sm:items-center">
 				<div class="relative w-full sm:max-w-xs">

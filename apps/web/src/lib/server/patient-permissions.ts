@@ -18,6 +18,9 @@ export const resolvePatientPermissions = (context: BusinessContext) => {
 	const canArchivePatient = role === 'owner' || role === 'admin' || role === 'professional';
 
 	return {
+		canReadClinicalHistory:
+			role !== 'reception' && capabilities.canViewExistingClinicalNotes &&
+			(context.access.canUseBusiness || (isOwnerOrAdmin && context.access.canEnterApp)),
 		canReadClinicalProfile:
 			(role === 'owner' || role === 'admin' || role === 'professional') &&
 			capabilities.canViewExistingClinicalNotes,
