@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import {
 	isValidPatientFullName,
 	normalizePatientFullName,
@@ -165,7 +165,7 @@ const hasVisibleProfessionalName = (professional: { name?: unknown } | null | un
 	String(professional?.name ?? '').trim().length > 0;
 
 export const recordPublicBookingAttempt = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: BookingAttemptInput
 ) => {
 	const { error } = await supabase.from('public_booking_attempts').insert({
@@ -176,7 +176,7 @@ export const recordPublicBookingAttempt = async (
 		success: input.success,
 		error_code: input.errorCode ?? null,
 		user_agent: input.userAgent?.slice(0, 500) ?? null,
-		metadata: input.metadata ?? null
+		metadata: readJson(input.metadata ?? null, 'bookingAudit.metadata')
 	});
 
 	if (error) {
@@ -185,7 +185,7 @@ export const recordPublicBookingAttempt = async (
 };
 
 const countPublicAttempts = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		businessId?: string | null;
 		phoneE164?: string | null;
@@ -210,7 +210,7 @@ const countPublicAttempts = async (
 };
 
 export const getPublicBusinessBySlug = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	slug: string
 ): Promise<PublicBookingBusiness | null> => {
 	const isBusinessId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(slug);
@@ -228,7 +228,7 @@ export const getPublicBusinessBySlug = async (
 };
 
 export const canUsePublicBusiness = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	businessId: string,
 	businessCreatedAt?: string | null
 ) => {
@@ -254,7 +254,7 @@ export const canUsePublicBusiness = async (
 };
 
 const getPublicBusinessSubscription = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	businessId: string
 ): Promise<{ subscription: BusinessSubscriptionRow | null; lookupFailed: boolean }> => {
 	const { data, error } = await supabase
@@ -278,7 +278,7 @@ const getPublicBusinessSubscription = async (
 };
 
 export const getReservableServices = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	businessId: string,
 	scope?: { serviceIds: string[]; professionalIds: string[] }
 ): Promise<PublicService[]> => {
@@ -352,7 +352,7 @@ export const getReservableServices = async (
 };
 
 export const getReservableProfessionals = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: { businessId: string; serviceId: string }
 ): Promise<PublicProfessional[]> => {
 	const [
@@ -504,7 +504,7 @@ const cachedScan = async <T>(key: string, ttlMs: number, compute: () => Promise<
 };
 
 const loadPublicAvailabilitySnapshot = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		businessId: string;
 		modality?: BookingModality;
@@ -706,7 +706,7 @@ const slotsFromPublicSnapshot = (
 };
 
 export const loadPublicBookingState = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		slug: string;
 		modality?: BookingModality;
@@ -919,7 +919,7 @@ export const verifyTurnstileIfConfigured = async (input: {
 };
 
 const assertPublicBookingRateLimits = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		businessId: string;
 		phoneE164: string;
@@ -947,7 +947,7 @@ const assertPublicBookingRateLimits = async (
 };
 
 export const assertPublicBookingPatientPolicy = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		businessId: string;
 		patientName: string;
@@ -992,7 +992,7 @@ export const assertPublicBookingPatientPolicy = async (
 };
 
 export const createPublicBooking = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		slug: string;
 		serviceId: string;
@@ -1271,3 +1271,4 @@ export function getPublicBookingErrorCode(error: unknown): PublicBookingErrorCod
 
 export const getPublicBookingErrorMessage = (error: unknown) =>
 	PUBLIC_BOOKING_ERROR_MESSAGES[getPublicBookingErrorCode(error)];
+import { readJson } from './contracts';

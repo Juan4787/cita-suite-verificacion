@@ -38,3 +38,22 @@ export function readFiniteNumber(value: unknown, contract: string): number {
 	if (typeof value !== 'number' || !Number.isFinite(value)) throw new InvalidDataContractError(contract);
 	return value;
 }
+
+/** Validate actual JSON instead of asserting that arbitrary objects are JSON. */
+export function readJson(value: unknown, contract: string, depth = 0): Json {
+	if (depth > 64) throw new InvalidDataContractError(contract);
+	if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+	if (typeof value === 'number') return readFiniteNumber(value, contract);
+	if (Array.isArray(value)) return value.map(item => readJson(item, contract, depth + 1));
+	const record = readRecord(value, contract);
+	const prototype = Object.getPrototypeOf(record);
+	if (prototype !== Object.prototype && prototype !== null) throw new InvalidDataContractError(contract);
+	const entries = new Map<string, Json>();
+	for (const [key, item] of Object.entries(record)) {
+		// JSON object serialization omits undefined; arrays and root values do not
+		// accept it. This preserves optional object fields without losing data.
+		if (item !== undefined) entries.set(key, readJson(item, contract, depth + 1));
+	}
+	return Object.fromEntries(entries);
+}
+import type { Json } from '@turnos-saas/shared';

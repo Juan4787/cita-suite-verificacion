@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/private';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { hmacSha256HexMatches } from './hmac';
 
 export const MP_API_BASE = 'https://api.mercadopago.com';
@@ -283,7 +283,7 @@ export type CreditOutcome =
 			reason: 'unknown_business' | 'permanent_business';
 	  };
 
-const businessExists = async (admin: SupabaseClient, businessId: string): Promise<boolean> => {
+const businessExists = async (admin: CitaSupabaseClient, businessId: string): Promise<boolean> => {
 	const { data, error } = await admin
 		.from('businesses')
 		.select('id')
@@ -296,7 +296,7 @@ const businessExists = async (admin: SupabaseClient, businessId: string): Promis
 };
 
 const businessIsPermanent = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	businessId: string
 ): Promise<boolean> => {
 	const { data, error } = await admin
@@ -320,7 +320,7 @@ type GrantCallOverrides = {
 	idempotencyKey: string;
 };
 
-const callGrantAccess = async (admin: SupabaseClient, opts: GrantCallOverrides) => {
+const callGrantAccess = async (admin: CitaSupabaseClient, opts: GrantCallOverrides) => {
 	const { data, error } = await admin.rpc('grant_business_access', {
 		p_business_id: opts.businessId,
 		p_operation: opts.operation,
@@ -351,7 +351,7 @@ const callGrantAccess = async (admin: SupabaseClient, opts: GrantCallOverrides) 
 // negocio para que un mapeo roto o un negocio permanente no terminen en un
 // loop de reintentos de MP (la RPC sigue de guardia ante carreras).
 export const creditApprovedPayment = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	opts: { businessId: string; paymentId: string; amount: number | null; origin: string }
 ): Promise<CreditOutcome> => {
 	if (!(await businessExists(admin, opts.businessId))) {
@@ -379,7 +379,7 @@ export const creditApprovedPayment = async (
 // Registra en el ledger un reembolso/contracargo sin tocar el acceso: la
 // decisión de reducir o cortar queda en manos del admin (requires_attention).
 export const recordCancelledPayment = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	opts: { businessId: string; paymentId: string; amount: number | null; status: string }
 ): Promise<CreditOutcome> => {
 	if (!(await businessExists(admin, opts.businessId))) {
@@ -406,7 +406,7 @@ export const recordCancelledPayment = async (
 // ---------------------------------------------------------------------------
 
 export const upsertMpSubscription = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	preapproval: MpPreapproval
 ): Promise<{ businessId: string | null; detail: string }> => {
 	const businessId = preapproval.external_reference?.trim() ?? '';
@@ -476,7 +476,7 @@ export const upsertMpSubscription = async (
 };
 
 const findBusinessByPreapproval = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	preapprovalId: string
 ): Promise<string | null> => {
 	const { data, error } = await admin
@@ -568,7 +568,7 @@ const resolvePaymentBusinessId = (payment: MpPayment): string | null => {
 };
 
 const processPaymentTopic = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	fetchFn: FetchLike,
 	resourceId: string,
 	origin: string
@@ -638,7 +638,7 @@ const processPaymentTopic = async (
 };
 
 const processAuthorizedPaymentTopic = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	fetchFn: FetchLike,
 	resourceId: string,
 	origin: string
@@ -701,7 +701,7 @@ const processAuthorizedPaymentTopic = async (
 const ATTENTION_PREAPPROVAL_STATUSES = new Set(['cancelled', 'paused']);
 
 const processPreapprovalTopic = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	fetchFn: FetchLike,
 	resourceId: string
 ): Promise<MpProcessResult> => {
@@ -732,7 +732,7 @@ const processPreapprovalTopic = async (
 };
 
 export const processMpWebhookEvent = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	fetchFn: FetchLike,
 	opts: { topic: string | null; resourceId: string | null; origin?: string }
 ): Promise<MpProcessResult> => {
@@ -797,7 +797,7 @@ export type MpReturnSummary = {
 const CONFIRM_BUDGET_MS = 6500;
 
 export const confirmMpSubscriptionForBusiness = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	fetchFn: FetchLike,
 	businessId: string
 ): Promise<MpReturnSummary> => {
@@ -863,7 +863,7 @@ export const confirmMpSubscriptionForBusiness = async (
 // que webhook/retorno no hayan registrado: una vez cancelada, la fila sale del
 // filtro de conciliación y ese último mes pagado se perdería. Idempotente.
 export const settleApprovedChargesForPreapproval = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	fetchFn: FetchLike,
 	businessId: string,
 	preapprovalId: string
@@ -905,10 +905,10 @@ export type MpWebhookEventRow = {
 };
 
 export const logMpWebhookEvent = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	row: MpWebhookEventRow
 ): Promise<void> => {
-	const { error } = await admin.from('mp_webhook_events').insert(row);
+	const { error } = await admin.from('mp_webhook_events').insert({ ...row, raw: readJson(row.raw ?? null, 'paymentWebhook.raw') });
 	if (error) {
 		// El log nunca voltea el procesamiento: se deja rastro en la consola de
 		// la función y se sigue.
@@ -925,7 +925,7 @@ export const logMpWebhookEvent = async (
 // suscripción): alerta una sola vez por (action, resource_id) para que la
 // conciliación de cada 6 h no sepulte las alertas reales bajo repeticiones.
 export const logMpWebhookEventOnce = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	row: MpWebhookEventRow & { action: string; resource_id: string }
 ): Promise<boolean> => {
 	const { data: existing, error } = await admin
@@ -990,7 +990,7 @@ export type MpReconcileSummary = {
 const RECONCILE_BUDGET_MS = 6500;
 
 export const reconcileMercadoPago = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	fetchFn: FetchLike,
 	opts?: { limit?: number; budgetMs?: number }
 ): Promise<MpReconcileSummary> => {
@@ -1169,3 +1169,4 @@ export const reconcileMercadoPago = async (
 
 	return summary;
 };
+import { readJson } from './contracts';

@@ -105,7 +105,9 @@ export const actions: Actions = {
             : "No pudimos guardar el enlace. Revisá su configuración y volvé a intentar.";
         return fail(400, { message });
       }
-      throw redirect(303, `?perfil=${data.id}&instalar=1&guardado=1`);
+      const saved = readRecord(data, 'bookingIntegration.saved');
+      const id = readText(saved.id, 'bookingIntegration.saved.id');
+      throw redirect(303, `?perfil=${encodeURIComponent(id)}&instalar=1&guardado=1`);
     } catch (cause) {
       if ((cause as any)?.status === 303) throw cause;
       return fail(400, {
@@ -115,3 +117,4 @@ export const actions: Actions = {
     }
   },
 };
+import { readRecord, readText } from '$lib/server/contracts';

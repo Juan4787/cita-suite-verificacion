@@ -1,8 +1,9 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { createSupabaseAdminClient } from './supabase';
+import { readJson } from './contracts';
 
 export const writeAuditLog = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		businessId: string;
 		userId?: string | null;
@@ -25,7 +26,7 @@ export const writeAuditLog = async (
 		action: input.action,
 		entity_type: input.entityType,
 		entity_id: input.entityId ?? null,
-		metadata: input.metadata ?? null
+		metadata: readJson(input.metadata ?? null, 'audit.metadata')
 	});
 
 	if (error) {

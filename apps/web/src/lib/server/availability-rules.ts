@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import type { TimeRange } from '$lib/utils/time-ranges';
 import { timeRangesOverlap, type NormalizedScheduleBlock } from '$lib/utils/schedule-blocks';
 
@@ -15,7 +15,7 @@ const isMissingAvailabilityRpc = (error: { code?: string; message?: string } | n
 	);
 
 export const replaceProfessionalWeeklyRules = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		businessId: string;
 		professionalId: string;
@@ -60,7 +60,7 @@ export const replaceProfessionalWeeklyRules = async (
 };
 
 export const replaceProfessionalScheduleBlocks = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		businessId: string;
 		professionalId: string;
@@ -70,6 +70,6 @@ export const replaceProfessionalScheduleBlocks = async (
 ) => {
     let revision=input.expectedRevision;
     if(revision===undefined){const {data,error}=await supabase.from('businesses').select('booking_availability_revision').eq('id',input.businessId).single();if(error)throw error;revision=Number(data.booking_availability_revision);}
-    const {error}=await supabase.rpc('replace_professional_schedule_blocks' as never,{p_business_id:input.businessId,p_professional_id:input.professionalId,p_expected_revision:revision,p_blocks:input.blocks.map(block=>({weekdays:block.weekdays,ranges:block.ranges,slot_interval_minutes:block.slotIntervalMinutes,break_minutes:block.breakMinutes,service_scope:block.serviceScope??'all',service_ids:block.allowedServiceIds??[]}))} as never);
+    const {error}=await supabase.rpc('replace_professional_schedule_blocks',{p_business_id:input.businessId,p_professional_id:input.professionalId,p_expected_revision:revision,p_blocks:input.blocks.map(block=>({weekdays:block.weekdays,ranges:block.ranges,slot_interval_minutes:block.slotIntervalMinutes,break_minutes:block.breakMinutes,service_scope:block.serviceScope??'all',service_ids:block.allowedServiceIds??[]}))});
     if(error)throw error;
 };

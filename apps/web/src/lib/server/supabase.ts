@@ -1,7 +1,8 @@
 import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
 import type { Cookies } from '@sveltejs/kit';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
+import type { CitaDatabase, CitaSupabaseClient } from '$lib/types/database';
 import WebSocket from 'ws';
 
 export type Module = 'odonto' | 'administrativo';
@@ -67,7 +68,7 @@ export const createSupabaseServerClient = async (
 	// fetchImpl es opcional, pero en server preferimos usar fetch global
 	// para evitar interferencias con headers/cookies en requests externas.
 	fetchImpl?: typeof fetch
-): Promise<SupabaseClient> => {
+): Promise<CitaSupabaseClient> => {
 	if (env.DEMO_MODE === 'true') {
 		throw new Error('Demo mode: Supabase deshabilitado');
 	}
@@ -87,7 +88,7 @@ export const createSupabaseServerClient = async (
 		headers.Authorization = `Bearer ${tokens.access_token}`;
 	}
 
-	const supabase = createClient(config.url, config.key, {
+	const supabase = createClient<CitaDatabase>(config.url, config.key, {
 		auth: {
 			persistSession: false,
 			autoRefreshToken: false,
@@ -115,7 +116,7 @@ export const createSupabaseOAuthClient = async (
 	module: Module,
 	cookies: Cookies,
 	fetchImpl?: typeof fetch
-): Promise<SupabaseClient> => {
+): Promise<CitaSupabaseClient> => {
 	if (env.DEMO_MODE === 'true') {
 		throw new Error('Demo mode: OAuth deshabilitado');
 	}
@@ -138,7 +139,7 @@ export const createSupabaseOAuthClient = async (
 		maxAge: 10 * 60
 	};
 
-	return createClient(config.url, config.key, {
+	return createClient<CitaDatabase>(config.url, config.key, {
 		auth: {
 			persistSession: true,
 			autoRefreshToken: false,
@@ -172,7 +173,7 @@ export const createSupabaseOAuthClient = async (
 export const createSupabaseAdminClient = async (
 	module: Module,
 	fetchImpl?: typeof fetch
-): Promise<SupabaseClient> => {
+): Promise<CitaSupabaseClient> => {
 	if (env.DEMO_MODE === 'true') {
 		throw new Error('Demo mode: Supabase admin deshabilitado');
 	}
@@ -189,7 +190,7 @@ export const createSupabaseAdminClient = async (
 		throw new Error(`URL inválida en ${label}`);
 	}
 
-	return createClient(config.url, config.serviceRoleKey, {
+	return createClient<CitaDatabase>(config.url, config.serviceRoleKey, {
 		auth: {
 			persistSession: false,
 			autoRefreshToken: false,
@@ -240,7 +241,7 @@ export const getUserIdFromAccessToken = (accessToken?: string | null): string | 
 };
 
 export const getAuthUserId = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	accessToken?: string | null
 ): Promise<string | null> => {
 	const ownerId = getUserIdFromAccessToken(accessToken);

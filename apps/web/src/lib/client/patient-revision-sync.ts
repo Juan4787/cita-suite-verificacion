@@ -6,12 +6,13 @@ import {
 	verifyPatientRevision
 } from '$lib/client/patient-list-cache';
 import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@turnos-saas/shared';
 import { get } from 'svelte/store';
 
 const SAFETY_CHECK_MS = 30_000;
 const FALLBACK_CHECK_MS = 5_000;
 
-let sharedRealtimeClient: SupabaseClient | null = null;
+let sharedRealtimeClient: SupabaseClient<Database> | null = null;
 let sharedRealtimeUrl = '';
 let sharedRealtimeKey = '';
 
@@ -22,7 +23,7 @@ const getSharedRealtimeClient = (url: string, key: string) => {
 	if (sharedRealtimeClient) void sharedRealtimeClient.removeAllChannels().catch(() => {});
 	sharedRealtimeUrl = url;
 	sharedRealtimeKey = key;
-	sharedRealtimeClient = createClient(url, key, {
+	sharedRealtimeClient = createClient<Database>(url, key, {
 		auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
 		realtime: { params: { eventsPerSecond: 2 } }
 	});
@@ -41,7 +42,7 @@ export const startPatientRevisionSync = ({
 	if (typeof window === 'undefined') return () => {};
 
 	let stopped = false;
-	let client: SupabaseClient | null = null;
+	let client: SupabaseClient<Database> | null = null;
 	let channel: RealtimeChannel | null = null;
 	let subscribedTopic = '';
 	let safetyTimer: number | null = null;
@@ -87,8 +88,9 @@ export const startPatientRevisionSync = ({
 		channel = client
 			.channel(topic, { config: { private: true, broadcast: { self: false } } })
 			.on('broadcast', { event: 'data_revision' }, (message) => {
-				const payload = (message?.payload ?? {}) as Record<string, unknown>;
-				if (payload.resource !== 'patients') return;
+				const payload: unknown = message?.payload;
+				if (typeof payload !== 'object' || payload === null || Array.isArray(payload) ||
+					!('resource' in payload) || payload.resource !== 'patients' || !('revision' in payload)) return;
 				if (observePatientRevisionEvent(businessId, payload.revision)) {
 					onRevisionChanged();
 					void refreshRevision(true);

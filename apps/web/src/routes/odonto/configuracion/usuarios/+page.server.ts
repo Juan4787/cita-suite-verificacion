@@ -47,7 +47,7 @@ import {
 import { env } from '$env/dynamic/private';
 import { error as kitError, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 
 type RoleAccessStatus = 'active' | 'pending';
 
@@ -123,7 +123,7 @@ const normalizeAccess = (row: any): BusinessRoleAccess | null => {
 };
 
 const listRoleAccess = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	businessId: string
 ): Promise<BusinessRoleAccess[]> => {
 	const { data, error } = await supabase.rpc('list_business_role_access', {
@@ -136,7 +136,7 @@ const listRoleAccess = async (
 };
 
 const listServices = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	businessId: string
 ): Promise<ServiceOption[]> => {
 	const { data, error } = await supabase
@@ -235,7 +235,7 @@ const roleLabel = (role: BusinessRole) => {
 	return labels[role];
 };
 
-const findAuthUserIdByEmail = async (admin: SupabaseClient, email: string) => {
+const findAuthUserIdByEmail = async (admin: CitaSupabaseClient, email: string) => {
 	for (let page = 1; page <= 20; page += 1) {
 		const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
 		if (error) throw error;
@@ -257,7 +257,7 @@ const saveRoleAccessDirect = async ({
 	isAssisting,
 	currentAccess
 }: {
-	admin: SupabaseClient;
+	admin: CitaSupabaseClient;
 	businessId: string;
 	email: string;
 	role: BusinessRole;
@@ -671,9 +671,9 @@ export const actions: Actions = {
 				return fail(500, { message: 'No se pudo crear el profesional.', values });
 			}
 
-			const rollback = async (admin: SupabaseClient) => {
+			const rollback = async (admin: CitaSupabaseClient) => {
 				// Borrar el profesional limpia en cascada asignaciones, reglas y excepciones.
-				await admin.from('professionals').delete().eq('business_id', businessId).eq('id', createdProfessionalId);
+				if (createdProfessionalId) await admin.from('professionals').delete().eq('business_id', businessId).eq('id', createdProfessionalId);
 				if (createdServiceIds.length > 0) {
 					await admin.from('services').delete().eq('business_id', businessId).in('id', createdServiceIds);
 				}

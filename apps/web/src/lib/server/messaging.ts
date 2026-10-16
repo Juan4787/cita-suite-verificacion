@@ -2,7 +2,8 @@ import { env } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
 import { PUBLIC_SITE_URL_FALLBACK } from '$lib/constants';
 import crypto from 'crypto';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
+import { readJson } from './contracts';
 import { writeAuditLog } from './audit';
 import { getBusinessAccessState, type BusinessSubscriptionRow } from './commercial-access';
 import { hmacSha256HexMatches } from './hmac';
@@ -299,7 +300,7 @@ export const renderTemplateBody = (body: string, variables: string[]) =>
 	variables.reduce((text, value, index) => text.replaceAll(`{{${index + 1}}}`, value), body);
 
 export const loadActiveMessagingAccount = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	businessId: string
 ): Promise<MessagingAccount | null> => {
 	const { data, error } = await supabase
@@ -317,7 +318,7 @@ export const loadActiveMessagingAccount = async (
 };
 
 export const loadReminderTemplate = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	businessId: string
 ): Promise<MessageTemplate | null> => {
 	const { data, error } = await supabase
@@ -333,7 +334,7 @@ export const loadReminderTemplate = async (
 };
 
 export const loadBotReplyTemplate = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	businessId: string
 ): Promise<MessageTemplate | null> => {
 	const { data, error } = await supabase
@@ -349,7 +350,7 @@ export const loadBotReplyTemplate = async (
 	return (data as MessageTemplate | null) ?? null;
 };
 
-export const ensureMockMessagingSetup = async (supabase: SupabaseClient, businessId: string) => {
+export const ensureMockMessagingSetup = async (supabase: CitaSupabaseClient, businessId: string) => {
 	const now = new Date().toISOString();
 	const { data: existingAccount, error: existingAccountError } = await supabase
 		.from('messaging_accounts')
@@ -472,7 +473,7 @@ const activeDispatchStatuses = new Set<MessageDispatchStatus>([
 ]);
 
 const hasActiveReminderDispatch = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	businessId: string,
 	appointmentId: string
 ) => {
@@ -487,7 +488,7 @@ const hasActiveReminderDispatch = async (
 	return (data ?? []).some((dispatch: any) => activeDispatchStatuses.has(dispatch.status));
 };
 
-const canBusinessUseOperationalMessaging = async (supabase: SupabaseClient, businessId: string) => {
+const canBusinessUseOperationalMessaging = async (supabase: CitaSupabaseClient, businessId: string) => {
 	const { data, error } = await supabase
 		.from('business_subscriptions')
 		.select(
@@ -509,7 +510,7 @@ const canBusinessUseOperationalMessaging = async (supabase: SupabaseClient, busi
 };
 
 export const generateReminderDispatches = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: { businessId?: string | null; now?: Date; limit?: number } = {}
 ) => {
 	if (!AUTOMATIC_REMINDERS_ENABLED) {
@@ -626,7 +627,7 @@ export const generateReminderDispatches = async (
 };
 
 const failDispatch = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	dispatch: Pick<MessageDispatch, 'id' | 'business_id' | 'attempts' | 'max_attempts'>,
 	error: unknown,
 	now: Date
@@ -648,7 +649,7 @@ const failDispatch = async (
 };
 
 const skipDispatch = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	dispatch: Pick<MessageDispatch, 'id' | 'business_id'>,
 	reason: string,
 	now: Date
@@ -667,7 +668,7 @@ const skipDispatch = async (
 };
 
 export const processQueuedMessageDispatches = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: { now?: Date; limit?: number } = {}
 ) => {
 	const now = input.now ?? new Date();
@@ -689,6 +690,7 @@ export const processQueuedMessageDispatches = async (
 				continue;
 			}
 
+			if (!dispatch.messaging_account_id) throw new Error('MESSAGING_ACCOUNT_NOT_ACTIVE');
 			const { data: account, error: accountError } = await supabase
 				.from('messaging_accounts')
 				.select(
@@ -763,7 +765,7 @@ export const processQueuedMessageDispatches = async (
 					status: 'sent',
 					provider_message_id: result.providerMessageId,
 					sent_at: now.toISOString(),
-					raw_response: result.raw,
+					raw_response: readJson(result.raw ?? null, 'messageProvider.raw'),
 					last_error_code: null,
 					last_error_message: null,
 					human_error_message: null,
@@ -809,7 +811,7 @@ const providerStatusRank: Record<MessageDispatchStatus, number> = {
 };
 
 export const applyProviderMessageStatus = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		providerMessageId: string;
 		status: 'sent' | 'delivered' | 'read' | 'failed';
@@ -832,9 +834,9 @@ export const applyProviderMessageStatus = async (
 		return { updated: false };
 	}
 
-	const updates: Record<string, unknown> = {
+	const updates: CitaUpdate<'message_dispatches'> = {
 		status: input.status,
-		raw_response: input.raw ?? null,
+		raw_response: readJson(input.raw ?? null, 'messageStatus.raw'),
 		updated_at: now.toISOString()
 	};
 	if (input.status === 'sent') updates.sent_at = now.toISOString();
@@ -882,7 +884,7 @@ export const buildBotReplyText = (
 ) => renderBotReplyBody(body, business);
 
 export const sendBotBookingLinkReply = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		account: MessagingAccount;
 		business: { id: string; name: string; slug: string };
@@ -923,7 +925,7 @@ export const sendBotBookingLinkReply = async (
 				status: 'sent',
 				provider_message_id: result.providerMessageId,
 				sent_at: now.toISOString(),
-				raw_response: result.raw,
+				raw_response: readJson(result.raw ?? null, 'messageProvider.raw'),
 				updated_at: now.toISOString()
 			})
 			.eq('id', dispatch.id)
@@ -956,7 +958,7 @@ const eventTimestamp = (timestamp?: string | number | null) => {
 };
 
 export const processWhatsAppWebhookPayload = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	payload: any,
 	now = new Date()
 ) => {

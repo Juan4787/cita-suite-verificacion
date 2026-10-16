@@ -66,7 +66,7 @@ export const POST: RequestHandler = async (event) => {
 		}
 
 		await enforceRateLimits(radiographUploadRateLimitRules(context.userId), event.fetch);
-		const { data, error } = await context.admin.rpc('begin_patient_radiograph_upload' as never, {
+		const { data, error } = await context.admin.rpc('begin_patient_radiograph_upload', {
 			p_actor_id: context.userId,
 			p_business_id: context.businessId,
 			p_patient_id: event.params.id,
@@ -77,7 +77,7 @@ export const POST: RequestHandler = async (event) => {
 			p_sha256: sha256,
 			p_taken_at: takenAt,
 			p_note: note
-		} as never);
+		});
 		if (error) throw error;
 
 		const row = (Array.isArray(data) ? data[0] : data) as
@@ -112,13 +112,13 @@ export const POST: RequestHandler = async (event) => {
 			});
 		} catch (error) {
 			try {
-				await context.admin.rpc('fail_patient_radiograph_upload' as never, {
+				await context.admin.rpc('fail_patient_radiograph_upload', {
 					p_actor_id: context.userId,
 					p_business_id: context.businessId,
 					p_patient_id: event.params.id,
 					p_radiograph_id: row.radiograph_id,
 					p_failure_code: 'signed_url_failed'
-				} as never);
+				});
 			} catch {
 				// La falla original se informa al usuario; este registro es de mejor esfuerzo.
 			}

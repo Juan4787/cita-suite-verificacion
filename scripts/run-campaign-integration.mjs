@@ -100,10 +100,7 @@ try {
 	const memberships = await membership.json();
 	if (!membership.ok || !Array.isArray(memberships) || memberships.length !== 1)
 		throw new Error(`Authenticated RLS membership was not verified (HTTP ${membership.status}, rows ${Array.isArray(memberships) ? memberships.length : 'invalid'}).`);
-	await run('node', ['scripts/catalog-disposable-database.mjs']);
-	// Stage 2 bootstrap exports the reconstructed contract for review; this
-	// becomes --check after importing that initial generated file.
-	await run('node', ['scripts/generate-database-types.mjs', '--export']);
+	await run('node', ['scripts/generate-database-types.mjs', '--check']);
 	const address = spawnSync('docker', ['inspect', '--format', '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}', database], { encoding: 'utf8' });
 	// Inspect the specific network: concatenating addresses of a multi-network container is invalid.
 	const details = spawnSync('docker', ['inspect', database], { encoding: 'utf8' });

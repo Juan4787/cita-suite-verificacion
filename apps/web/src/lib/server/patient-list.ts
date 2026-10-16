@@ -217,7 +217,7 @@ export const loadPatientList = async ({
 
 	const loadRows = async ({ includeCounts = true }: { includeCounts?: boolean } = {}): Promise<ListWithoutCacheMetadata> => {
 		const snapshotAt = cursor?.snapshotAt ?? new Date().toISOString();
-		const patientsPromise = supabase.rpc('list_accessible_patients_page' as never, {
+		const patientsPromise = supabase.rpc('list_accessible_patients_page', {
 				p_business_id: context.business.id,
 				p_show_archived: showArchived,
 				p_query: query,
@@ -226,13 +226,13 @@ export const loadPatientList = async ({
 				p_cursor_rank: cursor?.rank ?? null,
 				p_cursor_activity_at: cursor?.activityAt ?? null,
 				p_cursor_id: cursor?.id ?? null
-			} as never);
+			});
 		const [patientsResult, countsResult] = includeCounts
 			? await Promise.all([
 					patientsPromise,
-					supabase.rpc('accessible_patient_counts' as never, {
+					supabase.rpc('accessible_patient_counts', {
 						p_business_id: context.business.id
-					} as never)
+					})
 				])
 			: [await patientsPromise, { data: null, error: null }];
 

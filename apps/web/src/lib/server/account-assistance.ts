@@ -1,6 +1,6 @@
 import { MASTER_EMAIL } from './supabase';
 import type { BusinessRole } from './business';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 
 export const ACCOUNT_ASSISTANCE_DURATION_MINUTES = 60;
 export const ACCOUNT_ASSISTANCE_FINAL_NOTICE_HOURS = 24;
@@ -167,7 +167,7 @@ export const buildAccountAssistanceView = ({
 };
 
 export const loadLatestAccountAssistanceGrant = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	businessId: string
 ): Promise<AccountAssistanceRow | null> => {
 	try {
@@ -197,7 +197,7 @@ export const loadAccountAssistanceView = async ({
 	canUseBusiness,
 	isAssisting
 }: {
-	supabase: SupabaseClient;
+	supabase: CitaSupabaseClient;
 	businessId: string;
 	role: BusinessRole | null | undefined;
 	timeZone: string;
@@ -219,7 +219,7 @@ export const loadActiveMasterAccountAssistanceRequests = async ({
 	supportUserId,
 	now = new Date()
 }: {
-	admin: SupabaseClient;
+	admin: CitaSupabaseClient;
 	supportUserId: string;
 	now?: Date;
 }): Promise<MasterAccountAssistanceRequest[]> => {
@@ -251,7 +251,7 @@ export const loadActiveMasterAccountAssistanceRequests = async ({
 		.filter((row): row is MasterAccountAssistanceRequest => Boolean(row));
 };
 
-const findAuthUserIdByEmail = async (admin: SupabaseClient, email: string) => {
+const findAuthUserIdByEmail = async (admin: CitaSupabaseClient, email: string) => {
 	const normalized = email.trim().toLowerCase();
 	for (let page = 1; page <= 20; page += 1) {
 		const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
@@ -263,7 +263,7 @@ const findAuthUserIdByEmail = async (admin: SupabaseClient, email: string) => {
 	return null;
 };
 
-export const ensureMasterSupportUser = async (admin: SupabaseClient) => {
+export const ensureMasterSupportUser = async (admin: CitaSupabaseClient) => {
 	const supportUserId = await findAuthUserIdByEmail(admin, MASTER_EMAIL);
 	if (!supportUserId) {
 		throw new Error('ACCOUNT_ASSISTANCE_MASTER_USER_NOT_FOUND');
@@ -289,8 +289,8 @@ export const activateAccountAssistance = async ({
 	admin,
 	businessId
 }: {
-	supabase: SupabaseClient;
-	admin: SupabaseClient;
+	supabase: CitaSupabaseClient;
+	admin: CitaSupabaseClient;
 	businessId: string;
 }) => {
 	const supportUserId = await ensureMasterSupportUser(admin);
@@ -306,7 +306,7 @@ export const revokeAccountAssistance = async ({
 	supabase,
 	businessId
 }: {
-	supabase: SupabaseClient;
+	supabase: CitaSupabaseClient;
 	businessId: string;
 }) => {
 	const { data, error } = await supabase.rpc('revoke_account_assistance', {
@@ -321,7 +321,7 @@ export const dismissAccountAssistanceNotice = async ({
 	businessId,
 	grantId
 }: {
-	supabase: SupabaseClient;
+	supabase: CitaSupabaseClient;
 	businessId: string;
 	grantId: string;
 }) => {

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
 import { bookingContextsAvailable } from './booking-integration-flags';
 import { loadAppointmentBookingContext, type AppointmentBookingContext } from './booking-integrations';
 import { isActiveAppointmentStatus } from '$lib/utils/appointment-visibility';
@@ -136,7 +136,7 @@ const publicActionAttempt: Record<
 };
 
 export const loadPublicAppointmentByToken = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	token: string,
 	now = new Date(),
 	expectedIntegrationId?: string
@@ -246,7 +246,7 @@ const assertCanApplyPublicAction = (
 };
 
 export const applyPublicAppointmentAction = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		token: string;
 		action: PublicAppointmentAction;
@@ -277,7 +277,7 @@ export const applyPublicAppointmentAction = async (
 			return { appointment, changed: false };
 		}
 
-		const updates: Record<string, unknown> = {
+		const updates: CitaUpdate<'appointments'> = {
 			updated_at: now.toISOString(),
 			updated_by_user_id: null
 		};

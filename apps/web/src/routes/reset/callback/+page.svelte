@@ -2,6 +2,7 @@
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+	import type { Database } from '@turnos-saas/shared';
 	import { env } from '$env/dynamic/public';
 	import BackLink from '$lib/components/BackLink.svelte';
 
@@ -10,7 +11,7 @@
 	let password = $state('');
 	let confirmPassword = $state('');
 	let showPassword = $state(false);
-	let supabase: SupabaseClient | null = null;
+	let supabase: SupabaseClient<Database> | null = null;
 
 	const initSessionFromHash = async () => {
 		const supabaseUrl = env.PUBLIC_ODONTO_SUPABASE_URL?.trim();
@@ -46,7 +47,7 @@
 			return;
 		}
 
-		supabase = createClient(supabaseUrl, supabaseKey, {
+		supabase = createClient<Database>(supabaseUrl, supabaseKey, {
 			auth: {
 				persistSession: false,
 				autoRefreshToken: false

@@ -88,14 +88,14 @@ export async function savePricePolicy(event: RequestEvent) {
     const raw = String(form.get("price_configuration") ?? "");
     if (raw.length > 32000) throw new Error("invalid");
     const { error: cause } = await context.supabase.rpc(
-      "save_service_price_policy" as never,
+      "save_service_price_policy",
       {
         p_business_id: context.business.business.id,
         p_service_id: String(form.get("price_service_id") ?? ""),
         p_professional_id: scope==="service_default"?null:String(event.params.professionalId),
         p_expected_revision: Number(form.get("price_revision")),
         p_configuration: JSON.parse(raw),
-      } as never,
+      },
     );
     if (cause)
       return fail(400, {

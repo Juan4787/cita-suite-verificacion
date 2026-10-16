@@ -39,8 +39,9 @@ try {
 		'-e', 'PG_CONN_TIMEOUT_SECS=10', '-e', 'PG_QUERY_TIMEOUT_SECS=30',
 		'-e', 'PG_META_GENERATE_TYPES=typescript', '-e', 'PG_META_GENERATE_TYPES_INCLUDED_SCHEMAS=public',
 		'-e', 'PG_META_GENERATE_TYPES_DETECT_ONE_TO_ONE_RELATIONSHIPS=true', image, 'node', 'dist/server/server.js'];
-	const source = docker(args);
-	const again = docker(args);
+	const normalize = text => text.trimEnd() + '\n';
+	const source = normalize(docker(args));
+	const again = normalize(docker(args));
 	if (source !== again) throw new Error('Generated types are not reproducible on the same reconstructed database.');
 	const ts = createRequire(join(root, 'apps/web/package.json'))('typescript');
 	const parsed = ts.createSourceFile('database.types.ts', source, ts.ScriptTarget.Latest, true);

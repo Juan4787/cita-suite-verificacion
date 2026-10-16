@@ -554,6 +554,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, dep
 		clinical_entry_costs: undefined
 	}));
 	const hasMoreEntries = entriesWithCosts.length > ENTRIES_PAGE_SIZE;
+	const bookingProfile = parsePatientBookingProfile(clinicalProfile?.custom_fields);
 
 	return {
 		patient: {
@@ -562,9 +563,9 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, dep
 			medication: clinicalProfile?.medication ?? null,
 			background: clinicalProfile?.background ?? null,
 			custom_fields: clinicalProfile?.custom_fields ?? null,
-            booking_extra_fields: Object.values(clinicalProfile?.custom_fields?.booking_fields ?? {}).filter((item: any): item is {label:string;value:string|boolean} => item !== null && typeof item === 'object' && typeof item.label === 'string' && (typeof item.value === 'string' || typeof item.value === 'boolean')),
+			booking_extra_fields: bookingProfile.fields,
 			clinical_profile_updated_at: clinicalProfile?.updated_at ?? null,
-            clinical_profile_patient_reported: bookingInformationEnabled() && clinicalProfile?.updated_by === null && !!clinicalProfile?.custom_fields?.booking_last_reported_at && new Date(clinicalProfile.custom_fields.booking_last_reported_at).getTime() === new Date(clinicalProfile.updated_at).getTime(),
+			clinical_profile_patient_reported: bookingInformationEnabled() && clinicalProfile?.updated_by === null && bookingProfile.reportedAtMs !== null && bookingProfile.reportedAtMs === Date.parse(clinicalProfile.updated_at),
 			professional_archived_at:
 				context.role === 'professional' ? ((professionalLink as any)?.archived_at ?? null) : null
 		},
@@ -1029,7 +1030,7 @@ export const actions: Actions = {
 		}
 
 		const { data: atomicUpdate, error } = await admin.rpc(
-			'update_patient_with_clinical_profile_safely' as never,
+			'update_patient_with_clinical_profile_safely',
 			{
 				p_actor_id: ownerId,
 				p_business_id: context.business.id,
@@ -1052,7 +1053,7 @@ export const actions: Actions = {
 				p_expected_clinical_profile_updated_at: permissions.canEditClinicalProfile
 					? ((currentProfile as any)?.updated_at ?? null)
 					: null
-			} as never
+			}
 		);
 
 		if (error) {
@@ -1319,3 +1320,4 @@ export const actions: Actions = {
 		});
 	}
 };
+import { parsePatientBookingProfile } from '$lib/server/patient-booking-profile';

@@ -1,9 +1,10 @@
 import { env } from '$env/dynamic/private';
 import { error, type RequestEvent } from '@sveltejs/kit';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { parsePublicPatientFields, validateBookingIntakeAnswers } from '@turnos-saas/shared/booking-integration';
 import { createSupabaseAdminClient } from './supabase';
 import { hashRateLimitSubject } from './rate-limits';
+import { readBoolean, readRecord, readText } from './contracts';
 
 export const bookingInformationEnabled = () => env.BOOKING_INFORMATION_ENABLED === 'true';
 export const privateInformationHeaders = { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', 'x-content-type-options': 'nosniff' };
@@ -42,19 +43,26 @@ export function informationErrorMessage(cause: unknown) {
   return 'No pudimos completar el envío. Tu reserva se conserva. Volvé a intentar en unos minutos.';
 }
 
-export async function loadBookingInformation(admin: SupabaseClient, token: string): Promise<PublicInformation> {
+export async function loadBookingInformation(admin: CitaSupabaseClient, token: string): Promise<PublicInformation> {
   const { data, error: cause } = await admin.rpc('get_public_booking_information', { p_token: token });
   if (cause) throw cause;
-  const info = data as PublicInformation;
-  if (info.theme !== 'natalia' && info.theme !== 'cita-suite') throw new Error('BOOKING_INFORMATION_UNAVAILABLE');
-  info.schema = parsePublicPatientFields(info.schema);
-  info.answers = validateBookingIntakeAnswers(info.schema, info.answers);
-  return info;
+  const row = readRecord(data, 'bookingInformation');
+  const theme = row.theme;
+  if (theme !== 'natalia' && theme !== 'cita-suite') throw new Error('BOOKING_INFORMATION_UNAVAILABLE');
+  const schema = parsePublicPatientFields(row.schema);
+  return { theme, schema,
+    schema_hash: readText(row.schema_hash, 'bookingInformation.schema_hash'),
+    answers: validateBookingIntakeAnswers(schema, row.answers),
+    comment: readText(row.comment, 'bookingInformation.comment'),
+    version: readText(row.version, 'bookingInformation.version'),
+    ...(row.documents_enabled === undefined ? {} : { documents_enabled: readBoolean(row.documents_enabled, 'bookingInformation.documents_enabled') })
+  };
 }
 
 
-export async function loadProfessionalBookingSchema(admin: SupabaseClient, businessId: string, professionalIds: string[], integrationId?: string, requestKey?: string) {
+export async function loadProfessionalBookingSchema(admin: CitaSupabaseClient, businessId: string, professionalIds: string[], integrationId?: string, requestKey?: string) {
   const { data, error: cause } = await admin.rpc('get_public_patient_booking_schema', { p_business_id: businessId, p_professional_ids: professionalIds, p_integration_id: integrationId ?? null, p_request_key: requestKey ?? null });
   if (cause) throw cause;
-  return { fields: parsePublicPatientFields(data.schema), hash: String(data.hash) };
+  const row = readRecord(data, 'professionalBookingSchema');
+  return { fields: parsePublicPatientFields(row.schema), hash: readText(row.hash, 'professionalBookingSchema.hash') };
 }

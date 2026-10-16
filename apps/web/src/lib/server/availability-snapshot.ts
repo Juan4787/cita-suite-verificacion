@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { addMinutes, zonedDateTimeToUtc } from '$lib/availability/calculate';
 import type {
 	AvailabilitySnapshot,
@@ -102,7 +102,7 @@ const validateRange = (business: Business, fromDate: string, toDate: string) => 
 };
 
 const loadSnapshotFallback = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	businessId: string,
 	rangeStart: Date,
 	rangeEnd: Date
@@ -173,7 +173,7 @@ const loadSnapshotFallback = async (
 };
 
 export const loadInternalAvailabilitySnapshot = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		business: Business;
 		fromDate: string;

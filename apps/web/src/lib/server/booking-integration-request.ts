@@ -1,14 +1,14 @@
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { error, isHttpError, type RequestEvent } from '@sveltejs/kit';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { BOOKING_INTEGRATION_KEY_PATTERN, normalizeBookingOrigin } from '@turnos-saas/shared/booking-integration';
 import { loadBookingIntegration, type BookingIntegration } from './booking-integrations';
 import { createSupabaseAdminClient } from './supabase';
 import { hashRateLimitSubject } from './rate-limits';
 
 export type ResolvedBookingIntegration = {
-	supabase: SupabaseClient;
+	supabase: CitaSupabaseClient;
 	integration: BookingIntegration;
 	embed: { parentOrigin: string; instanceId: string } | null;
 };

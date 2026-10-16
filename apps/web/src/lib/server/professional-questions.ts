@@ -8,6 +8,7 @@ import { parseBookingIntakeFields } from "@turnos-saas/shared/booking-integratio
 export async function professionalQuestionContext(event: RequestEvent) {
   const context = await getOdontoContext(event);
   const id = event.params.professionalId;
+  if (!id) error(404, "Este profesional no está en tu consultorio.");
   if (!context.business.canManage) {
     if (
       context.business.role !== "professional" ||

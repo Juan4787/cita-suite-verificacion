@@ -17,8 +17,8 @@ export const GET: RequestHandler = async (event) => {
   if (limited || allowed !== true)
     error(429, "Esperá un momento antes de consultar el contacto nuevamente.");
   const { data, error: cause } = await admin.rpc(
-    "get_public_practice_contact" as never,
-    { p_key: event.params.integrationKey } as never,
+    "get_public_practice_contact",
+    { p_key: event.params.integrationKey },
   );
   if (cause || !data)
     error(404, "El contacto del consultorio todavía no está habilitado.");

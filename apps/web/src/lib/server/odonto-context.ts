@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { Cookies } from '@sveltejs/kit';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import {
 	isDefaultBusinessPendingManualSetupError,
 	isDefaultBusinessSetupUnavailableError,
@@ -9,9 +9,10 @@ import {
 } from './business';
 import { RateLimitExceededError } from './rate-limits';
 import { createSupabaseServerClient, getAuthUserId } from './supabase';
+import { env } from '$env/dynamic/private';
 
 export type OdontoContext = {
-	supabase: SupabaseClient;
+	supabase: CitaSupabaseClient;
 	business: BusinessContext;
 	userId: string;
 };
@@ -31,17 +32,26 @@ export const getOdontoContext = async ({
 
 	const supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);
 	let business: BusinessContext | null = null;
-	let userId: string | null = null;
+	// Normal private requests reuse the Auth identity validated by hooks. Direct
+	// consumers without hooks must still validate Auth; only the explicit demo
+	// profile uses its synthetic identity instead of an external provider.
+	let userId = locals.verifiedUser?.id ?? null;
+	if (!userId) {
+		if (env.DEMO_MODE === 'true') userId = await getAuthUserId(supabase, locals.auth.access_token);
+		else {
+			const { data, error } = await supabase.auth.getUser(locals.auth.access_token);
+			if (!error) userId = data.user?.id ?? null;
+		}
+	}
+	if (!userId) throw redirect(303, '/login');
 	try {
-		[business, userId] = await Promise.all([
-			resolveActiveBusiness({
-				supabase,
-				accessToken: locals.auth.access_token,
-				cookies,
-				membershipCache
-			}),
-			getAuthUserId(supabase, locals.auth.access_token)
-		]);
+		business = await resolveActiveBusiness({
+			supabase,
+			verifiedUserId: userId,
+			accessToken: locals.auth.access_token,
+			cookies,
+			membershipCache
+		});
 	} catch (error) {
 		if (isDefaultBusinessPendingManualSetupError(error)) {
 			throw redirect(303, '/odonto/pendiente?reason=manual_setup');
@@ -56,7 +66,6 @@ export const getOdontoContext = async ({
 		throw error;
 	}
 
-	if (!userId) throw redirect(303, '/login');
 	if (!business) throw redirect(303, '/odonto/pendiente?reason=temporarily_unavailable');
 
 	return { supabase, business, userId };

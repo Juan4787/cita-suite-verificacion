@@ -142,6 +142,45 @@ describe('hooks auth validation', () => {
 		expect(resolve).toHaveBeenCalledTimes(2);
 	});
 
+	it('expone la identidad de Auth y no usa un correo decodificado para el acceso maestro', async () => {
+		const event = makeEvent();
+		event.url = new URL('https://app.test/odonto/maestro');
+		mocks.getEmailFromAccessToken.mockReturnValue('master@example.test');
+		mocks.isMasterEmail.mockImplementation(email => email === 'master@example.test');
+		mocks.createSupabaseServerClient.mockResolvedValue({ auth: {
+			getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'verified-id', email: 'professional@example.test' } }, error: null })
+		} });
+		const resolve = vi.fn();
+		await expect(handle({ event, resolve } as never)).rejects.toMatchObject({ status: 303, location: '/odonto' });
+		expect(event.locals).toMatchObject({ verifiedUser: { id: 'verified-id', email: 'professional@example.test' } });
+		expect(mocks.isMasterEmail).toHaveBeenCalledWith('professional@example.test');
+		expect(mocks.getEmailFromAccessToken).not.toHaveBeenCalled();
+		expect(resolve).not.toHaveBeenCalled();
+	});
+
+	it('conserva la identidad verificada después de refrescar la sesión', async () => {
+		const event = makeEvent();
+		mocks.isJwtExpired.mockReturnValue(true);
+		const user = { id: 'refreshed-id', email: 'owner@example.test' };
+		mocks.createSupabaseServerClient.mockResolvedValue({ auth: {
+			refreshSession: vi.fn().mockResolvedValue({ data: { user,
+				session: { access_token: 'new-access', refresh_token: 'new-refresh', user } }, error: null })
+		} });
+		await handle({ event, resolve: vi.fn(async () => new Response('ok')) } as never);
+		expect(event.locals).toMatchObject({ verifiedUser: user, auth: { access_token: 'new-access', refresh_token: 'new-refresh' } });
+	});
+
+	it.each(['GET', 'POST'])('el módulo administrativo sigue inaccesible por %s antes de resolver una ruta', async (method) => {
+		const event = { ...makeEvent(), request: new Request('https://app.test/administrativo/expedientes', { method }) };
+		event.url = new URL('https://app.test/administrativo/expedientes');
+		mocks.createSupabaseServerClient.mockResolvedValue({ auth: {
+			getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'owner-id', email: 'owner@example.test' } }, error: null })
+		} });
+		const resolve = vi.fn();
+		await expect(handle({ event, resolve } as never)).rejects.toMatchObject({ status: 303, location: '/odonto' });
+		expect(resolve).not.toHaveBeenCalled();
+	});
+
 	it('aplica headers de seguridad y cache privado sin pisar contratos de rutas', async () => {
 		const event = makeEvent();
 		event.url = new URL('https://app.test/login');

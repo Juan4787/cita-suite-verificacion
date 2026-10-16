@@ -22,13 +22,13 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { BookingIntegration } from './booking-integrations';
 import { assertIntegrationSelection, bookingPresentation, intakeAnswersFromForm, integratedBookingErrorMessage } from './booking-integrations';
 import { BOOKING_REQUEST_ID_PATTERN } from '@turnos-saas/shared/booking-integration';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 
 const valuesFromForm = (form: FormData) => Object.fromEntries(form.entries());
 
 // The same recovery operation serves native and embedded entry points. A failed
 // lookup never certifies that a booking did not happen; retries retain its key.
-async function recoverIntegratedBooking(supabase: SupabaseClient, url: URL, integration: BookingIntegration, entryPoint: 'embedded' | 'public_page') {
+async function recoverIntegratedBooking(supabase: CitaSupabaseClient, url: URL, integration: BookingIntegration, entryPoint: 'embedded' | 'public_page') {
 	const requestId = url.searchParams.get('request_id') ?? '';
 	if (url.searchParams.get('recover') !== '1' || !BOOKING_REQUEST_ID_PATTERN.test(requestId)) return undefined;
 	const { data, error } = await supabase.from('appointments')
@@ -151,12 +151,12 @@ export const loadPublicBookingPage = async ({ params, fetch, url, setHeaders }: 
 			throw redirect(302, `/reservar/${state.business.id}${url.search}`);
 		}
 
-        if(state.business&&state.services.length){const {data:labels,error:labelError}=await supabase.rpc('get_public_service_price_labels' as never,{p_business_id:state.business.id,p_service_ids:integration?.serviceIds??[],p_professional_ids:integration?.professionalIds??[]} as never);if(labelError)throw labelError;const byId=new Map(((labels??[]) as any[]).map(label=>[label.id,label]));for(const service of state.services){const label=byId.get(service.id);if(label)service.price_label=label.mixed?'Arancel según profesional y fecha':`${label.minimum!==label.maximum?'Desde ':''}${formatQuotedPrice({amount:Number(label.minimum),currency:label.currency})}`;}}
+        if(state.business&&state.services.length){const {data:labels,error:labelError}=await supabase.rpc('get_public_service_price_labels',{p_business_id:state.business.id,p_service_ids:integration?.serviceIds??[],p_professional_ids:integration?.professionalIds??[]});if(labelError)throw labelError;const byId=new Map(((labels??[]) as any[]).map(label=>[label.id,label]));for(const service of state.services){const label=byId.get(service.id);if(label)service.price_label=label.mixed?'Arancel según profesional y fecha':`${label.minimum!==label.maximum?'Desde ':''}${formatQuotedPrice({amount:Number(label.minimum),currency:label.currency})}`;}}
         const patientFields = bookingInformationEnabled() && state.business && (selected.professionalId || selected.professionalIds.length)
             ? await loadProfessionalBookingSchema(supabase, state.business.id, selected.professionalId ? [selected.professionalId] : selected.professionalIds, integration?.id, bookingRequestId) : null;
 		let priceQuote: PriceQuote | null = null;
         if (state.business && state.days.some(day=>day.date===selected.date) && selected.serviceId && selected.date && (selected.professionalId || selected.professionalIds.length)) {
-            const { data: quote, error: quoteError } = await supabase.rpc('get_public_service_price_quote' as never, { p_business_id: state.business.id, p_service_id: selected.serviceId, p_professional_ids: selected.professionalId ? [selected.professionalId] : selected.professionalIds, p_date: selected.date } as never);
+            const { data: quote, error: quoteError } = await supabase.rpc('get_public_service_price_quote', { p_business_id: state.business.id, p_service_id: selected.serviceId, p_professional_ids: selected.professionalId ? [selected.professionalId] : selected.professionalIds, p_date: selected.date });
             if (quoteError) throw quoteError;
             priceQuote = quote as PriceQuote | null;
         }

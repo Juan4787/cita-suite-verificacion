@@ -20,13 +20,13 @@ export const POST: RequestHandler = async (event) => {
 		)
 			? requestedReason
 			: 'client_upload_failed';
-		const { error } = await context.admin.rpc('fail_patient_radiograph_upload' as never, {
+		const { error } = await context.admin.rpc('fail_patient_radiograph_upload', {
 			p_actor_id: context.userId,
 			p_business_id: context.businessId,
 			p_patient_id: event.params.id,
 			p_radiograph_id: event.params.radiographId,
 			p_failure_code: reason
-		} as never);
+		});
 		if (error) throw error;
 		return json({ id: event.params.radiographId, failed: true });
 	} catch (error) {

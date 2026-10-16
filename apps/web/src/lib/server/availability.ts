@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import type { BookingModality, BookingModalityWindow } from '@turnos-saas/shared/booking-integration';
 import type { Business } from './business';
 import { loadIntegratedAvailabilityRows } from './integrated-availability';
@@ -36,7 +36,7 @@ export type AvailabilityInput = {
 };
 
 export const getAvailabilitySlots = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: AvailabilityInput
 ): Promise<AvailabilitySlot[]> => {
 	const {

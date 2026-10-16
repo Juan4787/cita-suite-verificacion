@@ -15,12 +15,12 @@ export const POST: RequestHandler = async (event) => {
 		const context = await getClinicalFileRequestContext(event);
 		requireClinicalFileTrash(context);
 		await enforceRateLimits(radiographTrashRateLimitRules(context.userId), event.fetch);
-		const { error } = await context.admin.rpc('trash_patient_radiograph' as never, {
+		const { error } = await context.admin.rpc('trash_patient_radiograph', {
 			p_actor_id: context.userId,
 			p_business_id: context.businessId,
 			p_patient_id: event.params.id,
 			p_radiograph_id: event.params.radiographId
-		} as never);
+		});
 		if (error) throw error;
 		return json({ id: event.params.radiographId, trashed: true });
 	} catch (error) {

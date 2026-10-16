@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import {
 	PATIENT_EXPORT_DATASETS,
 	PATIENT_EXPORT_SCHEMA_VERSION,
@@ -19,6 +19,7 @@ import {
 	RateLimitUnavailableError
 } from './rate-limits';
 import { createSupabaseAdminClient, getUserIdFromAccessToken, type AuthTokens } from './supabase';
+import { readJson } from './contracts';
 
 export const PATIENT_EXPORT_ERROR_CODES = [
 	'EXPORT_INVALID_REQUEST',
@@ -156,12 +157,10 @@ const safeRpcErrorDetails = (error: unknown) => {
 };
 
 const rpcEnvelope = async (
-	supabase: SupabaseClient,
 	operation: string,
-	functionName: string,
-	args: Record<string, unknown>
+	request: PromiseLike<{ data: unknown; error: unknown }>
 ): Promise<Record<string, unknown>> => {
-	const { data, error } = await supabase.rpc(functionName as never, args as never);
+	const { data, error } = await request;
 	if (error) {
 		console.error('Fallo de dependencia en exportación de pacientes', {
 			operation,
@@ -508,7 +507,7 @@ export const startPatientExport = async ({
 	requestKey,
 	fetchImpl
 }: {
-	supabase: SupabaseClient;
+	supabase: CitaSupabaseClient;
 	businessId: string;
 	actorUserId: string;
 	scope: PatientExportScope;
@@ -537,13 +536,13 @@ export const startPatientExport = async ({
 		throw error;
 	}
 
-	const result = await rpcEnvelope(supabase, 'begin', 'begin_patient_export', {
+	const result = await rpcEnvelope('begin', supabase.rpc('begin_patient_export', {
 		p_actor_user_id: actorUserId,
 		p_business_id: businessId,
 		p_scope: scope,
 		p_patient_id: patientId,
 		p_request_key: requestKey
-	});
+	}));
 	return parseSession(result);
 };
 
@@ -563,19 +562,19 @@ export const readPatientExportPage = async <Dataset extends PatientExportDataset
 	dataset,
 	cursor
 }: {
-	supabase: SupabaseClient;
+	supabase: CitaSupabaseClient;
 	actorUserId: string;
 	exportId: string;
 	dataset: Dataset;
 	cursor: string | null;
 }): Promise<PatientExportPage<Dataset>> => {
-	const result = await rpcEnvelope(supabase, 'read_page', 'read_patient_export_page', {
+	const result = await rpcEnvelope('read_page', supabase.rpc('read_patient_export_page', {
 		p_actor_user_id: actorUserId,
 		p_export_id: exportId,
 		p_dataset: dataset,
-		p_cursor: decodePatientExportCursor(cursor),
+		p_cursor: readJson(decodePatientExportCursor(cursor), 'patientExport.cursor'),
 		p_limit: PAGE_SIZE_BY_DATASET[dataset]
-	});
+	}));
 
 	if (
 		result.export_id !== exportId ||
@@ -618,16 +617,16 @@ export const validatePatientExport = async ({
 	exportId,
 	receivedCounts
 }: {
-	supabase: SupabaseClient;
+	supabase: CitaSupabaseClient;
 	actorUserId: string;
 	exportId: string;
 	receivedCounts: PatientExportCounts;
 }) => {
-	const result = await rpcEnvelope(supabase, 'validate', 'validate_patient_export', {
+	const result = await rpcEnvelope('validate', supabase.rpc('validate_patient_export', {
 		p_actor_user_id: actorUserId,
 		p_export_id: exportId,
 		p_received_counts: receivedCounts
-	});
+	}));
 	if (result.validated !== true) {
 		throw new PatientExportError('EXPORT_DEPENDENCY_UNAVAILABLE');
 	}
@@ -639,14 +638,14 @@ export const cancelPatientExport = async ({
 	actorUserId,
 	exportId
 }: {
-	supabase: SupabaseClient;
+	supabase: CitaSupabaseClient;
 	actorUserId: string;
 	exportId: string;
 }) => {
-	const result = await rpcEnvelope(supabase, 'cancel', 'cancel_patient_export', {
+	const result = await rpcEnvelope('cancel', supabase.rpc('cancel_patient_export', {
 		p_actor_user_id: actorUserId,
 		p_export_id: exportId
-	});
+	}));
 	if (typeof result.status !== 'string') {
 		throw new PatientExportError('EXPORT_DEPENDENCY_UNAVAILABLE');
 	}

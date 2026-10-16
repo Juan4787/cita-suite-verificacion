@@ -14,11 +14,11 @@ export const legacyPublicPracticeActions: Actions = {
       });
     const admin = await createSupabaseAdminClient("odonto", event.fetch);
     const { data, error: cause } = await admin.rpc(
-      "claim_expired_clinical_uploads" as never,
+      "claim_expired_clinical_uploads",
       {
         p_business_id: context.business.business.id,
         p_actor_id: context.userId,
-      } as never,
+      },
     );
     if (cause)
       return fail(400, {
@@ -65,12 +65,12 @@ export const legacyPublicPracticeActions: Actions = {
         whatsapp_message: String(form.get("whatsapp_message") ?? "").trim(),
       };
       const { error: cause } = await context.supabase.rpc(
-        "save_public_practice_settings" as never,
+        "save_public_practice_settings",
         {
           p_business_id: context.business.business.id,
           p_settings: settings,
           p_expected_updated_at: String(form.get("settings_updated_at") ?? ""),
-        } as never,
+        },
       );
       if (cause?.message.includes("CARE_CONFIGURATION_CHANGED"))
         return fail(409, {
@@ -102,14 +102,14 @@ export const legacyPublicPracticeActions: Actions = {
       });
     const form = await readBoundedBookingForm(event.request);
     const { error: cause } = await context.supabase.rpc(
-      "save_service_patient_instructions" as never,
+      "save_service_patient_instructions",
       {
         p_business_id: context.business.business.id,
         p_service_id: String(form.get("service_id") ?? ""),
         p_instructions: String(form.get("instructions") ?? ""),
         p_public_description: String(form.get("public_description") ?? ""),
         p_expected_updated_at: String(form.get("service_updated_at") ?? ""),
-      } as never,
+      },
     );
     if (cause?.message.includes("CARE_CONFIGURATION_CHANGED"))
       return fail(409, {

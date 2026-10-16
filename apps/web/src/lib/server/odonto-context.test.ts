@@ -24,6 +24,7 @@ const { getOdontoContext } = await import('./odonto-context');
 
 const options = () => ({
 	locals: {
+		verifiedUser: { id: 'user-1', email: 'owner@example.test' },
 		auth: { module: 'odonto', access_token: 'access', refresh_token: 'refresh' }
 	},
 	fetch: vi.fn(),
@@ -39,6 +40,26 @@ beforeEach(() => {
 });
 
 describe('getOdontoContext onboarding errors', () => {
+	it('reutiliza la identidad verificada y la pasa a la resolución del consultorio', async () => {
+		const business = { business: { id: 'business-1' }, role: 'owner' };
+		mocks.resolveActiveBusiness.mockResolvedValueOnce(business);
+		const result = await getOdontoContext(options() as never);
+		expect(result.userId).toBe('user-1');
+		expect(mocks.getAuthUserId).not.toHaveBeenCalled();
+		expect(mocks.resolveActiveBusiness).toHaveBeenCalledWith(expect.objectContaining({ verifiedUserId: 'user-1', membershipCache: 'fresh' }));
+	});
+
+	it('sin identidad de hooks valida Auth en vez de decodificar el token', async () => {
+		const getUser = vi.fn().mockResolvedValue({ data: { user: null }, error: new Error('invalid token') });
+		mocks.createSupabaseServerClient.mockResolvedValueOnce({ auth: { getUser } });
+		const request = options();
+		const locals = { auth: request.locals.auth };
+		await expect(getOdontoContext({ ...request, locals } as never)).rejects.toMatchObject({ status: 303, location: '/login' });
+		expect(getUser).toHaveBeenCalledWith('access');
+		expect(mocks.getAuthUserId).not.toHaveBeenCalled();
+		expect(mocks.resolveActiveBusiness).not.toHaveBeenCalled();
+	});
+
 	it('envía el alta manual a una pantalla explícita', async () => {
 		const setupError = new Error('DEFAULT_BUSINESS_PENDING_MANUAL_SETUP');
 		mocks.resolveActiveBusiness.mockRejectedValueOnce(setupError);

@@ -60,6 +60,9 @@ const authUnavailableResponse = () =>
 	);
 
 export const handle: Handle = async ({ event, resolve }) => {
+	// Assigned only after this request's Auth response is verified. A decoded
+	// cookie payload is not the identity exposed to private request contexts.
+	event.locals.verifiedUser = null;
 	const startedAt = performance.now();
 	let authMs = 0;
 	let dbQ = 0;
@@ -128,6 +131,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 				}
 
 				const session = data.session;
+				const user = data.user ?? session.user;
+				if (!user?.id) throw new Error('Sesión sin identidad verificada');
+				event.locals.verifiedUser = { id: user.id, email: user.email ?? null };
 				const cookieOptions = {
 					path: '/',
 					httpOnly: true,
@@ -153,6 +159,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 				if (error || !data?.user?.id) {
 					throw error ?? new Error('Sesión inválida');
 				}
+				event.locals.verifiedUser = { id: data.user.id, email: data.user.email ?? null };
 			}
 		} catch (err) {
 			if (isTransientAuthError(err)) return authUnavailableResponse();
@@ -172,7 +179,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	if (event.locals.auth) {
-		const email = getEmailFromAccessToken(event.locals.auth.access_token);
+		const email = isDemo
+			? getEmailFromAccessToken(event.locals.auth.access_token)
+			: event.locals.verifiedUser?.email;
 		const isMaster = isMasterEmail(email);
 
 		if (wantsMaster && !isMaster) {

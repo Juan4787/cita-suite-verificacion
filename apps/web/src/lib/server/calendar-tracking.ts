@@ -3,7 +3,7 @@
 // La transición corre en la RPC record_calendar_action (un solo UPDATE atómico:
 // dos clicks concurrentes no se pisan y el contador no pierde incrementos).
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { writeAuditLog } from './audit';
 import type { PublicAppointmentView } from './public-appointments';
 
@@ -31,7 +31,7 @@ export const canRegisterCalendarAction = (appointment: PublicAppointmentView): b
 	!appointment.is_past && activeStatuses.has(appointment.status);
 
 export const recordCalendarAction = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	appointment: PublicAppointmentView,
 	action: CalendarClickAction,
 	options: { source?: string | null } = {}
@@ -61,7 +61,7 @@ export const recordCalendarAction = async (
 // Marca "ofrecido" la primera vez que el paciente ve la pantalla con el CTA.
 // Best-effort y solo desde not_offered: nunca pisa una acción real ya registrada.
 export const markCalendarOffered = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	appointment: PublicAppointmentView,
 	now = new Date()
 ) => {

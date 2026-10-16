@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/private';
 import crypto from 'node:crypto';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { createSupabaseAdminClient } from './supabase';
 
 export const RATE_LIMIT_ACTIONS = [
@@ -78,21 +78,21 @@ const formatRetry = (seconds: number) => {
 };
 
 const consumeRateLimit = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	group: {
 		action: RateLimitAction;
 		subject: string | null | undefined;
 		rules: RateLimitRule[];
 	}
 ): Promise<RateLimitRpcRow> => {
-	const { data, error } = await admin.rpc('consume_server_rate_limits' as never, {
+	const { data, error } = await admin.rpc('consume_server_rate_limits', {
 		p_action: group.action,
 		p_subject_hash: hashRateLimitSubject(group.subject),
 		p_windows: group.rules.map((rule) => ({
 			limit_count: rule.limit,
 			window_seconds: rule.windowSeconds
 		}))
-	} as never);
+	});
 
 	if (error) {
 		throw error;

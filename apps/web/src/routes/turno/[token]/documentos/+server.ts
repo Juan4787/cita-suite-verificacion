@@ -46,12 +46,12 @@ export const POST: RequestHandler = async (event) => {
       !Number.isSafeInteger(bytes) ||
       bytes < 1 ||
       bytes > CLINICAL_FILE_MAX_BYTES ||
-      !/^[a-f0-9]{64}$/.test(String(body.sha256 ?? "")) ||
-      !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(String(body.requestId ?? ""))
+      typeof body.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(body.sha256) ||
+      typeof body.requestId !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(body.requestId)
     )
       throw new Error("RADIOGRAPH_UPLOAD_INVALID");
     const { data, error } = await admin.rpc(
-      "begin_public_patient_document_upload" as never,
+      "begin_public_patient_document_upload",
       {
         p_token: token,
         p_request_id: body.requestId,
@@ -60,7 +60,7 @@ export const POST: RequestHandler = async (event) => {
         p_bytes: bytes,
         p_sha256: body.sha256,
         p_note: note,
-      } as never,
+      },
     );
     if (error) throw error;
     const file = data as any;

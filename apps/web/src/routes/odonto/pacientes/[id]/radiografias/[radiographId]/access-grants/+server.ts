@@ -23,13 +23,13 @@ export const POST: RequestHandler = async (event) => {
 		await enforceRateLimits(radiographOriginalAccessRateLimitRules(context.userId), event.fetch);
 
 		const { data, error } = await context.admin.rpc(
-			'grant_patient_radiograph_original_access' as never,
+			'grant_patient_radiograph_original_access',
 			{
 				p_actor_id: context.userId,
 				p_business_id: context.businessId,
 				p_patient_id: event.params.id,
 				p_radiograph_id: event.params.radiographId
-			} as never
+			}
 		);
 		if (error) throw error;
 		const row = (Array.isArray(data) ? data[0] : data) as

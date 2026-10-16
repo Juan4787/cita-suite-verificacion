@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
 import type { IntegratedBookingInput } from './booking-integrations';
 import { writeAuditLog } from './audit';
 import { normalizePhoneE164, normalizePhoneRaw } from './phone';
@@ -274,7 +274,7 @@ type AtomicAppointmentResult = {
 };
 
 const runAtomicAppointmentRpc = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: AtomicAppointmentInput,
 	replayOnly: boolean
 ): Promise<AtomicAppointmentResult | null> => {
@@ -381,12 +381,12 @@ const runAtomicAppointmentRpc = async (
 // Read-only idempotency probe used before mutable policy and availability
 // checks. A null result means the caller must continue with normal creation.
 export const findAppointmentCreationReplay = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: AtomicAppointmentInput
 ) => runAtomicAppointmentRpc(supabase, input, true);
 
 export const createManualAppointment = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		businessId: string;
 		ownerId?: string | null;
@@ -414,7 +414,7 @@ export const createManualAppointment = async (
 };
 
 export const createJointAppointment = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		businessId: string;
 		ownerId?: string | null;
@@ -445,7 +445,7 @@ export const createJointAppointment = async (
 };
 
 export const updateAppointmentStatus = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		businessId: string;
 		appointmentId: string;
@@ -474,7 +474,7 @@ export const updateAppointmentStatus = async (
 		now
 	});
 
-	const updates: Record<string, unknown> = {
+	const updates: CitaUpdate<'appointments'> = {
 		status: input.status,
 		updated_by_user_id: input.userId,
 		updated_at: now.toISOString()
@@ -517,7 +517,7 @@ export const updateAppointmentStatus = async (
 };
 
 export const rescheduleAppointment = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		businessId: string;
 		appointmentId: string;

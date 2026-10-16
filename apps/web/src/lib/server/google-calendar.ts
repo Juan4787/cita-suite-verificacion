@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/private';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import crypto from 'node:crypto';
 import {
 	calendarDescriptionFor,
@@ -236,7 +236,7 @@ const stateHash = (state: string): string =>
 const isValidOAuthState = (state: string): boolean => /^[A-Za-z0-9_-]{32,180}$/.test(state);
 
 export const createGoogleCalendarAuthorizationUrl = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	appointment: PublicAppointmentView,
 	options: { forceConsent?: boolean; now?: Date } = {}
 ): Promise<string> => {
@@ -297,7 +297,7 @@ export const createGoogleCalendarAuthorizationUrl = async (
 };
 
 export const consumeGoogleCalendarOAuthAttempt = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	state: string,
 	now = new Date()
 ): Promise<OAuthAttempt> => {
@@ -427,7 +427,7 @@ const loadGoogleSubject = async (accessToken: string, fetchFn: typeof fetch): Pr
 };
 
 export const authorizeGoogleCalendarAppointment = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	attempt: OAuthAttempt,
 	code: string,
 	fetchFn: typeof fetch
@@ -609,7 +609,7 @@ const refreshGoogleAccessToken = async (
 };
 
 const loadEventLink = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	eventRowId: string
 ): Promise<{ event: EventLinkRow; connection: ConnectionRow; appointment: PublicAppointmentView }> => {
 	const { data: event, error: eventError } = await supabase
@@ -678,7 +678,7 @@ const nextRetryAt = (attemptCount: number, now: Date): Date => {
 };
 
 const markSyncFailure = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	eventRowId: string,
 	error: GoogleCalendarRemoteError,
 	attemptCount: number,
@@ -697,7 +697,7 @@ const markSyncFailure = async (
 };
 
 const completeDelete = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	eventRowId: string,
 	now: Date
 ): Promise<string | null> => {
@@ -749,7 +749,7 @@ const revokeGoogleRefreshToken = async (
 };
 
 export const processGoogleCalendarEvent = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	eventRowId: string,
 	fetchFn: typeof fetch,
 	options: { accessToken?: string; now?: Date } = {}
@@ -879,7 +879,7 @@ export const processGoogleCalendarEvent = async (
 };
 
 export const processGoogleCalendarSyncJobs = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	fetchFn: typeof fetch,
 	options: { limit?: number; now?: Date } = {}
 ) => {
@@ -916,7 +916,7 @@ export const processGoogleCalendarSyncJobs = async (
 };
 
 export const processAppointmentGoogleCalendarSync = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	appointmentId: string,
 	fetchFn: typeof fetch,
 	options: { now?: Date } = {}
@@ -940,7 +940,7 @@ export const processAppointmentGoogleCalendarSync = async (
 };
 
 export const loadGoogleCalendarUiState = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	appointment: PublicAppointmentView,
 	now = new Date()
 ): Promise<GoogleCalendarUiState> => {
@@ -974,7 +974,7 @@ export const loadGoogleCalendarUiState = async (
 };
 
 export const requestGoogleCalendarEventDeletion = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	appointmentId: string,
 	fetchFn: typeof fetch
 ) => {

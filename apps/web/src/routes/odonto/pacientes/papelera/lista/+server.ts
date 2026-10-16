@@ -54,14 +54,14 @@ export const GET: RequestHandler = async (event) => {
 		}
 
 		const { data, error } = await context.supabase.rpc(
-			'list_trashed_patient_radiographs_page' as never,
+			'list_trashed_patient_radiographs_page',
 			{
 				p_business_id: context.businessId,
 				p_query: query,
 				p_limit: PAGE_SIZE,
 				p_cursor_deleted_at: cursor?.deletedAt ?? null,
 				p_cursor_id: cursor?.id ?? null
-			} as never
+			}
 		);
 		if (error) throw error;
 		const rows = (Array.isArray(data) ? data : []) as Array<Record<string, any>>;

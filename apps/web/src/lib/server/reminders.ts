@@ -19,7 +19,7 @@
 // elegida: no afirmamos ni intentamos comprobar el guardado dentro de una aplicación
 // externa.
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { bookingContextsAvailable } from './booking-integration-flags';
 import type { BookingModality } from '@turnos-saas/shared/booking-integration';
 import { ACTIVE_APPOINTMENT_STATUSES } from '$lib/utils/appointment-visibility';
@@ -291,7 +291,7 @@ export const hasConfirmedPushSubscription = (
 // --- Carga principal ----------------------------------------------------------
 
 export const loadReminderCandidates = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	business: Pick<Business, 'id' | 'name' | 'timezone' | 'address' | 'maps_url'>,
 	options: {
 		day: ReminderDay;
@@ -299,7 +299,7 @@ export const loadReminderCandidates = async (
 		// push_subscriptions no otorga acceso a usuarios autenticados. El caller
 		// debe pasar un cliente service-role, después de validar el negocio y con
 		// los appointment_id ya autorizados por la consulta principal.
-		pushSubscriptionsSupabase: SupabaseClient;
+		pushSubscriptionsSupabase: CitaSupabaseClient;
 	}
 ): Promise<ReminderCandidate[]> => {
 	const now = options.now ?? new Date();
@@ -448,9 +448,9 @@ export const loadReminderCandidates = async (
 // El aviso de Agenda usa exactamente los mismos criterios que la sección
 // Recordatorios. Así no anuncia turnos que ya tienen recordatorio confirmado.
 export const countTomorrowUncovered = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	business: Pick<Business, 'id' | 'name' | 'timezone' | 'address' | 'maps_url'>,
-	options: { now?: Date; pushSubscriptionsSupabase: SupabaseClient }
+	options: { now?: Date; pushSubscriptionsSupabase: CitaSupabaseClient }
 ): Promise<number> =>
 	(
 		await loadReminderCandidates(supabase, business, {

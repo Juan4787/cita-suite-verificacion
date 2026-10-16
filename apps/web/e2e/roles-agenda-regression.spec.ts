@@ -261,6 +261,18 @@ const login = async (page: Page, fixture: Fixture) => {
 	await expect(page.getByRole('link', { name: 'Agenda' })).toBeVisible();
 };
 
+const assertOwnerIdentity = async (page: Page, admin: SupabaseClient, fixture: Fixture) => {
+	const token = (await page.context().cookies()).find(cookie => cookie.name === 'sb-access-token');
+	if (!token) throw new Error('La sesión dueña no conservó su cookie de acceso.');
+	const { data, error } = await admin.auth.getUser(token.value);
+	expect(error).toBeNull();
+	expect(data.user?.id, 'Auth debe conservar la identidad dueña al registrar otro integrante').toBe(fixture.ownerUserId);
+	const { data: membership, error: membershipError } = await admin.from('business_users')
+		.select('role,status').eq('business_id', fixture.businessId).eq('user_id', fixture.ownerUserId).single();
+	expect(membershipError).toBeNull();
+	expect(membership, 'el alta de un integrante no debe modificar el rol del dueño').toMatchObject({ role: 'owner', status: 'active' });
+};
+
 const postAction = async (
 	page: Page,
 	url: string,
@@ -437,11 +449,13 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await pendingPage.goto(`/odonto/profesionales/${pendingInvite?.professional_id}`);
 		await expect(pendingPage).toHaveURL(/\/odonto\/mis-turnos/);
 		await pendingContext.close();
+		await assertOwnerIdentity(page, admin, fixture);
 		// Restablece explícitamente la sesión dueña antes de continuar con las
 		// verificaciones administrativas; evita que una implementación de auth o
 		// un navegador compartido contamine la segunda mitad del flujo.
 		await page.context().clearCookies();
 		await login(page, fixture);
+		await assertOwnerIdentity(page, admin, fixture);
 
 		const { data: acceptedInvite } = await admin
 			.from('business_user_invites')
@@ -451,6 +465,7 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 			.single();
 		expect(acceptedInvite?.status).toBe('accepted');
 		expect(acceptedInvite?.accepted_user_id).toBeTruthy();
+		expect(acceptedInvite?.accepted_user_id).not.toBe(fixture.ownerUserId);
 		if (acceptedInvite?.accepted_user_id) fixture.authUserIds.push(String(acceptedInvite.accepted_user_id));
 
 		const { data: acceptedMembership } = await admin
@@ -482,6 +497,7 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 
 		// La vista vieja de Profesionales redirige a Equipo.
 		await page.goto('/odonto/profesionales');
+		await assertOwnerIdentity(page, admin, fixture);
 		await page.waitForURL(/\/odonto\/configuracion\/usuarios/);
 
 		// No se puede duplicar un profesional con el mismo email.

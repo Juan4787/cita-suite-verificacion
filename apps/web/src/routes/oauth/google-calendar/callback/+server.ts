@@ -4,7 +4,7 @@ import {
 	processGoogleCalendarEvent
 } from '$lib/server/google-calendar';
 import { createSupabaseAdminClient } from '$lib/server/supabase';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import type { RequestHandler } from './$types';
 
 const redirectToAppointment = (token: string, status: string) =>
@@ -18,7 +18,7 @@ const redirectToAppointment = (token: string, status: string) =>
 	});
 
 const loadToken = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	appointmentId: string
 ): Promise<string | null> => {
 	const { data, error } = await supabase

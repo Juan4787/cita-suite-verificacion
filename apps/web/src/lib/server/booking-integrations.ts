@@ -1,5 +1,5 @@
 import { bookingInformationEnabled } from './booking-information';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import {
 	BOOKING_INTEGRATION_KEY_PATTERN, BOOKING_MODALITIES, BOOKING_THEMES,
 	normalizeBookingOrigin, parseBookingIntakeFields, parsePublicPatientFields, parseBookingModalityWindows, validateBookingIntakeAnswers,
@@ -70,14 +70,14 @@ export function parseBookingIntegration(row: Record<string, any>, allowLocal = f
 
 const INTEGRATION_SELECT = 'id, business_id, public_key, revision, is_active, is_default, contract_version, theme, allowed_origins, allowed_service_ids, allowed_professional_ids, allowed_modalities, video_instructions, intake_schema, modality_windows';
 
-export async function loadDefaultBookingIntegration(supabase: SupabaseClient, businessId: string, allowLocal = false) {
+export async function loadDefaultBookingIntegration(supabase: CitaSupabaseClient, businessId: string, allowLocal = false) {
 	const { data, error } = await supabase.from('booking_integrations').select(INTEGRATION_SELECT)
 		.eq('business_id', businessId).eq('is_default', true).maybeSingle();
 	if (error) throw error;
 	return data ? parseBookingIntegration(data, allowLocal) : null;
 }
 
-export async function loadBookingIntegration(supabase: SupabaseClient, publicKey: string, allowLocal = false) {
+export async function loadBookingIntegration(supabase: CitaSupabaseClient, publicKey: string, allowLocal = false) {
 	if (!BOOKING_INTEGRATION_KEY_PATTERN.test(publicKey)) return null;
 	const { data, error } = await supabase.from('booking_integrations').select(INTEGRATION_SELECT).eq('public_key', publicKey).maybeSingle();
 	if (error) throw error;
@@ -116,17 +116,19 @@ export function intakeAnswersFromForm(integration: Pick<BookingIntegration, 'int
 	return validateBookingIntakeAnswers(integration.intakeFields, raw);
 }
 
-export async function loadAppointmentBookingContext(supabase: SupabaseClient, appointmentId: string): Promise<AppointmentBookingContext | null> {
+export async function loadAppointmentBookingContext(supabase: CitaSupabaseClient, appointmentId: string): Promise<AppointmentBookingContext | null> {
 	const { data, error } = await supabase.from('appointment_booking_contexts')
 		.select('theme_snapshot, modality, video_instructions_snapshot').eq('appointment_id', appointmentId).maybeSingle();
 	if (error) throw error;
 	if (!data) return null;
-	if (!BOOKING_THEMES.includes(data.theme_snapshot) || !BOOKING_MODALITIES.includes(data.modality)) throw new Error('BOOKING_INTEGRATION_CONFIGURATION_INVALID');
-	return { theme: data.theme_snapshot, modality: data.modality, videoInstructions: data.video_instructions_snapshot };
+	const theme = BOOKING_THEMES.find(theme => theme === data.theme_snapshot);
+	const modality = BOOKING_MODALITIES.find(modality => modality === data.modality);
+	if (!theme || !modality) throw new Error('BOOKING_INTEGRATION_CONFIGURATION_INVALID');
+	return { theme, modality, videoInstructions: data.video_instructions_snapshot };
 }
 
 /** Use the authenticated client: RLS protects clinical answers and archived links. */
-export async function loadAppointmentIntakeForPatient(supabase: SupabaseClient, businessId: string, appointmentId: string, patientId: string) {
+export async function loadAppointmentIntakeForPatient(supabase: CitaSupabaseClient, businessId: string, appointmentId: string, patientId: string) {
 	const { data, error } = await supabase.from('appointment_intake_responses')
 		.select('schema_snapshot, answers, free_comment').eq('business_id', businessId).eq('appointment_id', appointmentId)
 		.eq('patient_id', patientId).maybeSingle();

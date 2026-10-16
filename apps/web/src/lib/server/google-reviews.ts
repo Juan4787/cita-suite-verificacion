@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { writeAuditLog } from './audit';
 import {
 	failureKindFor,
@@ -36,7 +36,7 @@ const hashClickToken = (token: string) =>
 	crypto.createHash('sha256').update(token).digest('hex');
 
 const releaseRequest = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	request: ClaimedGoogleReviewRequest,
 	errorKind: string,
 	now: Date
@@ -51,7 +51,7 @@ const releaseRequest = async (
 };
 
 const requestStillClaimed = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	request: ClaimedGoogleReviewRequest
 ) => {
 	const { data, error } = await supabase
@@ -64,7 +64,7 @@ const requestStillClaimed = async (
 };
 
 const acceptedDeliveryFor = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	requestId: string
 ): Promise<AcceptedGoogleReviewDelivery | null> => {
 	const { data, error } = await supabase
@@ -86,7 +86,7 @@ const acceptedDeliveryFor = async (
 };
 
 const completeRequest = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	request: ClaimedGoogleReviewRequest,
 	delivery: AcceptedGoogleReviewDelivery,
 	now: Date
@@ -103,7 +103,7 @@ const completeRequest = async (
 };
 
 const auditCompletedRequest = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	request: ClaimedGoogleReviewRequest
 ) => {
 	try {
@@ -129,7 +129,7 @@ const auditCompletedRequest = async (
 };
 
 export const sendDueGoogleReviewRequests = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: { now?: Date; limit?: number } = {}
 ) => {
 	if (!isPushConfigured()) {

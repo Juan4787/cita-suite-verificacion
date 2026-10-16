@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 
 export const DEFAULT_SERVICE_NAMES = ['Consulta', 'Otro servicio'] as const;
 export const DEFAULT_SERVICE_DURATION_MINUTES = 30;
@@ -11,7 +11,7 @@ export const isDefaultServiceName = (name: string | null | undefined) =>
 // Consulta y Otro servicio son servicios reales del consultorio: existen en `services`,
 // tienen duración y participan del motor de disponibilidad como cualquier otro servicio.
 export const ensureDefaultServices = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	businessId: string
 ): Promise<string[]> => {
 	const { data, error } = await supabase
@@ -66,7 +66,7 @@ export const ensureDefaultServices = async (
 };
 
 export const ensureDefaultServicesAssigned = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	businessId: string,
 	professionalId: string
 ): Promise<string[]> => {

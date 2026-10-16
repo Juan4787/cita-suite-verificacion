@@ -10,7 +10,7 @@ import { env as publicEnv } from '$env/dynamic/public';
 import webpush from 'web-push';
 import crypto from 'node:crypto';
 import { isIP } from 'node:net';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
 import { writeAuditLog } from './audit';
 import { formatInTimeZone } from '$lib/utils/format';
 import { isActiveAppointmentStatus } from '$lib/utils/appointment-visibility';
@@ -134,7 +134,7 @@ export const isValidSubscriptionPayload = (raw: unknown): raw is PushSubscriptio
 // separado el vínculo con el turno y aplica el bloqueo absoluto de 48 horas tras
 // "Sí, la recibí". El paso del tiempo, por sí solo, nunca exige otra prueba.
 export const saveAppointmentPushSubscription = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	appointment: PublicAppointmentView,
 	payload: PushSubscriptionPayload,
 	userAgent: string | null
@@ -212,7 +212,7 @@ const toDeliveryStatus = (row: any, now = new Date()): PushDeliveryStatus => ({
 });
 
 export const getPushDeliveryStatus = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: { appointmentId: string; deliveryId: string; now?: Date }
 ): Promise<PushDeliveryStatus | null> => {
 	const { data, error } = await supabase
@@ -228,7 +228,7 @@ export const getPushDeliveryStatus = async (
 };
 
 export const getLatestPushTestStatus = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: { subscriptionId: string; now?: Date }
 ): Promise<PushDeliveryStatus | null> => {
 	const { data, error } = await supabase
@@ -246,7 +246,7 @@ export const getLatestPushTestStatus = async (
 };
 
 export const recordPushDeliveryReceipt = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		appointmentId: string;
 		deliveryId: string;
@@ -300,7 +300,7 @@ export const recordPushDeliveryReceipt = async (
 };
 
 export const recordPushTestFeedback = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: { appointmentId: string; deliveryId: string; visible: boolean; now?: Date }
 ): Promise<boolean> => {
 	// La persona puede confirmar aunque Android omita el recibo "displayed". El RPC
@@ -353,7 +353,7 @@ export const failureKindFor = (error: unknown): 'gone' | 'rejected' | 'transient
 };
 
 export const sendTrackedPush = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		businessId: string;
 		appointmentId: string;
@@ -552,7 +552,7 @@ export const pushTtlUntilAppointment = (
 ) => Math.max(0, Math.min(maximumSeconds, Math.floor((startsAt.getTime() - now.getTime()) / 1000)));
 
 export const sendTestPushNotification = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: {
 		appointment: PublicAppointmentView;
 		subscription: TrackedPushTarget;
@@ -625,7 +625,7 @@ export const sendTestPushNotification = async (
 // opera vínculos todavía asociados a este turno; la salud del dispositivo vive en
 // push_devices y no se modifica al reprogramar.
 export const resetPushRemindersForReschedule = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: { businessId: string; appointmentId: string; now?: Date }
 ): Promise<number> => {
 	const now = (input.now ?? new Date()).toISOString();
@@ -655,7 +655,7 @@ export const resetPushRemindersForReschedule = async (
 // intenta en toda suscripción vigente: responder la pregunta de prueba sólo afecta
 // el refuerzo manual y nunca habilita ni bloquea estas entregas reales.
 export const sendReschedulePushNotice = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: { businessId: string; appointmentId: string; now?: Date }
 ) => {
 	if (!isPushConfigured()) return { configured: false, sent: 0, failed: 0, deadEndpoints: 0 };
@@ -780,7 +780,7 @@ export const isGoneError = (error: unknown) => {
 };
 
 export const markEndpointGone = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	endpoint: string,
 	now: Date
 ) => {
@@ -794,12 +794,12 @@ export const markEndpointGone = async (
 };
 
 const releaseClaim = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	claimed: ClaimedReminder,
 	failedCount: number,
 	now: Date
 ) => {
-	const updates: Record<string, unknown> = {
+	const updates: CitaUpdate<'push_subscriptions'> = {
 		failed_count: failedCount,
 		updated_at: now.toISOString(),
 		[claimed.reminder_kind === '24h' ? 'push_24h_claimed_at' : 'push_2h_claimed_at']: null
@@ -812,7 +812,7 @@ const releaseClaim = async (
 };
 
 export const sendDuePushReminders = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	input: { now?: Date; limit?: number } = {}
 ) => {
 	if (!isPushConfigured()) {
@@ -901,14 +901,15 @@ export const sendDuePushReminders = async (
 			});
 			if (!tracked.ok) throw tracked.error;
 
-			const { error: sentUpdateError } = await supabase
-				.from('push_subscriptions')
-				.update({
+			const sentUpdate: CitaUpdate<'push_subscriptions'> = {
 					[claimed.reminder_kind === '24h' ? 'push_24h_sent_at' : 'push_2h_sent_at']:
 						now.toISOString(),
 					failed_count: 0,
 					updated_at: now.toISOString()
-				})
+				};
+			const { error: sentUpdateError } = await supabase
+				.from('push_subscriptions')
+				.update(sentUpdate)
 				.eq('id', claimed.subscription_id);
 			if (sentUpdateError) throw sentUpdateError;
 

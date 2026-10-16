@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/private';
 import type { Cookies } from '@sveltejs/kit';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { createSupabaseAdminClient, getAuthUserId, getEmailFromAccessToken } from './supabase';
 import {
 	getBusinessAccessState,
@@ -147,7 +147,8 @@ export const demoBusinessContext = (): BusinessContext => ({
 });
 
 type ResolveBusinessOptions = {
-	supabase: SupabaseClient;
+	supabase: CitaSupabaseClient;
+	verifiedUserId?: string;
 	accessToken?: string | null;
 	cookies?: Cookies;
 	ensureDefault?: boolean;
@@ -266,7 +267,7 @@ const isMissingAssistanceSchemaError = (error: unknown) => {
 };
 
 const loadAssistanceMemberships = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	userId: string,
 	directBusinessIds: Set<string>
 ): Promise<BusinessContext[]> => {
@@ -316,7 +317,7 @@ const loadAssistanceMemberships = async (
 };
 
 const loadMembershipsLegacy = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	userId: string
 ): Promise<BusinessContext[]> => {
 	const { data, error } = await supabase
@@ -392,7 +393,7 @@ const isMissingBusinessContextsRpcError = (error: unknown) => {
 };
 
 const loadMemberships = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	userId: string
 ): Promise<BusinessContext[]> => {
 	const { data, error } = await supabase.rpc('list_user_business_contexts');
@@ -416,7 +417,7 @@ const defaultBusinessBootstrapByUser = new Map<
 >();
 
 const loadMembershipsForRequest = (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	userId: string,
 	accessToken: string | null,
 	requestKey: Cookies | undefined,
@@ -510,7 +511,7 @@ const hasPendingBusinessInvite = async ({
 };
 
 const reloadMembershipsAfterBootstrap = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	userId: string,
 	requestKey?: Cookies
 ): Promise<BusinessContext[]> => {
@@ -530,7 +531,7 @@ const ensureDefaultBusinessOnce = ({
 	ip,
 	fetch
 }: {
-	supabase: SupabaseClient;
+	supabase: CitaSupabaseClient;
 	userId: string;
 	accessToken?: string | null;
 	ip?: string | null;
@@ -575,6 +576,7 @@ const ensureDefaultBusinessOnce = ({
 
 export const resolveActiveBusiness = async ({
 	supabase,
+	verifiedUserId,
 	accessToken,
 	cookies,
 	ensureDefault = true,
@@ -584,7 +586,7 @@ export const resolveActiveBusiness = async ({
 }: ResolveBusinessOptions): Promise<BusinessContext | null> => {
 	if (env.DEMO_MODE === 'true') return demoBusinessContext();
 
-	const userId = await getAuthUserId(supabase, accessToken);
+	const userId = verifiedUserId ?? await getAuthUserId(supabase, accessToken);
 	if (!userId) return null;
 
 	const requestKey = cookies;

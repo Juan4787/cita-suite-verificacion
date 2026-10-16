@@ -22,7 +22,7 @@ import {
 	type NormalizedScheduleBlock,
 	type ScheduleBlockDraft
 } from '$lib/utils/schedule-blocks';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { error as kitError, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -75,7 +75,7 @@ type SaveResult<T = unknown> =
 const failSave = (result: Extract<SaveResult, { ok: false }>) =>
 	fail(result.status, { message: result.message, exceptionConflict: result.exceptionConflict });
 
-type OdontoSupabase = SupabaseClient<any, any, any>;
+type OdontoSupabase = CitaSupabaseClient;
 
 const getPendingProfessionalAccountEmail = async (
 	supabase: OdontoSupabase,
@@ -653,7 +653,7 @@ export const actions: Actions = {
   if(boolFromForm(form,'save_exception')){const prepared=await createAvailabilityException(supabase,business.business.id,params.professionalId,business.business.timezone,form,true);if(!prepared.ok)return failSave(prepared);items=prepared.data?.items??[];savedSections.push('disponibilidad');}
   const serviceIds=boolFromForm(form,'save_services')?idsFromForm(form,'service_id'):null;if(serviceIds)savedSections.push('servicios');
   if(!savedSections.length)return {success:true,message:'No había cambios pendientes.'};
-  const {error}=await supabase.rpc('save_professional_editor',{p_business_id:business.business.id,p_professional_id:params.professionalId,p_expected_revision:Number(form.get('availability_revision')),p_profile:profile,p_service_ids:serviceIds,p_blocks:blocks?.map(block=>({weekdays:block.weekdays,ranges:block.ranges,slot_interval_minutes:block.slotIntervalMinutes,break_minutes:block.breakMinutes,service_scope:block.serviceScope??'all',service_ids:block.allowedServiceIds??[]}))??null,p_exception_request_id:items?String(form.get('exception_request_id')):null,p_exception_items:items,p_ack_existing:form.get('ack_existing_appointments')==='true'});
+  const {error}=await supabase.rpc('save_professional_editor',{p_business_id:business.business.id,p_professional_id:params.professionalId,p_expected_revision:Number(form.get('availability_revision')),p_profile:readJson(profile,'professionalEditor.profile'),p_service_ids:serviceIds,p_blocks:blocks?.map(block=>({weekdays:block.weekdays,ranges:block.ranges,slot_interval_minutes:block.slotIntervalMinutes,break_minutes:block.breakMinutes,service_scope:block.serviceScope??'all',service_ids:block.allowedServiceIds??[]}))??null,p_exception_request_id:items?String(form.get('exception_request_id')):null,p_exception_items:readJson(items,'professionalEditor.exceptions'),p_ack_existing:form.get('ack_existing_appointments')==='true'});
   if(error)return fail(409,{exceptionConflict:error.message.includes('SCHEDULE_EXISTING_APPOINTMENTS'),message:error.message.includes('SCHEDULE_CHANGED')?'La configuración cambió. Recargá la página antes de guardar; no se aplicó ningún cambio.':error.message.includes('SCHEDULE_EXISTING_APPOINTMENTS')?'Hay turnos existentes. Revisá la agenda y confirmá el bloqueo; no se guardó ningún cambio.':'Revisá el perfil, las prestaciones y los horarios. No se guardó ningún cambio.'});
   return {success:true,message:`Guardado: ${savedSections.join(', ')}.`};
 	},
@@ -817,3 +817,4 @@ export const actions: Actions = {
 		throw redirect(303, '/odonto/configuracion/usuarios');
 	}
 };
+import { readJson } from '$lib/server/contracts';

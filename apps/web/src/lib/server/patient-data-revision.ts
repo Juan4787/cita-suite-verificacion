@@ -1,5 +1,5 @@
 import { isBusinessRole, type BusinessRole } from '$lib/server/business';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { createHash } from 'node:crypto';
 
 type RevisionRow = {
@@ -58,7 +58,7 @@ const toRevision = (row: RevisionRow | null): PatientDataRevision => {
 	};
 };
 
-const selectRevision = async (admin: SupabaseClient, businessId: string) => {
+const selectRevision = async (admin: CitaSupabaseClient, businessId: string) => {
 	const { data, error } = await admin
 		.from('business_data_revisions')
 		.select('patients_revision, realtime_topic_token')
@@ -69,7 +69,7 @@ const selectRevision = async (admin: SupabaseClient, businessId: string) => {
 };
 
 export const getPatientDataRevision = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	businessId: string
 ): Promise<PatientDataRevision> => {
 	try {
@@ -94,7 +94,7 @@ export const getPatientDataRevision = async (
 };
 
 export const getViewerPatientDataRevision = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	businessId: string
 ): Promise<ViewerPatientDataRevision> => {
 	const { data, error } = await supabase

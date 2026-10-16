@@ -70,7 +70,7 @@ export const POST: RequestHandler = async (event) => {
         : false;
 
     const completed = await context.admin.rpc(
-      "complete_patient_radiograph_upload" as never,
+      "complete_patient_radiograph_upload",
       {
         p_actor_id: context.userId,
         p_business_id: context.businessId,
@@ -79,7 +79,7 @@ export const POST: RequestHandler = async (event) => {
         p_actual_bytes: verified.bytes,
         p_actual_mime_type: verified.mimeType,
         p_thumbnail_uploaded: thumbnailUploaded,
-      } as never,
+      },
     );
     if (completed.error) throw completed.error;
 
@@ -100,14 +100,14 @@ export const POST: RequestHandler = async (event) => {
     ) {
       try {
         await context.admin.rpc(
-          "fail_patient_radiograph_upload" as never,
+          "fail_patient_radiograph_upload",
           {
             p_actor_id: context.userId,
             p_business_id: context.businessId,
             p_patient_id: event.params.id,
             p_radiograph_id: event.params.radiographId,
             p_failure_code: "object_validation_failed",
-          } as never,
+          },
         );
       } catch {
         // La validación fallida sigue siendo la respuesta principal.

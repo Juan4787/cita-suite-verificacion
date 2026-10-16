@@ -2,7 +2,7 @@
 // En DEMO_MODE devuelve el turno de muestra sin tocar Supabase.
 
 import { env } from '$env/dynamic/private';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { createSupabaseAdminClient } from './supabase';
 import {
 	demoPublicAppointment,
@@ -12,7 +12,7 @@ import {
 
 export type TokenAppointmentContext = {
 	appointment: PublicAppointmentView | null;
-	supabase: SupabaseClient | null;
+	supabase: CitaSupabaseClient | null;
 	demo: boolean;
 };
 

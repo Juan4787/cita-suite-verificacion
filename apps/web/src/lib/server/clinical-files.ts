@@ -1,5 +1,5 @@
 import {isHttpError,isRedirect,type RequestEvent} from '@sveltejs/kit';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { getOdontoContext } from './odonto-context';
 import { createSupabaseAdminClient } from './supabase';
 import { RateLimitExceededError } from './rate-limits';
@@ -37,8 +37,8 @@ export type ClinicalFileErrorCode =
 	| 'OPERATION_FAILED';
 
 export type ClinicalFileRequestContext = {
-	supabase: SupabaseClient;
-	admin: SupabaseClient;
+	supabase: CitaSupabaseClient;
+	admin: CitaSupabaseClient;
 	businessId: string;
 	userId: string;
 	role: 'owner' | 'admin' | 'reception' | 'professional' | 'readonly';
@@ -338,7 +338,7 @@ const readResponsePrefix = async (response: Response, maxBytes = 32) => {
 };
 
 export const createClinicalFileUploadUrls = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	paths: { original: string; thumbnail: string | null }
 ) => {
 	const bucket = admin.storage.from(CLINICAL_FILES_BUCKET);
@@ -368,7 +368,7 @@ export const createSignedClinicalFileUrl = async ({
 	expiresIn,
 	download
 }: {
-	admin: SupabaseClient;
+	admin: CitaSupabaseClient;
 	bucket: string;
 	path: string;
 	expiresIn: number;
@@ -397,7 +397,7 @@ export const verifyStoredClinicalImage = async ({
 	expectedBytes,
 	expectedMime
 }: {
-	admin: SupabaseClient;
+	admin: CitaSupabaseClient;
 	bucket: string;
 	path: string;
 	expectedBytes: number;
@@ -483,7 +483,7 @@ export const verifyStoredClinicalThumbnail = async ({
 	bucket,
 	path
 }: {
-	admin: SupabaseClient;
+	admin: CitaSupabaseClient;
 	bucket: string;
 	path: string;
 }) => {

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 
 export type ProfessionalEmailConflict = {
 	id: string;
@@ -14,7 +14,7 @@ export const normalizeProfessionalEmail = (value: unknown) => {
 };
 
 export const findProfessionalByEmail = async (
-	supabase: SupabaseClient,
+	supabase: CitaSupabaseClient,
 	businessId: string,
 	email: string | null,
 	excludeProfessionalId?: string | null

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import type { BusinessRole } from './business';
 
 // Seguimientos: recordar volver a contactar a un paciente. Sin recurrencia.
@@ -187,7 +187,7 @@ const mapRow = (row: any): FollowUpListItem => ({
 
 /** professional_id del usuario actuante (rol Profesional). Mirror de pacientes/+page.server.ts. */
 export const resolveActingProfessionalId = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	businessId: string,
 	userId: string
 ): Promise<string | null> => {
@@ -205,7 +205,7 @@ export const resolveActingProfessionalId = async (
 
 /** Resuelve el scope (incluye professionalId para rol Profesional). Una sola fuente para endpoints. */
 export const buildFollowUpScope = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	business: { role: BusinessRole; business: { id: string; timezone: string } },
 	userId: string
 ): Promise<TzScope> => {
@@ -231,7 +231,7 @@ const applyRoleScope = (query: any, scope: RoleScope) =>
  * por assigned_professional_id.
  */
 const filterActiveProfessionalPatientLinks = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	scope: RoleScope,
 	rows: any[]
 ) => {
@@ -252,7 +252,7 @@ const filterActiveProfessionalPatientLinks = async (
 };
 
 export const listExecutingFollowUps = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	scope: TzScope
 ): Promise<FollowUpListItem[]> => {
 	if (!roleSeesAllFollowUps(scope.role) && !scope.professionalId) return [];
@@ -274,7 +274,7 @@ export const listExecutingFollowUps = async (
 };
 
 export const listProgrammedFollowUps = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	scope: TzScope
 ): Promise<FollowUpListItem[]> => {
 	if (!roleSeesAllFollowUps(scope.role) && !scope.professionalId) return [];
@@ -296,7 +296,7 @@ export const listProgrammedFollowUps = async (
 };
 
 export const getNoticeSummary = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	scope: TzScope
 ): Promise<FollowUpNotice> => {
 	if (!roleSeesAllFollowUps(scope.role) && !scope.professionalId) return buildNotice([], 0);
@@ -340,7 +340,7 @@ export const getNoticeSummary = async (
 
 /** Profesionales atendibles (activos) vinculados a un paciente. */
 const listLinkedProfessionalsForPatient = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	businessId: string,
 	patientId: string
 ): Promise<AssignableProfessional[]> => {
@@ -370,7 +370,7 @@ const listLinkedProfessionalsForPatient = async (
 };
 
 const listOwnerAdminAttendingProfessionals = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	businessId: string
 ): Promise<AssignableProfessional[]> => {
 	const { data: memberships, error: membershipsError } = await admin
@@ -415,7 +415,7 @@ const listOwnerAdminAttendingProfessionals = async (
 
 /** Selector de asignación: vinculados al paciente + dueños/admins atendibles. */
 export const listAssignableProfessionalsForPatient = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	businessId: string,
 	patientId: string
 ): Promise<AssignableProfessional[]> => {
@@ -432,7 +432,7 @@ export type PatientSearchResult = { id: string; full_name: string; phone_e164: s
 
 /** Búsqueda de pacientes para asignar: Dueño/Admin/Recepción todos; Profesional sólo los suyos. */
 export const listAssignablePatientsSearch = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	scope: RoleScope,
 	rawQuery: string
 ): Promise<PatientSearchResult[]> => {
@@ -477,7 +477,7 @@ export const listAssignablePatientsSearch = async (
 };
 
 const patientBelongsToBusiness = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	businessId: string,
 	patientId: string
 ): Promise<boolean> => {
@@ -493,7 +493,7 @@ const patientBelongsToBusiness = async (
 };
 
 const professionalLinkedToPatient = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	businessId: string,
 	professionalId: string,
 	patientId: string
@@ -512,7 +512,7 @@ const professionalLinkedToPatient = async (
 };
 
 const professionalCanReceiveFollowUp = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	businessId: string,
 	professionalId: string,
 	patientId: string
@@ -539,7 +539,7 @@ export type CreateFollowUpInput = {
 
 /** El endpoint NUNCA inserta assigned_professional_id null en el flujo normal. */
 export const createFollowUp = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	input: CreateFollowUpInput
 ): Promise<string> => {
 	const { businessId, role, userId, patientId, timezone } = input;
@@ -587,7 +587,7 @@ export const createFollowUp = async (
 	return String(data.id);
 };
 
-const loadScopedPendingFollowUp = async (admin: SupabaseClient, scope: RoleScope, id: string) => {
+const loadScopedPendingFollowUp = async (admin: CitaSupabaseClient, scope: RoleScope, id: string) => {
 	const { data, error } = await admin
 		.from('follow_ups')
 		.select('id, patient_id, assigned_professional_id, status, remind_on, updated_at')
@@ -635,7 +635,7 @@ export const assertExpectedFollowUpVersion = (
 };
 
 export const markFollowUpDone = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	args: RoleScope & { id: string; expectedUpdatedAt: string | null }
 ): Promise<void> => {
 	const existing = await loadScopedPendingFollowUp(admin, args, args.id);
@@ -654,7 +654,7 @@ export const markFollowUpDone = async (
 };
 
 export const snoozeFollowUp = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	args: RoleScope & {
 		id: string;
 		newRemindOn: string;
@@ -683,7 +683,7 @@ export const snoozeFollowUp = async (
 
 /** Editar un seguimiento pendiente: fecha, mensaje y (si corresponde) asignación. El paciente no cambia. */
 export const updateFollowUp = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	args: RoleScope & {
 		id: string;
 		remindOn: string;
@@ -734,7 +734,7 @@ export const updateFollowUp = async (
 
 /** ¿El profesional tiene seguimientos asociados (cualquier estado)? Para el guard de borrado. */
 export const professionalHasFollowUps = async (
-	admin: SupabaseClient,
+	admin: CitaSupabaseClient,
 	businessId: string,
 	professionalId: string
 ): Promise<number> => {
