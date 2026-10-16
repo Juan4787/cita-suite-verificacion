@@ -22,10 +22,7 @@ export const POST: RequestHandler = async (event) => {
   try {
     context = await getClinicalFileRequestContext(event);
     requireClinicalFileUpload(context);
-    const body = (await readClinicalJson(event.request)) as Record<
-      string,
-      unknown
-    >;
+    const body = await readClinicalJson(event.request);
 
     const { data, error } = await context.supabase
       .from("patient_radiographs")

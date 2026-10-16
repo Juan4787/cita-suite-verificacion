@@ -1,3 +1,4 @@
+import { readRecord } from '$lib/server/contracts';
 import { env } from '$env/dynamic/private';
 import { getOdontoContext } from '$lib/server/odonto-context';
 import { createSupabaseAdminClient } from '$lib/server/supabase';
@@ -34,7 +35,7 @@ export const POST: RequestHandler = async ({ params, request, locals, fetch, coo
 
 	let body: Record<string, unknown>;
 	try {
-		body = (await request.json()) as Record<string, unknown>;
+		body = readRecord(await request.json(), 'followUp.request');
 	} catch {
 		return json({ message: 'Solicitud inválida.' }, { status: 400 });
 	}
@@ -43,8 +44,8 @@ export const POST: RequestHandler = async ({ params, request, locals, fetch, coo
 	const scope = await buildFollowUpScope(admin, business, userId);
 
 	let newRemindOn = '';
-	const preset = String(body.preset ?? '') as SnoozePreset;
-	if (PRESETS.includes(preset)) {
+	const preset = PRESETS.find(preset => preset === body.preset);
+	if (preset) {
 		newRemindOn = snoozePresetDate(preset, businessTodayISO(scope.timezone));
 	} else if (typeof body.date === 'string') {
 		newRemindOn = body.date.trim();

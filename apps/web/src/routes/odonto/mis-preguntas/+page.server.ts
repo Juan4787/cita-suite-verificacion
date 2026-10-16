@@ -22,7 +22,7 @@ export const load: PageServerLoad = async (event) => {
         ? row.professionals[0]
         : row.professionals,
     )
-    .filter(Boolean) as Array<{ id: string; name: string }>;
+    .filter((professional) => professional !== null && professional !== undefined);
   if (professionals.length === 1)
     redirect(303, `/odonto/profesionales/${professionals[0].id}/preguntas`);
   return { professionals };

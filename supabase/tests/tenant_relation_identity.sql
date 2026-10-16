@@ -3,7 +3,7 @@
 -- of application guards. Internal FK/CHECK/exclusion constraints stay enabled.
 -- Existing role/RLS suites test authorization with all normal triggers enabled.
 begin;
-select extensions.plan(41);
+select extensions.plan(45);
 alter table public.access_grants disable trigger user;
 alter table public.appointments disable trigger user;
 alter table public.clinical_entries disable trigger user;
@@ -65,6 +65,7 @@ begin
  insert into relation_fixture values(owner_a,owner_b,a,b,pa,pb,pra,prb,aa,ab,sa,sb,da,db,ra,rb,ea,eb,cost,profile,change,radio,follow_up,link,webhook,ga,gb);
 end $fixture$;
 
+set constraints public.google_review_requests_push_delivery_id_fkey, public.push_delivery_attempts_google_review_request_id_fkey immediate;
 select extensions.ok((select convalidated and array_length(conkey,1)=2 and confrelid='public.patients'::regclass and confdeltype='c' and conkey=array[(select attnum from pg_attribute where attrelid=conrelid and attname='business_id'),(select attnum from pg_attribute where attrelid=conrelid and attname='patient_id')]::smallint[] and confkey=array[(select attnum from pg_attribute where attrelid=confrelid and attname='business_id'),(select attnum from pg_attribute where attrelid=confrelid and attname='id')]::smallint[] from pg_constraint where conrelid='public.clinical_entries'::regclass and conname='clinical_entries_patient_id_fkey'),'clinical_entries_patient_id_fkey is validated and composite');
 select extensions.throws_ok($test$update public.clinical_entries set patient_id=(select pb from relation_fixture) where id=(select ea from relation_fixture)$test$,'23503',null,'clinical_entries_patient_id_fkey rejects foreign clinic without USER triggers');
 select extensions.ok((select convalidated and array_length(conkey,1)=2 and confrelid='public.clinical_entries'::regclass and confdeltype='c' and conkey=array[(select attnum from pg_attribute where attrelid=conrelid and attname='business_id'),(select attnum from pg_attribute where attrelid=conrelid and attname='clinical_entry_id')]::smallint[] and confkey=array[(select attnum from pg_attribute where attrelid=confrelid and attname='business_id'),(select attnum from pg_attribute where attrelid=confrelid and attname='id')]::smallint[] from pg_constraint where conrelid='public.clinical_entry_costs'::regclass and conname='clinical_entry_costs_clinical_entry_id_fkey'),'clinical_entry_costs_clinical_entry_id_fkey is validated and composite');
@@ -128,6 +129,21 @@ begin
  perform set_config('cita.tests.legacy_cascade_result',result,true);
 end $control$;
 select current_setting('cita.tests.legacy_cascade_result') as legacy_fk_cascade_result;
-select extensions.lives_ok($test$delete from public.push_subscriptions where id=(select sa from relation_fixture)$test$,'subscription CASCADE and review SET NULL compose without clearing clinic');
+set constraints public.google_review_requests_push_delivery_id_fkey, public.push_delivery_attempts_google_review_request_id_fkey deferred;
+select extensions.lives_ok($test$
+ delete from public.push_subscriptions where id=(select sa from relation_fixture);
+ set constraints public.google_review_requests_push_delivery_id_fkey, public.push_delivery_attempts_google_review_request_id_fkey immediate;
+$test$,'subscription CASCADE and review SET NULL compose with final integrity checked');
+select extensions.is((select count(*) from public.push_delivery_attempts where id=(select da from relation_fixture)),0::bigint,'subscription cascade removes its delivery');
+select extensions.ok((select business_id=(select a from relation_fixture) and push_delivery_id is null and push_subscription_id is null from public.google_review_requests where id=(select ra from relation_fixture)),'completed cascade preserves the review and clinic with both references cleared');
+set constraints public.google_review_requests_push_delivery_id_fkey, public.push_delivery_attempts_google_review_request_id_fkey deferred;
+select extensions.throws_ok($test$
+ update public.google_review_requests set push_delivery_id=(select db from relation_fixture) where id=(select ra from relation_fixture);
+ set constraints public.google_review_requests_push_delivery_id_fkey immediate;
+$test$,'23503',null,'deferred review references still reject foreign clinics at final checking');
+select extensions.throws_ok($test$
+ update public.push_delivery_attempts set google_review_request_id=(select ra from relation_fixture),failed_at=now() where id=(select db from relation_fixture);
+ set constraints public.push_delivery_attempts_google_review_request_id_fkey immediate;
+$test$,'23503',null,'deferred delivery references still reject foreign clinics at final checking');
 select * from extensions.finish();
 rollback;

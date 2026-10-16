@@ -34,6 +34,7 @@ import { sanitizePublicImageUrl } from './public-image';
 import type { IntegratedBookingInput } from './booking-integrations';
 import type { BookingModality, BookingModalityWindow } from '@turnos-saas/shared/booking-integration';
 import { loadIntegratedAvailabilityRows, parseIntegratedAvailabilityRows } from './integrated-availability';
+import { isRecord } from './contracts';
 
 export type PublicService = {
 	id: string;
@@ -459,46 +460,56 @@ const SLOT_SCAN_CACHE_TTL_MS = 0;
 const STRUCTURE_SCAN_CACHE_TTL_MS = 0;
 const SCAN_CACHE_MAX_ENTRIES = 500;
 
-type ScanCacheEntry = {
-	value?: unknown;
-	promise?: Promise<unknown>;
+type ScanCacheEntry<Value> = {
+	value?: Value;
+	promise?: Promise<Value>;
 	expiresAt: number;
 };
-const scanCache = new Map<string, ScanCacheEntry>();
+const businessScanCache = new Map<string, ScanCacheEntry<PublicBookingBusiness | null>>();
+const accessScanCache = new Map<string, ScanCacheEntry<Awaited<ReturnType<typeof getPublicBusinessSubscription>>>>();
+const servicesScanCache = new Map<string, ScanCacheEntry<PublicService[]>>();
+const professionalsScanCache = new Map<string, ScanCacheEntry<PublicProfessional[]>>();
+const availabilityScanCache = new Map<string, ScanCacheEntry<Awaited<ReturnType<typeof loadPublicAvailabilitySnapshot>>>>();
+const scanCaches = [businessScanCache, accessScanCache, servicesScanCache, professionalsScanCache, availabilityScanCache];
 
-export const clearPublicBookingScanCache = () => scanCache.clear();
+export const clearPublicBookingScanCache = () => {
+	for (const cache of scanCaches) cache.clear();
+};
 
 // Tras crear una reserva, los escaneos cacheados del negocio quedan viejos
 // (el slot tomado seguiría visible hasta vencer el TTL en esta instancia).
 export const invalidatePublicBookingScans = (businessId: string) => {
-	for (const key of scanCache.keys()) {
-		if (key.includes(`:${businessId}:`) || key.endsWith(`:${businessId}`)) {
-			scanCache.delete(key);
+	for (const cache of scanCaches) {
+		for (const key of cache.keys()) {
+			if (key.includes(`:${businessId}:`) || key.endsWith(`:${businessId}`)) cache.delete(key);
 		}
 	}
 };
 
-const cachedScan = async <T>(key: string, ttlMs: number, compute: () => Promise<T>): Promise<T> => {
+const cachedScan = async <T>(cache: Map<string, ScanCacheEntry<T>>, key: string, ttlMs: number, compute: () => Promise<T>): Promise<T> => {
 	const now = Date.now();
-	const hit = scanCache.get(key);
-	if (hit?.promise) return (await hit.promise) as T;
-	if (hit && hit.expiresAt > now && 'value' in hit) return hit.value as T;
-	if (scanCache.size >= SCAN_CACHE_MAX_ENTRIES) {
-		for (const [entryKey, entry] of scanCache) {
-			if (entry.expiresAt <= now) scanCache.delete(entryKey);
+	const hit = cache.get(key);
+	if (hit?.promise) return await hit.promise;
+	if (hit && hit.expiresAt > now && hit.value !== undefined) return hit.value;
+	const cacheSize = () => scanCaches.reduce((size, item) => size + item.size, 0);
+	if (cacheSize() >= SCAN_CACHE_MAX_ENTRIES) {
+		for (const item of scanCaches) {
+			for (const [entryKey, entry] of item) {
+				if (entry.expiresAt <= now) item.delete(entryKey);
+			}
 		}
-		if (scanCache.size >= SCAN_CACHE_MAX_ENTRIES) scanCache.clear();
+		if (cacheSize() >= SCAN_CACHE_MAX_ENTRIES) clearPublicBookingScanCache();
 	}
 	const promise = compute();
-	scanCache.set(key, { promise, expiresAt: Number.POSITIVE_INFINITY });
+	cache.set(key, { promise, expiresAt: Number.POSITIVE_INFINITY });
 	try {
 		const value = await promise;
-		if (scanCache.get(key)?.promise === promise) {
-			scanCache.set(key, { value, expiresAt: Date.now() + ttlMs });
+		if (cache.get(key)?.promise === promise) {
+			cache.set(key, { value, expiresAt: Date.now() + ttlMs });
 		}
 		return value;
 	} catch (error) {
-		if (scanCache.get(key)?.promise === promise) scanCache.delete(key);
+		if (cache.get(key)?.promise === promise) cache.delete(key);
 		throw error;
 	}
 };
@@ -726,19 +737,20 @@ export const loadPublicBookingState = async (
 		? normalizedSlug
 		: null;
 	const loadBusiness = () =>
-		cachedScan(`business-lookup:${normalizedSlug}`, STRUCTURE_SCAN_CACHE_TTL_MS, () =>
+		cachedScan(businessScanCache, `business-lookup:${normalizedSlug}`, STRUCTURE_SCAN_CACHE_TTL_MS, () =>
 			getPublicBusinessBySlug(supabase, input.slug)
 		);
 	const loadAccess = (businessId: string) =>
-		cachedScan(`commercial-access-row:${businessId}`, STRUCTURE_SCAN_CACHE_TTL_MS, () =>
+		cachedScan(accessScanCache, `commercial-access-row:${businessId}`, STRUCTURE_SCAN_CACHE_TTL_MS, () =>
 			getPublicBusinessSubscription(supabase, businessId)
 		);
 	const loadServices = (businessId: string) =>
-		cachedScan(`public-services:${businessId}:${input.scope ? JSON.stringify(input.scope) : ''}`, STRUCTURE_SCAN_CACHE_TTL_MS, () =>
+		cachedScan(servicesScanCache, `public-services:${businessId}:${input.scope ? JSON.stringify(input.scope) : ''}`, STRUCTURE_SCAN_CACHE_TTL_MS, () =>
 			getReservableServices(supabase, businessId, input.scope)
 		);
 	const loadProfessionals = (businessId: string, serviceId: string) =>
 		cachedScan(
+			professionalsScanCache,
 			`public-professionals:${businessId}:${serviceId}`,
 			STRUCTURE_SCAN_CACHE_TTL_MS,
 			() => getReservableProfessionals(supabase, { businessId, serviceId })
@@ -852,6 +864,7 @@ export const loadPublicBookingState = async (
 	);
 	const selectionCacheKey = selectedProfessionalIds.join(',');
 	const availabilityRows = await cachedScan(
+		availabilityScanCache,
 		`availability-rows:${business.id}:${business.booking_availability_revision??0}:${selectedService.id}:${selectionCacheKey}:${scanFromDate}:${scanToDate}:${input.modality ?? ''}`,
 		SLOT_SCAN_CACHE_TTL_MS,
 		() =>
@@ -914,8 +927,8 @@ export const verifyTurnstileIfConfigured = async (input: {
 		method: 'POST',
 		body
 	});
-	const payload = (await response.json().catch(() => null)) as { success?: boolean } | null;
-	if (!response.ok || !payload?.success) throw new Error('PUBLIC_CAPTCHA_FAILED');
+	const payload: unknown = await response.json().catch(() => null);
+	if (!response.ok || !isRecord(payload) || payload.success !== true) throw new Error('PUBLIC_CAPTCHA_FAILED');
 };
 
 const assertPublicBookingRateLimits = async (

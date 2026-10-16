@@ -94,7 +94,7 @@ alter table public.follow_ups validate constraint follow_ups_patient_id_fkey;
 alter table public.google_review_requests
   drop constraint google_review_requests_push_delivery_id_fkey,
   add constraint google_review_requests_push_delivery_id_fkey foreign key (business_id,push_delivery_id)
-    references public.push_delivery_attempts(business_id,id) ON DELETE SET NULL (push_delivery_id) deferrable initially immediate not valid;
+    references public.push_delivery_attempts(business_id,id) ON DELETE SET NULL (push_delivery_id) deferrable initially deferred not valid;
 alter table public.google_review_requests validate constraint google_review_requests_push_delivery_id_fkey;
 
 alter table public.google_review_requests
@@ -148,7 +148,7 @@ alter table public.professional_patient_links validate constraint professional_p
 alter table public.push_delivery_attempts
   drop constraint push_delivery_attempts_google_review_request_id_fkey,
   add constraint push_delivery_attempts_google_review_request_id_fkey foreign key (business_id,google_review_request_id)
-    references public.google_review_requests(business_id,id) ON DELETE SET NULL (google_review_request_id) deferrable initially immediate not valid;
+    references public.google_review_requests(business_id,id) ON DELETE SET NULL (google_review_request_id) deferrable initially deferred not valid;
 alter table public.push_delivery_attempts validate constraint push_delivery_attempts_google_review_request_id_fkey;
 
 alter table public.push_delivery_attempts

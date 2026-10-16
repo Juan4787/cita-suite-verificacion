@@ -107,7 +107,7 @@ export function bookingPresentation(integration: BookingIntegration): BookingPre
 
 export function assertIntegrationSelection(integration: BookingIntegration, input: { serviceId: string; professionalIds: string[]; modality: unknown }) {
 	if (!integration.isActive) throw new Error('BOOKING_INTEGRATION_UNAVAILABLE');
-	if (!integration.modalities.includes(input.modality as BookingModality)) throw new Error('BOOKING_MODALITY_UNAVAILABLE');
+	if (!integration.modalities.some(modality => modality === input.modality)) throw new Error('BOOKING_MODALITY_UNAVAILABLE');
 	if ((integration.serviceIds.length && !integration.serviceIds.includes(input.serviceId)) ||
 		(integration.professionalIds.length && input.professionalIds.some((id) => !integration.professionalIds.includes(id)))) {
 		throw new Error('BOOKING_INTEGRATION_SCOPE_INVALID');

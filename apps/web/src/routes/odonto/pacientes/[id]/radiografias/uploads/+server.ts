@@ -24,7 +24,7 @@ export const POST: RequestHandler = async (event) => {
 	try {
 		const context = await getClinicalFileRequestContext(event);
 		requireClinicalFileUpload(context);
-		const body = (await readClinicalJson(event.request)) as Record<string, unknown> | null;
+		const body = await readClinicalJson(event.request);
 		if (!body) {
 			return json(
 				{ code: 'INVALID_REQUEST', message: 'Revisá los datos del archivo.' },
@@ -80,15 +80,7 @@ export const POST: RequestHandler = async (event) => {
 		});
 		if (error) throw error;
 
-		const row = (Array.isArray(data) ? data[0] : data) as
-			| {
-					radiograph_id: string;
-					storage_bucket: string;
-					storage_path: string;
-					thumbnail_path: string | null;
-					status: string;
-			  }
-			| null;
+		const row = data?.[0];
 		if (!row?.radiograph_id) throw new Error('RADIOGRAPH_BEGIN_EMPTY');
 		if (row.status === 'ready') {
 			return json({ id: row.radiograph_id, already_complete: true });

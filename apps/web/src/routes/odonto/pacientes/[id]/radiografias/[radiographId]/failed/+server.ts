@@ -1,3 +1,4 @@
+import { isRecord } from '$lib/server/contracts';
 import {
 	clinicalFileCacheHeaders,
 	clinicalFileErrorBody,
@@ -13,7 +14,8 @@ export const POST: RequestHandler = async (event) => {
 	try {
 		const context = await getClinicalFileRequestContext(event);
 		requireClinicalFileUpload(context);
-		const body = (await event.request.json().catch(() => ({}))) as Record<string, unknown>;
+		const raw: unknown = await event.request.json().catch(() => null);
+		const body = isRecord(raw) ? raw : {};
 		const requestedReason = String(body.reason ?? '').trim();
 		const reason = ['client_upload_failed', 'client_upload_aborted', 'client_upload_timeout'].includes(
 			requestedReason

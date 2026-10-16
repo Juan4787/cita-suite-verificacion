@@ -1,3 +1,4 @@
+import { readRecord } from '$lib/server/contracts';
 import { env } from '$env/dynamic/private';
 import {
 	CLINICAL_FILES_BUCKET,
@@ -22,7 +23,7 @@ const decodeCursor = (value: string | null): Cursor | null => {
 	if (!value) return null;
 	if (value.length > 512) return null;
 	try {
-		const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as Partial<Cursor>;
+		const parsed = readRecord(JSON.parse(Buffer.from(value, 'base64url').toString('utf8')), 'patientFiles.cursor');
 		if (
 			typeof parsed.createdAt !== 'string' ||
 			!timestampPattern.test(parsed.createdAt) ||

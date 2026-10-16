@@ -10,9 +10,37 @@ import {
 	loadPublicBookingState,
 	PUBLIC_BOOKING_ERROR_MESSAGES,
 	summarizeSlotsByDate,
-	todayForBusiness
+	todayForBusiness,
+	verifyTurnstileIfConfigured
 } from './public-booking';
 import type { AvailabilitySlot } from './availability';
+
+describe('Turnstile response contract', () => {
+	it.each([null, [], {}, { success: false }, { success: 'true' }, { success: 1 }])(
+		'rejects a response without an explicit boolean success: %j',
+		async (payload) => {
+			const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(Response.json(payload));
+			await expect(verifyTurnstileIfConfigured({
+				secret: 'synthetic-secret', token: 'synthetic-token', fetchImpl
+			})).rejects.toThrow('PUBLIC_CAPTCHA_FAILED');
+		}
+	);
+
+	it('accepts only a successful HTTP response with boolean success', async () => {
+		const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ success: true }));
+		await expect(verifyTurnstileIfConfigured({
+			secret: 'synthetic-secret', token: 'synthetic-token', fetchImpl
+		})).resolves.toBeUndefined();
+		expect(fetchImpl).toHaveBeenCalledWith(
+			'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+			expect.objectContaining({ method: 'POST', body: expect.any(URLSearchParams) })
+		);
+		fetchImpl.mockResolvedValue(Response.json({ success: true }, { status: 503 }));
+		await expect(verifyTurnstileIfConfigured({
+			secret: 'synthetic-secret', token: 'synthetic-token', fetchImpl
+		})).rejects.toThrow('PUBLIC_CAPTCHA_FAILED');
+	});
+});
 
 const {
 	createJointAppointmentMock,

@@ -7,7 +7,7 @@ import {
 	getClinicalFileRequestContext,
 	requireClinicalFileTrashView
 } from '$lib/server/clinical-files';
-import { readArray } from '$lib/server/contracts';
+import { readArray, readRecord } from '$lib/server/contracts';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
@@ -20,7 +20,7 @@ const decodeCursor = (value: string | null): Cursor | null => {
 	if (!value) return null;
 	if (value.length > 512) return null;
 	try {
-		const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as Partial<Cursor>;
+		const parsed = readRecord(JSON.parse(Buffer.from(value, 'base64url').toString('utf8')), 'patientFiles.cursor');
 		if (
 			typeof parsed.deletedAt !== 'string' ||
 			!timestampPattern.test(parsed.deletedAt) ||

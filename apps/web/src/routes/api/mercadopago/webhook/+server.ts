@@ -1,3 +1,4 @@
+import { readRecord } from '$lib/server/contracts';
 import {
 	logMpWebhookEvent,
 	processMpWebhookEvent,
@@ -33,7 +34,7 @@ export const POST: RequestHandler = async ({ request, url, fetch }) => {
 
 	let payload: Record<string, unknown> | null = null;
 	try {
-		payload = body ? (JSON.parse(body) as Record<string, unknown>) : null;
+		payload = body ? readRecord(JSON.parse(body), 'payment.webhook') : null;
 	} catch {
 		payload = null;
 	}

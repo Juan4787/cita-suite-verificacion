@@ -1,3 +1,4 @@
+import { readRecord } from '$lib/server/contracts';
 import { env } from '$env/dynamic/private';
 import { getOdontoContext } from '$lib/server/odonto-context';
 import { createSupabaseAdminClient } from '$lib/server/supabase';
@@ -32,7 +33,7 @@ export const POST: RequestHandler = async ({ params, request, locals, fetch, coo
 	let body: Record<string, unknown> = {};
 	try {
 		const raw = await request.text();
-		if (raw.trim()) body = JSON.parse(raw) as Record<string, unknown>;
+		if (raw.trim()) body = readRecord(JSON.parse(raw), 'followUp.request');
 	} catch {
 		return json({ message: 'Solicitud inválida.' }, { status: 400 });
 	}

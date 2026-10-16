@@ -49,7 +49,7 @@ const restrictedBusiness = {
 	}
 };
 
-const event = (body: Record<string, unknown> = {}) => ({
+const event = (body: unknown = {}) => ({
 	params: { id: 'follow-up-1' },
 	request: new Request('http://localhost/odonto/seguimientos', {
 		method: 'POST',
@@ -99,4 +99,21 @@ describe('seguimientos bloquea operaciones con acceso comercial vencido', () => 
 		const response = (await manageFollowUpPost(event() as never)) as Response;
 		await expectRestricted(response);
 	});
+});
+
+describe('seguimientos valida la estructura JSON antes de operar', () => {
+	it.each([null, [], true, 'texto'])(
+		'rechaza cuerpos que no son objetos: %j',
+		async (body) => {
+			mocks.getOdontoContext.mockResolvedValue({
+				business: { ...restrictedBusiness, access: { canUseBusiness: true } },
+				userId: 'user-1', supabase: {}
+			});
+			for (const handler of [createFollowUpPost, editFollowUpPost, snoozeFollowUpPost, manageFollowUpPost]) {
+				const response = await handler(event(body) as never);
+				expect(response.status).toBe(400);
+				await expect(response.json()).resolves.toEqual({ message: 'Solicitud inválida.' });
+			}
+		}
+	);
 });
