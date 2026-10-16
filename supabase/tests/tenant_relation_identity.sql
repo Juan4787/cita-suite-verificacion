@@ -106,6 +106,28 @@ select extensions.lives_ok($test$delete from public.google_review_requests where
 select extensions.ok((select business_id=(select b from relation_fixture) and google_review_request_id is null from public.push_delivery_attempts where id=(select db from relation_fixture)),'SET NULL clears only review reference, preserving clinic');
 select extensions.lives_ok($test$delete from public.access_grants where id=(select ga from relation_fixture)$test$,'grant deletion preserves webhook history');
 select extensions.ok((select business_id=(select a from relation_fixture) and credited_grant_id is null from public.mp_webhook_events where id=(select webhook from relation_fixture)),'SET NULL clears only credited grant, preserving clinic');
+-- Diagnostic control: replay exactly this cascade with the four previous
+-- single-column FKs, then restore everything via an inner rollback. The
+-- result is evidence, not an acceptance assertion or a reason to skip #41.
+do $control$
+declare result text;
+begin
+ begin
+  alter table public.google_review_requests drop constraint google_review_requests_push_delivery_id_fkey,
+   add constraint google_review_requests_push_delivery_id_fkey foreign key(push_delivery_id) references public.push_delivery_attempts(id) on delete set null;
+  alter table public.google_review_requests drop constraint google_review_requests_push_subscription_id_fkey,
+   add constraint google_review_requests_push_subscription_id_fkey foreign key(push_subscription_id) references public.push_subscriptions(id) on delete set null;
+  alter table public.push_delivery_attempts drop constraint push_delivery_attempts_google_review_request_id_fkey,
+   add constraint push_delivery_attempts_google_review_request_id_fkey foreign key(google_review_request_id) references public.google_review_requests(id) on delete set null;
+  alter table public.push_delivery_attempts drop constraint push_delivery_attempts_subscription_id_fkey,
+   add constraint push_delivery_attempts_subscription_id_fkey foreign key(subscription_id) references public.push_subscriptions(id) on delete cascade;
+  delete from public.push_subscriptions where id=(select sa from relation_fixture);
+  raise exception using errcode='P9999',message='ROLLBACK_SUCCESSFUL_CONTROL';
+ exception when others then result:=sqlstate;
+ end;
+ perform set_config('cita.tests.legacy_cascade_result',result,true);
+end $control$;
+select current_setting('cita.tests.legacy_cascade_result') as legacy_fk_cascade_result;
 select extensions.lives_ok($test$delete from public.push_subscriptions where id=(select sa from relation_fixture)$test$,'subscription CASCADE and review SET NULL compose without clearing clinic');
 select * from extensions.finish();
 rollback;
