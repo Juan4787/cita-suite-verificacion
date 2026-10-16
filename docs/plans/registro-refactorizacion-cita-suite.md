@@ -131,6 +131,14 @@ Corrección preparada: asignar las funciones del fixture al propietario correcto
 
 ## Comprobación final obligatoria
 
+### Etapa 2: generación y contexto en curso
+
+- Generador preparado con el mismo motor oficial de la CLI fijada: `postgres-meta:v0.98.0`. Comprueba propiedad/red del contenedor, no acepta destinos remotos, genera dos veces y compara antes de exportar/comprobar/escribir atómicamente. La primera exportación se incorpora al archivo compartido y luego el nivel completo exigirá `--check`; responsable: campaña, vencimiento: antes del cierre de etapa 2. Todavía no se considera generada ni reproducible hasta obtener el recibo real.
+- La corrida `38826733120`, fuente `215b1feadb7fbc15b859784c28e87cf952200134`, agotó correctamente cinco intentos de descarga porque ECR respondió `Data limit exceeded`. No ejecutó pruebas de aplicación. Se comprobó por las APIs OCI que los cuatro manifiestos de Docker Hub oficial son idénticos a las imágenes ECR de la corrida aprobada; se fijaron esos digest. La imagen nueva del generador también queda fijada por digest. No cambian versiones ni contratos del fixture.
+- Se eliminó la caché global de membresías. La reutilización queda limitada al objeto de cookies de una petición y a la misma identidad/token. El modo `fresh` fuerza una lectura nueva. Dos pruebas adicionales verifican cambio de rol/revocación entre peticiones e identidad/token cambiados; las pruebas originales se adaptaron al contrato aprobado conservando sus comprobaciones de coalescencia y expiración. Los 18 casos iniciales aprobaron y, después de añadir validación JSON negativa, aprobaron los 25 casos del archivo `business.test.ts`. Evidencia local: `.verification/stage2-business-tests.log`.
+- Contextos JSON inválidos y suscripciones de otro consultorio se rechazan explícitamente antes de intentar un alta. Los mensajes no incluyen los datos recibidos. La comprobación de tipos encontró una incompatibilidad en la guarda inicial de objetos; se corrigió con una guarda que comprueba la estructura y permite el estrechamiento de TypeScript, sin conversiones ciegas. Repetición de tipos en curso.
+- Se corrigió el directorio de salida de Playwright por perfil/corrida para que la demo no borre capturas del perfil previo. Pendiente comprobar su preservación en la próxima ejecución externa.
+
 ### CI externo: primera ejecución y corrección de preparación
 
 - Workflow manual registrado y ejecutado en el repositorio auxiliar: [corrida 38825130254](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/38825130254), fuente `6015b87c6e0020a1137584ada7e9ba15f5467df6`. Instalación y comprobación de recursos aprobadas. La descarga de PostgreSQL terminó, pero ECR rechazó la de Storage con `toomanyrequests: Rate exceeded`. **No se ejecutaron pruebas de aplicación.** Registro conservado en `.verification/remote-first-failure.log`.

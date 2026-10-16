@@ -32,7 +32,6 @@ vi.mock('./rate-limits', async () => {
 });
 
 import {
-	clearBusinessMembershipReadCache,
 	DefaultBusinessSetupUnavailableError,
 	resolveActiveBusiness
 } from './business';
@@ -106,7 +105,6 @@ const missingContextsRpc = () =>
 
 describe('resolveActiveBusiness', () => {
 	beforeEach(() => {
-		clearBusinessMembershipReadCache();
 	rateLimitMocks.enforceRateLimits.mockReset();
 		rateLimitMocks.enforceRateLimits.mockResolvedValue(undefined);
 		rateLimitMocks.pendingBusinessCreationRateLimitRules.mockClear();
@@ -541,7 +539,23 @@ describe('resolveActiveBusiness', () => {
 		expect(supabase.from).not.toHaveBeenCalled();
 	});
 
-	it('reuses a short read across different requests for the same authenticated session', async () => {
+	it.each([
+		null,
+		{ business: businessRow },
+		[{ business: null, role: 'owner', subscription: subscriptionRow }],
+		[{ business: { ...businessRow, is_active: 'true' }, role: 'owner', subscription: subscriptionRow }],
+		[{ business: businessRow, role: 'unknown-role', subscription: subscriptionRow }],
+		[{ business: businessRow, role: 'owner', subscription: { ...subscriptionRow, is_permanent: 'true' } }],
+		[{ business: businessRow, role: 'owner', subscription: { ...subscriptionRow, business_id: 'other-business' } }]
+	])('rejects an invalid or cross-tenant JSON context without attempting bootstrap (%#)', async (data) => {
+		const supabase = { rpc: vi.fn().mockResolvedValue({ data, error: null }) } as any;
+		await expect(resolveActiveBusiness({ supabase, accessToken: accessTokenFor('json-user') }))
+			.rejects.toMatchObject({ name: 'InvalidDataContractError' });
+		expect(supabase.rpc).toHaveBeenCalledTimes(1);
+		expect(supabase.rpc).toHaveBeenCalledWith('list_user_business_contexts');
+	});
+
+	it('revalidates membership on a different request with the same authenticated session', async () => {
 		const supabase = {
 			from: vi.fn(),
 			rpc: vi.fn(async (name: string) => {
@@ -567,21 +581,21 @@ describe('resolveActiveBusiness', () => {
 			supabase,
 			accessToken,
 			cookies: firstCookies,
-			membershipCache: 'short'
+			membershipCache: 'request'
 		});
 		const second = await resolveActiveBusiness({
 			supabase,
 			accessToken,
 			cookies: secondCookies,
-			membershipCache: 'short'
+			membershipCache: 'request'
 		});
 
 		expect(first?.business.id).toBe('business-1');
 		expect(second?.business.id).toBe('business-1');
-		expect(supabase.rpc).toHaveBeenCalledTimes(1);
+		expect(supabase.rpc).toHaveBeenCalledTimes(2);
 	});
 
-	it('coalesces concurrent short reads into one RPC', async () => {
+	it('coalesces concurrent reads only inside the same request', async () => {
 		let releaseRpc: (value: unknown) => void = () => {};
 		const rpcResult = new Promise((resolve) => {
 			releaseRpc = resolve;
@@ -591,18 +605,19 @@ describe('resolveActiveBusiness', () => {
 			rpc: vi.fn(() => rpcResult)
 		} as any;
 		const accessToken = accessTokenFor('single-flight-user');
+		const cookies = { get: vi.fn(() => null), set: vi.fn() } as any;
 
 		const firstPending = resolveActiveBusiness({
 			supabase,
 			accessToken,
-			cookies: { get: vi.fn(() => null), set: vi.fn() } as any,
-			membershipCache: 'short'
+			cookies,
+			membershipCache: 'request'
 		});
 		const secondPending = resolveActiveBusiness({
 			supabase,
 			accessToken,
-			cookies: { get: vi.fn(() => null), set: vi.fn() } as any,
-			membershipCache: 'short'
+			cookies,
+			membershipCache: 'request'
 		});
 
 		await Promise.resolve();
@@ -623,7 +638,32 @@ describe('resolveActiveBusiness', () => {
 		expect(supabase.rpc).toHaveBeenCalledTimes(1);
 	});
 
-	it('keeps fresh reads outside the shared cache for actions and sensitive checks', async () => {
+	it('does not reuse a revoked membership or role across requests', async () => {
+		const supabase = {
+			rpc: vi.fn()
+				.mockResolvedValueOnce({ data: [{ business: businessRow, role: 'owner', subscription: subscriptionRow }], error: null })
+				.mockResolvedValueOnce({ data: [{ business: businessRow, role: 'readonly', subscription: subscriptionRow }], error: null })
+				.mockResolvedValueOnce({ data: [], error: null })
+		} as any;
+		const request = () => ({ supabase, accessToken: accessTokenFor('revoked-user'),
+			cookies: { get: vi.fn(() => null), set: vi.fn() } as any,
+			ensureDefault: false, membershipCache: 'request' as const });
+		await expect(resolveActiveBusiness(request())).resolves.toMatchObject({ role: 'owner', canManage: true });
+		await expect(resolveActiveBusiness(request())).resolves.toMatchObject({ role: 'readonly', canManage: false });
+		await expect(resolveActiveBusiness(request())).resolves.toBeNull();
+		expect(supabase.rpc).toHaveBeenCalledTimes(3);
+	});
+
+	it('does not share a request read when the identity or its token changes', async () => {
+		const supabase = { rpc: vi.fn().mockResolvedValue({ data: [], error: null }) } as any;
+		const cookies = { get: vi.fn(() => null), set: vi.fn() } as any;
+		for (const accessToken of [accessTokenFor('first-user'), accessTokenFor('second-user'), accessTokenFor('second-user', 'renewed@example.test')]) {
+			await resolveActiveBusiness({ supabase, cookies, accessToken, ensureDefault: false, membershipCache: 'request' });
+		}
+		expect(supabase.rpc).toHaveBeenCalledTimes(3);
+	});
+
+	it('fresh reads revalidate authorization even inside the same request', async () => {
 		const supabase = {
 			from: vi.fn(),
 			rpc: vi.fn(async () => ({
@@ -639,23 +679,25 @@ describe('resolveActiveBusiness', () => {
 			}))
 		} as any;
 		const accessToken = accessTokenFor('fresh-bypass-user');
+		const cookies = { get: vi.fn(() => null), set: vi.fn() } as any;
 
 		await resolveActiveBusiness({
 			supabase,
 			accessToken,
-			cookies: { get: vi.fn(() => null), set: vi.fn() } as any,
-			membershipCache: 'short'
+			cookies,
+			membershipCache: 'request'
 		});
 		await resolveActiveBusiness({
 			supabase,
 			accessToken,
-			cookies: { get: vi.fn(() => null), set: vi.fn() } as any
+			cookies,
+			membershipCache: 'fresh'
 		});
 
 		expect(supabase.rpc).toHaveBeenCalledTimes(2);
 	});
 
-	it('lets a sensitive child load bypass a short value reused by its parent request', async () => {
+	it('observes commercial restriction on the next request and a fresh child check', async () => {
 		const restrictedSubscription = {
 			...subscriptionRow,
 			is_permanent: false,
@@ -679,7 +721,7 @@ describe('resolveActiveBusiness', () => {
 					],
 					error: null
 				})
-				.mockResolvedValueOnce({
+				.mockResolvedValue({
 					data: [
 						{
 							business: businessRow,
@@ -698,7 +740,7 @@ describe('resolveActiveBusiness', () => {
 			supabase,
 			accessToken,
 			cookies: makeCookies(),
-			membershipCache: 'short'
+			membershipCache: 'request'
 		});
 
 		const requestCookies = makeCookies();
@@ -707,9 +749,9 @@ describe('resolveActiveBusiness', () => {
 				supabase,
 				accessToken,
 				cookies: requestCookies,
-				membershipCache: 'short'
+				membershipCache: 'request'
 			})
-		).resolves.toMatchObject({ access: { canUseBusiness: true } });
+		).resolves.toMatchObject({ access: { canUseBusiness: false } });
 		await expect(
 			resolveActiveBusiness({
 				supabase,
@@ -719,7 +761,7 @@ describe('resolveActiveBusiness', () => {
 			})
 		).resolves.toMatchObject({ access: { canUseBusiness: false } });
 
-		expect(supabase.rpc).toHaveBeenCalledTimes(2);
+		expect(supabase.rpc).toHaveBeenCalledTimes(3);
 	});
 
 	it('stops using a cached assistance grant as soon as its exact expiry is reached', async () => {
@@ -754,7 +796,7 @@ describe('resolveActiveBusiness', () => {
 					accessToken,
 					cookies: { get: vi.fn(() => null), set: vi.fn() } as any,
 					ensureDefault: false,
-					membershipCache: 'short'
+					membershipCache: 'request'
 				})
 			).resolves.toMatchObject({ assistance: { grantId: 'grant-1' } });
 
@@ -765,10 +807,10 @@ describe('resolveActiveBusiness', () => {
 					accessToken,
 					cookies: { get: vi.fn(() => null), set: vi.fn() } as any,
 					ensureDefault: false,
-					membershipCache: 'short'
+					membershipCache: 'request'
 				})
 			).resolves.toBeNull();
-			expect(supabase.rpc).toHaveBeenCalledTimes(1);
+			expect(supabase.rpc).toHaveBeenCalledTimes(2);
 		} finally {
 			nowSpy.mockRestore();
 		}
@@ -799,7 +841,7 @@ describe('resolveActiveBusiness', () => {
 			accessToken,
 			cookies: { get: vi.fn(() => null), set: vi.fn() } as any,
 			ensureDefault: false,
-			membershipCache: 'short' as const
+			membershipCache: 'request' as const
 		});
 
 		await expect(resolveActiveBusiness(options())).rejects.toThrow('temporary failure');

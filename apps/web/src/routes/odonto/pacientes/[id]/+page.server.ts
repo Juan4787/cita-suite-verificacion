@@ -95,7 +95,7 @@ const resolveBusinessActionContext = async ({
 	locals: App.Locals;
 	fetch: typeof globalThis.fetch;
 	cookies: import('@sveltejs/kit').Cookies;
-	membershipCache?: 'fresh' | 'short';
+	membershipCache?: 'fresh' | 'request';
 }) => {
 	const supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);
 	const ownerId = await getAuthUserId(supabase, locals.auth?.access_token);

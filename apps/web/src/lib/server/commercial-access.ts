@@ -52,6 +52,40 @@ export type BusinessSubscriptionRow = {
 	updated_at?: string | null;
 };
 
+export function parseBusinessSubscription(value: unknown, businessId: string): BusinessSubscriptionRow | null {
+	if (value === null || value === undefined) return null;
+	const row = readRecord(value, 'businessSubscription');
+	const id = readText(row.business_id, 'businessSubscription.business_id');
+	if (id !== businessId) throw new InvalidDataContractError('businessSubscription.business_id');
+	const status = readNullableText(row.subscription_status, 'businessSubscription.subscription_status');
+	if (status !== null && !COMMERCIAL_STATUSES.some(candidate => candidate === status))
+		throw new InvalidDataContractError('businessSubscription.subscription_status');
+	const paymentAmount = row.last_payment_amount;
+	if (paymentAmount !== null && paymentAmount !== undefined &&
+		!(typeof paymentAmount === 'number' && Number.isFinite(paymentAmount)) &&
+		!(typeof paymentAmount === 'string' && /^\d+(?:\.\d+)?$/.test(paymentAmount)))
+		throw new InvalidDataContractError('businessSubscription.last_payment_amount');
+	return {
+		id: readNullableText(row.id, 'businessSubscription.id'), business_id: id,
+		commercial_access_enabled: readBoolean(row.commercial_access_enabled, 'businessSubscription.commercial_access_enabled'),
+		is_permanent: readBoolean(row.is_permanent, 'businessSubscription.is_permanent'), subscription_status: status,
+		access_starts_at: readNullableText(row.access_starts_at, 'businessSubscription.access_starts_at'),
+		paid_until: readNullableText(row.paid_until, 'businessSubscription.paid_until'),
+		grace_until: readNullableText(row.grace_until, 'businessSubscription.grace_until'),
+		restricted_until: readNullableText(row.restricted_until, 'businessSubscription.restricted_until'),
+		archived_at: readNullableText(row.archived_at, 'businessSubscription.archived_at'),
+		last_payment_at: readNullableText(row.last_payment_at, 'businessSubscription.last_payment_at'),
+		last_payment_amount: paymentAmount ?? null,
+		last_grant_duration_seconds: row.last_grant_duration_seconds == null ? null : readFiniteNumber(row.last_grant_duration_seconds, 'businessSubscription.last_grant_duration_seconds'),
+		expiration_notice_enabled: row.expiration_notice_enabled == null ? null : readBoolean(row.expiration_notice_enabled, 'businessSubscription.expiration_notice_enabled'),
+		access_source: readNullableText(row.access_source, 'businessSubscription.access_source'),
+		access_note: readNullableText(row.access_note, 'businessSubscription.access_note'),
+		updated_by: readNullableText(row.updated_by, 'businessSubscription.updated_by'),
+		created_at: readNullableText(row.created_at, 'businessSubscription.created_at'),
+		updated_at: readNullableText(row.updated_at, 'businessSubscription.updated_at')
+	};
+}
+
 export type BusinessAccessState = {
 	canEnterApp: boolean;
 	canUseBusiness: boolean;
@@ -252,3 +286,4 @@ export const commercialAccessMessage = (state: BusinessAccessState) => {
 
 export const publicBusinessUnavailableMessage =
 	'La reserva online no está disponible en este momento. Contactá al consultorio.';
+import { InvalidDataContractError, readBoolean, readFiniteNumber, readNullableText, readRecord, readText } from './contracts';

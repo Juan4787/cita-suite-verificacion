@@ -1,10 +1,10 @@
 import { env } from '$env/dynamic/private';
 import type { Cookies } from '@sveltejs/kit';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createHash } from 'node:crypto';
 import { createSupabaseAdminClient, getAuthUserId, getEmailFromAccessToken } from './supabase';
 import {
 	getBusinessAccessState,
+	parseBusinessSubscription,
 	type BusinessAccessState,
 	type BusinessSubscriptionRow
 } from './commercial-access';
@@ -14,6 +14,7 @@ import {
 	RateLimitExceededError
 } from './rate-limits';
 import { isEmailAlreadyAssociatedWithOtherBusinessError } from './business-email-association';
+import { InvalidDataContractError, readArray, readBoolean, readFiniteNumber, readNullableText, readRecord, readText } from './contracts';
 
 export const BUSINESS_ROLES = ['owner', 'admin', 'reception', 'professional', 'readonly'] as const;
 export type BusinessRole = (typeof BUSINESS_ROLES)[number];
@@ -152,23 +153,40 @@ type ResolveBusinessOptions = {
 	ensureDefault?: boolean;
 	defaultBusinessCreationIp?: string | null;
 	fetch?: typeof fetch;
-	membershipCache?: 'fresh' | 'short';
+	membershipCache?: 'fresh' | 'request';
 };
 
-type BusinessContextRpcRow = {
-	business?: Business | null;
-	role?: string | null;
-	assistance?: BusinessAssistanceContext | null;
-	subscription?: BusinessSubscriptionRow | null;
-};
+export function parseBusiness(value: unknown): Business {
+	const row = readRecord(value, 'business');
+	const industry = readText(row.industry, 'business.industry');
+	if (!isBusinessIndustry(industry)) throw new InvalidDataContractError('business.industry');
+	return {
+		id: readText(row.id, 'business.id'), name: readText(row.name, 'business.name'),
+		slug: readText(row.slug, 'business.slug'), industry,
+		phone: readNullableText(row.phone, 'business.phone'), email: readNullableText(row.email, 'business.email'),
+		address: readNullableText(row.address, 'business.address'),
+		address_instructions: readNullableText(row.address_instructions, 'business.address_instructions'),
+		maps_url: readNullableText(row.maps_url, 'business.maps_url'), logo_url: readNullableText(row.logo_url, 'business.logo_url'),
+		timezone: readText(row.timezone, 'business.timezone'),
+		public_booking_enabled: readBoolean(row.public_booking_enabled, 'business.public_booking_enabled'),
+		whatsapp_enabled: readBoolean(row.whatsapp_enabled, 'business.whatsapp_enabled'),
+		allow_same_day_booking: readBoolean(row.allow_same_day_booking, 'business.allow_same_day_booking'),
+		min_booking_notice_minutes: readFiniteNumber(row.min_booking_notice_minutes, 'business.min_booking_notice_minutes'),
+		max_booking_days_ahead: readFiniteNumber(row.max_booking_days_ahead, 'business.max_booking_days_ahead'),
+		cancellation_policy: readNullableText(row.cancellation_policy, 'business.cancellation_policy'),
+		is_active: readBoolean(row.is_active, 'business.is_active'),
+		created_at: readNullableText(row.created_at, 'business.created_at'), updated_at: readNullableText(row.updated_at, 'business.updated_at')
+	};
+}
 
-const mapMembership = (row: any): BusinessContext | null => {
-	const role = String(row?.role ?? '');
-	const business = row?.business;
-	if (!business || !isBusinessRole(role)) return null;
+const mapMembership = (value: unknown): BusinessContext => {
+	const row = readRecord(value, 'membership');
+	const role = readText(row.role, 'membership.role');
+	const business = parseBusiness(row.business);
+	if (!isBusinessRole(role)) throw new InvalidDataContractError('membership.role');
 	const access = getBusinessAccessState(null, { businessCreatedAt: business.created_at });
 	return {
-		business: business as Business,
+		business,
 		role,
 		canManage: canManageRole(role) && access.canUseBusiness,
 		canOperate: canOperateRole(role) && access.canUseBusiness,
@@ -177,22 +195,22 @@ const mapMembership = (row: any): BusinessContext | null => {
 	};
 };
 
-const mapAssistanceMembership = (row: any): BusinessContext | null => {
-	const business = row?.business;
-	if (!business || !row?.id || !row?.support_user_id || !row?.requested_by_user_id) return null;
+const mapAssistanceMembership = (value: unknown): BusinessContext => {
+	const row = readRecord(value, 'assistanceMembership');
+	const business = parseBusiness(row.business);
 	const access = getBusinessAccessState(null, { businessCreatedAt: business.created_at });
 	return {
-		business: business as Business,
+		business,
 		role: 'admin',
 		canManage: access.canUseBusiness,
 		canOperate: access.canUseBusiness,
 		access,
 		assistance: {
-			grantId: String(row.id),
-			requestedByUserId: String(row.requested_by_user_id),
-			supportUserId: String(row.support_user_id),
-			startsAt: String(row.starts_at ?? ''),
-			expiresAt: String(row.expires_at ?? '')
+			grantId: readText(row.id, 'assistanceMembership.id'),
+			requestedByUserId: readText(row.requested_by_user_id, 'assistanceMembership.requested_by_user_id'),
+			supportUserId: readText(row.support_user_id, 'assistanceMembership.support_user_id'),
+			startsAt: readText(row.starts_at, 'assistanceMembership.starts_at'),
+			expiresAt: readText(row.expires_at, 'assistanceMembership.expires_at')
 		}
 	};
 };
@@ -214,11 +232,12 @@ const applySubscription = (
 	};
 };
 
-const mapRpcMembership = (row: BusinessContextRpcRow): BusinessContext | null => {
-	const business = row.business;
-	const role = String(row.role ?? '');
-	if (!business || !isBusinessRole(role)) return null;
-	const assistance = row.assistance ?? null;
+const mapRpcMembership = (value: unknown): BusinessContext => {
+	const row = readRecord(value, 'businessContext');
+	const business = parseBusiness(row.business);
+	const role = readText(row.role, 'businessContext.role');
+	if (!isBusinessRole(role)) throw new InvalidDataContractError('businessContext.role');
+	const assistance = row.assistance == null ? null : readRecord(row.assistance, 'businessContext.assistance');
 	const base = assistance
 		? mapAssistanceMembership({
 				id: assistance.grantId,
@@ -229,7 +248,7 @@ const mapRpcMembership = (row: BusinessContextRpcRow): BusinessContext | null =>
 				business
 			})
 		: mapMembership({ role, business });
-	return base ? applySubscription(base, row.subscription ?? null) : null;
+	return applySubscription(base, parseBusinessSubscription(row.subscription, business.id));
 };
 
 const isMissingAssistanceSchemaError = (error: unknown) => {
@@ -345,10 +364,12 @@ const loadMembershipsLegacy = async (
 	}
 
 	const subscriptionByBusinessId = new Map(
-		((subscriptions ?? []) as BusinessSubscriptionRow[]).map((subscription) => [
-			subscription.business_id,
-			subscription
-		])
+		readArray(subscriptions ?? [], 'businessSubscriptions').map((value) => {
+			const row = readRecord(value, 'businessSubscription');
+			const businessId = readText(row.business_id, 'businessSubscription.business_id');
+			if (!businessIds.includes(businessId)) throw new InvalidDataContractError('businessSubscription.scope');
+			return [businessId, parseBusinessSubscription(row, businessId)] as const;
+		})
 	);
 
 	return memberships.map((membership) =>
@@ -376,127 +397,43 @@ const loadMemberships = async (
 ): Promise<BusinessContext[]> => {
 	const { data, error } = await supabase.rpc('list_user_business_contexts');
 	if (!error) {
-		return ((data ?? []) as BusinessContextRpcRow[])
-			.map(mapRpcMembership)
-			.filter((item): item is BusinessContext => Boolean(item));
+		return readArray(data, 'businessContexts').map(mapRpcMembership);
 	}
 	if (!isMissingBusinessContextsRpcError(error)) throw error;
 	return loadMembershipsLegacy(supabase, userId);
 };
 
 type MembershipsByRequestEntry = {
-	pending: Promise<BusinessContext[]>;
-	// A shared short read can be up to 12 seconds old. A security-sensitive
-	// child load in the same SvelteKit request must still be able to bypass it.
-	source: 'fresh' | 'shared-short';
-};
-const membershipsByRequest = new WeakMap<object, MembershipsByRequestEntry>();
-
-const MEMBERSHIP_READ_CACHE_TTL_MS = 12_000;
-const MEMBERSHIP_READ_CACHE_MAX_ENTRIES = 500;
-type MembershipReadCacheEntry = {
-	expiresAt: number;
+	userId: string;
+	accessToken: string | null;
 	pending: Promise<BusinessContext[]>;
 };
-const membershipReadCache = new Map<string, MembershipReadCacheEntry>();
-
-const membershipReadCacheKey = (userId: string, accessToken?: string | null) =>
-	createHash('sha256')
-		.update(`${userId}:${accessToken ?? ''}`)
-		.digest('base64url');
-
-const removeOldestMembershipReadCacheEntry = () => {
-	const oldestKey = membershipReadCache.keys().next().value;
-	if (typeof oldestKey === 'string') membershipReadCache.delete(oldestKey);
-};
-
-const rememberMembershipRead = (
-	key: string,
-	pending: Promise<BusinessContext[]>,
-	now = Date.now()
-) => {
-	if (membershipReadCache.size >= MEMBERSHIP_READ_CACHE_MAX_ENTRIES && !membershipReadCache.has(key)) {
-		removeOldestMembershipReadCacheEntry();
-	}
-
-	const guarded = pending.then(
-		(memberships) => {
-			// Una lista vacía puede activar el alta inicial y no debe sobrevivir entre requests.
-			if (
-				memberships.length === 0 &&
-				membershipReadCache.get(key)?.pending === guarded
-			) {
-				membershipReadCache.delete(key);
-			}
-			return memberships;
-		},
-		(error) => {
-			if (membershipReadCache.get(key)?.pending === guarded) membershipReadCache.delete(key);
-			throw error;
-		}
-	);
-	membershipReadCache.set(key, {
-		expiresAt: now + MEMBERSHIP_READ_CACHE_TTL_MS,
-		pending: guarded
-	});
-	return guarded;
-};
-
-const getFreshMembershipRead = (key: string, now = Date.now()) => {
-	const cached = membershipReadCache.get(key);
-	if (!cached) return null;
-	if (cached.expiresAt <= now) {
-		membershipReadCache.delete(key);
-		return null;
-	}
-	// Reinsertar mantiene un límite LRU sencillo sin conservar datos más allá del TTL original.
-	membershipReadCache.delete(key);
-	membershipReadCache.set(key, cached);
-	return cached.pending;
-};
+const membershipsByRequest = new WeakMap<Cookies, MembershipsByRequestEntry>();
 
 const defaultBusinessBootstrapByUser = new Map<
 	string,
 	Promise<{ error: unknown | null }>
 >();
 
-export const clearBusinessMembershipReadCache = () => {
-	membershipReadCache.clear();
-	defaultBusinessBootstrapByUser.clear();
-};
-
 const loadMembershipsForRequest = (
 	supabase: SupabaseClient,
 	userId: string,
-	requestKey?: object,
-	readCacheKey?: string
+	accessToken: string | null,
+	requestKey: Cookies | undefined,
+	mode: 'fresh' | 'request'
 ) => {
-	if (readCacheKey) {
-		const shared = getFreshMembershipRead(readCacheKey);
-		if (shared) {
-			if (requestKey) {
-				membershipsByRequest.set(requestKey, { pending: shared, source: 'shared-short' });
-			}
-			return shared;
-		}
-	}
-
 	const cached = requestKey ? membershipsByRequest.get(requestKey) : null;
-	if (cached && (readCacheKey || cached.source === 'fresh')) {
-		return readCacheKey
-			? rememberMembershipRead(readCacheKey, cached.pending)
-			: cached.pending;
-	}
+	if (mode === 'request' && cached?.userId === userId && cached.accessToken === accessToken)
+		return cached.pending;
 
 	const loaded = loadMemberships(supabase, userId);
-	const pending = readCacheKey ? rememberMembershipRead(readCacheKey, loaded) : loaded;
-	const guarded = pending.catch((error) => {
+	const guarded = loaded.catch((error) => {
 		if (requestKey && membershipsByRequest.get(requestKey)?.pending === guarded) {
 			membershipsByRequest.delete(requestKey);
 		}
 		throw error;
 	});
-	if (requestKey) membershipsByRequest.set(requestKey, { pending: guarded, source: 'fresh' });
+	if (requestKey) membershipsByRequest.set(requestKey, { userId, accessToken, pending: guarded });
 	return guarded;
 };
 
@@ -575,7 +512,7 @@ const hasPendingBusinessInvite = async ({
 const reloadMembershipsAfterBootstrap = async (
 	supabase: SupabaseClient,
 	userId: string,
-	requestKey?: object
+	requestKey?: Cookies
 ): Promise<BusinessContext[]> => {
 	if (requestKey) membershipsByRequest.delete(requestKey);
 	for (const delay of [0, 150, 350]) {
@@ -643,17 +580,15 @@ export const resolveActiveBusiness = async ({
 	ensureDefault = true,
 	defaultBusinessCreationIp,
 	fetch,
-	membershipCache = 'fresh'
+	membershipCache = 'request'
 }: ResolveBusinessOptions): Promise<BusinessContext | null> => {
 	if (env.DEMO_MODE === 'true') return demoBusinessContext();
 
 	const userId = await getAuthUserId(supabase, accessToken);
 	if (!userId) return null;
 
-	const requestKey = cookies as unknown as object | undefined;
-	const readCacheKey =
-		membershipCache === 'short' ? membershipReadCacheKey(userId, accessToken) : undefined;
-	let memberships = await loadMembershipsForRequest(supabase, userId, requestKey, readCacheKey);
+	const requestKey = cookies;
+	let memberships = await loadMembershipsForRequest(supabase, userId, accessToken ?? null, requestKey, membershipCache);
 	const now = Date.now();
 	memberships = memberships.filter((membership) => {
 		if (!membership.assistance) return true;

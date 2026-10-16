@@ -25,7 +25,7 @@ export const getOdontoContext = async ({
 	locals: App.Locals;
 	fetch: typeof globalThis.fetch;
 	cookies: Cookies;
-	membershipCache?: 'fresh' | 'short';
+	membershipCache?: 'fresh' | 'request';
 }): Promise<OdontoContext> => {
 	if (!locals.auth) throw redirect(303, '/login');
 

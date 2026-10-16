@@ -1,12 +1,16 @@
 import { spawnSync } from 'node:child_process';
 
 export const verificationImages = [
-	'public.ecr.aws/supabase/postgres:17.6.1.166',
-	'public.ecr.aws/supabase/storage-api:v1.70.3',
-	'public.ecr.aws/supabase/postgrest:v16.1',
-	'public.ecr.aws/supabase/gotrue:v2.196.0',
-	'public.ecr.aws/supabase/postgres-meta:v0.98.0'
-];
+	['postgres:17.6.1.166', 'supabase/postgres', 'b3bfedb107413abb3b8cb0d0874b0414a1dceb3d55bc0c778de6ad22d1f7dc86'],
+	['storage-api:v1.70.3', 'supabase/storage-api', '528ec49c3c32561908b07ee91bced7f8456f3b688164e341eaa422441767a0bd'],
+	['postgrest:v16.1', 'postgrest/postgrest', '5922bde07147b82b1c9d8f749e48c1e5b99ebb233f3888bb7ab65f07cf4ac82d'],
+	['gotrue:v2.196.0', 'supabase/gotrue', 'c0c25187a6b835e65a6f6e6c6b39d090e832d40e6de5186f2c038e0411944232'],
+	['postgres-meta:v0.98.0', 'supabase/postgres-meta', 'cef71ba901751dcc242cc685cf13786935ea8926820fb342f23bb0fbef77de5a']
+].map(([tag, repository, digest]) => ({
+	image: 'public.ecr.aws/supabase/' + tag,
+	source: `docker.io/${repository}@sha256:${digest}`,
+	digest: 'sha256:' + digest
+}));
 
 // Only registry/transport failures are retryable. Missing images, bad tags and
 // denied credentials must remain visible instead of consuming the retry budget.
