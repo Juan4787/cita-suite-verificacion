@@ -14,7 +14,7 @@ Después de cada compactación y antes de cada etapa: releer íntegramente el pl
 |---|---|
 | 0. Base real y preservación | Cerrada localmente: rama, estado previo, inventario efectivo, matriz funcional, proveedores y destinos documentados. Accesos pendientes se mantienen como bloqueos explícitos de las etapas remotas. |
 | 1. Verificación confiable | Base completa aprobada en CI `38825775890`: tipos, 1.108 unidades, fronteras/guardas, 24 suites SQL, siete carreras, Auth/Storage, 25 casos de navegador, dos de demo y Natalia nativa escritorio/móvil. Mecanismos de fallo deliberado y rechazo de omisiones comprobados. Release remoto permanece pendiente del staging separado y los accesos; no se lo considera aprobado por esta corrida. |
-| 2. Tipos, contexto y aislamiento | En ejecución: comienza por generación reproducible desde la reconstrucción descartable. |
+| 2. Tipos, contexto y aislamiento | En ejecución. Generación reproducible, fábricas activas, contexto por petición y primeros contratos comprobados. CI rápida `38853654335` aprobada; faltan completar escapes/JSON, relaciones compuestas y la regresión Auth intermitente antes del cierre completo. |
 | 3. Capacidades y cuotas | No iniciada. |
 | 4. Disponibilidad, reservas y aranceles | No iniciada. |
 | 5. Áreas e interfaz | No iniciada. |
@@ -27,7 +27,7 @@ Después de cada compactación y antes de cada etapa: releer íntegramente el pl
 - Rama aislada creada preservando las diferencias iniciales y los archivos ajenos.
 - Vitest de servidor y cliente: un trabajador, sin paralelismo entre archivos y sin permitir éxito con cero pruebas.
 - Comando raíz de tipos incluye Natalia.
-- Nuevos comandos `verify:fast`, `verify:full`, `verify:release`; ejecución secuencial, exclusión entre verificaciones y recibos en `.verification/`. **Los niveles full/release no están cerrados: sus ejecutores de navegador/staging todavía deben completarse.**
+- Nuevos comandos `verify:fast`, `verify:full`, `verify:release`; ejecución secuencial, exclusión entre verificaciones y recibos en `.verification/`. La base full ya aprobó en CI; release/staging remoto sigue pendiente y no se presenta como aprobado.
 - Reconstrucción SQL descubre todas las suites y los siete scripts de carreras, en lugar de ejecutar sólo una lista parcial. Comprueba planes y número de aserciones pgTAP.
 - Preflight ya no exige ni recomienda credenciales de WhatsApp.
 - Artefactos temporales de los fixtures separados por checkout; no comparten archivos globales con otra copia del repositorio.
@@ -166,3 +166,14 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
 - El catálogo efectivo demostró que la autorización nullable candidata ya estaba endurecida por una migración posterior; no se añadió una corrección redundante. Quedan relaciones entre entidades con FK sólo por id que requieren revisar garantías efectivas y compatibilidad de embeds PostgREST antes de completar restricciones compuestas.
 - Fallo intermitente pendiente de causa raíz: CI `38827616358` llegó a 18 casos de navegador y encontró identidad/vista profesional cuando el recorrido esperaba dueño en Equipo. Se añadieron comprobaciones Auth/membresía en puntos del flujo; no se aumentaron esperas ni se declara resuelto porque otra fuente haya aprobado. Evidencia preservada con capturas en `.verification/remote-38827616358/`.
 - Próximo punto: corregir el contrato de preguntas detectado en Svelte, completar los consumidores/JSON y aislamiento de etapa 2 y verificar la revisión exacta en CI secuencial. Etapas 3–6, carga, staging y auditoría final siguen pendientes; esta actualización no las da por terminadas.
+
+
+### Continuación verificada del 16 de octubre
+
+- Ampliación de identidad conservada en commit local `0f8bedc` de la rama aislada. No se renombraron recursos externos ni el directorio activo. Quedaron preguntas de preparación para acceso Cloudflare correcto y proyecto Supabase exclusivamente de staging; se trabaja en los frentes independientes mientras llegan las respuestas.
+- Corregido el JSON de campos del cuestionario con el parser compartido real, sin conversión ciega. Prueba negativa con esquema malformado añadida. Se validan ahora configuración de integración, cotización/etiquetas de precios, catálogo y contacto públicos en su frontera, sin transformar respuestas incompletas en resultados vacíos.
+- Eliminados escapes adicionales de clientes de prestaciones, precios, disponibilidad y seguimientos. Las relaciones de reserva pública se infieren desde selecciones literales con y sin el inner join de integración; no se sobreescriben tipos de respuesta. Las sesiones administrativas inactivas sólo exponen Auth en la fábrica, sin atribuirles el esquema de Cita Suite; hay comprobación negativa de compilación.
+- Suite local secuencial: 137 archivos / 1.032 pruebas de servidor aprobadas, registro `.verification/stage2-server-tests-current.log`. Durante esa corrida se preparó un ajuste posterior que conserva los campos adicionales de la cotización; su comprobación definitiva corresponde a la revisión exacta de CI siguiente, no al resultado local anterior.
+- **CI rápida aprobada** [38853654335](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/38853654335), fuente `e8561797b45cb31704012d049004ea0f328956cd`, digest de fuente `2a77a78056a7b5511db61fb5dbf79d2b53f893590d2c135f6647fd1e10d8056b`. Recibo `5b0006bc-9589-46e0-a6ea-d38efcb980b7`: tipos shared/Svelte/Natalia, guardas, recuperación de evidencias, fronteras y unidades de servidor/cliente aprobados. Paquete SHA-256 `a93b7f18bd67ae1d7cae238555add97afce44a38c46d18d7331b20b57de03dea`, recuperado en `.verification/remote-38853654335/`. Esta corrida no ejecuta SQL ni navegador.
+- Se prepara compatibilidad del coste clínico para embeds antiguos en array y nuevos uno-a-uno en objeto. Necesaria antes de completar claves compuestas; conserva cero y valores decimales históricos de costes, que no son los aranceles de reserva. Pruebas propias y verificación completa sobre la nueva fuente pendientes. No se aplicó aún ninguna migración de claves.
+- Revisión del catálogo efectivo descartable: las funciones privilegiadas tienen `search_path` configurado; la única tabla sin RLS del catálogo es una tabla privada de límites con permisos sólo del propietario. Esto no sustituye revisar el contenido/privilegios de cada contrato ni demuestra por sí solo aislamiento completo.

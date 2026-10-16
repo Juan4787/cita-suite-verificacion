@@ -1,3 +1,4 @@
+import { readClinicalEntryAmount } from '$lib/server/clinical-entry-costs';
 import { bookingInformationEnabled } from '$lib/server/booking-information';
 import { env } from '$env/dynamic/private';
 import { resolveActiveBusiness } from '$lib/server/business';
@@ -134,8 +135,8 @@ const getCurrentProfessional = async ({
 		.maybeSingle();
 
 	if (error) throw error;
-	const professional = (data as any)?.professionals;
-	const professionalId = (data as any)?.professional_id ? String((data as any).professional_id) : null;
+	const professional = data?.professionals;
+	const professionalId = data?.professional_id ? String(data.professional_id) : null;
 	if (!professionalId) return null;
 
 	return {
@@ -166,7 +167,7 @@ const ensureProfessionalCanAccessPatient = async ({
 		.maybeSingle();
 
 	if (error) throw error;
-	return data ? { id: String((data as any).id), archived_at: (data as any).archived_at ?? null } : null;
+	return data ? { id: String(data.id), archived_at: data.archived_at ?? null } : null;
 };
 
 const findPatientDuplicateDniForUpdate = async ({
@@ -190,7 +191,7 @@ const findPatientDuplicateDniForUpdate = async ({
 			.limit(1)
 			.maybeSingle();
 		if (error) throw error;
-		if ((data as any)?.id) return { id: String((data as any).id), field: 'dni' };
+		if (data?.id) return { id: String(data.id), field: 'dni' };
 	}
 
 	return null;
@@ -544,12 +545,10 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, dep
 	}
 
 	const safeEntries = entries ?? [];
-	const entriesWithCosts = safeEntries.map((entry: any) => ({
+	const entriesWithCosts = safeEntries.map((entry) => ({
 		...entry,
 		amount: permissions.canViewCosts
-			? (Array.isArray(entry.clinical_entry_costs)
-					? (entry.clinical_entry_costs[0]?.amount ?? null)
-					: null)
+			? readClinicalEntryAmount(entry.clinical_entry_costs)
 			: null,
 		clinical_entry_costs: undefined
 	}));
@@ -567,7 +566,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, dep
 			clinical_profile_updated_at: clinicalProfile?.updated_at ?? null,
 			clinical_profile_patient_reported: bookingInformationEnabled() && clinicalProfile?.updated_by === null && bookingProfile.reportedAtMs !== null && bookingProfile.reportedAtMs === Date.parse(clinicalProfile.updated_at),
 			professional_archived_at:
-				context.role === 'professional' ? ((professionalLink as any)?.archived_at ?? null) : null
+				context.role === 'professional' ? (professionalLink?.archived_at ?? null) : null
 		},
 		businessTimeZone: context.business.timezone,businessIndustry:context.business.industry,
 		bookingInformationEnabled: bookingInformationEnabled(),
@@ -1001,12 +1000,12 @@ export const actions: Actions = {
 		}
 		if (
 			expectedPatientUpdatedAt &&
-			isStaleUpdatedAt(expectedPatientUpdatedAt, (currentPatient as any).updated_at)
+			isStaleUpdatedAt(expectedPatientUpdatedAt, currentPatient.updated_at)
 		) {
 			return fail(409, {
 				message: PATIENT_UPDATE_CONFLICT_MESSAGE,
-				currentPatientUpdatedAt: String((currentPatient as any).updated_at ?? ''),
-				currentClinicalProfileUpdatedAt: String((currentProfile as any)?.updated_at ?? '')
+				currentPatientUpdatedAt: String(currentPatient.updated_at ?? ''),
+				currentClinicalProfileUpdatedAt: String(currentProfile?.updated_at ?? '')
 			});
 		}
 		if (currentProfileError) {
@@ -1020,12 +1019,12 @@ export const actions: Actions = {
 		if (
 			permissions.canEditClinicalProfile &&
 			expectedClinicalProfileUpdatedAt &&
-			isStaleUpdatedAt(expectedClinicalProfileUpdatedAt, (currentProfile as any)?.updated_at)
+			isStaleUpdatedAt(expectedClinicalProfileUpdatedAt, currentProfile?.updated_at)
 		) {
 			return fail(409, {
 				message: PATIENT_UPDATE_CONFLICT_MESSAGE,
-				currentPatientUpdatedAt: String((currentPatient as any).updated_at ?? ''),
-				currentClinicalProfileUpdatedAt: String((currentProfile as any)?.updated_at ?? '')
+				currentPatientUpdatedAt: String(currentPatient.updated_at ?? ''),
+				currentClinicalProfileUpdatedAt: String(currentProfile?.updated_at ?? '')
 			});
 		}
 
@@ -1049,9 +1048,9 @@ export const actions: Actions = {
 				p_allergies: permissions.canEditClinicalProfile ? clinicalUpdates.allergies : null,
 				p_medication: permissions.canEditClinicalProfile ? clinicalUpdates.medication : null,
 				p_background: permissions.canEditClinicalProfile ? clinicalUpdates.background : null,
-				p_expected_patient_updated_at: (currentPatient as any).updated_at ?? null,
+				p_expected_patient_updated_at: currentPatient.updated_at ?? null,
 				p_expected_clinical_profile_updated_at: permissions.canEditClinicalProfile
-					? ((currentProfile as any)?.updated_at ?? null)
+					? (currentProfile?.updated_at ?? null)
 					: null
 			}
 		);
@@ -1060,8 +1059,8 @@ export const actions: Actions = {
 			console.error('Error actualizando ficha y perfil clínico del paciente', error);
 			const mapped = patientUpdateRpcError(
 				error,
-				(currentPatient as any).updated_at,
-				(currentProfile as any)?.updated_at
+				currentPatient.updated_at,
+				currentProfile?.updated_at
 			);
 			if (mapped) return mapped;
 			const duplicateResult = await mapDuplicatePatientError({
