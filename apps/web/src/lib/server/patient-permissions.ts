@@ -12,7 +12,7 @@ export const resolvePatientPermissions = (context: BusinessContext) => {
 		role === 'owner' || role === 'admin' || role === 'reception' || role === 'professional';
 	const canWriteClinical = role === 'owner' || role === 'admin' || role === 'professional';
 	const radiographRoleEligible = role === 'owner' || role === 'admin' || role === 'professional';
-	const canAccessRadiographsNow = isOwnerOrAdmin
+	const canReadClinicalDataNow = isOwnerOrAdmin
 		? context.access.canEnterApp
 		: context.access.canUseBusiness;
 	const canArchivePatient = role === 'owner' || role === 'admin' || role === 'professional';
@@ -20,13 +20,13 @@ export const resolvePatientPermissions = (context: BusinessContext) => {
 	return {
 		canReadClinicalHistory:
 			role !== 'reception' && capabilities.canViewExistingClinicalNotes &&
-			(context.access.canUseBusiness || (isOwnerOrAdmin && context.access.canEnterApp)),
+			canReadClinicalDataNow,
 		canReadClinicalProfile:
 			(role === 'owner' || role === 'admin' || role === 'professional') &&
-			capabilities.canViewExistingClinicalNotes,
+			capabilities.canViewExistingClinicalNotes && canReadClinicalDataNow,
 		canEditClinicalProfile:
 			(role === 'owner' || role === 'admin' || role === 'professional') && capabilities.canEditPatient,
-		canViewCosts: isOwnerOrAdmin && capabilities.canViewExistingCosts,
+		canViewCosts: isOwnerOrAdmin && capabilities.canViewExistingCosts && canReadClinicalDataNow,
 		canEditPatient: canEditPatientData && capabilities.canEditPatient,
 		canArchivePatient: canArchivePatient && capabilities.canEditPatient,
 		canCreateClinicalEntry: canWriteClinical && capabilities.canCreateClinicalEntry,
@@ -37,7 +37,7 @@ export const resolvePatientPermissions = (context: BusinessContext) => {
 		canViewRadiographs:
 			radiographRoleEligible &&
 			capabilities.canViewExistingClinicalNotes &&
-			canAccessRadiographsNow,
+			canReadClinicalDataNow,
 		canUploadRadiographs:
 			radiographRoleEligible && capabilities.canManagePatientFiles && context.access.canUseBusiness,
 		canViewRadiographTrash:

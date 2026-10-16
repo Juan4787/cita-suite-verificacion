@@ -175,8 +175,8 @@ const createPublicBookingFixtures = async (input: {
 	// id (UUID) — igual que getPublicBusinessBySlug en la app. Resolvemos por la
 	// columna correcta para no asumir que siempre hay slug.
 	const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.slug);
-	const business = await restGetSingle<{ id: string }>(
-		`businesses?${isUuid ? 'id' : 'slug'}=eq.${encodeURIComponent(input.slug)}&select=id`
+	const business = await restGetSingle<{ id: string; timezone: string }>(
+		`businesses?${isUuid ? 'id' : 'slug'}=eq.${encodeURIComponent(input.slug)}&select=id,timezone`
 	);
 	expect(business.id).toBe(fixtureBusinessId());
 
@@ -257,7 +257,7 @@ const createPublicBookingFixtures = async (input: {
 		}
 	}
 
-	return { businessId: business.id, serviceId: service.id, professionalId: professional.id };
+	return { businessId: business.id, timezone: business.timezone, serviceId: service.id, professionalId: professional.id };
 };
 
 const login = async (page: import('@playwright/test').Page) => {
@@ -319,7 +319,7 @@ test.describe('Dental Suite - flujo operativo completo', () => {
 		const bookingUrl = new URL(linkText ?? '', page.url());
 		const bookingSlug = bookingUrl.pathname.split('/').filter(Boolean).at(-1);
 		expect(bookingSlug).toBeTruthy();
-		await createPublicBookingFixtures({
+		const publicFixture = await createPublicBookingFixtures({
 			slug: bookingSlug ?? '',
 			professionalName,
 			unavailableProfessionalName,
@@ -341,7 +341,21 @@ test.describe('Dental Suite - flujo operativo completo', () => {
 		await expect(professionalStep.getByText(unavailableProfessionalName)).toHaveCount(0);
 		await expect(professionalStep.getByText(unassignedProfessionalName)).toHaveCount(0);
 		await professionalStep.getByRole('link', { name: new RegExp(professionalName) }).click();
-		await section(page, 'Elegí un día').getByRole('link').first().click();
+		// This scenario deliberately tests 09:00 and its overlap. Today's 09:00
+		// legitimately disappears after the configured notice period; select a
+		// future day without weakening that rule or changing the application clock.
+		const dateParts = new Intl.DateTimeFormat('en', {
+			timeZone: publicFixture.timezone, year: 'numeric', month: '2-digit', day: '2-digit'
+		}).formatToParts(new Date());
+		const today = ['year', 'month', 'day'].map(type => dateParts.find(part => part.type === type)?.value ?? '').join('-');
+		expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+		const dayLinks = section(page, 'Elegí un día').getByRole('link');
+		const futureDayIndex = await dayLinks.evaluateAll((links, today) => links.findIndex(link => {
+			const date = new URL(link.getAttribute('href') ?? '', window.location.href).searchParams.get('date');
+			return date !== null && date > today;
+		}), today);
+		expect(futureDayIndex, 'El fixture debe ofrecer un día futuro completo.').toBeGreaterThanOrEqual(0);
+		await dayLinks.nth(futureDayIndex).click();
 		await section(page, 'Elegí un horario').getByRole('link', { name: '09:00' }).click();
 
 		const selectedBookingUrl = new URL(page.url());

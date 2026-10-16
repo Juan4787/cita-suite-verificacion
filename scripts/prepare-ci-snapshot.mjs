@@ -27,6 +27,7 @@ const extras = [
 	'docs/plans/registro-refactorizacion-cita-suite.md',
 	'docs/architecture/base-de-campana.md', 'docs/architecture/verificacion.md',
 	'docs/architecture/identidad-cita-suite.md', 'docs/architecture/relaciones-entre-consultorios.md',
+	'docs/architecture/tipado-contexto-aislamiento.md',
 	'docs/archive/administrativo-inactivo/README.md', 'docs/archive/administrativo-inactivo/integridad.json',
 	...JSON.parse(readFileSync(join(root, 'docs/archive/administrativo-inactivo/integridad.json'), 'utf8')).map(entry => entry.archive),
 	'docs/architecture/functional-contracts.md', 'docs/architecture/refactoring-campaign.md',

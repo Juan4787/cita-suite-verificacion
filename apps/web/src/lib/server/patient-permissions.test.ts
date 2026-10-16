@@ -138,7 +138,11 @@ describe('clinical history permissions', () => {
 
 	it('closes history when application access or the capability is unavailable', () => {
 		const access = { ...context().access, canUseBusiness: false, canEnterApp: false };
-		expect(resolvePatientPermissions(context({ access })).canReadClinicalHistory).toBe(false);
+		const denied = resolvePatientPermissions(context({ access }));
+		expect(denied.canReadClinicalHistory).toBe(false);
+		expect(denied.canReadClinicalProfile).toBe(false);
+		expect(denied.canViewCosts).toBe(false);
+		expect(denied.canViewRadiographs).toBe(false);
 		access.canUseBusiness = true;
 		access.canEnterApp = true;
 		access.allowedCapabilities = { ...access.allowedCapabilities, canViewExistingClinicalNotes: false };
