@@ -555,7 +555,7 @@ export const rescheduleAppointment = async (
 	// Versionado del evento de calendario: el ICS del mismo turno sale con SEQUENCE
 	// incrementado, y si el paciente ya había registrado una acción de calendario el
 	// turno queda "pendiente de actualizar" (banner en /turno + sección Recordatorios).
-	const hadCalendarAction = Number((appointment as any).calendar_action_count ?? 0) > 0;
+	const hadCalendarAction = Number(appointment.calendar_action_count ?? 0) > 0;
 	const { data: changedAppointment, error } = await supabase
 		.from('appointments')
 		.update({
@@ -565,7 +565,7 @@ export const rescheduleAppointment = async (
 			confirmed_at: null,
 			reschedule_requested_at: null,
 			reminder_due_at: null,
-			calendar_sequence: Number((appointment as any).calendar_sequence ?? 0) + 1,
+			calendar_sequence: Number(appointment.calendar_sequence ?? 0) + 1,
 			calendar_update_required_at: hadCalendarAction ? now.toISOString() : null,
 			// Una reprogramación vuelve a calcular desde cero. La excepción al
 			// descanso sólo continúa si el usuario la solicita otra vez.

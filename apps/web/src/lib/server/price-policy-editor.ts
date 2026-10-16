@@ -1,3 +1,4 @@
+import { parsePriceAdjustments } from './price-contracts';
 import { env } from "$env/dynamic/private";
 import { getOdontoContext } from "./odonto-context";
 import { bookingInformationEnabled } from "./booking-information";
@@ -41,7 +42,7 @@ export async function loadPricePolicyEditor(event: RequestEvent) {
       .select("services(id,name)")
       .eq("business_id", businessId)
       .or(`professional_id.eq.${professionalId},professional_id.is.null`),
-    (context.supabase as any)
+    context.supabase
       .from("service_price_policies")
       .select("*,service_price_monthly_adjustments(month,kind,percentage)")
       .eq("business_id", businessId)
@@ -61,7 +62,7 @@ export async function loadPricePolicyEditor(event: RequestEvent) {
           ? [row.services]
           : [],
     ),
-    policies: policies ?? [],
+    policies: (policies ?? []).map(policy => ({ ...policy, service_price_monthly_adjustments: parsePriceAdjustments(policy.service_price_monthly_adjustments) })),
     currentMonth: monthForTimezone(
       new Date(),
       context.business.business.timezone,

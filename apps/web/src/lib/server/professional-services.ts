@@ -1,3 +1,5 @@
+import type { CitaSupabaseClient } from '$lib/types/database';
+
 type AssignmentRow = {
 	business_id: string;
 	professional_id: string;
@@ -11,7 +13,7 @@ export const idsFromForm = (form: FormData, key: string) =>
 	uniqueIds(form.getAll(key).map((value) => String(value)));
 
 const assertExistingIds = async (
-	supabase: any,
+	supabase: CitaSupabaseClient,
 	table: 'professionals' | 'services',
 	businessId: string,
 	ids: string[],
@@ -34,7 +36,7 @@ const assertExistingIds = async (
 };
 
 const assertTargetExists = async (
-	supabase: any,
+	supabase: CitaSupabaseClient,
 	table: 'professionals' | 'services',
 	businessId: string,
 	targetId: string,
@@ -59,7 +61,7 @@ const syncAssignments = async ({
 	relatedColumn,
 	relatedIds
 }: {
-	supabase: any;
+	supabase: CitaSupabaseClient;
 	businessId: string;
 	targetColumn: 'professional_id' | 'service_id';
 	targetId: string;
@@ -69,14 +71,14 @@ const syncAssignments = async ({
 	const desiredIds = uniqueIds(relatedIds);
 	const { data: currentRows, error: currentError } = await supabase
 		.from('professional_services')
-		.select(relatedColumn)
+		.select('professional_id,service_id')
 		.eq('business_id', businessId)
 		.eq(targetColumn, targetId);
 
 	if (currentError) throw currentError;
 
 	const currentIds = new Set<string>(
-		(currentRows ?? []).map((row: Record<string, string>) => row[relatedColumn])
+		(currentRows ?? []).map((row) => row[relatedColumn])
 	);
 	const desiredIdSet = new Set(desiredIds);
 	const idsToAdd = desiredIds.filter((id) => !currentIds.has(id));
@@ -112,7 +114,7 @@ const syncAssignments = async ({
 };
 
 export const setServiceProfessionals = async (
-	supabase: any,
+	supabase: CitaSupabaseClient,
 	businessId: string,
 	serviceId: string,
 	professionalIds: string[]
@@ -136,7 +138,7 @@ export const setServiceProfessionals = async (
 };
 
 export const setProfessionalServices = async (
-	supabase: any,
+	supabase: CitaSupabaseClient,
 	businessId: string,
 	professionalId: string,
 	serviceIds: string[]

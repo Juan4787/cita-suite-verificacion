@@ -1,6 +1,7 @@
 import { dev } from '$app/environment';
 import {
 	createSupabaseServerClient,
+	parseModule,
 	getEmailFromAccessToken,
 	getModuleEntryRoute,
 	isJwtExpired,
@@ -97,7 +98,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return response;
 	};
 
-	const moduleCookie = event.cookies.get('sb-module') as Module | undefined;
+	const moduleCookie = parseModule(event.cookies.get('sb-module'));
 	const accessToken = event.cookies.get('sb-access-token');
 	const refreshToken = event.cookies.get('sb-refresh-token');
 

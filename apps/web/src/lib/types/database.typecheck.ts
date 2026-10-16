@@ -1,3 +1,4 @@
+import type { createSupabaseServerClient } from '$lib/server/supabase';
 import type { CitaSupabaseClient } from './database';
 
 // Compile-only negative contract tests. This function is never imported or run.
@@ -16,4 +17,11 @@ function databaseContract(client: CitaSupabaseClient) {
 	client.rpc('list_user_business_contexts', { invented: null });
 	// @ts-expect-error declared table columns retain their actual types
 	client.from('patients').update({ phone: 42 });
+}
+
+async function inactiveModuleHasNoInventedDatabase(factory: typeof createSupabaseServerClient) {
+  const client = await factory('administrativo');
+  client.auth.getUser();
+  // @ts-expect-error inactive unrelated schema is not the active Cita Suite schema
+  client.from('patients');
 }

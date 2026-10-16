@@ -9,6 +9,7 @@ import {
   saveProfessionalQuestions,
 } from "./professional-questions";
 const personId = "10000000-0000-4000-8000-000000000001";
+let fields: unknown;
 let client: any;
 let queries: Array<{ table: string; filters: Array<[string, unknown]> }>;
 function mockContext(role = "professional", own = true, person = true) {
@@ -33,7 +34,7 @@ function mockContext(role = "professional", own = true, person = true) {
               ? person
                 ? { id: personId, name: "Profesional sintético" }
                 : null
-              : { revision: 2, fields: [] },
+              : { revision: 2, fields },
       }),
     };
     return builder;
@@ -56,7 +57,7 @@ function event(body = new URLSearchParams({ revision: "2", fields: "[]" })) {
     request: new Request("https://app.test", { method: "POST", body }),
   } as any;
 }
-beforeEach(() => mockContext());
+beforeEach(() => { fields = []; mockContext(); });
 describe("professional questions stay in their own profile", () => {
   it("loads only a linked professional in the current practice", async () => {
     const loaded = await loadProfessionalQuestions(event());
@@ -67,6 +68,14 @@ describe("professional questions stay in their own profile", () => {
       ["professional_id", personId],
     ]);
     expect(queries[1].filters).toContainEqual(["business_id", "practice"]);
+  });
+  it("validates stored questions instead of passing malformed JSON to the editor", async () => {
+    fields = [{ id: "insurance", label: "Obra social", kind: "text", required: true, maxLength: 120 }];
+    expect((await loadProfessionalQuestions(event())).configuration).toEqual({ revision: 2, fields });
+    for (const malformed of [null, {}, [{ id: "insurance", label: "Obra social", kind: "text", required: true }]]) {
+      fields = malformed;
+      await expect(loadProfessionalQuestions(event())).rejects.toThrow("BOOKING_INTAKE_SCHEMA_INVALID");
+    }
   });
   it("ignores a forged professional id in the submitted form", async () => {
     const body = new URLSearchParams({

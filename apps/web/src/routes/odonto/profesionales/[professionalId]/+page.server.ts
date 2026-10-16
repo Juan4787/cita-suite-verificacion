@@ -1,3 +1,4 @@
+import { parsePriceAdjustments } from '$lib/server/price-contracts';
 import {readBoundedBookingForm} from '$lib/server/public-booking-page';
 import {previewMonthlyPrices,formatQuotedPrice,monthForTimezone} from '$lib/booking/pricing';
 import { env } from '$env/dynamic/private';
@@ -295,7 +296,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
  const {data:pricePolicies,error:priceError}=await supabase.from('service_price_policies').select('*,service_price_monthly_adjustments(month,kind,percentage)').eq('business_id',businessId).or(`professional_id.eq.${professional.id},professional_id.is.null`);
  if(priceError)throw kitError(503,'No pudimos cargar los aranceles. Volvé a intentar.');
  const currentMonth=monthForTimezone(new Date(),business.business.timezone);const currentPriceLabels:Record<string,string>={};
- for(const service of services??[]){const policy=(pricePolicies??[]).find(row=>row.service_id===service.id&&row.professional_id===professional.id)??(pricePolicies??[]).find(row=>row.service_id===service.id&&row.professional_id===null);if(policy){try{const [quote]=previewMonthlyPrices(String(policy.base_amount),String(policy.monthly_percentage),String(policy.rounding_unit),policy.base_month.slice(0,7),policy.first_adjustment_month.slice(0,7),policy.service_price_monthly_adjustments as any,1,currentMonth);currentPriceLabels[service.id]=formatQuotedPrice({amount:quote.amount,currency:policy.currency});}catch{currentPriceLabels[service.id]='Revisar configuración de arancel';}}}
+ for(const service of services??[]){const policy=(pricePolicies??[]).find(row=>row.service_id===service.id&&row.professional_id===professional.id)??(pricePolicies??[]).find(row=>row.service_id===service.id&&row.professional_id===null);if(policy){try{const [quote]=previewMonthlyPrices(String(policy.base_amount),String(policy.monthly_percentage),String(policy.rounding_unit),policy.base_month.slice(0,7),policy.first_adjustment_month.slice(0,7),parsePriceAdjustments(policy.service_price_monthly_adjustments),1,currentMonth);currentPriceLabels[service.id]=formatQuotedPrice({amount:quote.amount,currency:policy.currency});}catch{currentPriceLabels[service.id]='Revisar configuración de arancel';}}}
  const defaultServiceIds = (services ?? [])
 		.filter((service: any) => isDefaultServiceName(String(service.name ?? '')))
 		.map((service: any) => String(service.id));

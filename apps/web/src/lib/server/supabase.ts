@@ -1,3 +1,4 @@
+import { readRecord } from './contracts';
 import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
 import type { Cookies } from '@sveltejs/kit';
@@ -48,10 +49,12 @@ const moduleConfig: Record<
 	}
 };
 
+export const parseModule = (value: unknown): Module | null =>
+  value === 'odonto' || value === 'administrativo' ? value : null;
+
 export const resolveModuleByEmail = (email: string): Module | null => {
-	const normalized = email.trim().toLowerCase();
-	return (Object.entries(moduleEmails).find(([, value]) => value?.toLowerCase() === normalized)?.[0] ??
-		null) as Module | null;
+  const normalized = email.trim().toLowerCase();
+  return moduleEmails.odonto?.toLowerCase() === normalized ? 'odonto' : null;
 };
 
 export const getModuleEntryRoute = (module: Module) =>
@@ -62,13 +65,16 @@ export const getModuleEntryRoute = (module: Module) =>
 export const isMasterEmail = (email?: string | null) =>
 	Boolean(email && email.trim().toLowerCase() === MASTER_EMAIL);
 
-export const createSupabaseServerClient = async (
+type SupabaseAuthOnlyClient = Pick<CitaSupabaseClient, 'auth'>;
+export function createSupabaseServerClient(module: 'odonto', tokens?: AuthTokens | null, fetchImpl?: typeof fetch): Promise<CitaSupabaseClient>;
+export function createSupabaseServerClient(module: Module, tokens?: AuthTokens | null, fetchImpl?: typeof fetch): Promise<SupabaseAuthOnlyClient>;
+export async function createSupabaseServerClient(
 	module: Module,
 	tokens?: AuthTokens | null,
 	// fetchImpl es opcional, pero en server preferimos usar fetch global
 	// para evitar interferencias con headers/cookies en requests externas.
 	fetchImpl?: typeof fetch
-): Promise<CitaSupabaseClient> => {
+): Promise<CitaSupabaseClient> {
 	if (env.DEMO_MODE === 'true') {
 		throw new Error('Demo mode: Supabase deshabilitado');
 	}
@@ -104,7 +110,7 @@ export const createSupabaseServerClient = async (
 	});
 
 	return supabase;
-};
+}
 
 const OAUTH_CODE_VERIFIER_COOKIE = 'sb-oauth-code-verifier';
 
@@ -113,7 +119,7 @@ export const clearSupabaseOAuthCookies = (cookies: Cookies) => {
 };
 
 export const createSupabaseOAuthClient = async (
-	module: Module,
+	module: 'odonto',
 	cookies: Cookies,
 	fetchImpl?: typeof fetch
 ): Promise<CitaSupabaseClient> => {
@@ -171,7 +177,7 @@ export const createSupabaseOAuthClient = async (
 };
 
 export const createSupabaseAdminClient = async (
-	module: Module,
+	module: 'odonto',
 	fetchImpl?: typeof fetch
 ): Promise<CitaSupabaseClient> => {
 	if (env.DEMO_MODE === 'true') {
@@ -216,7 +222,7 @@ export const decodeJwtPayload = (accessToken?: string | null): Record<string, un
 		.replace(/_/g, '/')
 		.padEnd(Math.ceil(payload.length / 4) * 4, '=');
 	try {
-		return JSON.parse(Buffer.from(normalized, 'base64').toString('utf8')) as Record<string, unknown>;
+		return readRecord(JSON.parse(Buffer.from(normalized, 'base64').toString('utf8')), 'jwtPayload');
 	} catch {
 		return null;
 	}

@@ -18,7 +18,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('$app/environment', () => ({ dev: false }));
 vi.mock('$env/dynamic/private', () => ({ env: envState.privateEnv }));
 vi.mock('$lib/server/business', () => ({ ACTIVE_BUSINESS_COOKIE: 'active-business-id' }));
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/supabase', async (importOriginal) => ({
+	parseModule: (await importOriginal<typeof import('$lib/server/supabase')>()).parseModule,
 	createSupabaseServerClient: mocks.createSupabaseServerClient,
 	getEmailFromAccessToken: mocks.getEmailFromAccessToken,
 	getModuleEntryRoute: mocks.getModuleEntryRoute,

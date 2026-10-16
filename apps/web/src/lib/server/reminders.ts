@@ -333,7 +333,7 @@ export const loadReminderCandidates = async (
 
 	const appointments = rows ?? [];
 	if (appointments.length === 0) return [];
-	const ids = appointments.map((row: any) => String(row.id));
+	const ids = appointments.map((row) => String(row.id));
 	const managedGoogleCalendarEnabled = isManagedGoogleCalendarEnabled();
 
 	const [pushResult, dispatchResult, googleCalendarResult, bookingContextResult] = await Promise.all([
@@ -368,23 +368,23 @@ export const loadReminderCandidates = async (
 	if (dispatchResult.error) throw dispatchResult.error;
 	if (googleCalendarResult.error) throw googleCalendarResult.error;
 	if (bookingContextResult.error) throw bookingContextResult.error;
-	const modalitiesByAppointment = new Map((bookingContextResult.data ?? []).map((row: any) => [String(row.appointment_id), row.modality as BookingModality]));
+	const modalitiesByAppointment = new Map((bookingContextResult.data ?? []).map((row) => [String(row.appointment_id), row.modality as BookingModality]));
 	const pushRows = pushResult.data;
 	const dispatchRows = dispatchResult.data;
 	const googleCalendarRows = googleCalendarResult.data;
 
 	const confirmedPushAppointments = new Set(
 		(pushRows ?? [])
-			.filter((row: any) => hasConfirmedPushSubscription(row, now))
-			.map((row: any) => String(row.appointment_id))
+			.filter((row) => hasConfirmedPushSubscription(row, now))
+			.map((row) => String(row.appointment_id))
 	);
 	const dispatched = new Set(
 		(dispatchRows ?? [])
-			.filter((row: any) => ACTIVE_DISPATCH_STATUSES.includes(String(row.status)))
-			.map((row: any) => String(row.appointment_id))
+			.filter((row) => ACTIVE_DISPATCH_STATUSES.includes(String(row.status)))
+			.map((row) => String(row.appointment_id))
 	);
 	const googleCalendarByAppointment = new Map(
-		(googleCalendarRows ?? []).map((row: any) => [String(row.appointment_id), row])
+		(googleCalendarRows ?? []).map((row) => [String(row.appointment_id), row])
 	);
 	const mapsLink = resolveMapsUrl({ address: business.address, maps_url: business.maps_url });
 

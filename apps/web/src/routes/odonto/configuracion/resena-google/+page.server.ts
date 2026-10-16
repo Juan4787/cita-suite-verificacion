@@ -1,3 +1,4 @@
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { env } from '$env/dynamic/private';
 import {
 	GOOGLE_REVIEW_ACTION_MAX_LENGTH,
@@ -31,7 +32,7 @@ const valuesFromForm = (form: FormData) => ({
 });
 
 const validatedAssistanceClient = async (
-	supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+	supabase: CitaSupabaseClient,
 	businessId: string,
 	fetch: typeof globalThis.fetch
 ) => {

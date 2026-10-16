@@ -1,3 +1,4 @@
+import { readRecord } from './contracts';
 import { MASTER_EMAIL } from './supabase';
 import type { BusinessRole } from './business';
 import type { CitaSupabaseClient } from '$lib/types/database';
@@ -44,7 +45,9 @@ export type MasterAccountAssistanceRequest = {
 const ASSISTANCE_SELECT =
 	'id, business_id, requested_by_user_id, support_user_id, status, starts_at, expires_at, revoked_at, dismissed_at, created_at, updated_at';
 
-const normalizeRow = (row: any): AccountAssistanceRow | null => {
+const normalizeRow = (value: unknown): AccountAssistanceRow | null => {
+	if (value === null || value === undefined) return null;
+	const row = readRecord(value, 'accountAssistance');
 	if (!row?.id || !row?.business_id || !row?.requested_by_user_id || !row?.support_user_id) return null;
 	return {
 		id: String(row.id),
@@ -236,7 +239,7 @@ export const loadActiveMasterAccountAssistanceRequests = async ({
 		return [];
 	}
 
-	return ((data ?? []) as any[])
+	return (data ?? [])
 		.map((row) => {
 			const business = Array.isArray(row.business) ? row.business[0] : row.business;
 			if (!row?.id || !row?.business_id || !row?.expires_at) return null;

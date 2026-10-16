@@ -463,7 +463,7 @@ export const ensureMockMessagingSetup = async (supabase: CitaSupabaseClient, bus
 	return account;
 };
 
-const activeDispatchStatuses = new Set<MessageDispatchStatus>([
+const activeDispatchStatuses = new Set<string>([
 	'scheduled',
 	'queued',
 	'sending',
@@ -485,7 +485,7 @@ const hasActiveReminderDispatch = async (
 		.eq('type', REMINDER_TEMPLATE_NAME)
 		.is('superseded_at', null);
 	if (error) throw error;
-	return (data ?? []).some((dispatch: any) => activeDispatchStatuses.has(dispatch.status));
+	return (data ?? []).some((dispatch) => activeDispatchStatuses.has(dispatch.status));
 };
 
 const canBusinessUseOperationalMessaging = async (supabase: CitaSupabaseClient, businessId: string) => {

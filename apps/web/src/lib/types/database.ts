@@ -23,3 +23,4 @@ export type CitaSupabaseClient = SupabaseClient<CitaDatabase>;
 export type CitaTable = keyof Database['public']['Tables'];
 export type CitaUpdate<Table extends CitaTable> = Database['public']['Tables'][Table]['Update'];
 export type CitaInsert<Table extends CitaTable> = Database['public']['Tables'][Table]['Insert'];
+export type CitaRow<Table extends CitaTable> = Database['public']['Tables'][Table]['Row'];

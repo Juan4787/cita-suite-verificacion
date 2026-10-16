@@ -1,3 +1,4 @@
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { env } from '$env/dynamic/private';
 import { ACTIVE_BUSINESS_COOKIE } from '$lib/server/business';
 import { getOdontoContext } from '$lib/server/odonto-context';
@@ -21,7 +22,7 @@ export const GET: RequestHandler = async ({ url, locals, fetch, cookies, setHead
 
 	const cookieBusinessId = String(cookies.get(ACTIVE_BUSINESS_COOKIE) ?? '').trim();
 	let businessId = cookieBusinessId;
-	let supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+	let supabase: CitaSupabaseClient;
 
 	if (UUID_PATTERN.test(cookieBusinessId)) {
 		supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);

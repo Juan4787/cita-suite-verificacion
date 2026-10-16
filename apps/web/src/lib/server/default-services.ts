@@ -24,7 +24,7 @@ export const ensureDefaultServices = async (
 	const ids: string[] = [];
 	for (const name of DEFAULT_SERVICE_NAMES) {
 		const existing = rows.find(
-			(row: any) => String(row.name ?? '').trim().toLowerCase() === name.toLowerCase()
+			(row) => String(row.name ?? '').trim().toLowerCase() === name.toLowerCase()
 		);
 		if (existing?.id) {
 			if (!existing.is_active || !existing.is_public) {

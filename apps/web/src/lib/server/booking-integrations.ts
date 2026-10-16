@@ -1,3 +1,4 @@
+import { readArray, readRecord } from './contracts';
 import { bookingInformationEnabled } from './booking-information';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import {
@@ -34,38 +35,51 @@ export type IntegratedBookingInput = {
 };
 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
+const invalidConfiguration = () => new Error('BOOKING_INTEGRATION_CONFIGURATION_INVALID');
 const ids = (value: unknown, max: number): string[] => {
-	if (!Array.isArray(value) || value.length > max || value.some((id) => typeof id !== 'string' || !UUID.test(id))) {
-		throw new Error('BOOKING_INTEGRATION_CONFIGURATION_INVALID');
-	}
-	return [...new Set(value)];
+  const values = readArray(value, 'bookingIntegration.ids');
+  if (values.length > max) throw invalidConfiguration();
+  return [...new Set(values.map(id => {
+    if (typeof id !== 'string' || !UUID.test(id)) throw invalidConfiguration();
+    return id;
+  }))];
 };
 
-export function parseBookingIntegration(row: Record<string, any>, allowLocal = false): BookingIntegration {
-	if (!UUID.test(row.id) || !UUID.test(row.business_id) || !BOOKING_INTEGRATION_KEY_PATTERN.test(row.public_key) ||
-		row.contract_version !== 1 || !Number.isSafeInteger(Number(row.revision)) || Number(row.revision) < 1 ||
-		!BOOKING_THEMES.includes(row.theme) || typeof row.is_active !== 'boolean' ||
-		!Array.isArray(row.allowed_origins) || row.allowed_origins.length > 20 ||
-		!Array.isArray(row.allowed_modalities) || row.allowed_modalities.length < 1 || row.allowed_modalities.length > 2 ||
-		row.allowed_modalities.some((modality: any) => !BOOKING_MODALITIES.includes(modality)) ||
-		new Set(row.allowed_modalities).size !== row.allowed_modalities.length) {
-		throw new Error('BOOKING_INTEGRATION_CONFIGURATION_INVALID');
-	}
-	const allowedOrigins = row.allowed_origins.map((origin: unknown) =>
-		typeof origin === 'string' ? normalizeBookingOrigin(origin, allowLocal) : null);
-	if (allowedOrigins.some((origin: string | null) => !origin) || new Set(allowedOrigins).size !== allowedOrigins.length) {
-		throw new Error('BOOKING_INTEGRATION_CONFIGURATION_INVALID');
-	}
-	const videoInstructions = typeof row.video_instructions === 'string' ? row.video_instructions.trim() : null;
-	if (row.allowed_modalities.includes('video') && !videoInstructions) throw new Error('BOOKING_INTEGRATION_CONFIGURATION_INVALID');
-	return {
-		id: row.id, businessId: row.business_id, publicKey: row.public_key,
-		revision: Number(row.revision), isActive: row.is_active, isDefault: row.is_default === true, theme: row.theme,
-		allowedOrigins: allowedOrigins as string[], serviceIds: ids(row.allowed_service_ids, 500),
-		professionalIds: ids(row.allowed_professional_ids, 100), modalities: row.allowed_modalities,
-		intakeFields: parseBookingIntakeFields(row.intake_schema), videoInstructions,
-		modalityWindows: parseBookingModalityWindows(row.modality_windows ?? [])
-	};
+export function parseBookingIntegration(value: unknown, allowLocal = false): BookingIntegration {
+  const row = readRecord(value, 'bookingIntegration');
+  const theme = BOOKING_THEMES.find(candidate => candidate === row.theme);
+  if (typeof row.id !== 'string' || !UUID.test(row.id) ||
+    typeof row.business_id !== 'string' || !UUID.test(row.business_id) ||
+    typeof row.public_key !== 'string' || !BOOKING_INTEGRATION_KEY_PATTERN.test(row.public_key) ||
+    row.contract_version !== 1 || !Number.isSafeInteger(Number(row.revision)) || Number(row.revision) < 1 ||
+    !theme || typeof row.is_active !== 'boolean') throw invalidConfiguration();
+  const rawOrigins = readArray(row.allowed_origins, 'bookingIntegration.origins');
+  if (rawOrigins.length > 20) throw invalidConfiguration();
+  const allowedOrigins = rawOrigins.map(value => {
+    if (typeof value !== 'string') throw invalidConfiguration();
+    const origin = normalizeBookingOrigin(value, allowLocal);
+    if (!origin) throw invalidConfiguration();
+    return origin;
+  });
+  if (new Set(allowedOrigins).size !== allowedOrigins.length) throw invalidConfiguration();
+  const rawModalities = readArray(row.allowed_modalities, 'bookingIntegration.modalities');
+  if (rawModalities.length < 1 || rawModalities.length > 2) throw invalidConfiguration();
+  const modalities = rawModalities.map(value => {
+    const modality = BOOKING_MODALITIES.find(candidate => candidate === value);
+    if (!modality) throw invalidConfiguration();
+    return modality;
+  });
+  if (new Set(modalities).size !== modalities.length) throw invalidConfiguration();
+  const videoInstructions = typeof row.video_instructions === 'string' ? row.video_instructions.trim() : null;
+  if (modalities.includes('video') && !videoInstructions) throw invalidConfiguration();
+  return {
+    id: row.id, businessId: row.business_id, publicKey: row.public_key,
+    revision: Number(row.revision), isActive: row.is_active, isDefault: row.is_default === true, theme,
+    allowedOrigins, serviceIds: ids(row.allowed_service_ids, 500),
+    professionalIds: ids(row.allowed_professional_ids, 100), modalities,
+    intakeFields: parseBookingIntakeFields(row.intake_schema), videoInstructions,
+    modalityWindows: parseBookingModalityWindows(row.modality_windows ?? [])
+  };
 }
 
 const INTEGRATION_SELECT = 'id, business_id, public_key, revision, is_active, is_default, contract_version, theme, allowed_origins, allowed_service_ids, allowed_professional_ids, allowed_modalities, video_instructions, intake_schema, modality_windows';

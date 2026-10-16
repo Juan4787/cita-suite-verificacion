@@ -1,0 +1,37 @@
+[
+  {
+    "path": "apps/web/src/routes/administrativo/+layout.server.ts",
+    "archive": "docs/archive/administrativo-inactivo/+layout.server.ts.txt",
+    "sha256": "e8326203b3f6cf2a4ac6d9e0a1fb067a75fd399856814204fe820021bc5941c3"
+  },
+  {
+    "path": "apps/web/src/routes/administrativo/+layout.svelte",
+    "archive": "docs/archive/administrativo-inactivo/+layout.svelte.txt",
+    "sha256": "f405db4452af8cc4e499b7f01a233fbb78158b8453923750c15ffe9a9025a17b"
+  },
+  {
+    "path": "apps/web/src/routes/administrativo/configuracion/+page.svelte",
+    "archive": "docs/archive/administrativo-inactivo/configuracion/+page.svelte.txt",
+    "sha256": "87ce80e8bf3ac9243bd32740c8c5a15782b15e31e5983c8eba41a01ffb4ad219"
+  },
+  {
+    "path": "apps/web/src/routes/administrativo/expedientes/+page.server.ts",
+    "archive": "docs/archive/administrativo-inactivo/expedientes/+page.server.ts.txt",
+    "sha256": "4ca30deef3f2baad65cda6de8d9641e10b34d94c0c9aaeaf1aea9dfc87e834ad"
+  },
+  {
+    "path": "apps/web/src/routes/administrativo/expedientes/+page.svelte",
+    "archive": "docs/archive/administrativo-inactivo/expedientes/+page.svelte.txt",
+    "sha256": "0136316a20dee23ed3ded1432fc9ff410c5331be9353229a73bc47e9c0948b4d"
+  },
+  {
+    "path": "apps/web/src/routes/administrativo/expedientes/[id]/+page.server.ts",
+    "archive": "docs/archive/administrativo-inactivo/expedientes/[id]/+page.server.ts.txt",
+    "sha256": "edf23b287f85122aa15a927e63797011d740408060c4e68f4ad7f21955daea94"
+  },
+  {
+    "path": "apps/web/src/routes/administrativo/expedientes/[id]/+page.svelte",
+    "archive": "docs/archive/administrativo-inactivo/expedientes/[id]/+page.svelte.txt",
+    "sha256": "1233dfcd420978a989a9b082aa0cabc85ffb7fc16b68abbcd2848fb69301a84e"
+  }
+]

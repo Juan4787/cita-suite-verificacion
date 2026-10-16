@@ -4,8 +4,16 @@
   "originalPlanCharacters": 28290,
   "originalPlanSha256": "67ab8f5726aaeaaae7025e3538d4ded7e24c7f9ea043ec7032dc377645faf5bd",
   "executionInstructionSha256": "b5cdc724c1958546811caee41c80ab219d985c64c35a3d5f32b113edc02ff97f",
-  "documentSha256": "1cb268f1d60ebefb997cd7cab4b7376e8173fd3e9b7a92b1e1039faa9762ef7f",
+  "documentSha256": "8b7db1745438b552a09be8e2e75c7bb55f3201f73bedfaa8ef1d32714ef5ca81",
   "originalCopiedDocumentSha256": "e2d1642b0c44fe920bdbd895f7199c7be4894dd460dad426b3304e1122a9df07",
   "continuityAddendumSha256": "408ea142d4867f2a46de54c57119a7e4710cb48e547382b6db023daeb4702245",
-  "continuityRevisionNote": "Preserved the additional continuity directive already present in the workspace. Original approved plan and execution instruction hashes remain unchanged; only formatting in these two sections was restored."
+  "continuityRevisionNote": "Preserved the additional continuity directive already present in the workspace. Original approved plan and execution instruction hashes remain unchanged; only formatting in these two sections was restored.",
+  "documentBeforeBrandingAmendmentSha256": "1cb268f1d60ebefb997cd7cab4b7376e8173fd3e9b7a92b1e1039faa9762ef7f",
+  "amendments": [
+    {
+      "heading": "# Ampliación aprobada por el usuario: identidad unificada «Cita Suite»",
+      "source": "Pedido explícito del usuario del 2026-10-16; transcripción íntegra y criterios adicionales sin reducir el plan original.",
+      "sha256": "25e883ff2bee7b8c347e45fc4c0035e4875a87a7a8199056e8bce32070271cfd"
+    }
+  ]
 }

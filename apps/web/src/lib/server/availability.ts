@@ -1,12 +1,12 @@
 import type { CitaSupabaseClient } from '$lib/types/database';
 import type { BookingModality, BookingModalityWindow } from '@turnos-saas/shared/booking-integration';
-import type { Business } from './business';
 import { loadIntegratedAvailabilityRows } from './integrated-availability';
 import {
 	calculateAvailabilitySlots,
 	clampRangeToBusinessRules,
 	hasVisibleProfessionalName,
 	zonedDateTimeToUtc,
+	type AvailabilityBusiness,
 	type AvailabilityAppointmentBlockRow,
 	type AvailabilityExceptionRow,
 	type AvailabilityProfessionalRow,
@@ -22,7 +22,7 @@ const BLOCKING_STATUSES = ['reserved', 'confirmed', 'reschedule_requested'] as c
 export type AvailabilityInput = {
 	modality?: BookingModality;
 	modalityWindows?: BookingModalityWindow[];
-	business: Business;
+	business: AvailabilityBusiness & { id: string };
 	serviceId: string;
 	professionalId?: string | null;
 	professionalIds?: string[] | null;
@@ -87,7 +87,7 @@ export const getAvailabilitySlots = async (
 		)
 		.eq('business_id', business.id)
 		.eq('id', serviceId)
-		.maybeSingle<AvailabilityServiceRow>();
+		.maybeSingle();
 	if (serviceError || !service || !service.is_active || (publicOnly && !service.is_public)) return [];
 
 	let assignmentQuery = supabase
@@ -105,7 +105,7 @@ export const getAvailabilitySlots = async (
 	if (assignmentError) throw assignmentError;
 
 	let professionals = (assignments ?? [])
-		.map((row: any) => row.professionals as AvailabilityProfessionalRow)
+		.map((row) => row.professionals)
 		.filter(
 			(professional) =>
 				professional?.is_active && (!publicOnly || (professional.is_public && hasVisibleProfessionalName(professional)))

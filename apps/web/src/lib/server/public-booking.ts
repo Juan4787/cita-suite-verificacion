@@ -70,7 +70,7 @@ export type PublicBookingBusiness = Pick<
 	| 'min_booking_notice_minutes'
 	| 'max_booking_days_ahead'
 	| 'cancellation_policy'
->;
+> & { booking_availability_revision?: number };
 
 export type PublicBookingIssue =
 	| 'integration_unavailable'
@@ -319,30 +319,30 @@ export const getReservableServices = async (
 	if (rulesError) throw rulesError;
 
 	const scheduledProfessionalIds = new Set(
-		(rules ?? []).map((rule: any) => String(rule.professional_id))
+		(rules ?? []).map((rule) => String(rule.professional_id))
 	);
 	const publicScheduledProfessionalIds = new Set(
 		(professionals ?? [])
 			.filter(
-				(professional: any) =>
+				(professional) =>
 					hasVisibleProfessionalName(professional) &&
 					(!scope?.professionalIds.length || scope.professionalIds.includes(String(professional.id))) &&
 					scheduledProfessionalIds.has(String(professional.id))
 			)
-			.map((professional: any) => String(professional.id))
+			.map((professional) => String(professional.id))
 	);
 	const reservableServiceIds = new Set(
 		(assignments ?? [])
-			.filter((assignment: any) =>
+			.filter((assignment) =>
 				publicScheduledProfessionalIds.has(String(assignment.professional_id))
 			)
-			.map((assignment: any) => String(assignment.service_id))
+			.map((assignment) => String(assignment.service_id))
 	);
 
 	return (services ?? [])
-		.filter((service: any) => reservableServiceIds.has(String(service.id)) &&
+		.filter((service) => reservableServiceIds.has(String(service.id)) &&
 			(!scope?.serviceIds.length || scope.serviceIds.includes(String(service.id))))
-		.map((service: any) => ({
+		.map((service) => ({
 			id: String(service.id),
 			name: String(service.name),
 			description: service.description ?? null,
@@ -375,24 +375,24 @@ export const getReservableProfessionals = async (
 	if (error) throw error;
 	if (rulesError) throw rulesError;
 	const scheduledProfessionalIds = new Set(
-		(rules ?? []).map((rule: any) => String(rule.professional_id))
+		(rules ?? []).map((rule) => String(rule.professional_id))
 	);
 
 	return (data ?? [])
-		.map((row: any) => row.professionals)
+		.map((row) => row.professionals)
 		.filter(
-			(professional: any) =>
+			(professional) =>
 				professional?.is_active &&
 				professional?.is_public &&
 				hasVisibleProfessionalName(professional) &&
 				scheduledProfessionalIds.has(String(professional.id))
 		)
 		.sort(
-			(a: any, b: any) =>
+			(a, b) =>
 				Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0) ||
 				String(a.name).localeCompare(String(b.name))
 		)
-		.map((professional: any) => ({
+		.map((professional) => ({
 			id: String(professional.id),
 			name: String(professional.name).trim(),
 			specialty: professional.specialty ?? null,
@@ -687,7 +687,7 @@ const slotsFromPublicSnapshot = (
 	return calculateAvailabilitySlots({
 		modality: input.modality,
 		modalityWindows: input.modalityWindows,
-		business: business as Business,
+		business,
 		service,
 		professionals,
 		rules: snapshot.rules.filter((rule) => professionalIds.has(rule.professional_id)),
@@ -852,7 +852,7 @@ export const loadPublicBookingState = async (
 	);
 	const selectionCacheKey = selectedProfessionalIds.join(',');
 	const availabilityRows = await cachedScan(
-		`availability-rows:${business.id}:${(business as any).booking_availability_revision??0}:${selectedService.id}:${selectionCacheKey}:${scanFromDate}:${scanToDate}:${input.modality ?? ''}`,
+		`availability-rows:${business.id}:${business.booking_availability_revision??0}:${selectedService.id}:${selectionCacheKey}:${scanFromDate}:${scanToDate}:${input.modality ?? ''}`,
 		SLOT_SCAN_CACHE_TTL_MS,
 		() =>
 			loadPublicAvailabilitySnapshot(supabase, {
@@ -1020,7 +1020,7 @@ export const createPublicBooking = async (
 		// The final RPC holds this row and refuses edits committed during calculation.
 		const { data, error } = await supabase.from('businesses')
 			.select(PUBLIC_BUSINESS_SELECT).eq('id', business.id)
-			.single<PublicBookingBusiness & { booking_availability_revision: number }>();
+			.single();
 		if (error) throw error;
 		business = data as PublicBookingBusiness;
 		availabilityRevision = Number(data.booking_availability_revision);
@@ -1106,7 +1106,7 @@ export const createPublicBooking = async (
 		const slots = await getAvailabilitySlots(supabase, {
 			modality: input.bookingIntegration?.modality,
 			modalityWindows: input.bookingIntegration?.modalityWindows,
-			business: business as Business,
+			business,
 			serviceId: input.serviceId,
 			professionalId: bookingMode === 'individual' ? professionalId : null,
 			professionalIds: bookingMode === 'joint' ? professionalIds : [],

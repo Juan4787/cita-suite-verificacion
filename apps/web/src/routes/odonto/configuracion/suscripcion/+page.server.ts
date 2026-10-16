@@ -1,3 +1,4 @@
+import type { CitaSupabaseClient } from '$lib/types/database';
 import { env } from '$env/dynamic/private';
 import { demoBusinessContext, resolveActiveBusiness } from '$lib/server/business';
 import {
@@ -151,7 +152,7 @@ export const actions: Actions = {
 			return fail(400, { message: 'No disponible en modo demo.' });
 		}
 
-		let supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+		let supabase: CitaSupabaseClient;
 		let context: Awaited<ReturnType<typeof resolveActiveBusiness>>;
 		try {
 			supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);

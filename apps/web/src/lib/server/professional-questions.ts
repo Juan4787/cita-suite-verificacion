@@ -54,7 +54,9 @@ export async function loadProfessionalQuestions(event: RequestEvent) {
     error(503, "No pudimos cargar las preguntas. Volvé a intentar.");
   return {
     professional: context.professional,
-    configuration: row.data,
+    configuration: row.data
+      ? { revision: row.data.revision, fields: parseBookingIntakeFields(row.data.fields) }
+      : null,
     canManage: context.business.canManage,
     enabled,
   };

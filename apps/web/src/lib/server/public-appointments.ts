@@ -1,3 +1,4 @@
+import { parsePriceQuote } from './price-contracts';
 import type { CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
 import { bookingContextsAvailable } from './booking-integration-flags';
 import { loadAppointmentBookingContext, type AppointmentBookingContext } from './booking-integrations';
@@ -19,15 +20,6 @@ import {
 import { sanitizePublicImageUrl } from './public-image';
 
 export type PublicAppointmentAction = 'confirm' | 'cancel' | 'reschedule';
-
-type PublicAppointmentDatabaseRow = {
-	id: string; status: string; starts_at: string; ends_at: string; confirmation_token: string;
-	service_name_snapshot: string; professional_name_snapshot: string;
-	calendar_action_status?: string; calendar_action_at?: string | null;
-	calendar_action_count?: number; calendar_sequence?: number; calendar_update_required_at?: string | null;
-	businesses: Record<string, any>; patients?: { full_name?: string | null };
-	appointment_professionals?: unknown[];
-};
 
 export type PublicAppointmentView = {
 	booking_context?: AppointmentBookingContext | null;
@@ -107,24 +99,7 @@ export const demoPublicAppointment = (token: string): PublicAppointmentView => (
 	is_past: false
 });
 
-const appointmentSelect = `
-	id,
-	confirmation_token,
-	status,
-	starts_at,
-	ends_at,
-	service_name_snapshot,
-    price_quote_snapshot,patient_instructions_snapshot,public_reminder_description_snapshot,
-	professional_name_snapshot,
-	calendar_action_status,
-	calendar_action_at,
-	calendar_action_count,
-	calendar_sequence,
-	calendar_update_required_at,
-	businesses!inner(${PUBLIC_BUSINESS_SELECT}),
-	patients(full_name),
-	appointment_professionals(professional_id)
-`;
+const appointmentSelect = `id,confirmation_token,status,starts_at,ends_at,service_name_snapshot,    price_quote_snapshot,patient_instructions_snapshot,public_reminder_description_snapshot,professional_name_snapshot,calendar_action_status,calendar_action_at,calendar_action_count,calendar_sequence,calendar_update_required_at,businesses!inner(${PUBLIC_BUSINESS_SELECT}),patients(full_name),appointment_professionals(professional_id)` as const;
 
 const publicActionAttempt: Record<
 	PublicAppointmentAction,
@@ -141,12 +116,14 @@ export const loadPublicAppointmentByToken = async (
 	now = new Date(),
 	expectedIntegrationId?: string
 ): Promise<PublicAppointmentView | null> => {
-	let query = supabase
-		.from('appointments')
-		.select(appointmentSelect + (expectedIntegrationId ? ', appointment_booking_contexts!inner(integration_id)' : ''))
-		.eq('confirmation_token', token);
-	if (expectedIntegrationId) query = query.eq('appointment_booking_contexts.integration_id', expectedIntegrationId);
-	const { data, error } = await query.maybeSingle<PublicAppointmentDatabaseRow>();
+  // Keep each select a literal so the SDK validates both relationships. An
+  // optional inner join must not be replaced by a type override or a left join.
+  const table = supabase.from('appointments');
+  const { data, error } = expectedIntegrationId
+    ? await table.select(`${appointmentSelect},appointment_booking_contexts!inner(integration_id)`)
+      .eq('confirmation_token', token).eq('appointment_booking_contexts.integration_id', expectedIntegrationId).maybeSingle()
+    : await table.select(appointmentSelect).eq('confirmation_token', token).maybeSingle();
+
 	if (error) throw error;
 	if (!data) return null;
 	const bookingContext = bookingContextsAvailable()
@@ -154,7 +131,7 @@ export const loadPublicAppointmentByToken = async (
 
 	const status = String(data.status);
 	if (!isAppointmentStatus(status)) return null;
-	const business = (data as any).businesses;
+	const business = data.businesses;
 	const startsAt = new Date(data.starts_at);
 	const isPast = startsAt <= now;
 	const isBusinessActive = Boolean(business?.is_active);
@@ -164,13 +141,13 @@ export const loadPublicAppointmentByToken = async (
 	const canAct = isBusinessActive && canUsePublicTokens && !isPast;
 	const professionalCount = Math.max(
 		1,
-		Array.isArray((data as any).appointment_professionals)
-			? (data as any).appointment_professionals.length
+		Array.isArray(data.appointment_professionals)
+			? data.appointment_professionals.length
 			: 0
 	);
 
 	return {
-        price_quote_snapshot:(data as any).price_quote_snapshot??null,patient_instructions_snapshot:(data as any).patient_instructions_snapshot??null,public_reminder_description_snapshot:(data as any).public_reminder_description_snapshot??null,
+        price_quote_snapshot:parsePriceQuote(data.price_quote_snapshot),patient_instructions_snapshot:data.patient_instructions_snapshot??null,public_reminder_description_snapshot:data.public_reminder_description_snapshot??null,
 		booking_context: bookingContext,
 		id: String(data.id),
 		token: String(data.confirmation_token),
@@ -202,7 +179,7 @@ export const loadPublicAppointmentByToken = async (
 			is_active: Boolean(business.is_active),
 			cancellation_policy: business.cancellation_policy ?? null
 		},
-		patient_name: (data as any).patients?.full_name ?? null,
+		patient_name: data.patients?.full_name ?? null,
 		public_status_label: APPOINTMENT_STATUS_LABELS[status],
 		public_actions_available: canUsePublicTokens,
 		can_confirm: canAct && status === 'reserved',

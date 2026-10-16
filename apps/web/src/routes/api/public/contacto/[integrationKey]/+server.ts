@@ -1,3 +1,4 @@
+import { parsePublicContactResponse } from '$lib/server/public-catalogue';
 import { json, error } from "@sveltejs/kit";
 import { createSupabaseAdminClient } from "$lib/server/supabase";
 import { hashRateLimitSubject } from "$lib/server/rate-limits";
@@ -22,9 +23,9 @@ export const GET: RequestHandler = async (event) => {
   );
   if (cause || !data)
     error(404, "El contacto del consultorio todavía no está habilitado.");
-  const result = data as any;
+  const result = parsePublicContactResponse(data);
   const origin = event.request.headers.get("origin");
-  if (origin && !result.allowed_origins?.includes(origin))
+  if (origin && !result.allowedOrigins.includes(origin))
     error(403, "Este sitio no está habilitado para consultar el contacto.");
   return json(
     { contact: result.contact },

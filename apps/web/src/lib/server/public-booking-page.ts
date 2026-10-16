@@ -1,5 +1,6 @@
 import { bookingInformationEnabled, loadProfessionalBookingSchema, informationErrorMessage } from './booking-information';
-import {formatQuotedPrice,type PriceQuote} from '$lib/booking/pricing';
+import {type PriceQuote} from '$lib/booking/pricing';
+import { parsePriceQuote, parseServicePriceLabels } from './price-contracts';
 import { env } from '$env/dynamic/private';
 import { randomUUID } from 'crypto';
 import { env as publicEnv } from '$env/dynamic/public';
@@ -129,7 +130,7 @@ export const loadPublicBookingPage = async ({ params, fetch, url, setHeaders }: 
 			presentation: { ...bookingPresentation(integration), theme: entryPoint === 'public_page' ? 'cita-suite' as const : integration.theme }, demo: false
 		};
 		const state = await loadPublicBookingState(supabase, {
-			modality: integration ? (integration.modalities.includes(url.searchParams.get('modality') as any) ? url.searchParams.get('modality') as import('@turnos-saas/shared/booking-integration').BookingModality : integration.modalities[0]) : undefined,
+			modality: integration ? (integration.modalities.find(modality => modality === url.searchParams.get('modality')) ?? integration.modalities[0]) : undefined,
 			modalityWindows: integration?.modalityWindows,
 			slug: integration?.businessId ?? params.businessSlug ?? '',
 			serviceId: selected.serviceId,
@@ -151,14 +152,24 @@ export const loadPublicBookingPage = async ({ params, fetch, url, setHeaders }: 
 			throw redirect(302, `/reservar/${state.business.id}${url.search}`);
 		}
 
-        if(state.business&&state.services.length){const {data:labels,error:labelError}=await supabase.rpc('get_public_service_price_labels',{p_business_id:state.business.id,p_service_ids:integration?.serviceIds??[],p_professional_ids:integration?.professionalIds??[]});if(labelError)throw labelError;const byId=new Map(((labels??[]) as any[]).map(label=>[label.id,label]));for(const service of state.services){const label=byId.get(service.id);if(label)service.price_label=label.mixed?'Arancel según profesional y fecha':`${label.minimum!==label.maximum?'Desde ':''}${formatQuotedPrice({amount:Number(label.minimum),currency:label.currency})}`;}}
+        if (state.business && state.services.length) {
+            const { data: labels, error: labelError } = await supabase.rpc('get_public_service_price_labels', {
+                p_business_id: state.business.id, p_service_ids: integration?.serviceIds ?? [], p_professional_ids: integration?.professionalIds ?? []
+            });
+            if (labelError) throw labelError;
+            const byId = parseServicePriceLabels(labels);
+            for (const service of state.services) {
+                const label = byId.get(service.id);
+                if (label !== undefined) service.price_label = label;
+            }
+        }
         const patientFields = bookingInformationEnabled() && state.business && (selected.professionalId || selected.professionalIds.length)
             ? await loadProfessionalBookingSchema(supabase, state.business.id, selected.professionalId ? [selected.professionalId] : selected.professionalIds, integration?.id, bookingRequestId) : null;
 		let priceQuote: PriceQuote | null = null;
         if (state.business && state.days.some(day=>day.date===selected.date) && selected.serviceId && selected.date && (selected.professionalId || selected.professionalIds.length)) {
             const { data: quote, error: quoteError } = await supabase.rpc('get_public_service_price_quote', { p_business_id: state.business.id, p_service_id: selected.serviceId, p_professional_ids: selected.professionalId ? [selected.professionalId] : selected.professionalIds, p_date: selected.date });
             if (quoteError) throw quoteError;
-            priceQuote = quote as PriceQuote | null;
+            priceQuote = parsePriceQuote(quote);
         }
         return {
             priceQuote,

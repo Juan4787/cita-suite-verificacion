@@ -1,4 +1,4 @@
-import type { CitaSupabaseClient } from '$lib/types/database';
+import type { CitaSupabaseClient, CitaRow } from '$lib/types/database';
 import type { BusinessRole } from './business';
 
 // Seguimientos: recordar volver a contactar a un paciente. Sin recurrencia.
@@ -175,7 +175,9 @@ export type TzScope = RoleScope & { timezone: string };
 const FOLLOWUP_SELECT =
 	'id, patient_id, message, remind_on, assigned_professional_id, updated_at, patients(full_name)';
 
-const mapRow = (row: any): FollowUpListItem => ({
+type FollowUpResult = Pick<CitaRow<'follow_ups'>, 'id' | 'patient_id' | 'message' | 'remind_on' | 'assigned_professional_id' | 'updated_at'> & { patients: { full_name: string } | null };
+
+const mapRow = (row: FollowUpResult): FollowUpListItem => ({
 	id: String(row.id),
 	patient_id: String(row.patient_id),
 	patient_name: String(row?.patients?.full_name ?? 'Paciente'),
@@ -221,7 +223,7 @@ export const buildFollowUpScope = async (
 	};
 };
 
-const applyRoleScope = (query: any, scope: RoleScope) =>
+const applyRoleScope = <Query extends { eq(column: 'assigned_professional_id', value: string | null): Query }>(query: Query, scope: RoleScope) =>
 	roleSeesAllFollowUps(scope.role) ? query : query.eq('assigned_professional_id', scope.professionalId);
 
 /**
@@ -230,10 +232,10 @@ const applyRoleScope = (query: any, scope: RoleScope) =>
  * backend, por lo que esta segunda comprobación es necesaria además del scope
  * por assigned_professional_id.
  */
-const filterActiveProfessionalPatientLinks = async (
+const filterActiveProfessionalPatientLinks = async <Row extends { patient_id: string }>(
 	admin: CitaSupabaseClient,
 	scope: RoleScope,
-	rows: any[]
+	rows: Row[]
 ) => {
 	if (roleSeesAllFollowUps(scope.role)) return rows;
 	if (!scope.professionalId || rows.length === 0) return [];
@@ -247,7 +249,7 @@ const filterActiveProfessionalPatientLinks = async (
 		.eq('is_active', true)
 		.in('patient_id', patientIds);
 	if (error) throw error;
-	const linkedPatientIds = new Set((data ?? []).map((row: any) => String(row.patient_id)));
+	const linkedPatientIds = new Set((data ?? []).map((row) => String(row.patient_id)));
 	return rows.filter((row) => linkedPatientIds.has(String(row.patient_id)));
 };
 
@@ -315,7 +317,7 @@ export const getNoticeSummary = async (
 	);
 	if (error) throw error;
 	const visibleIdentityRows = await filterActiveProfessionalPatientLinks(admin, scope, identityRows ?? []);
-	const identityIds = visibleIdentityRows.map((row: any) => String(row.id));
+	const identityIds = visibleIdentityRows.map((row) => String(row.id));
 	// Si se filtró un vínculo archivado, el count de PostgREST ya no representa
 	// lo que puede ver el profesional. En ese caso usamos sólo las filas visibles
 	// para no mostrar un aviso huérfano ni filtrar un paciente por accidente.
@@ -351,7 +353,7 @@ const listLinkedProfessionalsForPatient = async (
 		.eq('patient_id', patientId)
 		.eq('is_active', true);
 	if (linksError) throw linksError;
-	const ids = [...new Set((links ?? []).map((l: any) => String(l.professional_id)))];
+	const ids = [...new Set((links ?? []).map((l) => String(l.professional_id)))];
 	if (ids.length === 0) return [];
 	const { data: profs, error: profsError } = await admin
 		.from('professionals')
@@ -360,8 +362,8 @@ const listLinkedProfessionalsForPatient = async (
 		.in('id', ids);
 	if (profsError) throw profsError;
 	return (profs ?? [])
-		.filter((p: any) => p.is_active !== false)
-		.map((p: any) => ({
+		.filter((p) => p.is_active !== false)
+		.map((p) => ({
 			id: String(p.id),
 			name: String(p.name),
 			source: 'patient_link' as const
@@ -382,7 +384,7 @@ const listOwnerAdminAttendingProfessionals = async (
 	if (membershipsError) throw membershipsError;
 
 	const userIds = [
-		...new Set((memberships ?? []).map((row: any) => row.user_id).filter(Boolean).map(String))
+		...new Set((memberships ?? []).map((row) => row.user_id).filter(Boolean).map(String))
 	];
 	if (userIds.length === 0) return [];
 
@@ -393,7 +395,7 @@ const listOwnerAdminAttendingProfessionals = async (
 		.in('user_id', userIds);
 	if (linksError) throw linksError;
 
-	const ids = [...new Set((links ?? []).map((row: any) => String(row.professional_id)))];
+	const ids = [...new Set((links ?? []).map((row) => String(row.professional_id)))];
 	if (ids.length === 0) return [];
 
 	const { data: professionals, error: professionalsError } = await admin
@@ -404,8 +406,8 @@ const listOwnerAdminAttendingProfessionals = async (
 	if (professionalsError) throw professionalsError;
 
 	return (professionals ?? [])
-		.filter((professional: any) => professional.is_active !== false)
-		.map((professional: any) => ({
+		.filter((professional) => professional.is_active !== false)
+		.map((professional) => ({
 			id: String(professional.id),
 			name: String(professional.name),
 			source: 'owner_admin_attending' as const
@@ -454,7 +456,7 @@ export const listAssignablePatientsSearch = async (
 			.eq('professional_id', scope.professionalId)
 			.eq('is_active', true);
 		if (linksError) throw linksError;
-		restrictIds = [...new Set((links ?? []).map((l: any) => String(l.patient_id)))];
+		restrictIds = [...new Set((links ?? []).map((l) => String(l.patient_id)))];
 		if (restrictIds.length === 0) return [];
 	}
 
@@ -469,7 +471,7 @@ export const listAssignablePatientsSearch = async (
 		.order('updated_at', { ascending: false })
 		.limit(12);
 	if (error) throw error;
-	return (data ?? []).map((p: any) => ({
+	return (data ?? []).map((p) => ({
 		id: String(p.id),
 		full_name: String(p.full_name),
 		phone_e164: p.phone_e164 ?? null
@@ -627,7 +629,7 @@ export const isStaleFollowUpUpdatedAt = (
 
 export const assertExpectedFollowUpVersion = (
 	expectedUpdatedAt: string | null | undefined,
-	existing: any
+	existing: { updated_at?: string | null } | null
 ) => {
 	if (isStaleFollowUpUpdatedAt(expectedUpdatedAt, existing?.updated_at)) {
 		throw new FollowUpError('FOLLOWUP_STATUS_CONFLICT');
