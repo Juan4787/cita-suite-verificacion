@@ -270,6 +270,12 @@ try {
   console.log(
     "Clean reconstruction: " + migrations.length + " migrations applied.",
   );
+  // Preserve the effective schema even when a newly added negative contract
+  // exposes a bug and stops the suite. This provisional receipt is never SQL
+  // approval; the manager requires sqlVerified=true before browser execution.
+  writeFileSync(fixturePath('database.json'), JSON.stringify({ container, network: localNetwork, runId: fixtureRunId, sqlVerified: false }), { mode: 0o600 });
+  const catalog = spawnSync(process.execPath, ['scripts/catalog-disposable-database.mjs'], { cwd: root, env: process.env, stdio: 'inherit' });
+  if (catalog.status !== 0 || catalog.error) throw new Error('Could not retain the reconstructed database catalog.');
   if (!prepareOnly) {
   const sqlTests = readdirSync(root + 'supabase/tests').filter(file => file.endsWith('.sql')).sort();
   if (!sqlTests.length || sqlTests[0] !== '000_pgtap_setup.sql')
@@ -320,6 +326,7 @@ try {
     if (realStorage) rmSync(fixturePath("storage.json"), { force: true });
     if (created) command(["rm", "-f", "-v", container]);
     if (localNetwork) command(["network", "rm", localNetwork]);
+    rmSync(fixturePath('database.json'), { force: true });
   }
   verificationLease.release();
 }
