@@ -7,6 +7,7 @@ import {
 	getClinicalFileRequestContext,
 	requireClinicalFileTrashView
 } from '$lib/server/clinical-files';
+import { readArray } from '$lib/server/contracts';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
@@ -64,7 +65,8 @@ export const GET: RequestHandler = async (event) => {
 			}
 		);
 		if (error) throw error;
-		const rows = (Array.isArray(data) ? data : []) as Array<Record<string, any>>;
+		readArray(data, 'patientFiles.trash');
+		const rows = data ?? [];
 		const hasMore = rows.length > PAGE_SIZE;
 		const visible = hasMore ? rows.slice(0, PAGE_SIZE) : rows;
 		const paths = visible

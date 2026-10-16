@@ -88,7 +88,7 @@ const getPendingProfessionalAccountEmail = async (
 	});
 	if (error) throw error;
 	const pending = (data ?? []).find(
-		(item: any) =>
+		(item) =>
 			String(item?.status ?? '') === 'pending' &&
 			String(item?.professional_id ?? '') === professionalId
 	);
@@ -204,7 +204,9 @@ const saveProfessionalWeeklyRules = async (
 	return { ok: true, data: { blocks: scheduleBlocks.blocks } };
 };
 
-const createAvailabilityException = async (supabase:OdontoSupabase,businessId:string,professionalId:string,timeZone:string,form:FormData,dryRun=false):Promise<SaveResult<{id:null;professionalId:string|null;type:string;periodMode:'single'|'range';startDate:string;endDate:string;items?:any[]}>>=>{
+type PreparedException = {professional_id: string | null; type: string; starts_at: string; ends_at: string; reason: string | null; service_ids: string[]};
+
+const createAvailabilityException = async (supabase:OdontoSupabase,businessId:string,professionalId:string,timeZone:string,form:FormData,dryRun=false):Promise<SaveResult<{id:null;professionalId:string|null;type:string;periodMode:'single'|'range';startDate:string;endDate:string;items?:PreparedException[]}>>=>{
  const target=String(form.get('applies_to'))==='business'?null:professionalId;
  const type=String(form.get('type')??'');const mode=String(form.get('period_mode')??'single');
  let dates:string[]=[];try{dates=mode==='multiple'?JSON.parse(String(form.get('dates')??'[]')):[String(form.get('date')??'')];}catch{return {ok:false,status:400,message:'Revisá las fechas seleccionadas.'};}
@@ -298,8 +300,8 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
  const currentMonth=monthForTimezone(new Date(),business.business.timezone);const currentPriceLabels:Record<string,string>={};
  for(const service of services??[]){const policy=(pricePolicies??[]).find(row=>row.service_id===service.id&&row.professional_id===professional.id)??(pricePolicies??[]).find(row=>row.service_id===service.id&&row.professional_id===null);if(policy){try{const [quote]=previewMonthlyPrices(String(policy.base_amount),String(policy.monthly_percentage),String(policy.rounding_unit),policy.base_month.slice(0,7),policy.first_adjustment_month.slice(0,7),parsePriceAdjustments(policy.service_price_monthly_adjustments),1,currentMonth);currentPriceLabels[service.id]=formatQuotedPrice({amount:quote.amount,currency:policy.currency});}catch{currentPriceLabels[service.id]='Revisar configuración de arancel';}}}
  const defaultServiceIds = (services ?? [])
-		.filter((service: any) => isDefaultServiceName(String(service.name ?? '')))
-		.map((service: any) => String(service.id));
+		.filter((service) => isDefaultServiceName(String(service.name ?? '')))
+		.map((service) => String(service.id));
 
 
 	return {
@@ -307,7 +309,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
         availabilityRevision:Number(revisionRow.booking_availability_revision),exceptionRequestId:crypto.randomUUID(),
 		professional,
 		services: services ?? [],currentPriceLabels,
-		assignedServiceIds: (assignments ?? []).map((item: any) => String(item.service_id)),
+		assignedServiceIds: (assignments ?? []).map((item) => String(item.service_id)),
 		defaultServiceIds,
 		rules: rules ?? [],
 		exceptions: exceptions ?? [],
@@ -648,7 +650,7 @@ export const actions: Actions = {
 
 		const form = await request.formData();
 
-  const savedSections:string[]=[];let profile:null|Record<string,unknown>=null;let blocks:NormalizedScheduleBlock[]|null=null;let items:any[]|null=null;
+  const savedSections:string[]=[];let profile:null|Record<string,unknown>=null;let blocks:NormalizedScheduleBlock[]|null=null;let items:PreparedException[]|null=null;
   if(boolFromForm(form,'save_profile')){const name=String(form.get('name')??'').trim();if(!name)return fail(400,{message:'El nombre es obligatorio. No se guardó ningún cambio.'});const email=normalizeProfessionalEmail(form.get('email'));const existing=await findProfessionalByEmail(supabase,business.business.id,email,params.professionalId);if(existing)return fail(400,{message:humanProfessionalEmailConflict(existing)});const pending=await getPendingProfessionalAccountEmail(supabase,business.business.id,params.professionalId);profile={name,specialty:String(form.get('specialty')??'').trim(),phone:String(form.get('phone')??'').trim(),email,is_public:pending?false:boolFromForm(form,'is_available'),...(pending?{}:{is_active:boolFromForm(form,'is_available')})};savedSections.push('perfil');}
   if(boolFromForm(form,'save_schedule')){const parsed=scheduleBlocksFromForm(form);if(!parsed.ok)return failSave(parsed);blocks=parsed.blocks;savedSections.push('horarios');}
   if(boolFromForm(form,'save_exception')){const prepared=await createAvailabilityException(supabase,business.business.id,params.professionalId,business.business.timezone,form,true);if(!prepared.ok)return failSave(prepared);items=prepared.data?.items??[];savedSections.push('disponibilidad');}

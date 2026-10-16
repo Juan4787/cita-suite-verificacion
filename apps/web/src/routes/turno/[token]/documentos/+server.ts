@@ -63,10 +63,12 @@ export const POST: RequestHandler = async (event) => {
       },
     );
     if (error) throw error;
-    const file = data as any;
+    const file = data;
+    if (!file) throw new Error("RADIOGRAPH_NOT_FOUND");
     if (file.status === "ready")
       return json({ id: file.id, already_complete: true });
     if (file.status !== "uploading") throw new Error("RADIOGRAPH_UPLOAD_EXPIRED");
+    if (!file.storage_bucket || !file.storage_path) throw new Error("RADIOGRAPH_UPLOAD_INVALID");
     const existing = await admin.storage
       .from(file.storage_bucket)
       .info(file.storage_path);

@@ -17,7 +17,7 @@ export const load: PageServerLoad = async (event) => {
     .eq("user_id", context.userId);
   if (own.error) error(503, "No pudimos cargar tu perfil. Volvé a intentar.");
   const professionals = (own.data ?? [])
-    .map((row: any) =>
+    .map((row) =>
       Array.isArray(row.professionals)
         ? row.professionals[0]
         : row.professionals,

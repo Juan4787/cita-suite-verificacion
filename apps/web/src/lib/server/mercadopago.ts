@@ -908,15 +908,13 @@ export const logMpWebhookEvent = async (
 	admin: CitaSupabaseClient,
 	row: MpWebhookEventRow
 ): Promise<void> => {
-	const { error } = await admin.from('mp_webhook_events').insert({ ...row, raw: readJson(row.raw ?? null, 'paymentWebhook.raw') });
-	if (error) {
-		// El log nunca voltea el procesamiento: se deja rastro en la consola de
-		// la función y se sigue.
-		console.error('No se pudo registrar el evento de Mercado Pago', error, {
-			topic: row.topic,
-			resource_id: row.resource_id,
-			processing_status: row.processing_status
-		});
+	try {
+		const { error } = await admin.from('mp_webhook_events').insert({ ...row, raw: readJson(row.raw ?? null, 'paymentWebhook.raw') });
+		if (error) console.error('No se pudo registrar el evento de Mercado Pago.');
+	} catch {
+		// The log must not overturn payment processing, even if optional JSON or
+		// the transport fails. Do not include provider bodies in application logs.
+		console.error('No se pudo registrar el evento de Mercado Pago.');
 	}
 };
 

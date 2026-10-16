@@ -3,7 +3,7 @@ import { env as publicEnv } from '$env/dynamic/public';
 import { PUBLIC_SITE_URL_FALLBACK } from '$lib/constants';
 import crypto from 'crypto';
 import type { CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
-import { readJson } from './contracts';
+import { readJson, readRecord, readArray, isRecord } from './contracts';
 import { writeAuditLog } from './audit';
 import { getBusinessAccessState, type BusinessSubscriptionRow } from './commercial-access';
 import { hmacSha256HexMatches } from './hmac';
@@ -224,10 +224,11 @@ export class MetaCloudMessagingProvider implements MessagingProvider {
 		const payload = await response.json().catch(() => null);
 		if (!response.ok) {
 			const errorMessage =
-				(payload as any)?.error?.message || `WhatsApp respondió con estado ${response.status}`;
+				(isRecord(payload) && isRecord(payload.error) && typeof payload.error.message === 'string' ? payload.error.message : null) || `WhatsApp respondió con estado ${response.status}`;
 			throw new Error(errorMessage);
 		}
-		const messageId = (payload as any)?.messages?.[0]?.id;
+		const messages = isRecord(payload) && Array.isArray(payload.messages) ? payload.messages : [];
+		const messageId = isRecord(messages[0]) && typeof messages[0].id === 'string' ? messages[0].id : null;
 		if (!messageId) throw new Error('WHATSAPP_PROVIDER_MESSAGE_ID_MISSING');
 		return { providerMessageId: String(messageId), raw: payload };
 	}
@@ -552,7 +553,7 @@ export const generateReminderDispatches = async (
 
 	for (const appointment of appointments ?? []) {
 		try {
-			const row = appointment as any;
+			const row = appointment;
 			const business = row.businesses;
 			const patient = row.patients;
 			if (!business?.is_active || !business?.whatsapp_enabled) {
@@ -950,8 +951,8 @@ export const sendBotBookingLinkReply = async (
 	}
 };
 
-const eventTimestamp = (timestamp?: string | number | null) => {
-	if (!timestamp) return new Date();
+const eventTimestamp = (timestamp?: unknown) => {
+	if (!timestamp || (typeof timestamp !== 'string' && typeof timestamp !== 'number')) return new Date();
 	const numeric = Number(timestamp);
 	if (!Number.isFinite(numeric)) return new Date();
 	return new Date(numeric * 1000);
@@ -959,7 +960,7 @@ const eventTimestamp = (timestamp?: string | number | null) => {
 
 export const processWhatsAppWebhookPayload = async (
 	supabase: CitaSupabaseClient,
-	payload: any,
+	payload: unknown,
 	now = new Date()
 ) => {
 	let events = 0;
@@ -967,10 +968,14 @@ export const processWhatsAppWebhookPayload = async (
 	let statuses = 0;
 	let botReplies = 0;
 
-	for (const entry of payload?.entry ?? []) {
-		for (const change of entry?.changes ?? []) {
-			const value = change?.value ?? {};
-			const phoneNumberId = value?.metadata?.phone_number_id ? String(value.metadata.phone_number_id) : null;
+	const root = readRecord(payload, 'messagingWebhook');
+	for (const entryValue of readArray(root.entry ?? [], 'messagingWebhook.entries')) {
+		const entry = readRecord(entryValue, 'messagingWebhook.entry');
+		for (const changeValue of readArray(entry.changes ?? [], 'messagingWebhook.changes')) {
+			const change = readRecord(changeValue, 'messagingWebhook.change');
+			const value = readRecord(change.value ?? {}, 'messagingWebhook.value');
+			const metadata = readRecord(value.metadata ?? {}, 'messagingWebhook.metadata');
+			const phoneNumberId = metadata.phone_number_id ? String(metadata.phone_number_id) : null;
 			const { data: account } = phoneNumberId
 				? await supabase
 						.from('messaging_accounts')
@@ -981,9 +986,10 @@ export const processWhatsAppWebhookPayload = async (
 						.maybeSingle()
 				: { data: null };
 
-			for (const message of value?.messages ?? []) {
+			for (const messageValue of readArray(value.messages ?? [], 'messagingWebhook.messages')) {
+				const message = readRecord(messageValue, 'messagingWebhook.message');
 				const providerEventId = String(message.id ?? crypto.randomUUID());
-				const eventPayload = { entry, change, message };
+				const eventPayload = readJson({ entry, change, message }, 'messagingWebhook.event');
 				const { data: event } = await supabase
 					.from('whatsapp_webhook_events')
 					.upsert(
@@ -1007,7 +1013,8 @@ export const processWhatsAppWebhookPayload = async (
 						| (MessagingAccount & { businesses?: { id: string; name: string; slug: string; is_active: boolean } })
 						| null;
 					if (!accountRow?.business_id) throw new Error('MESSAGING_ACCOUNT_NOT_FOUND');
-					const text = message?.text?.body ? String(message.text.body) : '';
+					const textBody = readRecord(message.text ?? {}, 'messagingWebhook.text').body;
+					const text = textBody ? String(textBody) : '';
 					const fromPhone = normalizePhoneE164(String(message.from ?? ''));
 					if (!fromPhone) throw new Error('INBOUND_PHONE_INVALID');
 					const requiresHuman = isHumanRequest(text);
@@ -1020,7 +1027,7 @@ export const processWhatsAppWebhookPayload = async (
 							from_phone_e164: fromPhone,
 							text: text || null,
 							requires_human: requiresHuman,
-							raw_payload: message,
+							raw_payload: readJson(message, 'messagingWebhook.message'),
 							received_at: eventTimestamp(message.timestamp).toISOString()
 						},
 						{ onConflict: 'provider,provider_message_id' }
@@ -1072,10 +1079,11 @@ export const processWhatsAppWebhookPayload = async (
 				}
 			}
 
-			for (const statusEvent of value?.statuses ?? []) {
+			for (const statusValue of readArray(value.statuses ?? [], 'messagingWebhook.statuses')) {
+				const statusEvent = readRecord(statusValue, 'messagingWebhook.status');
 				const statusId = String(statusEvent.id ?? crypto.randomUUID());
 				const providerEventId = `${statusId}:${String(statusEvent.status ?? 'status')}:${String(statusEvent.timestamp ?? '')}`;
-				const eventPayload = { entry, change, status: statusEvent };
+				const eventPayload = readJson({ entry, change, status: statusEvent }, 'messagingWebhook.statusEvent');
 				const { data: event } = await supabase
 					.from('whatsapp_webhook_events')
 					.upsert(
@@ -1096,12 +1104,14 @@ export const processWhatsAppWebhookPayload = async (
 
 				try {
 					const providerStatus = String(statusEvent.status ?? '');
-					if (['sent', 'delivered', 'read', 'failed'].includes(providerStatus)) {
+					if (providerStatus === 'sent' || providerStatus === 'delivered' || providerStatus === 'read' || providerStatus === 'failed') {
+						const errors = readArray(statusEvent.errors ?? [], 'messagingWebhook.errors');
+						const firstError = errors.length ? readRecord(errors[0], 'messagingWebhook.error') : {};
 						await applyProviderMessageStatus(supabase, {
 							providerMessageId: statusId,
-							status: providerStatus as 'sent' | 'delivered' | 'read' | 'failed',
+							status: providerStatus,
 							raw: statusEvent,
-							errorMessage: statusEvent?.errors?.[0]?.title ?? statusEvent?.errors?.[0]?.message ?? null,
+							errorMessage: firstError.title === undefined && firstError.message === undefined ? null : String(firstError.title ?? firstError.message),
 							now: eventTimestamp(statusEvent.timestamp)
 						});
 						statuses += 1;

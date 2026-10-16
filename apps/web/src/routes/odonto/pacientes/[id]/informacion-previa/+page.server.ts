@@ -3,11 +3,12 @@ import { getOdontoContext } from '$lib/server/odonto-context';
 import { resolvePatientPermissions } from '$lib/server/patient-permissions';
 import { bookingInformationEnabled, privateInformationHeaders } from '$lib/server/booking-information';
 import { parsePublicPatientFields } from '@turnos-saas/shared/booking-integration';
+import { isRecord, readRecord } from '$lib/server/contracts';
 import type { PageServerLoad } from './$types';
 
 function displayProfileValue(value: unknown): string {
  if (value === null || value === undefined) return 'Sin registrar';
- if (typeof value === 'object') { const entry = value as Record<string, unknown>; return 'years' in entry ? `${entry.years} años (al ${entry.as_of})` : 'value' in entry ? String(entry.value) : JSON.stringify(value); }
+ if (isRecord(value)) { const entry = value; return 'years' in entry ? `${entry.years} años (al ${entry.as_of})` : 'value' in entry ? String(entry.value) : JSON.stringify(value); }
  return typeof value === 'boolean' ? value ? 'Sí' : 'No' : String(value);
 }
 
@@ -24,9 +25,21 @@ export const load: PageServerLoad = async (event) => {
   ]);
   if (results.some(result => result.error)) error(503, 'No pudimos cargar la información. Volvé a intentar en unos minutos.');
   if (!results[0].data) error(404, 'No encontramos la ficha o tu usuario no puede verla.');
-  const history = [...(results[1].data ?? []).filter(row => !(results[2].data ?? []).some(submission => submission.appointment_id === row.appointment_id)), ...(results[2].data ?? [])].sort((a,b) => b.created_at.localeCompare(a.created_at));
+  const history = [...(results[1].data ?? []).filter(row => !(results[2].data ?? []).some(submission => submission.appointment_id === row.appointment_id)).map(row => ({ ...row, id: row.appointment_id, profile_changes: {} })), ...(results[2].data ?? [])].sort((a,b) => b.created_at.localeCompare(a.created_at));
   return { patient: results[0].data, timezone: context.business.business.timezone,
-    history: history.map((row: any) => ({ id: row.id ?? row.appointment_id, created_at: row.created_at, comment: row.free_comment, changes: Object.entries(row.profile_changes?.after ?? {}).map(([key, value]) => ({ label: (parsePublicPatientFields(row.schema_snapshot).find(field => field.patientField === key) ?? parsePublicPatientFields(row.schema_snapshot).find(field => field.id === key))?.label ?? 'Dato del perfil', before: displayProfileValue(row.profile_changes?.before?.[key]), after: displayProfileValue(value) })),
-      responses: parsePublicPatientFields(row.schema_snapshot).map(field => ({ label: field.label, value: row.answers[field.id] === undefined ? 'Sin responder' : typeof row.answers[field.id] === 'boolean' ? row.answers[field.id] ? 'Sí' : 'No' : String(row.answers[field.id]) })) })),
+    history: history.map((row) => {
+      const schema = parsePublicPatientFields(row.schema_snapshot);
+      const answers = readRecord(row.answers, 'intakeHistory.answers');
+      const changes = readRecord(row.profile_changes, 'intakeHistory.profileChanges');
+      const before = changes.before === undefined ? {} : readRecord(changes.before, 'intakeHistory.before');
+      const after = changes.after === undefined ? {} : readRecord(changes.after, 'intakeHistory.after');
+      return { id: row.id, created_at: row.created_at, comment: row.free_comment,
+        changes: Object.entries(after).map(([key, value]) => ({
+          label: (schema.find(field => field.patientField === key) ?? schema.find(field => field.id === key))?.label ?? 'Dato del perfil',
+          before: displayProfileValue(before[key]), after: displayProfileValue(value)
+        })),
+        responses: schema.map(field => ({ label: field.label, value: answers[field.id] === undefined ? 'Sin responder' : typeof answers[field.id] === 'boolean' ? answers[field.id] ? 'Sí' : 'No' : String(answers[field.id]) }))
+      };
+    }),
     limited: results.slice(1).some(result => (Array.isArray(result.data) ? result.data.length : 0) === 50) };
 };

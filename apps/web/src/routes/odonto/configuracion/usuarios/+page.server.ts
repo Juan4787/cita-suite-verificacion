@@ -1,3 +1,4 @@
+import { readArray, readRecord } from '$lib/server/contracts';
 import {
 	BUSINESS_ROLES,
 	demoBusinessContext,
@@ -105,7 +106,8 @@ const normalizeEmail = (value: FormDataEntryValue | null) =>
 		.trim()
 		.toLowerCase();
 
-const normalizeAccess = (row: any): BusinessRoleAccess | null => {
+const normalizeAccess = (value: unknown): BusinessRoleAccess | null => {
+	const row = readRecord(value, 'businessRoleAccess');
 	const role = String(row?.role ?? '');
 	const status = String(row?.status ?? '');
 	if (!row?.id || !row?.business_id || !row?.email || !isBusinessRole(role)) return null;
@@ -130,7 +132,7 @@ const listRoleAccess = async (
 		target_business_id: businessId
 	});
 	if (error) throw error;
-	return ((data ?? []) as unknown[])
+	return readArray(data, 'businessRoleAccessList')
 		.map(normalizeAccess)
 		.filter((item): item is BusinessRoleAccess => Boolean(item));
 };
@@ -147,7 +149,7 @@ const listServices = async (
 		.order('sort_order')
 		.order('name');
 	if (error) throw error;
-	return ((data ?? []) as any[]).map((item) => ({
+	return (data ?? []).map((item) => ({
 		id: String(item.id),
 		name: String(item.name ?? ''),
 		duration_minutes: Number(item.duration_minutes ?? 0),
@@ -294,7 +296,7 @@ const saveRoleAccessDirect = async ({
 			.eq('professional_id', effectiveProfessionalId)
 			.limit(10);
 		if (linkedError) throw linkedError;
-		if ((linkedRows ?? []).some((row: any) => !targetUserId || String(row.user_id) !== targetUserId)) {
+		if ((linkedRows ?? []).some((row) => !targetUserId || String(row.user_id) !== targetUserId)) {
 			throw new Error('PROFESSIONAL_ALREADY_LINKED_TO_USER');
 		}
 	}
@@ -442,7 +444,7 @@ const parseNewServices = (raw: string): NewServiceInput[] => {
 		throw new Error('INVALID_NEW_SERVICES');
 	}
 	if (!Array.isArray(parsed)) throw new Error('INVALID_NEW_SERVICES');
-	return parsed.map((item: any) => {
+	return parsed.map((item) => {
 		const name = String(item?.name ?? '').trim();
 		const duration = Number(item?.duration_minutes ?? 0);
 		if (!name) throw new Error('NEW_SERVICE_NAME_REQUIRED');

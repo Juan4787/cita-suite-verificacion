@@ -16,8 +16,10 @@ export const POST: RequestHandler = async (event) => {
       { p_token: token, p_file_id: event.params.fileId },
     );
     if (error) throw error;
-    const file = data as any;
+    const file = data;
+    if (!file) throw new Error("RADIOGRAPH_NOT_FOUND");
     if (file.status === "ready") return json({ ready: true, id: file.id });
+    if (!file.storage_bucket || !file.storage_path) throw new Error("RADIOGRAPH_UPLOAD_INVALID");
     if (!isClinicalFileMime(file.mime_type))
       throw new Error("RADIOGRAPH_FORMAT_INVALID");
     const verified = await verifyStoredClinicalImage({

@@ -153,15 +153,15 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
 	if (teamResult.error) console.error('Error cargando equipo del turno', teamResult.error);
 
 	const userLabels = Object.fromEntries(
-		(usersResult.data ?? []).map((user: any) => [String(user.user_id), user.email ?? String(user.user_id).slice(0, 8)])
+		(usersResult.data ?? []).map((user) => [String(user.user_id), user.email ?? String(user.user_id).slice(0, 8)])
 	);
 
 	// Botón "Enviar actualización por WhatsApp": solo si el turno sigue activo, hay un
 	// teléfono E.164 plausible y un token. El enlace privado muestra SOLO el aviso de
 	// reprogramación. El texto va precargado y neutral (sin datos clínicos).
-	const patient = (data as any).patients;
+	const patient = data.patients;
 	const phone = normalizeArgentineWhatsAppPhone(patient?.phone_e164);
-	const token = (data as any).confirmation_token ? String((data as any).confirmation_token) : null;
+	const token = data.confirmation_token ? String(data.confirmation_token) : null;
 	const canNotifyReschedule = isActiveAppointmentStatus(data.status);
 	let rescheduleWhatsAppUrl: string | null = null;
 	let rescheduleWhatsAppWebUrl: string | null = null;
@@ -184,8 +184,8 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
 
 	const phoneWarningAcknowledged =
 		['missing', 'invalid'].includes(
-			String((data as any).phone_communication_status_at_booking)
-		) && Boolean((data as any).phone_warning_acknowledged_at);
+			String(data.phone_communication_status_at_booking)
+		) && Boolean(data.phone_warning_acknowledged_at);
 	const justCreated = shouldOfferCreatedAppointmentActivation({
 		requested: url.searchParams.get('created') === '1',
 		source: String(data.source),
@@ -269,7 +269,7 @@ export const actions: Actions = {
 				userId,
 				reason: String(form.get('reason') ?? '').trim() || null
 			});
-		} catch (error: any) {
+		} catch (error) {
 			console.error('Error actualizando turno', error);
 			return fail(400, { message: getHumanAppointmentErrorMessage(error) });
 		}
@@ -394,7 +394,7 @@ export const actions: Actions = {
 				startsAt: new Date(slot.starts_at),
 				ignoreBreak
 			});
-		} catch (error: any) {
+		} catch (error) {
 			console.error('Error reprogramando turno', error);
 			return fail(400, { message: getHumanAppointmentErrorMessage(error) });
 		}

@@ -159,4 +159,13 @@ describe('internal availability snapshot', () => {
 		).rejects.toThrow('Rango inválido');
 		expect(rpc).not.toHaveBeenCalled();
 	});
+	it('rechaza colecciones incompletas en lugar de aparentar una agenda vacía', async () => {
+		for (const data of [{ ...rpcPayload, blocks: undefined }, { ...rpcPayload, assignments: null }, { ...rpcPayload, generated_at: 'invalid' }]) {
+			const from = vi.fn();
+			await expect(loadInternalAvailabilitySnapshot({ rpc: vi.fn().mockResolvedValue({ data, error: null }), from } as unknown as SupabaseClient,
+				{ business, fromDate: '2026-07-25', toDate: '2026-07-26' })).rejects.toThrow();
+			expect(from).not.toHaveBeenCalled();
+		}
+	});
+
 });

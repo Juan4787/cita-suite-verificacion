@@ -25,7 +25,10 @@ import {
 	isActiveAppointmentStatus
 } from '$lib/utils/appointment-visibility';
 import { resolveCommunicationPhoneDecision } from '$lib/utils/communication-phone';
-import { fail, redirect } from '@sveltejs/kit';
+import { isRecord } from '$lib/server/contracts';
+import type { CitaRow } from '$lib/types/database';
+import type { AvailabilitySnapshot } from '$lib/availability/snapshot';
+import { fail, redirect, isRedirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -111,27 +114,22 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 		}
 	})();
 
-	let dayAppointments: any[] | null = null;
+	const appointmentQuery = () => {
+		const selected = professionalId
+			? supabase.from('appointments').select(`${APPOINTMENT_COLUMNS}, appointment_professionals!inner(professional_id)` as const)
+				.eq('appointment_professionals.professional_id', professionalId)
+			: supabase.from('appointments').select(APPOINTMENT_COLUMNS);
+		return selected.eq('business_id', business.business.id);
+	};
+	type AgendaAppointment = NonNullable<Awaited<ReturnType<typeof appointmentQuery>>['data']>[number];
+	let dayAppointments: AgendaAppointment[] | null = null;
 	let appointmentsError: unknown = null;
 	let anyDayLimited = false;
 	if (anyDay) {
 		// "Cualquier día" es una vista operativa: sólo devuelve próximos turnos activos.
 		// Los registros históricos siguen disponibles al elegir explícitamente una fecha pasada.
 		const baseQuery = () => {
-			let builder = supabase
-				.from('appointments')
-				.select(
-					professionalId
-						? `${APPOINTMENT_COLUMNS}, appointment_professionals!inner(professional_id)`
-						: APPOINTMENT_COLUMNS
-				)
-				.eq('business_id', business.business.id);
-			if (professionalId) {
-				builder = builder.eq(
-					'appointment_professionals.professional_id',
-					professionalId
-				);
-			}
+			let builder = appointmentQuery();
 			if (serviceId) builder = builder.eq('service_id', serviceId);
 			if (patientId) builder = builder.eq('patient_id', patientId);
 			if (status) builder = builder.eq('status', status);
@@ -150,19 +148,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 	} else {
 		const dayStart = zonedDateTimeToUtc(date, '00:00', business.business.timezone);
 		const dayEnd = zonedDateTimeToUtc(date, '23:59', business.business.timezone);
-		({ data: dayAppointments, error: appointmentsError } = await supabase
-			.from('appointments')
-			.select(
-				professionalId
-					? `${APPOINTMENT_COLUMNS}, appointment_professionals!inner(professional_id)`
-					: APPOINTMENT_COLUMNS
-			)
-			.eq('business_id', business.business.id)
-			.match(
-				professionalId
-					? { 'appointment_professionals.professional_id': professionalId }
-					: {}
-			)
+		({ data: dayAppointments, error: appointmentsError } = await appointmentQuery()
 			.gte('starts_at', dayStart.toISOString())
 			.lte('starts_at', dayEnd.toISOString())
 			.order('starts_at'));
@@ -171,7 +157,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 		console.error('Error cargando agenda diaria', appointmentsError);
 	}
 
-	const filteredAppointments = (dayAppointments ?? []).filter((appointment: any) => {
+	const filteredAppointments = (dayAppointments ?? []).filter((appointment) => {
 		if (serviceId && appointment.service_id !== serviceId) return false;
 		if (patientId && appointment.patient_id !== patientId) return false;
 		if (status && appointment.status !== status) return false;
@@ -180,14 +166,14 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 
 	const stats = APPOINTMENT_STATUSES.map((appointmentStatus) => ({
 		status: appointmentStatus,
-		count: filteredAppointments.filter((appointment: any) => appointment.status === appointmentStatus).length
+		count: filteredAppointments.filter((appointment) => appointment.status === appointmentStatus).length
 	}));
 
 	const shouldLoadReferences = Boolean(professionalId || serviceId || patientId);
-	let professionals: any[] = [];
-	let services: any[] = [];
-	let patients: any[] = [];
-	let assignments: any[] = [];
+	let professionals: AvailabilitySnapshot['professionals'] = [];
+	let services: AvailabilitySnapshot['services'] = [];
+	let patients: Pick<CitaRow<'patients'>, 'id' | 'full_name' | 'phone' | 'phone_raw' | 'phone_e164' | 'dni' | 'birth_date' | 'activity_at' | 'blocked'>[] = [];
+	let assignments: AvailabilitySnapshot['assignments'] = [];
 	let availabilitySnapshot = null;
 	if (shouldLoadReferences) {
 		try {
@@ -205,7 +191,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 	}
 	const appointments = filteredAppointments;
 
-	const serviceProfessionalIds = (assignments ?? []).reduce<Record<string, string[]>>((acc, assignment: any) => {
+	const serviceProfessionalIds = (assignments ?? []).reduce<Record<string, string[]>>((acc, assignment) => {
 		const service = String(assignment.service_id);
 		acc[service] = acc[service] ?? [];
 		acc[service].push(String(assignment.professional_id));
@@ -434,8 +420,8 @@ export const actions: Actions = {
 			try {
 				const replay = await findAppointmentCreationReplay(admin, commonInput);
 				if (replay) throw redirect(303, createdAppointmentDetailUrl(replay.id, date));
-			} catch (error: any) {
-				if (error?.status && error?.location) throw error;
+			} catch (error) {
+				if (isRedirect(error)) throw error;
 				console.error('Error recuperando un turno ya creado', error);
 				return fail(500, { message: getHumanAppointmentErrorMessage(error), values });
 			}
@@ -500,11 +486,11 @@ export const actions: Actions = {
 								professionalId
 							});
 			throw redirect(303, createdAppointmentDetailUrl(created.id, date));
-		} catch (error: any) {
-			if (error?.status && error?.location) throw error;
+		} catch (error) {
+			if (isRedirect(error)) throw error;
 			console.error('Error creando turno', error);
 			const message = getHumanAppointmentErrorMessage(error);
-			return fail(error?.code === '23P01' ? 409 : 500, { message, values });
+			return fail(isRecord(error) && error.code === '23P01' ? 409 : 500, { message, values });
 		}
 	},
 	update_status: async ({ request, locals, fetch, cookies }) => {
@@ -538,7 +524,7 @@ export const actions: Actions = {
 				userId,
 				reason: String(form.get('reason') ?? '').trim() || null
 			});
-		} catch (error: any) {
+		} catch (error) {
 			console.error('Error actualizando turno', error);
 			return fail(400, { message: getHumanAppointmentErrorMessage(error) });
 		}

@@ -42,7 +42,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 		.eq('business_id', business.business.id)
 		.eq('user_id', userId);
 
-	const professionalIds = (links ?? []).map((link: any) => String(link.professional_id));
+	const professionalIds = (links ?? []).map((link) => String(link.professional_id));
 	const selectedProfessionalId = url.searchParams.get('professional_id') ?? '';
 	const visibleProfessionalIds =
 		selectedProfessionalId && professionalIds.includes(selectedProfessionalId)

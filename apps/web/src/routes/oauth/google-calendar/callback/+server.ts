@@ -1,3 +1,4 @@
+import { isRecord } from '$lib/server/contracts';
 import {
 	authorizeGoogleCalendarAppointment,
 	consumeGoogleCalendarOAuthAttempt,
@@ -71,8 +72,8 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 						? 'preparing'
 						: 'unavailable';
 		return redirectToAppointment(appointmentToken, status);
-	} catch (error: any) {
-		const code = String(error?.message ?? error?.code ?? 'unknown');
+	} catch (error) {
+		const code = error instanceof Error ? error.message : isRecord(error) ? String(error.message ?? error.code ?? 'unknown') : 'unknown';
 		console.error('No se pudo completar Google Calendar', {
 			appointmentId,
 			code: code.slice(0, 120)

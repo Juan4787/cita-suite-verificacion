@@ -127,7 +127,7 @@ export const actions: Actions = {
 			const code = authErrorCode(error);
 			const status = authErrorStatus(error);
 			const msg = error?.message?.toLowerCase() ?? '';
-			if ((error as any)?.code === 'email_provider_disabled' || msg.includes('email logins are disabled')) {
+			if (error?.code === 'email_provider_disabled' || msg.includes('email logins are disabled')) {
 				console.error('El proveedor de ingreso por email no está disponible', { code, status });
 				return loginFail(503, LOGIN_UNAVAILABLE_MESSAGE, email);
 			}

@@ -248,7 +248,7 @@ const buildMasterData = async (
 			subscription
 		])
 	);
-	const membershipsByBusinessId = new Map<string, any[]>();
+	const membershipsByBusinessId = new Map<string, (NonNullable<typeof membershipsRes.data>[number] & { email: string | null })[]>();
 	for (const membership of membershipsRes.data ?? []) {
 		const businessId = String(membership.business_id);
 		const list = membershipsByBusinessId.get(businessId) ?? [];
@@ -259,7 +259,7 @@ const buildMasterData = async (
 		membershipsByBusinessId.set(businessId, list);
 	}
 
-	const grantsByBusinessId = new Map<string, any[]>();
+	const grantsByBusinessId = new Map<string, NonNullable<typeof grantsRes.data>>();
 	for (const grant of grantsRes.data ?? []) {
 		const businessId = String(grant.business_id);
 		const list = grantsByBusinessId.get(businessId) ?? [];
@@ -281,7 +281,7 @@ const buildMasterData = async (
 		return Boolean(email && (email === normalizedMasterEmail || isMasterEmail(email)));
 	};
 
-	const businesses = (businessesRes.data ?? []).map((business: any) => {
+	const businesses = (businessesRes.data ?? []).map((business) => {
 		const subscription = subscriptionsByBusinessId.get(String(business.id)) ?? null;
 		const access = getBusinessAccessState(subscription, { businessCreatedAt: business.created_at });
 		const members = membershipsByBusinessId.get(String(business.id)) ?? [];
@@ -298,18 +298,18 @@ const buildMasterData = async (
 				mpSubsByBusinessId.get(String(business.id)) ?? []
 			)
 		};
-	}).filter((business: any) => {
+	}).filter((business) => {
 		const ownerEmails = (business.owners ?? [])
-			.map((owner: any) => String(owner.email ?? '').toLowerCase())
+			.map((owner) => String(owner.email ?? '').toLowerCase())
 			.filter(Boolean);
 		if (isProtectedEmail(business.email)) return false;
 		return !ownerEmails.some((email: string) => isProtectedEmail(email));
 	});
 
 	const businessNameById = new Map(
-		businesses.map((business: any) => [String(business.id), String(business.name ?? '')])
+		businesses.map((business) => [String(business.id), String(business.name ?? '')])
 	);
-	const assistance = ((assistanceRes.error ? [] : assistanceRes.data ?? []) as any[])
+	const assistance = (assistanceRes.error ? [] : assistanceRes.data ?? [])
 		.filter((grant) => businessNameById.has(String(grant.business_id)))
 		.map((grant) => {
 			const business = Array.isArray(grant.business) ? grant.business[0] : grant.business;
@@ -326,7 +326,7 @@ const buildMasterData = async (
 		});
 	// Solo eventos de negocios visibles en el panel (o globales, sin negocio):
 	// los negocios filtrados por protección no deben filtrarse por acá.
-	const mpAttention = ((mpAttentionRes.data ?? []) as any[])
+	const mpAttention = (mpAttentionRes.data ?? [])
 		.filter((event) => !event.business_id || businessNameById.has(String(event.business_id)))
 		.map((event) => ({
 			...event,
@@ -336,7 +336,7 @@ const buildMasterData = async (
 		}));
 
 	return {
-		emails: (emailsRes.data ?? []).filter((item: any) => !isProtectedEmail(String(item.email ?? ''))),
+		emails: (emailsRes.data ?? []).filter((item) => !isProtectedEmail(String(item.email ?? ''))),
 		businesses,
 		statuses: COMMERCIAL_STATUSES,
 		assistance,
@@ -738,7 +738,7 @@ export const actions: Actions = {
 		const idempotencyKey = String(form.get('idempotency_key') ?? '').trim() || randomUUID();
 
 		if (!businessId) return fail(400, { message: 'Consultorio inválido.' });
-		if (!BUSINESS_ACCESS_OPERATIONS.includes(operation as any)) {
+		if (!BUSINESS_ACCESS_OPERATIONS.some(allowed => allowed === operation)) {
 			return fail(400, { message: 'Operación inválida.' });
 		}
 		if (!duration && !['disable_business_access', 'enable_business_access', 'archive_business', 'payment_cancelled', 'unset_permanent'].includes(operation)) {

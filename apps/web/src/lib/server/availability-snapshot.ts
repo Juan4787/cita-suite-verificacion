@@ -1,12 +1,11 @@
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { addMinutes, zonedDateTimeToUtc } from '$lib/availability/calculate';
 import type {
-	AvailabilitySnapshot,
-	AvailabilitySnapshotAssignment,
-	AvailabilitySnapshotProfessional,
-	AvailabilitySnapshotService
+	AvailabilitySnapshot
 } from '$lib/availability/snapshot';
 import type { Business } from './business';
+import { parseIntegratedAvailabilityRows } from './integrated-availability';
+import { readRecord, readText, InvalidDataContractError } from './contracts';
 
 const SNAPSHOT_TTL_MS = 20_000;
 const SNAPSHOT_MAX_DAYS = 31;
@@ -48,7 +47,6 @@ const isMissingSnapshotRpcError = (error: unknown) => {
 	);
 };
 
-const asArray = <T>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
 
 const snapshotBusiness = (business: Business) => ({
 	timezone: business.timezone,
@@ -193,14 +191,15 @@ export const loadInternalAvailabilitySnapshot = async (
 		if (!isMissingSnapshotRpcError(rpcResult.error)) throw rpcResult.error;
 		payload = await loadSnapshotFallback(supabase, business.id, rangeStart, rangeEnd);
 	} else if (rpcResult.data && typeof rpcResult.data === 'object') {
-		payload = rpcResult.data as SnapshotRpcPayload;
+		payload = readRecord(rpcResult.data, 'internalAvailability');
 	} else {
 		throw new Error('El snapshot de disponibilidad no devolvió datos.');
 	}
 
-	const generatedAt = payload.generated_at
-		? new Date(payload.generated_at).toISOString()
-		: new Date().toISOString();
+	const generatedAtValue = payload.generated_at === undefined ? new Date().toISOString() : readText(payload.generated_at, 'internalAvailability.generatedAt');
+	if (!Number.isFinite(Date.parse(generatedAtValue))) throw new InvalidDataContractError('internalAvailability.generatedAt');
+	const generatedAt = new Date(generatedAtValue).toISOString();
+	const rows = parseIntegratedAvailabilityRows(payload);
 	return {
 		schema_version: 1,
 		generated_at: generatedAt,
@@ -208,11 +207,11 @@ export const loadInternalAvailabilitySnapshot = async (
 		from_date: fromDate,
 		to_date: toDate,
 		business: snapshotBusiness(business),
-		services: asArray<AvailabilitySnapshotService>(payload.services),
-		professionals: asArray<AvailabilitySnapshotProfessional>(payload.professionals),
-		assignments: asArray<AvailabilitySnapshotAssignment>(payload.assignments),
-		rules: asArray(payload.rules),
-		exceptions: asArray(payload.exceptions),
-		blocks: asArray(payload.blocks)
+		services: rows.services.map(({ description, price_label, ...service }) => service),
+		professionals: rows.professionals.map(({ avatar_url, ...professional }) => professional),
+		assignments: rows.assignments,
+		rules: rows.rules,
+		exceptions: rows.exceptions,
+		blocks: rows.blocks
 	};
 };

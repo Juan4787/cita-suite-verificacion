@@ -71,17 +71,17 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 			.eq('business_id', context.business.id)
 			.eq('is_active', true)
 	]);
-	const professionalsWithRules = new Set((rules ?? []).map((rule: any) => String(rule.professional_id)));
+	const professionalsWithRules = new Set((rules ?? []).map((rule) => String(rule.professional_id)));
 	const readyServices = new Set<string>();
 	const readyProfessionals = new Set<string>();
 	for (const assignment of assignments ?? []) {
-		const service = (assignment as any).services;
-		const professional = (assignment as any).professionals;
+		const service = assignment.services;
+		const professional = assignment.professionals;
 		if (!service?.is_active || !service?.is_public) continue;
 		if (!professional?.is_active || !professional?.is_public) continue;
-		if (!professionalsWithRules.has(String((assignment as any).professional_id))) continue;
-		readyServices.add(String((assignment as any).service_id));
-		readyProfessionals.add(String((assignment as any).professional_id));
+		if (!professionalsWithRules.has(String(assignment.professional_id))) continue;
+		readyServices.add(String(assignment.service_id));
+		readyProfessionals.add(String(assignment.professional_id));
 	}
 	return {
 		context,

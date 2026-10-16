@@ -47,10 +47,11 @@ export const GET: RequestHandler = async ({ params, locals, fetch, cookies, url,
 		.eq('id', params.appointmentId)
 		.maybeSingle();
 
-	const patient = (appointment as any)?.patients;
+	const patient = appointment?.patients;
 	const phone = normalizeArgentineWhatsAppPhone(patient?.phone_e164);
 	if (
 		!appointment ||
+		!patient ||
 		!phone ||
 		patient.blocked ||
 		!['reserved', 'confirmed'].includes(String(appointment.status))

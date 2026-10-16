@@ -1,3 +1,4 @@
+import { isRecord } from '$lib/server/contracts';
 import { readClinicalEntryAmount } from '$lib/server/clinical-entry-costs';
 import { bookingInformationEnabled } from '$lib/server/booking-information';
 import { env } from '$env/dynamic/private';
@@ -1074,7 +1075,7 @@ export const actions: Actions = {
 			return fail(500, { message: 'No pudimos actualizar la ficha del paciente. Revisá los datos y volvé a intentar.' });
 		}
 		const savedAtomicUpdate = Array.isArray(atomicUpdate) ? atomicUpdate[0] : atomicUpdate;
-		if (!savedAtomicUpdate || typeof savedAtomicUpdate !== 'object' || !(savedAtomicUpdate as any).patient_id) {
+		if (!isRecord(savedAtomicUpdate) || typeof savedAtomicUpdate.patient_id !== 'string' || !savedAtomicUpdate.patient_id) {
 			console.error('La actualización de paciente no devolvió una ficha confirmada');
 			return fail(500, { message: 'No se pudo confirmar la actualización de la ficha.' });
 		}

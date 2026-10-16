@@ -62,7 +62,7 @@ export const GET: RequestHandler = async ({ url, locals, fetch, cookies, setHead
 		return json({ message: 'No se pudieron cargar profesionales y servicios.' }, { status: 500 });
 	}
 	const serviceProfessionalIds = snapshot.assignments.reduce<Record<string, string[]>>(
-		(acc, assignment: any) => {
+		(acc, assignment) => {
 			const serviceId = String(assignment.service_id);
 			acc[serviceId] = acc[serviceId] ?? [];
 			acc[serviceId].push(String(assignment.professional_id));

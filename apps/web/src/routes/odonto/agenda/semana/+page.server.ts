@@ -62,26 +62,19 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 	const rangeStart = zonedDateTimeToUtc(dates[0], '00:00', business.business.timezone);
 	const rangeEnd = zonedDateTimeToUtc(dates[6], '23:59', business.business.timezone);
 
-	let appointmentsQuery = supabase
-		.from('appointments')
-		.select(
-			selectedProfessionalId
-				? 'id, professional_id, starts_at, status, appointment_professionals!inner(professional_id)'
-				: 'id, professional_id, starts_at, status'
-		)
+	// Separate literal selects keep the SDK's relationship inference exact.
+	const appointmentsQuery = selectedProfessionalId
+		? supabase.from('appointments')
+			.select('id, professional_id, starts_at, status, appointment_professionals!inner(professional_id)')
+			.eq('appointment_professionals.professional_id', selectedProfessionalId)
+		: supabase.from('appointments').select('id, professional_id, starts_at, status');
+	const rangedAppointments = appointmentsQuery
 		.eq('business_id', business.business.id)
 		.gte('starts_at', rangeStart.toISOString())
-		.lte('starts_at', rangeEnd.toISOString())
-		.order('starts_at');
-	if (selectedProfessionalId) {
-		appointmentsQuery = appointmentsQuery.eq(
-			'appointment_professionals.professional_id',
-			selectedProfessionalId
-		);
-	}
+		.lte('starts_at', rangeEnd.toISOString()).order('starts_at');
 
 	const [{ data: appointments, error: appointmentsError }, { data: professionals }] = await Promise.all([
-		appointmentsQuery,
+		rangedAppointments,
 		supabase
 			.from('professionals')
 			.select('id, name, is_active')
@@ -97,14 +90,14 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 
 	const days = dates.map((date) => {
 		const dayAppointments = (appointments ?? []).filter(
-			(appointment: any) => localDateFor(appointment.starts_at, business.business.timezone) === date
+			(appointment) => localDateFor(appointment.starts_at, business.business.timezone) === date
 		);
 		return {
 			date,
 			total: dayAppointments.length,
 			stats: APPOINTMENT_STATUSES.map((status) => ({
 				status,
-				count: dayAppointments.filter((appointment: any) => appointment.status === status).length
+				count: dayAppointments.filter((appointment) => appointment.status === status).length
 			}))
 		};
 	});

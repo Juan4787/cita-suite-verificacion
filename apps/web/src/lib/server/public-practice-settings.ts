@@ -132,6 +132,11 @@ export const legacyPublicPracticeActions: Actions = {
   },
 };
 
+type PracticeSettings = import('$lib/types/database').CitaRow<'businesses'>;
+type LoadedPracticeSettings = Pick<PracticeSettings, 'id' | 'name' | 'updated_at' | 'patient_documents_enabled' | 'public_contact_enabled' | 'whatsapp_contact_enabled' | 'whatsapp_phone' | 'whatsapp_message'>;
+type StorageBudget = ReturnType<typeof parseStorageBudget>;
+export function loadPublicPracticeSettings(event: RequestEvent, documents: true): Promise<{ settings: LoadedPracticeSettings; budget: StorageBudget }>;
+export function loadPublicPracticeSettings(event: RequestEvent, documents: boolean): Promise<{ settings: LoadedPracticeSettings; budget: StorageBudget | null }>;
 export async function loadPublicPracticeSettings(
   event: RequestEvent,
   documents: boolean,

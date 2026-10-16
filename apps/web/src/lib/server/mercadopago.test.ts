@@ -1295,6 +1295,19 @@ describe('logMpWebhookEvent', () => {
 		expect(errorSpy).toHaveBeenCalled();
 		errorSpy.mockRestore();
 	});
+	it('no cambia el procesamiento ante JSON inválido y no filtra su contenido', async () => {
+		const { admin, insertCalls } = createAdminMock();
+		const raw: Record<string, unknown> = { secret: 'PRIVATE_SENTINEL' }; raw.self = raw;
+		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+		try {
+			await expect(logMpWebhookEvent(admin, { topic: 'payment', action: null, resource_id: null, request_id: null,
+				live_mode: null, signature_valid: false, processing_status: 'rejected', processing_detail: 'invalid', raw })).resolves.toBeUndefined();
+			expect(insertCalls).toHaveLength(0);
+			expect(log).toHaveBeenCalledOnce();
+			expect(JSON.stringify(log.mock.calls)).not.toContain('PRIVATE_SENTINEL');
+		} finally { log.mockRestore(); }
+	});
+
 });
 
 describe('logMpWebhookEventOnce', () => {

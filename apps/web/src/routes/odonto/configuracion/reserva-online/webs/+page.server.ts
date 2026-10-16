@@ -1,3 +1,4 @@
+import { isRedirect } from '@sveltejs/kit';
 import { fail, error, redirect } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
 import { getOdontoContext } from "$lib/server/odonto-context";
@@ -109,7 +110,7 @@ export const actions: Actions = {
       const id = readText(saved.id, 'bookingIntegration.saved.id');
       throw redirect(303, `?perfil=${encodeURIComponent(id)}&instalar=1&guardado=1`);
     } catch (cause) {
-      if ((cause as any)?.status === 303) throw cause;
+      if (isRedirect(cause)) throw cause;
       return fail(400, {
         message:
           "Revisá la dirección web y las opciones de la agenda antes de guardar.",
