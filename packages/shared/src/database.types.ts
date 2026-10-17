@@ -4277,8 +4277,24 @@ export type Database = {
         }
         Returns: string
       }
+      get_availability_catalog: {
+        Args: { p_business_id: string; p_public: boolean }
+        Returns: Json
+      }
       get_availability_snapshot: {
         Args: { p_business_id: string; p_from: string; p_to: string }
+        Returns: Json
+      }
+      get_availability_window: {
+        Args: {
+          p_business_id: string
+          p_configuration_revision: number
+          p_from_date: string
+          p_professional_ids: string[]
+          p_public: boolean
+          p_service_id: string
+          p_to_date: string
+        }
         Returns: Json
       }
       get_clinical_file_daily_transfer_estimates: {
