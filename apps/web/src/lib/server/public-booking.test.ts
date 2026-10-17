@@ -1,3 +1,6 @@
+import { createClient } from '@supabase/supabase-js';
+import type { CitaDatabase } from '$lib/types/database';
+import { readRecord } from '$lib/contracts/json';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	assertPublicBookingPatientPolicy,
@@ -489,11 +492,11 @@ describe('public joint booking creation', () => {
 
 // ---------------------------------------------------------------------------
 // loadPublicBookingState: el flujo navega la misma URL varias veces; estos tests
-// fijan el contrato de performance (caché + reuso del escaneo de días).
+// fijan el contrato de lecturas acotadas, frescas y sin fallback de tablas.
 // ---------------------------------------------------------------------------
 
 const business = {
-	id: 'biz-1',
+	id: '00000000-0000-4000-8000-000000000001',
 	name: 'Consultorio Test',
 	slug: 'consultorio-test',
 	phone: null,
@@ -512,7 +515,7 @@ const business = {
 
 const subscription = {
 	id: 'sub-1',
-	business_id: 'biz-1',
+	business_id: '00000000-0000-4000-8000-000000000001',
 	commercial_access_enabled: true,
 	is_permanent: true,
 	subscription_status: 'active',
@@ -523,226 +526,79 @@ const subscription = {
 	expiration_notice_enabled: false
 };
 
-const queryBuilder = (data: unknown) => {
-	const builder: Record<string, unknown> = {};
-	for (const method of [
-		'eq',
-		'in',
-		'gte',
-		'lte',
-		'lt',
-		'gt',
-		'or',
-		'order',
-		'limit',
-		'is',
-		'neq',
-		'not'
-	]) {
-		builder[method] = () => builder;
-	}
-	builder.maybeSingle = async () => ({ data, error: null });
-	builder.single = async () => ({ data, error: null });
-	(builder as { then: unknown }).then = (resolve: (value: unknown) => unknown) =>
-		resolve({ data, error: null });
-	return builder;
-};
-
-const createSupabaseMock = (
-	overrides: {
-		professionalName?: string;
-		includeUnavailableFixtures?: boolean;
-		includeSecondProfessional?: boolean;
-	} = {}
-) => {
-	const tableReads: string[] = [];
-	return {
-	tableReads,
-	from: (table: string) => {
-		tableReads.push(table);
-		return {
-		select: (columns: string) => {
-			const professionalName = overrides.professionalName ?? 'Dra. Uno';
-			if (table === 'businesses') return queryBuilder(business);
-			if (table === 'business_subscriptions') return queryBuilder(subscription);
-			if (table === 'services') {
-				const services = [
-					{
-						id: 'svc-1',
-						business_id: 'biz-1',
-						name: 'Consulta',
-						description: null,
-						duration_minutes: 30,
-						buffer_before_minutes: 0,
-						buffer_after_minutes: 0,
-						price_label: null,
-						is_active: true,
-						is_public: true,
-						sort_order: 0
-					}
-				];
-				if (overrides.includeUnavailableFixtures) {
-					services.push({
-						...services[0],
-						id: 'svc-unavailable',
-						name: 'Sin disponibilidad',
-						sort_order: 1
-					});
-				}
-				return queryBuilder(services);
-			}
-			if (table === 'professionals') {
-				const professionals = [
-					{
-						id: 'pro-1',
-						name: professionalName,
-						specialty: null,
-						avatar_url: null,
-						is_active: true,
-						is_public: true,
-						sort_order: 0
-					}
-				];
-				if (overrides.includeSecondProfessional) {
-					professionals.push({
-						...professionals[0],
-						id: 'pro-2',
-						name: 'Dr. Dos',
-						sort_order: 1
-					});
-				}
-				if (overrides.includeUnavailableFixtures) {
-					professionals.push({
-						...professionals[0],
-						id: 'pro-unavailable',
-						name: 'Dr. Sin horarios',
-						sort_order: 1
-					});
-				}
-				return queryBuilder(professionals);
-			}
-			if (table === 'professional_services') {
-				if (columns.includes('professionals!inner')) {
-					return queryBuilder([
-						{
-							professional_id: 'pro-1',
-							professionals: {
-								id: 'pro-1',
-								name: professionalName,
-								specialty: null,
-								avatar_url: null,
-								is_active: true,
-								is_public: true,
-								sort_order: 0
-							}
-						},
-						...(overrides.includeSecondProfessional
-							? [
-									{
-										professional_id: 'pro-2',
-										professionals: {
-											id: 'pro-2',
-											name: 'Dr. Dos',
-											specialty: 'Control',
-											avatar_url: null,
-											is_active: true,
-											is_public: true,
-											sort_order: 1
-										}
-									}
-								]
-							: [])
-					]);
-				}
-				return queryBuilder([
-					{ service_id: 'svc-1', professional_id: 'pro-1' },
-					...(overrides.includeSecondProfessional
-						? [{ service_id: 'svc-1', professional_id: 'pro-2' }]
-						: []),
-					...(overrides.includeUnavailableFixtures
-						? [
-								{ service_id: 'svc-1', professional_id: 'pro-unavailable' },
-										{
-											service_id: 'svc-unavailable',
-											professional_id: 'pro-unavailable'
-										}
-							]
-						: [])
-				]);
-			}
-			if (table === 'availability_rules') {
-				return queryBuilder(
-					Array.from({ length: 7 }, (_, weekday) => [
-						{
-							id: `rule-pro-1-${weekday}`,
-							professional_id: 'pro-1',
-							weekday,
-							start_time: '09:00:00',
-							end_time: '12:00:00',
-							slot_interval_minutes: 30,
-							break_minutes: 0,
-							is_active: true
-						},
-						...(overrides.includeSecondProfessional
-							? [
-									{
-										id: `rule-pro-2-${weekday}`,
-										professional_id: 'pro-2',
-										weekday,
-										start_time: '09:23:00',
-										end_time: '12:00:00',
-										slot_interval_minutes: 15,
-										break_minutes: 0,
-										is_active: true
-									}
-								]
-							: [])
-					]).flat()
-				);
-			}
-			return queryBuilder([]);
-		}
-	};
-	}
-	};
-};
-
-const slotsForRange = (fromDate: string, toDate: string): AvailabilitySlot[] => {
-	const slots: AvailabilitySlot[] = [];
-	let cursor = fromDate;
-	while (cursor <= toDate) {
-		slots.push({
-			date: cursor,
-			time: '10:00',
-			starts_at: `${cursor}T13:00:00.000Z`,
-			ends_at: `${cursor}T13:30:00.000Z`,
-			professional_id: 'pro-1',
-			professional_name: 'Dra. Uno'
-		});
-		cursor = addDaysToDateString(cursor, 1);
-	}
-	return slots;
+// Real typed SDK with simulated HTTP. SQL completeness/permissions have their
+// own database tests; these cases verify selection, calculation and read cost.
+const createSupabaseMock = (overrides: {
+ professionalName?: string; includeUnavailableFixtures?: boolean; includeSecondProfessional?: boolean;
+ failWindow?: boolean; blockFirstWindow?: boolean;
+} = {}) => {
+ const tableReads: string[] = [];
+ const requests: Array<{ name: string; body: Record<string, unknown> }> = [];
+ const professional = { id: '00000000-0000-4000-8000-000000000003', name: overrides.professionalName ?? 'Dra. Uno', specialty: null, avatar_url: null,
+  is_active: true, is_public: true, sort_order: 0 };
+ const professionals = [professional, ...(overrides.includeSecondProfessional ? [{ ...professional, id: '00000000-0000-4000-8000-000000000004', name: 'Dr. Dos', sort_order: 1 }] : []),
+  ...(overrides.includeUnavailableFixtures ? [{ ...professional, id: '00000000-0000-4000-8000-000000000005', name: 'Dr. Sin horarios', sort_order: 2 }] : [])]
+  .filter(row => row.name.trim());
+ const ids = new Set(professionals.map(row => row.id));
+ const service = { id: '00000000-0000-4000-8000-000000000002', business_id: business.id, name: 'Consulta', description: null, duration_minutes: 30,
+  buffer_before_minutes: 0, buffer_after_minutes: 0, price_label: null, is_active: true, is_public: true, sort_order: 0 };
+ const source = {
+  schema_version: 2, business_id: business.id, scope: 'public', configuration_revision: 4, generated_at: new Date().toISOString(),
+  business: { timezone: business.timezone, max_booking_days_ahead: business.max_booking_days_ahead, min_booking_notice_minutes: 0,
+   is_active: true, public_booking_enabled: true },
+  services: [service, ...(overrides.includeUnavailableFixtures ? [{ ...service, id: '00000000-0000-4000-8000-000000000006', name: 'Sin disponibilidad', sort_order: 1 }] : [])],
+  professionals,
+  assignments: [...ids].map(professional_id => ({ service_id: service.id, professional_id })).concat(
+   overrides.includeUnavailableFixtures ? [{ service_id: '00000000-0000-4000-8000-000000000006', professional_id: '00000000-0000-4000-8000-000000000005' }] : []),
+  rules: Array.from({ length: 7 }, (_, weekday) => [
+   { id: `00000000-0000-4000-8000-${String(100 + weekday).padStart(12, '0')}`, professional_id: '00000000-0000-4000-8000-000000000003', weekday, start_time: '09:00:00', end_time: '12:00:00',
+    slot_interval_minutes: 30, break_minutes: 0, is_active: true, service_scope: 'all', allowed_service_ids: [] },
+   ...(overrides.includeSecondProfessional ? [{ id: `00000000-0000-4000-8000-${String(200 + weekday).padStart(12, '0')}`, professional_id: '00000000-0000-4000-8000-000000000004', weekday,
+    start_time: '09:23:00', end_time: '12:00:00', slot_interval_minutes: 15, break_minutes: 0, is_active: true, service_scope: 'all', allowed_service_ids: [] }] : [])
+  ]).flat().filter(row => ids.has(row.professional_id))
+ };
+ const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
+  const url = new URL(input instanceof Request ? input.url : String(input));
+  const name = url.pathname.split('/').at(-1) ?? '';
+  if (!url.pathname.includes('/rpc/')) {
+   tableReads.push(name);
+   if (name === 'businesses') return Response.json(business);
+   if (name === 'business_subscriptions') return Response.json(subscription);
+   throw new Error('Unexpected table read: ' + name);
+  }
+  const body = readRecord(JSON.parse(String(init?.body)), 'synthetic.rpcBody');
+  requests.push({ name, body });
+  if (name === 'get_availability_catalog') return Response.json(source);
+  if (name !== 'get_availability_window') throw new Error('Unexpected RPC: ' + name);
+  if (overrides.failWindow) return Response.json({ blocks: [] });
+  const exceptions = overrides.blockFirstWindow ? [{ id: '00000000-0000-4000-8000-000000000300', professional_id: null,
+   starts_at: todayForBusiness(business) + 'T00:00:00Z', ends_at: addDaysToDateString(todayForBusiness(business), 15) + 'T03:00:00Z',
+   type: 'blocked', allowed_service_ids: [] }] : [];
+  return Response.json({ schema_version: 2, complete: true, business_id: business.id, scope: 'public', configuration_revision: 4,
+   generated_at: source.generated_at, from_date: body.p_from_date, to_date: body.p_to_date, professional_ids: body.p_professional_ids,
+   counts: { blocks: 0, exceptions: exceptions.length }, blocks: [], exceptions });
+ });
+ const client = createClient<CitaDatabase>('https://synthetic.example.test', 'synthetic-key', {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch }
+ });
+ return { client, tableReads, requests, source };
 };
 
 describe('loadPublicBookingState (performance del flujo público)', () => {
 	beforeEach(() => {
 		clearPublicBookingScanCache();
 		getAvailabilitySlotsMock.mockReset();
-		getAvailabilitySlotsMock.mockImplementation(
-			async (_supabase: unknown, input: { fromDate: string; toDate: string }) =>
-				slotsForRange(input.fromDate, input.toDate)
-		);
 	});
 
 	it('muestra el catálogo inicial sin disparar el camino de consultas por servicio', async () => {
 		const supabase = createSupabaseMock();
 
-		const state = await loadPublicBookingState(supabase as never, {
+		const state = await loadPublicBookingState(supabase.client, {
 			slug: business.slug
 		});
 
 		expect(state.issue).toBeNull();
-		expect(state.services.map((service) => service.id)).toEqual(['svc-1']);
+		expect(state.services.map((service) => service.id)).toEqual(['00000000-0000-4000-8000-000000000002']);
 		expect(getAvailabilitySlotsMock).not.toHaveBeenCalled();
 		expect(supabase.tableReads).not.toContain('availability_exceptions');
 		expect(supabase.tableReads).not.toContain('appointment_professionals');
@@ -751,35 +607,35 @@ describe('loadPublicBookingState (performance del flujo público)', () => {
 	it('conserva ocultos servicios y profesionales sin un horario semanal activo', async () => {
 		const supabase = createSupabaseMock({
 			includeUnavailableFixtures: true
-		}) as never;
+		});
 
-		const initial = await loadPublicBookingState(supabase, {
+		const initial = await loadPublicBookingState(supabase.client, {
 			slug: business.slug
 		});
-		expect(initial.services.map((service) => service.id)).toEqual(['svc-1']);
+		expect(initial.services.map((service) => service.id)).toEqual(['00000000-0000-4000-8000-000000000002']);
 
-		const professionalStep = await loadPublicBookingState(supabase, {
+		const professionalStep = await loadPublicBookingState(supabase.client, {
 			slug: business.slug,
-			serviceId: 'svc-1'
+			serviceId: '00000000-0000-4000-8000-000000000002'
 		});
 		expect(professionalStep.professionals.map((professional) => professional.id)).toEqual([
-			'pro-1'
+			'00000000-0000-4000-8000-000000000003'
 		]);
 	});
 
 	it('no consulta la agenda hasta que la selección individual o conjunta está completa', async () => {
 		const supabase = createSupabaseMock({ includeSecondProfessional: true });
 
-		const state = await loadPublicBookingState(supabase as never, {
+		const state = await loadPublicBookingState(supabase.client, {
 			slug: business.slug,
-			serviceId: 'svc-1',
+			serviceId: '00000000-0000-4000-8000-000000000002',
 			bookingMode: 'joint',
-			professionalIds: ['pro-1']
+			professionalIds: ['00000000-0000-4000-8000-000000000003']
 		});
 
 		expect(state.issue).toBeNull();
 		expect(state.days).toEqual([]);
-		expect(state.professionals.map((professional) => professional.id)).toEqual(['pro-1', 'pro-2']);
+		expect(state.professionals.map((professional) => professional.id)).toEqual(['00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000004']);
 		expect(supabase.tableReads).not.toContain('availability_exceptions');
 		expect(supabase.tableReads).not.toContain('appointment_professionals');
 	});
@@ -787,26 +643,26 @@ describe('loadPublicBookingState (performance del flujo público)', () => {
 	it('calcula días y horarios únicamente cuando los dos integrantes están libres', async () => {
 		const supabase = createSupabaseMock({
 			includeSecondProfessional: true
-		}) as never;
+		});
 		const today = todayForBusiness(business);
 		const date = addDaysToDateString(today, 2);
 
-		const dayState = await loadPublicBookingState(supabase, {
+		const dayState = await loadPublicBookingState(supabase.client, {
 			slug: business.slug,
-			serviceId: 'svc-1',
+			serviceId: '00000000-0000-4000-8000-000000000002',
 			bookingMode: 'joint',
-			professionalIds: ['pro-1', 'pro-2']
+			professionalIds: ['00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000004']
 		});
 		expect(dayState.issue).toBeNull();
 		expect(dayState.days.length).toBeGreaterThan(0);
 		expect(dayState.slots).toEqual([]);
 		expect(dayState.days.every((day) => day.count === 1)).toBe(true);
 
-		const slotState = await loadPublicBookingState(supabase, {
+		const slotState = await loadPublicBookingState(supabase.client, {
 			slug: business.slug,
-			serviceId: 'svc-1',
+			serviceId: '00000000-0000-4000-8000-000000000002',
 			bookingMode: 'joint',
-			professionalIds: ['pro-1', 'pro-2'],
+			professionalIds: ['00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000004'],
 			date
 		});
 		expect(slotState.issue).toBeNull();
@@ -814,40 +670,40 @@ describe('loadPublicBookingState (performance del flujo público)', () => {
 		expect(
 			slotState.slots.every(
 				(slot) =>
-					slot.is_joint && slot.professional_ids?.join(',') === 'pro-1,pro-2' && slot.date === date
+					slot.is_joint && slot.professional_ids?.join(',') === '00000000-0000-4000-8000-000000000003,00000000-0000-4000-8000-000000000004' && slot.date === date
 			)
 		).toBe(true);
 		expect(slotState.slots[0]?.time).toBe('09:23');
 	});
 
-	it('la fecha elegida dentro del rango escaneado se filtra sin query extra', async () => {
-		const supabase = createSupabaseMock() as never;
+	it('consulta únicamente la fecha elegida y no reconsulta el catálogo por fragmento', async () => {
+		const supabase = createSupabaseMock();
 		const today = todayForBusiness(business);
 		const date = addDaysToDateString(today, 2);
 
-		const state = await loadPublicBookingState(supabase, {
+		const state = await loadPublicBookingState(supabase.client, {
 			slug: business.slug,
-			serviceId: 'svc-1',
-			professionalId: 'pro-1',
+			serviceId: '00000000-0000-4000-8000-000000000002',
+			professionalId: '00000000-0000-4000-8000-000000000003',
 			date
 		});
 
 		expect(state.issue).toBeNull();
 		expect(state.slots.length).toBeGreaterThan(0);
 		expect(state.slots.every((slot) => slot.date === date)).toBe(true);
-		// La fecha puntual se filtra de la foto compartida y no dispara el camino
-		// tradicional de cinco consultas de disponibilidad.
+		expect(supabase.requests.map(row => row.name)).toEqual(['get_availability_catalog', 'get_availability_window']);
+		expect(supabase.requests[1].body).toMatchObject({ p_from_date: date, p_to_date: date });
 		expect(getAvailabilitySlotsMock).not.toHaveBeenCalled();
 		const dates = state.days.map((day) => day.date);
 		expect(dates).toEqual([...dates].sort());
 	});
 
 	it('no ofrece profesionales públicos sin nombre visible', async () => {
-		const supabase = createSupabaseMock({ professionalName: '   ' }) as never;
+		const supabase = createSupabaseMock({ professionalName: '   ' });
 
-		const state = await loadPublicBookingState(supabase, {
+		const state = await loadPublicBookingState(supabase.client, {
 			slug: business.slug,
-			serviceId: 'svc-1'
+			serviceId: '00000000-0000-4000-8000-000000000002'
 		});
 
 		expect(state.issue).toBe('no_services');
@@ -855,34 +711,35 @@ describe('loadPublicBookingState (performance del flujo público)', () => {
 		expect(getAvailabilitySlotsMock).not.toHaveBeenCalled();
 	});
 
-	it('navegar de nuevo con la misma selección reusa el caché (cero escaneos nuevos)', async () => {
-		const supabase = createSupabaseMock() as never;
+	it('una nueva navegación consulta ocupación fresca sin conservar disponibilidad global', async () => {
+		const supabase = createSupabaseMock();
 		const today = todayForBusiness(business);
 		const date = addDaysToDateString(today, 2);
 		const input = {
 			slug: business.slug,
-			serviceId: 'svc-1',
-			professionalId: 'pro-1',
+			serviceId: '00000000-0000-4000-8000-000000000002',
+			professionalId: '00000000-0000-4000-8000-000000000003',
 			date
 		};
 
-		await loadPublicBookingState(supabase, input);
-		const callsAfterFirst = getAvailabilitySlotsMock.mock.calls.length;
-		const second = await loadPublicBookingState(supabase, input);
+		await loadPublicBookingState(supabase.client, input);
+		const callsAfterFirst = supabase.requests.length;
+		const second = await loadPublicBookingState(supabase.client, input);
 
 		expect(second.issue).toBeNull();
-		expect(getAvailabilitySlotsMock).toHaveBeenCalledTimes(callsAfterFirst);
+		expect(supabase.requests.length).toBe(callsAfterFirst + 2);
+		expect(supabase.requests.filter(row => row.name === 'get_availability_window')).toHaveLength(2);
 	});
 
-	it('incluye una fecha lejana en el único rango escaneado, sin query puntual', async () => {
-		const supabase = createSupabaseMock() as never;
+	it('permite acceder directamente a una fecha lejana sin descargar fechas intermedias', async () => {
+		const supabase = createSupabaseMock();
 		const today = todayForBusiness(business);
 		const farDate = addDaysToDateString(today, 20);
 
-		const state = await loadPublicBookingState(supabase, {
+		const state = await loadPublicBookingState(supabase.client, {
 			slug: business.slug,
-			serviceId: 'svc-1',
-			professionalId: 'pro-1',
+			serviceId: '00000000-0000-4000-8000-000000000002',
+			professionalId: '00000000-0000-4000-8000-000000000003',
 			date: farDate
 		});
 
@@ -890,9 +747,52 @@ describe('loadPublicBookingState (performance del flujo público)', () => {
 		expect(state.slots.length).toBeGreaterThan(0);
 		expect(state.slots.every((slot) => slot.date === farDate)).toBe(true);
 		expect(getAvailabilitySlotsMock).not.toHaveBeenCalled();
-		// El día lejano se integra ordenado a la lista de días.
+		expect(supabase.requests[1].body).toMatchObject({ p_from_date: farDate, p_to_date: farDate });
 		const dates = state.days.map((day) => day.date);
 		expect(dates).toEqual([...dates].sort());
 		expect(dates).toContain(farDate);
 	});
+ it('carga sólo quince fechas al abrir y conserva navegación aunque estén todas bloqueadas', async () => {
+  const fixture = createSupabaseMock({ blockFirstWindow: true });
+  const today = todayForBusiness(business);
+  const input = { slug: business.slug, serviceId: '00000000-0000-4000-8000-000000000002', professionalId: '00000000-0000-4000-8000-000000000003' };
+  const first = await loadPublicBookingState(fixture.client, input);
+  expect(first.days).toEqual([]);
+  expect(first.issue).toBe('no_availability');
+  expect(first.dateWindow).toEqual({ fromDate: today, toDate: addDaysToDateString(today, 14), previousFromDate: null,
+   nextFromDate: addDaysToDateString(today, 15), horizonEnd: addDaysToDateString(today, 30) });
+  expect(fixture.requests.map(row => row.name)).toEqual(['get_availability_catalog', 'get_availability_window']);
+  expect(fixture.requests[1].body).toMatchObject({ p_from_date: today, p_to_date: addDaysToDateString(today, 14) });
+  const next = await loadPublicBookingState(fixture.client, { ...input, datesFrom: first.dateWindow?.nextFromDate });
+  expect(next.days.length).toBeGreaterThan(0);
+  expect(next.dateWindow).toMatchObject({ fromDate: addDaysToDateString(today, 15), previousFromDate: today,
+   nextFromDate: addDaysToDateString(today, 30) });
+  const last = await loadPublicBookingState(fixture.client, { ...input, datesFrom: next.dateWindow?.nextFromDate });
+  expect(last.dateWindow).toMatchObject({ fromDate: addDaysToDateString(today, 30), toDate: addDaysToDateString(today, 30), nextFromDate: null });
+  expect(fixture.requests).toHaveLength(6);
+ });
+ it('rechaza respuestas 200 parciales sin fallback ni disponibilidad aparente', async () => {
+  const fixture = createSupabaseMock({ failWindow: true });
+  await expect(loadPublicBookingState(fixture.client, { slug: business.slug, serviceId: '00000000-0000-4000-8000-000000000002',
+   professionalId: '00000000-0000-4000-8000-000000000003' })).rejects.toThrow();
+  expect(fixture.tableReads).toEqual(['businesses', 'business_subscriptions']);
+  expect(fixture.requests).toHaveLength(2);
+ });
+ it('un cursor inexistente o fuera de horizonte no dispara lecturas de ocupación', async () => {
+  for (const datesFrom of ['2026-02-30', addDaysToDateString(todayForBusiness(business), 31)]) {
+   const fixture = createSupabaseMock();
+   await expect(loadPublicBookingState(fixture.client, { slug: business.slug, serviceId: '00000000-0000-4000-8000-000000000002',
+    professionalId: '00000000-0000-4000-8000-000000000003', datesFrom })).rejects.toThrow();
+   expect(fixture.requests.map(row => row.name)).toEqual(['get_availability_catalog']);
+  }
+ });
+ it('conserva una franja restringida sin prestaciones cerrada en el turnero público', async () => {
+  const fixture = createSupabaseMock();
+  fixture.source.rules.forEach(row => { row.service_scope = 'restricted'; });
+  const state = await loadPublicBookingState(fixture.client, { slug: business.slug, serviceId: '00000000-0000-4000-8000-000000000002',
+   professionalId: '00000000-0000-4000-8000-000000000003' });
+  expect(state.days).toEqual([]);
+  expect(state.issue).toBe('no_availability');
+ });
+
 });

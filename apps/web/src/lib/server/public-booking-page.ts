@@ -79,7 +79,8 @@ export const loadPublicBookingPage = async ({ params, fetch, url, setHeaders }: 
 		professionalId:
 			bookingMode === 'individual' ? (url.searchParams.get('professional_id') ?? '') : '',
 		professionalIds: bookingMode === 'joint' ? requestedProfessionalIds : [],
-		date: url.searchParams.get('date') ?? ''
+		date: url.searchParams.get('date') ?? '',
+		datesFrom: url.searchParams.get('dates_from') ?? ''
 	};
 	// Las reservas no pueden servirse desde cachés compartidas: el catálogo y,
 	// especialmente, los horarios deben reflejar disponibilidad viva.
@@ -139,6 +140,7 @@ export const loadPublicBookingPage = async ({ params, fetch, url, setHeaders }: 
 			professionalIds: selected.professionalIds,
 			bookingMode: selected.bookingMode,
 			date: selected.date,
+			datesFrom: selected.datesFrom,
 			scope: integration ? { serviceIds: integration.serviceIds, professionalIds: integration.professionalIds } : undefined
 		});
 

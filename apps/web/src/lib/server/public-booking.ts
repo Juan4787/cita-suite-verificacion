@@ -12,12 +12,6 @@ import {
 	addMinutes,
 	calculateAvailabilitySlots,
 	getAvailabilitySlots,
-	zonedDateTimeToUtc,
-	type AvailabilityAppointmentBlockRow,
-	type AvailabilityExceptionRow,
-	type AvailabilityProfessionalRow,
-	type AvailabilityRuleRow,
-	type AvailabilityServiceRow,
 	type AvailabilitySlot
 } from './availability';
 import {
@@ -33,7 +27,11 @@ import { isLikelyPhoneE164, normalizePhoneE164 } from './phone';
 import { sanitizePublicImageUrl } from './public-image';
 import type { IntegratedBookingInput } from './booking-integrations';
 import type { BookingModality, BookingModalityWindow } from '@turnos-saas/shared/booking-integration';
-import { loadIntegratedAvailabilityRows, parseIntegratedAvailabilityRows } from './integrated-availability';
+import { loadAvailabilityCatalog, loadAvailabilityWindowRows } from './availability-windows';
+import type { AvailabilityCatalog } from '$lib/availability/contracts';
+import type { IntegratedAvailabilityRows } from '$lib/availability/rows';
+import { AVAILABILITY_WINDOW_DAYS, isAvailabilityDate } from '$lib/availability/windows';
+import { InvalidDataContractError } from '$lib/contracts/json';
 import { isRecord } from '$lib/contracts/json';
 
 export type PublicService = {
@@ -83,7 +81,12 @@ export type PublicBookingIssue =
 	| 'no_professionals'
 	| 'no_availability';
 
+export type PublicDateWindow = {
+	fromDate: string; toDate: string; previousFromDate: string | null; nextFromDate: string | null; horizonEnd: string;
+};
+
 export type PublicBookingState = {
+	dateWindow?: PublicDateWindow;
 	business: PublicBookingBusiness | null;
 	services: PublicService[];
 	professionals: PublicProfessional[];
@@ -92,31 +95,7 @@ export type PublicBookingState = {
 	issue: PublicBookingIssue | null;
 };
 
-type PublicAvailabilityService = AvailabilityServiceRow & {
-	description: string | null;
-	price_label: string | null;
-	sort_order: number;
-};
-
-type PublicAvailabilityProfessional = AvailabilityProfessionalRow & {
-	specialty: string | null;
-	avatar_url: string | null;
-	sort_order: number;
-};
-
-type PublicAvailabilityRows = {
-	services: PublicAvailabilityService[];
-	professionals: PublicAvailabilityProfessional[];
-	assignments: Array<{ service_id: string; professional_id: string }>;
-	rules: AvailabilityRuleRow[];
-	exceptions: AvailabilityExceptionRow[];
-	blocks: AvailabilityAppointmentBlockRow[];
-};
-
-type PublicAvailabilitySnapshot = PublicAvailabilityRows & {
-	fromDate: string;
-	toDate: string;
-};
+type PublicAvailabilitySnapshot = IntegratedAvailabilityRows & { fromDate: string; toDate: string };
 
 type BookingAttemptInput = {
 	businessId?: string | null;
@@ -161,9 +140,6 @@ export const publicHash = (value?: string | null) => {
 	if (!normalized) return null;
 	return crypto.createHash('sha256').update(normalized).digest('hex');
 };
-
-const hasVisibleProfessionalName = (professional: { name?: unknown } | null | undefined) =>
-	String(professional?.name ?? '').trim().length > 0;
 
 export const recordPublicBookingAttempt = async (
 	supabase: CitaSupabaseClient,
@@ -278,127 +254,22 @@ const getPublicBusinessSubscription = async (
 	};
 };
 
-export const getReservableServices = async (
-	supabase: CitaSupabaseClient,
-	businessId: string,
-	scope?: { serviceIds: string[]; professionalIds: string[] }
-): Promise<PublicService[]> => {
-	const [
-		{ data: services, error: servicesError },
-		{ data: professionals, error: professionalsError },
-		{ data: assignments, error: assignmentsError },
-		{ data: rules, error: rulesError }
-	] =
-		await Promise.all([
-			supabase
-				.from('services')
-				.select('id, name, description, duration_minutes, price_label, is_active, is_public, sort_order')
-				.eq('business_id', businessId)
-				.eq('is_active', true)
-				.eq('is_public', true)
-				.order('sort_order')
-				.order('name'),
-			supabase
-				.from('professionals')
-				.select('id, name, is_active, is_public')
-				.eq('business_id', businessId)
-				.eq('is_active', true)
-				.eq('is_public', true),
-			supabase
-				.from('professional_services')
-				.select('service_id, professional_id')
-				.eq('business_id', businessId),
-			supabase
-				.from('availability_rules')
-				.select('professional_id')
-				.eq('business_id', businessId)
-				.eq('is_active', true)
-		]);
-	if (servicesError) throw servicesError;
-	if (professionalsError) throw professionalsError;
-	if (assignmentsError) throw assignmentsError;
-	if (rulesError) throw rulesError;
-
-	const scheduledProfessionalIds = new Set(
-		(rules ?? []).map((rule) => String(rule.professional_id))
-	);
-	const publicScheduledProfessionalIds = new Set(
-		(professionals ?? [])
-			.filter(
-				(professional) =>
-					hasVisibleProfessionalName(professional) &&
-					(!scope?.professionalIds.length || scope.professionalIds.includes(String(professional.id))) &&
-					scheduledProfessionalIds.has(String(professional.id))
-			)
-			.map((professional) => String(professional.id))
-	);
-	const reservableServiceIds = new Set(
-		(assignments ?? [])
-			.filter((assignment) =>
-				publicScheduledProfessionalIds.has(String(assignment.professional_id))
-			)
-			.map((assignment) => String(assignment.service_id))
-	);
-
-	return (services ?? [])
-		.filter((service) => reservableServiceIds.has(String(service.id)) &&
-			(!scope?.serviceIds.length || scope.serviceIds.includes(String(service.id))))
-		.map((service) => ({
-			id: String(service.id),
-			name: String(service.name),
-			description: service.description ?? null,
-			duration_minutes: Number(service.duration_minutes),
-			price_label: service.price_label ?? null
-		}));
+// Catalog selectors preserve the existing requirement of an active weekly
+// schedule. Both steps share one validated catalog in this request.
+const reservableServices = (catalog: AvailabilityCatalog, scope?: { serviceIds: string[]; professionalIds: string[] }): PublicService[] => {
+ const scheduled = new Set(catalog.rules.map(rule => rule.professional_id));
+ const professionals = new Set(catalog.professionals.filter(row => scheduled.has(row.id) &&
+  (!scope?.professionalIds.length || scope.professionalIds.includes(row.id))).map(row => row.id));
+ const assignedServices = new Set(catalog.assignments.filter(row => professionals.has(row.professional_id)).map(row => row.service_id));
+ return catalog.services.filter(row => assignedServices.has(row.id) && (!scope?.serviceIds.length || scope.serviceIds.includes(row.id)))
+  .map(({ id, name, description, duration_minutes, price_label }) => ({ id, name, description, duration_minutes, price_label }));
 };
-
-export const getReservableProfessionals = async (
-	supabase: CitaSupabaseClient,
-	input: { businessId: string; serviceId: string }
-): Promise<PublicProfessional[]> => {
-	const [
-		{ data, error },
-		{ data: rules, error: rulesError }
-	] = await Promise.all([
-		supabase
-			.from('professional_services')
-			.select(
-				'professional_id, professionals!inner(id, name, specialty, avatar_url, is_active, is_public, sort_order)'
-			)
-			.eq('business_id', input.businessId)
-			.eq('service_id', input.serviceId),
-		supabase
-			.from('availability_rules')
-			.select('professional_id')
-			.eq('business_id', input.businessId)
-			.eq('is_active', true)
-	]);
-	if (error) throw error;
-	if (rulesError) throw rulesError;
-	const scheduledProfessionalIds = new Set(
-		(rules ?? []).map((rule) => String(rule.professional_id))
-	);
-
-	return (data ?? [])
-		.map((row) => row.professionals)
-		.filter(
-			(professional) =>
-				professional?.is_active &&
-				professional?.is_public &&
-				hasVisibleProfessionalName(professional) &&
-				scheduledProfessionalIds.has(String(professional.id))
-		)
-		.sort(
-			(a, b) =>
-				Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0) ||
-				String(a.name).localeCompare(String(b.name))
-		)
-		.map((professional) => ({
-			id: String(professional.id),
-			name: String(professional.name).trim(),
-			specialty: professional.specialty ?? null,
-			avatar_url: sanitizePublicImageUrl(professional.avatar_url)
-		}));
+const reservableProfessionals = (catalog: AvailabilityCatalog, serviceId: string, scope?: { professionalIds: string[] }): PublicProfessional[] => {
+ const scheduled = new Set(catalog.rules.map(rule => rule.professional_id));
+ const assigned = new Set(catalog.assignments.filter(row => row.service_id === serviceId).map(row => row.professional_id));
+ return catalog.professionals.filter(row => scheduled.has(row.id) && assigned.has(row.id) &&
+  (!scope?.professionalIds.length || scope.professionalIds.includes(row.id)))
+  .map(({ id, name, specialty, avatar_url }) => ({ id, name: name.trim(), specialty, avatar_url: sanitizePublicImageUrl(avatar_url) }));
 };
 
 export const summarizeSlotsByDate = (
@@ -425,10 +296,6 @@ export const summarizeSlotsByDate = (
 		}));
 };
 
-// El rango público ya está acotado a 90 días. Consultarlo completo en una sola
-// tanda evita hasta seis rondas consecutivas a Supabase cuando un profesional
-// tiene pocos horarios, sin aumentar la cantidad de turnos finalmente enviados
-// al navegador.
 const uniqueSlots = (slots: AvailabilitySlot[]) => {
 	const seen = new Set<string>();
 	const result: AvailabilitySlot[] = [];
@@ -442,12 +309,10 @@ const uniqueSlots = (slots: AvailabilitySlot[]) => {
 };
 
 // ---------------------------------------------------------------------------
-// Caché en memoria de los escaneos de disponibilidad pública.
+// Coalescencia de lecturas públicas simultáneas, sin persistencia entre peticiones.
 //
-// El flujo de reserva navega 4-5 veces la misma URL (servicio → profesional →
-// día → horario) y cada navegación recomputaba TODOS los escaneos (varios
-// round-trips a Supabase). `cachedScan` conserva la deduplicación de requests
-// simultáneos, pero no persiste resultados de disponibilidad entre requests:
+// `cachedScan` conserva sólo la deduplicación de lecturas simultáneas de negocio
+// y acceso comercial. El catálogo y la ocupación se leen dentro de cada petición:
 // un reload puede caer en otro isolate de Cloudflare y nunca debe volver a
 // mostrar un horario que acaba de ocuparse.
 //
@@ -456,7 +321,6 @@ const uniqueSlots = (slots: AvailabilitySlot[]) => {
 // varias instancias de Cloudflare Workers.
 // ---------------------------------------------------------------------------
 
-const SLOT_SCAN_CACHE_TTL_MS = 0;
 const STRUCTURE_SCAN_CACHE_TTL_MS = 0;
 const SCAN_CACHE_MAX_ENTRIES = 500;
 
@@ -467,10 +331,7 @@ type ScanCacheEntry<Value> = {
 };
 const businessScanCache = new Map<string, ScanCacheEntry<PublicBookingBusiness | null>>();
 const accessScanCache = new Map<string, ScanCacheEntry<Awaited<ReturnType<typeof getPublicBusinessSubscription>>>>();
-const servicesScanCache = new Map<string, ScanCacheEntry<PublicService[]>>();
-const professionalsScanCache = new Map<string, ScanCacheEntry<PublicProfessional[]>>();
-const availabilityScanCache = new Map<string, ScanCacheEntry<Awaited<ReturnType<typeof loadPublicAvailabilitySnapshot>>>>();
-const scanCaches = [businessScanCache, accessScanCache, servicesScanCache, professionalsScanCache, availabilityScanCache];
+const scanCaches = [businessScanCache, accessScanCache];
 
 export const clearPublicBookingScanCache = () => {
 	for (const cache of scanCaches) cache.clear();
@@ -512,156 +373,6 @@ const cachedScan = async <T>(cache: Map<string, ScanCacheEntry<T>>, key: string,
 		if (cache.get(key)?.promise === promise) cache.delete(key);
 		throw error;
 	}
-};
-
-const loadPublicAvailabilitySnapshot = async (
-	supabase: CitaSupabaseClient,
-	input: {
-		businessId: string;
-		modality?: BookingModality;
-		serviceId: string;
-		professionalIds: string[];
-		rangeStart: Date;
-		rangeEnd: Date;
-	}
-): Promise<PublicAvailabilityRows> => {
-	const professionalIds = [...new Set(input.professionalIds.map((id) => id.trim()).filter(Boolean))];
-	if (professionalIds.length === 0) {
-		return { services: [], professionals: [], assignments: [], rules: [], exceptions: [], blocks: [] };
-	}
-	if (input.modality) return loadIntegratedAvailabilityRows(supabase, { ...input, professionalIds });
-
-	// Estas lecturas son independientes y se ejecutan en una sola ola, pero ya
-	// no descargan la agenda completa del consultorio: sólo el procedimiento y
-	// los profesionales elegidos por el paciente.
-	// Los turnos se parten en ventanas mensuales para no truncarse en el límite de
-	// 1.000 filas de PostgREST en consultorios de alto volumen.
-	const appointmentWindows: Array<{ start: Date; end: Date }> = [];
-	for (
-		let start = new Date(input.rangeStart);
-		start < input.rangeEnd;
-		start = addMinutes(start, 31 * 24 * 60)
-	) {
-		appointmentWindows.push({
-			start,
-			end: new Date(
-				Math.min(addMinutes(start, 31 * 24 * 60).getTime(), input.rangeEnd.getTime())
-			)
-		});
-	}
-	const servicesQuery = supabase
-		.from('services')
-		.select(
-			'id, business_id, name, description, duration_minutes, buffer_before_minutes, buffer_after_minutes, price_label, is_public, is_active, sort_order'
-		)
-		.eq('business_id', input.businessId)
-		.eq('id', input.serviceId)
-		.eq('is_active', true)
-		.eq('is_public', true);
-	const professionalsQuery = supabase
-		.from('professionals')
-		.select('id, name, specialty, avatar_url, is_public, is_active, sort_order')
-		.eq('business_id', input.businessId)
-		.in('id', professionalIds)
-		.eq('is_active', true)
-		.eq('is_public', true);
-	const assignmentsQuery = supabase
-		.from('professional_services')
-		.select('service_id, professional_id')
-		.eq('business_id', input.businessId)
-		.eq('service_id', input.serviceId)
-		.in('professional_id', professionalIds);
-	const rulesQuery = supabase
-		.from('availability_rules')
-		.select(
-			'id, professional_id, weekday, start_time, end_time, slot_interval_minutes, break_minutes, is_active, service_scope, rule_services:availability_rule_services(service_id)'
-		)
-		.eq('business_id', input.businessId)
-		.in('professional_id', professionalIds)
-		.eq('is_active', true);
-
-	const [
-		servicesResult,
-		professionalsResult,
-		assignmentsResult,
-		rulesResult,
-		exceptionsResult,
-		blocksResults
-	] = await Promise.all([
-		servicesQuery,
-		professionalsQuery,
-		assignmentsQuery,
-		rulesQuery,
-		supabase
-			.from('availability_exceptions')
-			.select('id, professional_id, starts_at, ends_at, type, exception_services:availability_exception_services(service_id)')
-			.eq('business_id', input.businessId)
-			.lt('starts_at', input.rangeEnd.toISOString())
-			.gt('ends_at', input.rangeStart.toISOString()),
-		Promise.all(
-			appointmentWindows.map(({ start, end }) =>
-				supabase
-					.from('appointment_professionals')
-					.select(
-						'id, appointment_id, professional_id, starts_at, ends_at, base_blocking_starts_at, base_blocking_ends_at, blocking_starts_at, blocking_ends_at'
-						)
-						.eq('business_id', input.businessId)
-						.in('professional_id', professionalIds)
-						.in('status', ['reserved', 'confirmed', 'reschedule_requested'])
-					.lt('blocking_starts_at', end.toISOString())
-					.gt('blocking_ends_at', start.toISOString())
-			)
-		)
-	]);
-	if (servicesResult.error) throw servicesResult.error;
-	if (professionalsResult.error) throw professionalsResult.error;
-	if (assignmentsResult.error) throw assignmentsResult.error;
-	if (rulesResult.error) throw rulesResult.error;
-	if (exceptionsResult.error) throw exceptionsResult.error;
-	for (const blocksResult of blocksResults) {
-		if (blocksResult.error) throw blocksResult.error;
-	}
-
-	const parsed = parseIntegratedAvailabilityRows({
-		services: servicesResult.data ?? [], professionals: professionalsResult.data ?? [], assignments: assignmentsResult.data ?? [],
-		rules: rulesResult.data ?? [], exceptions: exceptionsResult.data ?? [], blocks: blocksResults.flatMap(result => result.data ?? [])
-	});
-	const services = parsed.services;
-	const professionals = parsed.professionals.filter(
-		hasVisibleProfessionalName
-	);
-	const serviceIds = new Set(services.map((service) => service.id));
-	const availableProfessionalIds = new Set(professionals.map((professional) => professional.id));
-	const assignments = parsed.assignments.filter(
-		(assignment) =>
-			serviceIds.has(assignment.service_id) &&
-			availableProfessionalIds.has(assignment.professional_id)
-	);
-
-	const assignedProfessionalIds = new Set(
-		assignments.map((assignment) => assignment.professional_id)
-	);
-
-	return {
-		services,
-		professionals,
-		assignments,
-		rules: parsed.rules.filter((rule) =>
-			assignedProfessionalIds.has(rule.professional_id)
-		),
-		exceptions: parsed.exceptions.filter(
-			(exception) =>
-				exception.professional_id === null ||
-				assignedProfessionalIds.has(exception.professional_id)
-		),
-		blocks: [
-			...new Map(
-				parsed.blocks
-					.filter((block) => assignedProfessionalIds.has(block.professional_id))
-					.map((block) => [block.id, block] as const)
-			).values()
-		]
-	};
 };
 
 const slotsFromPublicSnapshot = (
@@ -727,6 +438,7 @@ export const loadPublicBookingState = async (
 		professionalIds?: string[] | null;
 		bookingMode?: PublicBookingMode | null;
 		date?: string | null;
+		datesFrom?: string | null;
 		scope?: { serviceIds: string[]; professionalIds: string[] };
 	}
 ): Promise<PublicBookingState> => {
@@ -744,46 +456,13 @@ export const loadPublicBookingState = async (
 		cachedScan(accessScanCache, `commercial-access-row:${businessId}`, STRUCTURE_SCAN_CACHE_TTL_MS, () =>
 			getPublicBusinessSubscription(supabase, businessId)
 		);
-	const loadServices = (businessId: string) =>
-		cachedScan(servicesScanCache, `public-services:${businessId}:${input.scope ? JSON.stringify(input.scope) : ''}`, STRUCTURE_SCAN_CACHE_TTL_MS, () =>
-			getReservableServices(supabase, businessId, input.scope)
-		);
-	const loadProfessionals = (businessId: string, serviceId: string) =>
-		cachedScan(
-			professionalsScanCache,
-			`public-professionals:${businessId}:${serviceId}`,
-			STRUCTURE_SCAN_CACHE_TTL_MS,
-			() => getReservableProfessionals(supabase, { businessId, serviceId })
-		);
-
-	let business: PublicBookingBusiness | null;
-	let accessLookup: Awaited<ReturnType<typeof getPublicBusinessSubscription>> | null = null;
-	let services: PublicService[] = [];
-	let professionals: PublicProfessional[] = [];
-	if (businessIdFromSlug) {
-		// Los links generados usan UUID: catálogo, acceso y negocio arrancan en
-		// paralelo. La agenda pesada no se consulta hasta que el paciente elige
-		// un profesional o un equipo completo.
-		[business, accessLookup, services, professionals] = await Promise.all([
-			loadBusiness(),
-			loadAccess(businessIdFromSlug),
-			loadServices(businessIdFromSlug),
-			input.serviceId
-				? loadProfessionals(businessIdFromSlug, input.serviceId)
-				: Promise.resolve([])
-		]);
-	} else {
-		business = await loadBusiness();
-		if (business) {
-			[accessLookup, services, professionals] = await Promise.all([
-				loadAccess(business.id),
-				loadServices(business.id),
-				input.serviceId
-					? loadProfessionals(business.id, input.serviceId)
-					: Promise.resolve([])
-			]);
-		}
-	}
+ let business: PublicBookingBusiness | null;
+ let accessLookup: Awaited<ReturnType<typeof getPublicBusinessSubscription>> | null = null;
+ if (businessIdFromSlug) [business, accessLookup] = await Promise.all([loadBusiness(), loadAccess(businessIdFromSlug)]);
+ else {
+  business = await loadBusiness();
+  if (business) accessLookup = await loadAccess(business.id);
+ }
 	if (!business) {
 		return { business: null, services: [], professionals: [], slots: [], days: [], issue: 'business_not_found' };
 	}
@@ -791,11 +470,6 @@ export const loadPublicBookingState = async (
 		return { business, services: [], professionals: [], slots: [], days: [], issue: 'booking_disabled' };
 	}
 
-	const today = todayForBusiness(business);
-	const maxDate = addDaysToDateString(
-		today,
-		Math.min(Math.max(business.max_booking_days_ahead, 1), 90)
-	);
 	const commerciallyUsable = Boolean(
 		!accessLookup?.lookupFailed &&
 			getBusinessAccessState(accessLookup?.subscription ?? null, {
@@ -805,10 +479,14 @@ export const loadPublicBookingState = async (
 	if (!commerciallyUsable) {
 		return { business, services: [], professionals: [], slots: [], days: [], issue: 'commercial_unavailable' };
 	}
-	if (input.scope) {
-		if (input.scope.serviceIds.length) services = services.filter((service) => input.scope!.serviceIds.includes(service.id));
-		if (input.scope.professionalIds.length) professionals = professionals.filter((professional) => input.scope!.professionalIds.includes(professional.id));
-	}
+ const catalog = await loadAvailabilityCatalog(supabase, business.id, 'public');
+ // Calculation settings belong to the consistent catalog, not the preceding
+ // presentation/business lookup, which could have observed an older version.
+ business = { ...business, ...catalog.business };
+ const today = todayForBusiness(business);
+ const maxDate = addDaysToDateString(today, Math.min(Math.max(business.max_booking_days_ahead, 1), 90));
+ const services = reservableServices(catalog, input.scope);
+ const professionals = input.serviceId ? reservableProfessionals(catalog, input.serviceId, input.scope) : [];
 	if (services.length === 0) {
 		return { business, services: [], professionals: [], slots: [], days: [], issue: 'no_services' };
 	}
@@ -848,40 +526,29 @@ export const loadPublicBookingState = async (
 	const selectedDate = String(input.date ?? '').trim();
 	const selectedDateIsValid =
 		!selectedDate ||
-		(/^\d{4}-\d{2}-\d{2}$/.test(selectedDate) &&
+		(isAvailabilityDate(selectedDate) &&
 			selectedDate >= today &&
 			selectedDate <= maxDate);
 	if (!selectedDateIsValid) {
 		return { business, services, professionals, slots: [], days: [], issue: 'no_availability' };
 	}
-	const scanFromDate = selectedDate || today;
-	const scanToDate = selectedDate || maxDate;
-	const rangeStart = zonedDateTimeToUtc(scanFromDate, '00:00', business.timezone);
-	const rangeEnd = zonedDateTimeToUtc(
-		addDaysToDateString(scanToDate, 1),
-		'00:00',
-		business.timezone
-	);
-	const selectionCacheKey = selectedProfessionalIds.join(',');
-	const availabilityRows = await cachedScan(
-		availabilityScanCache,
-		`availability-rows:${business.id}:${business.booking_availability_revision??0}:${selectedService.id}:${selectionCacheKey}:${scanFromDate}:${scanToDate}:${input.modality ?? ''}`,
-		SLOT_SCAN_CACHE_TTL_MS,
-		() =>
-			loadPublicAvailabilitySnapshot(supabase, {
-				businessId: business.id,
-				modality: input.modality,
-				serviceId: selectedService.id,
-				professionalIds: selectedProfessionalIds,
-				rangeStart,
-				rangeEnd
-			})
-	);
-	const availabilitySnapshot: PublicAvailabilitySnapshot = {
-		...availabilityRows,
-		fromDate: scanFromDate,
-		toDate: scanToDate
-	};
+ const requestedFrom = String(input.datesFrom ?? '').trim();
+ if (requestedFrom && (!isAvailabilityDate(requestedFrom) || requestedFrom < today || requestedFrom > maxDate))
+  throw new InvalidDataContractError('availability.publicWindow');
+ const scanFromDate = selectedDate || requestedFrom || today;
+ const scanToDate = selectedDate || [addDaysToDateString(scanFromDate, AVAILABILITY_WINDOW_DAYS - 1), maxDate].sort()[0];
+ const previousDate = addDaysToDateString(scanFromDate, -AVAILABILITY_WINDOW_DAYS);
+ const dateWindow: PublicDateWindow = {
+  fromDate: scanFromDate, toDate: scanToDate, horizonEnd: maxDate,
+  previousFromDate: scanFromDate > today ? (previousDate < today ? today : previousDate) : null,
+  nextFromDate: scanToDate < maxDate ? addDaysToDateString(scanToDate, 1) : null
+ };
+ const rows = await loadAvailabilityWindowRows(supabase, catalog, {
+  serviceId: selectedService.id, professionalIds: selectedProfessionalIds, fromDate: scanFromDate, toDate: scanToDate
+ });
+ const availabilitySnapshot: PublicAvailabilitySnapshot = {
+  ...catalog, ...rows, fromDate: scanFromDate, toDate: scanToDate
+ };
 	const calculatedSlots = uniqueSlots(
 		slotsFromPublicSnapshot(business, availabilitySnapshot, {
 			modality: input.modality,
@@ -903,6 +570,7 @@ export const loadPublicBookingState = async (
 		professionals,
 		slots,
 		days,
+		dateWindow,
 		issue: days.length === 0 ? 'no_availability' : null
 	};
 };

@@ -1,6 +1,6 @@
 # Disponibilidad y aranceles
 
-Autoridad: [plan íntegro, etapa 4](../plans/refactorizacion-cita-suite.md). El [registro](../plans/registro-refactorizacion-cita-suite.md) distingue cada fuente y resultado. **La etapa sigue abierta:** aranceles comprobados; contratos SQL de disponibilidad comprobados inicialmente; filtro profesional adicional en comparación; consumidores, carga perezosa y equivalencia integral pendientes. No se aplicaron migraciones remotas.
+Autoridad: [plan íntegro, etapa 4](../plans/refactorizacion-cita-suite.md). El [registro](../plans/registro-refactorizacion-cita-suite.md) distingue cada fuente y resultado. **La etapa sigue abierta:** aranceles comprobados; contratos SQL y filtro profesional comprobados; consumidores internos aprobados en fast; estado público, carga perezosa y equivalencia integral pendientes. No se aplicaron migraciones remotas.
 
 ## Propiedad y límites
 
@@ -27,7 +27,7 @@ Los intervalos conservan inicio/fin de atención, ocupación base con márgenes 
 
 Cada llamada usa funciones STABLE y una vista MVCC para sus lecturas de datos. Una revisión diferente impide combinar configuración antigua con la ventana nueva; no provoca un reinicio recursivo. Las comprobaciones de permisos se conservan separadas y no se convierten en una caché global de autorización. Fundamento: [volatilidad y snapshots de PostgreSQL 17](https://www.postgresql.org/docs/17/xfunc-volatility.html).
 
-El borrador inicial de ventana usó SECURITY DEFINER para acceder a la revisión privada. La comparación posterior detectó que eso exige aplicar expresamente `user_can_read_appointment` a las asignaciones internas, como la política existente de `appointment_professionals`. Se preparó ese filtro sin duplicar su lista de roles. Los dos controles nuevos bajo authenticated y la comparación positiva están registrados; su estado real debe consultarse antes de atribuir aprobación a ese alcance.
+El borrador inicial de ventana usó SECURITY DEFINER para acceder a la revisión privada. La comparación posterior detectó que eso exige aplicar expresamente `user_can_read_appointment` a las asignaciones internas, como la política existente de `appointment_professionals`. Se preparó ese filtro sin duplicar su lista de roles. Los dos controles nuevos bajo authenticated fallaron antes del filtro y aprobaron después en CI 39051242102: 63 asignaciones propias y cero del colega. La comparación conserva también los otros 28 controles.
 
 No se usa paginación implícita de una tabla PostgREST para construir estos agregados. La función agrega todas las filas de la ventana y declara los conteos. Una respuesta que supera el límite explícito de 5 MB falla completa: no recorta filas ni devuelve una agenda vacía. Los contratos anteriores se conservan durante la transición compatible; eso no autoriza mantener activa una lectura alternativa susceptible de truncamiento al cerrar la etapa.
 
@@ -39,7 +39,7 @@ No se usa paginación implícita de una tabla PostgREST para construir estos agr
 
 El parser anterior se movió a `availability/rows.ts` para compartir contratos sin importar servidor desde navegador. El adaptador anterior lo reexporta durante la transición. Esto no crea otro calculador ni otra autoridad de reglas.
 
-**Pendiente de conexión y verificación:** los recorridos actuales todavía deben migrar a estos contratos, eliminar el fallback de tablas y solicitar sólo las ventanas necesarias. No se atribuye esa conducta al producto sólo por existir el coordinador.
+El calculador de servidor y el snapshot interno usan catálogo/ventanas y retiraron su fallback de tablas (fast 39051788001). El endpoint interno fija su contexto interno aunque filtre visibilidad pública. El snapshot HTTP conserva su forma y predetermina quince fechas; solicitudes explícitas mayores se dividen en ventanas fijas. **Pendientes:** estado público, carga perezosa de interfaz y verificación integral de estos consumidores en SQL/navegador real.
 
 ## Aranceles exactos
 
