@@ -106,8 +106,8 @@ describe('validación previa del teléfono al crear un turno', () => {
   const { container } = renderWizard('3425048209', { availability: { slots: [{}] } });
   expect(await screen.findByText(/No pudimos actualizar los horarios/)).toBeInTheDocument();
   expect(screen.queryByText(/No hay horarios para ese día/)).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Confirmar turno', exact: true })).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Cambiar día', exact: true })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Confirmar turno' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Cambiar día' })).toBeInTheDocument();
   expect(container.querySelector('[name="slot_starts_at"]')).toBeNull();
  });
 
