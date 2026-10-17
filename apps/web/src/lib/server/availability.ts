@@ -1,26 +1,18 @@
-import { parseIntegratedAvailabilityRows } from './integrated-availability';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import type { BookingModality, BookingModalityWindow } from '@turnos-saas/shared/booking-integration';
-import { loadIntegratedAvailabilityRows } from './integrated-availability';
+import type { AvailabilityScope } from '$lib/availability/contracts';
+import { isAvailabilityDate } from '$lib/availability/windows';
+import { InvalidDataContractError } from '$lib/contracts/json';
+import { loadAvailabilityCatalog, loadAvailabilityWindowRows } from './availability-windows';
 import {
-	calculateAvailabilitySlots,
-	clampRangeToBusinessRules,
-	hasVisibleProfessionalName,
-	zonedDateTimeToUtc,
-	type AvailabilityBusiness,
-	type AvailabilityAppointmentBlockRow,
-	type AvailabilityExceptionRow,
-	type AvailabilityProfessionalRow,
-	type AvailabilityRuleRow,
-	type AvailabilityServiceRow,
-	type AvailabilitySlot
+ calculateAvailabilitySlots, clampRangeToBusinessRules, hasVisibleProfessionalName,
+ type AvailabilityBusiness, type AvailabilitySlot
 } from '$lib/availability/calculate';
-
 export * from '$lib/availability/calculate';
 
-const BLOCKING_STATUSES = ['reserved', 'confirmed', 'reschedule_requested'] as const;
-
 export type AvailabilityInput = {
+	/** Authentication scope, fixed by the server endpoint; publicOnly controls visibility. */
+	readScope?: AvailabilityScope;
 	modality?: BookingModality;
 	modalityWindows?: BookingModalityWindow[];
 	business: AvailabilityBusiness & { id: string };
@@ -36,160 +28,33 @@ export type AvailabilityInput = {
 	maxSlotsPerDate?: number;
 };
 
-export const getAvailabilitySlots = async (
-	supabase: CitaSupabaseClient,
-	input: AvailabilityInput
-): Promise<AvailabilitySlot[]> => {
-	const {
-		business,
-		serviceId,
-		professionalId,
-		publicOnly = false,
-		ignoreBreak = false
-	} = input;
-	const requiredProfessionalIds = [
-		...new Set(
-			(input.professionalIds ?? [])
-				.map((candidate) => String(candidate).trim())
-				.filter(Boolean)
-		)
-	];
 
-	if (publicOnly && (!business.is_active || !business.public_booking_enabled)) return [];
-	if (publicOnly && input.modality) {
-		const selectedIds = requiredProfessionalIds.length ? requiredProfessionalIds : professionalId ? [professionalId] : [];
-		if (!selectedIds.length) return [];
-		const dates = clampRangeToBusinessRules(business, input.fromDate, input.toDate);
-		if (!dates.length) return [];
-		const dayAfter = new Date(dates[dates.length - 1] + 'T12:00:00Z');
-		dayAfter.setUTCDate(dayAfter.getUTCDate() + 1);
-		const rows = await loadIntegratedAvailabilityRows(supabase, {
-			businessId: business.id, serviceId, professionalIds: selectedIds,
-			rangeStart: zonedDateTimeToUtc(dates[0], '00:00', business.timezone),
-			rangeEnd: zonedDateTimeToUtc(dayAfter.toISOString().slice(0, 10), '00:00', business.timezone)
-		});
-		const service = rows.services.find((service) => service.id === serviceId);
-		if (!service) return [];
-		const assigned = new Set(rows.assignments.filter((assignment) => assignment.service_id === serviceId).map((assignment) => assignment.professional_id));
-		return calculateAvailabilitySlots({
-			business, service, professionals: rows.professionals.filter((professional) => assigned.has(professional.id)),
-			rules: rows.rules, exceptions: rows.exceptions,
-			blocks: rows.blocks.filter((block) => block.appointment_id !== input.excludeAppointmentId),
-			fromDate: dates[0], toDate: dates[dates.length - 1], publicOnly,
-			requiredProfessionalIds, modality: input.modality, modalityWindows: input.modalityWindows,
-			maxSlots: input.maxSlots, maxSlotsPerDate: input.maxSlotsPerDate
-		});
-	}
-
-	const { data: service, error: serviceError } = await supabase
-		.from('services')
-		.select(
-			'id, business_id, name, duration_minutes, buffer_before_minutes, buffer_after_minutes, is_public, is_active'
-		)
-		.eq('business_id', business.id)
-		.eq('id', serviceId)
-		.maybeSingle();
-	if (serviceError || !service || !service.is_active || (publicOnly && !service.is_public)) return [];
-
-	let assignmentQuery = supabase
-		.from('professional_services')
-		.select('professional_id, professionals!inner(id, name, is_public, is_active)')
-		.eq('business_id', business.id)
-		.eq('service_id', service.id);
-	if (requiredProfessionalIds.length > 0) {
-		assignmentQuery = assignmentQuery.in('professional_id', requiredProfessionalIds);
-	} else if (professionalId) {
-		assignmentQuery = assignmentQuery.eq('professional_id', professionalId);
-	}
-
-	const { data: assignments, error: assignmentError } = await assignmentQuery;
-	if (assignmentError) throw assignmentError;
-
-	let professionals = (assignments ?? [])
-		.map((row) => row.professionals)
-		.filter(
-			(professional) =>
-				professional?.is_active && (!publicOnly || (professional.is_public && hasVisibleProfessionalName(professional)))
-		);
-
-	if (professionals.length === 0) return [];
-	if (requiredProfessionalIds.length > 0) {
-		const byId = new Map(professionals.map((professional) => [professional.id, professional]));
-		professionals = requiredProfessionalIds
-			.map((requiredId) => byId.get(requiredId))
-			.filter((professional): professional is AvailabilityProfessionalRow => Boolean(professional));
-		if (professionals.length !== requiredProfessionalIds.length) return [];
-	}
-	const professionalIds = professionals.map((professional) => professional.id);
-
-	const calculationNow = new Date();
-	const dates = clampRangeToBusinessRules(business, input.fromDate, input.toDate, calculationNow);
-	if (dates.length === 0) return [];
-
-	const rangeStart = zonedDateTimeToUtc(dates[0], '00:00', business.timezone);
-	const rangeEnd = zonedDateTimeToUtc(dates[dates.length - 1], '23:59', business.timezone);
-
-	let blocksQuery = supabase
-		.from('appointment_professionals')
-		.select(
-			'id, appointment_id, professional_id, starts_at, ends_at, base_blocking_starts_at, base_blocking_ends_at, blocking_starts_at, blocking_ends_at'
-		)
-		.eq('business_id', business.id)
-		.in('professional_id', professionalIds)
-		.in('status', [...BLOCKING_STATUSES]);
-	if (ignoreBreak) {
-		blocksQuery = blocksQuery
-			.lt('base_blocking_starts_at', rangeEnd.toISOString())
-			.gt('base_blocking_ends_at', rangeStart.toISOString());
-	} else {
-		blocksQuery = blocksQuery
-			.lt('blocking_starts_at', rangeEnd.toISOString())
-			.gt('blocking_ends_at', rangeStart.toISOString());
-	}
-	if (input.excludeAppointmentId) {
-		blocksQuery = blocksQuery.neq('appointment_id', input.excludeAppointmentId);
-	}
-
-	const [{ data: rules, error: rulesError }, { data: exceptions, error: exceptionsError }, { data: blocks, error: blocksError }] =
-		await Promise.all([
-			supabase
-				.from('availability_rules')
-				.select(
-					'id, professional_id, weekday, start_time, end_time, slot_interval_minutes, break_minutes, is_active, service_scope, rule_services:availability_rule_services(service_id)'
-				)
-				.eq('business_id', business.id)
-				.in('professional_id', professionalIds)
-				.eq('is_active', true),
-			supabase
-				.from('availability_exceptions')
-				.select('id, professional_id, starts_at, ends_at, type, exception_services:availability_exception_services(service_id)')
-				.eq('business_id', business.id)
-				.lt('starts_at', rangeEnd.toISOString())
-				.gt('ends_at', rangeStart.toISOString()),
-			blocksQuery
-		]);
-
-	if (rulesError) throw rulesError;
-	if (exceptionsError) throw exceptionsError;
-	if (blocksError) throw blocksError;
-
-	const validated = parseIntegratedAvailabilityRows({ services: [], professionals: [], assignments: [], rules: rules ?? [], exceptions: exceptions ?? [], blocks: blocks ?? [] });
-	return calculateAvailabilitySlots({
-		modality: input.modality,
-		modalityWindows: input.modalityWindows,
-		business,
-		service,
-		professionals,
-		rules: validated.rules,
-		exceptions: validated.exceptions,
-		blocks: validated.blocks,
-		fromDate: dates[0],
-		toDate: dates[dates.length - 1],
-		publicOnly,
-		requiredProfessionalIds,
-		ignoreBreak,
-		maxSlots: input.maxSlots,
-		maxSlotsPerDate: input.maxSlotsPerDate,
-		now: calculationNow
-	});
+export const getAvailabilitySlots = async (client: CitaSupabaseClient, input: AvailabilityInput): Promise<AvailabilitySlot[]> => {
+ if (!isAvailabilityDate(input.fromDate) || !isAvailabilityDate(input.toDate) || input.fromDate > input.toDate)
+  throw new InvalidDataContractError('availability.range');
+ const publicOnly = input.publicOnly ?? false;
+ if (publicOnly && (!input.business.is_active || !input.business.public_booking_enabled)) return [];
+ const catalog = await loadAvailabilityCatalog(client, input.business.id, input.readScope ?? (publicOnly ? 'public' : 'internal'));
+ const service = catalog.services.find(row => row.id === input.serviceId && (!publicOnly || row.is_public));
+ if (!service) return [];
+ const requiredProfessionalIds = [...new Set((input.professionalIds ?? []).map(id => id.trim().toLowerCase()).filter(Boolean))];
+ const professionalId = input.professionalId?.trim().toLowerCase();
+ const assigned = new Set(catalog.assignments.filter(row => row.service_id === service.id).map(row => row.professional_id));
+ const professionals = catalog.professionals.filter(row => assigned.has(row.id) &&
+  (!publicOnly || (row.is_public && hasVisibleProfessionalName(row))) &&
+  (requiredProfessionalIds.length ? requiredProfessionalIds.includes(row.id) : !professionalId || row.id === professionalId));
+ if (!professionals.length || (requiredProfessionalIds.length && professionals.length !== requiredProfessionalIds.length)) return [];
+ const now = new Date();
+ const dates = clampRangeToBusinessRules(catalog.business, input.fromDate, input.toDate, now);
+ if (!dates.length) return [];
+ const rows = await loadAvailabilityWindowRows(client, catalog, {
+  serviceId: service.id, professionalIds: professionals.map(row => row.id), fromDate: dates[0], toDate: dates[dates.length - 1]
+ });
+ return calculateAvailabilitySlots({
+  business: catalog.business, service, professionals, rules: catalog.rules,
+  exceptions: rows.exceptions, blocks: rows.blocks.filter(row => row.appointment_id !== input.excludeAppointmentId),
+  fromDate: dates[0], toDate: dates[dates.length - 1], publicOnly, requiredProfessionalIds,
+  modality: input.modality, modalityWindows: input.modalityWindows, ignoreBreak: input.ignoreBreak,
+  maxSlots: input.maxSlots, maxSlotsPerDate: input.maxSlotsPerDate, now
+ });
 };

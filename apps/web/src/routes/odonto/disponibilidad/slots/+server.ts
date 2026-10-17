@@ -65,6 +65,7 @@ export const GET: RequestHandler = async ({ url, locals, fetch, cookies }) => {
 
 	try {
 		const slots = await getAvailabilitySlots(supabase, {
+			readScope: 'internal',
 			business: business.business,
 			serviceId,
 			professionalId,

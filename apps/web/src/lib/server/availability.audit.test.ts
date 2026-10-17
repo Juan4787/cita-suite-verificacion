@@ -5,12 +5,15 @@
 // - La anticipación mínima del negocio aplica a la reserva pública, no al panel.
 // Las fechas se computan relativas a hoy para que la suite no caduque.
 import { describe, expect, it } from 'vitest';
+import { createClient } from '@supabase/supabase-js';
+import type { CitaDatabase } from '$lib/types/database';
+import { readRecord, readText, readFiniteNumber } from '$lib/contracts/json';
 import { getAvailabilitySlots, zonedDateTimeToUtc } from './availability';
 
 const TIMEZONE = 'America/Argentina/Cordoba';
 
 const business = {
-	id: 'biz-1',
+	id: '00000000-0000-4000-8000-000000000001',
 	timezone: TIMEZONE,
 	is_active: true,
 	public_booking_enabled: true,
@@ -46,28 +49,38 @@ type MockData = {
 	appointments?: unknown[];
 };
 
-const queryBuilder = (data: unknown) => {
-	const builder: Record<string, unknown> = {};
-	for (const method of ['eq', 'in', 'lt', 'gt', 'neq']) {
-		builder[method] = () => builder;
-	}
-	builder.maybeSingle = async () => ({ data, error: null });
-	(builder as { then: unknown }).then = (resolve: (value: unknown) => unknown) =>
-		resolve({ data, error: null });
-	return builder;
-};
-
-const supabaseFor = (input: MockData) => ({
-	from: (table: string) => ({
-		select: () => {
-			if (table === 'services') return queryBuilder(input.service);
-			if (table === 'professional_services') return queryBuilder(input.assignments);
-			if (table === 'availability_rules') return queryBuilder(input.rules);
-			if (table === 'availability_exceptions') return queryBuilder(input.exceptions ?? []);
-			if (table === 'appointment_professionals') return queryBuilder(input.appointments ?? []);
-			return queryBuilder([]);
-		}
-	})
+const supabaseFor = (input: MockData, settings = business) => createClient<CitaDatabase>('https://synthetic.example.test', 'synthetic-key', {
+ auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+ global: { fetch: async (url, init) => {
+  const params = readRecord(JSON.parse(String(init?.body)), 'synthetic.rpcBody');
+  const scope = params.p_public ? 'public' : 'internal';
+  const professionals = input.assignments.map(value => {
+   const row = readRecord(readRecord(value, 'synthetic.assignment').professionals, 'synthetic.professional');
+   return { ...row, id: readText(row.id, 'synthetic.professionalId'), sort_order: 0, specialty: null, avatar_url: null };
+  });
+  const blocks = (input.appointments ?? []).map((value, i) => {
+   const row = readRecord(value, 'synthetic.block');
+   const start = readText(row.blocking_starts_at, 'synthetic.start');
+   const end = readText(row.blocking_ends_at, 'synthetic.end');
+   return { ...row, id: `00000000-0000-4000-8000-${String(300 + i).padStart(12, '0')}`,
+    appointment_id: `00000000-0000-4000-8000-${String(400 + i).padStart(12, '0')}`,
+    starts_at: new Date(Date.parse(start) + readFiniteNumber(input.service.buffer_before_minutes, 'synthetic.before') * 60000).toISOString(),
+    ends_at: new Date(Date.parse(end) - readFiniteNumber(input.service.buffer_after_minutes, 'synthetic.after') * 60000).toISOString(),
+    base_blocking_starts_at: start, base_blocking_ends_at: end };
+  });
+  const exceptions = (input.exceptions ?? []).map((value, i) => ({ ...readRecord(value, 'synthetic.exception'),
+   id: `00000000-0000-4000-8000-${String(200 + i).padStart(12, '0')}`, allowed_service_ids: [] }));
+  const payload = String(url).endsWith('get_availability_catalog') ? {
+   schema_version: 2, business_id: business.id, scope, configuration_revision: 1, generated_at: new Date().toISOString(), business: settings,
+   services: [{ ...input.service, sort_order: 0, description: null, price_label: null }], professionals,
+   assignments: professionals.map(row => ({ service_id: input.service.id, professional_id: row.id })),
+   rules: input.rules.map((value, i) => ({ ...readRecord(value, 'synthetic.rule'),
+    id: `00000000-0000-4000-8000-${String(100 + i).padStart(12, '0')}`, service_scope: 'all', allowed_service_ids: [], break_minutes: 0 }))
+  } : { schema_version: 2, complete: true, business_id: business.id, scope, configuration_revision: 1, generated_at: new Date().toISOString(),
+   from_date: params.p_from_date, to_date: params.p_to_date, professional_ids: params.p_professional_ids,
+   counts: { blocks: blocks.length, exceptions: exceptions.length }, blocks, exceptions };
+  return new Response(JSON.stringify(payload), { headers: { 'content-type': 'application/json' } });
+ } }
 });
 
 const professional = (id: string, name: string) => ({
@@ -86,7 +99,7 @@ const rule = (professionalId: string, start: string, end: string, step = 60) => 
 });
 
 const service = (overrides: Record<string, unknown> = {}) => ({
-	id: 'svc-1',
+	id: '00000000-0000-4000-8000-000000000002',
 	business_id: business.id,
 	name: 'Consulta',
 	duration_minutes: 60,
@@ -105,58 +118,58 @@ describe('auditoría disponibilidad: turno tomado por profesional', () => {
 		const slots = await getAvailabilitySlots(
 			supabaseFor({
 				service: service(),
-				assignments: [professional('pro-1', 'Dra. Uno'), professional('pro-2', 'Dr. Dos')],
-				rules: [rule('pro-1', '15:00', '18:00'), rule('pro-2', '15:00', '18:00')],
+				assignments: [professional('00000000-0000-4000-8000-000000000003', 'Dra. Uno'), professional('00000000-0000-4000-8000-000000000004', 'Dr. Dos')],
+				rules: [rule('00000000-0000-4000-8000-000000000003', '15:00', '18:00'), rule('00000000-0000-4000-8000-000000000004', '15:00', '18:00')],
 				appointments: [
 					{
 						id: 'appt-1',
-						professional_id: 'pro-1',
+						professional_id: '00000000-0000-4000-8000-000000000003',
 						blocking_starts_at: atLocal('16:00'),
 						blocking_ends_at: atLocal('17:00')
 					}
 				]
-			}) as never,
-			{ business: business as never, serviceId: 'svc-1', fromDate: DATE, toDate: DATE, publicOnly: true }
+			}),
+			{ business, serviceId: '00000000-0000-4000-8000-000000000002', fromDate: DATE, toDate: DATE, publicOnly: true }
 		);
 
-		expect(timesFor(slots, 'pro-1')).toEqual(['15:00', '17:00']);
-		expect(timesFor(slots, 'pro-2')).toEqual(['15:00', '16:00', '17:00']);
+		expect(timesFor(slots, '00000000-0000-4000-8000-000000000003')).toEqual(['15:00', '17:00']);
+		expect(timesFor(slots, '00000000-0000-4000-8000-000000000004')).toEqual(['15:00', '16:00', '17:00']);
 	});
 
 	it('respeta el buffer de descanso: no ofrece el horario pegado al bloqueo del turno anterior', async () => {
 		const slots = await getAvailabilitySlots(
 			supabaseFor({
 				service: service({ buffer_after_minutes: 15 }),
-				assignments: [professional('pro-1', 'Dra. Uno')],
-				rules: [rule('pro-1', '15:00', '19:00')],
+				assignments: [professional('00000000-0000-4000-8000-000000000003', 'Dra. Uno')],
+				rules: [rule('00000000-0000-4000-8000-000000000003', '15:00', '19:00')],
 				appointments: [
 					{
 						id: 'appt-1',
-						professional_id: 'pro-1',
+						professional_id: '00000000-0000-4000-8000-000000000003',
 						// Turno 15:00–16:00 local + 15 min de buffer ya aplicados por el trigger
 						blocking_starts_at: atLocal('15:00'),
 						blocking_ends_at: atLocal('16:15')
 					}
 				]
-			}) as never,
-			{ business: business as never, serviceId: 'svc-1', fromDate: DATE, toDate: DATE, publicOnly: true }
+			}),
+			{ business, serviceId: '00000000-0000-4000-8000-000000000002', fromDate: DATE, toDate: DATE, publicOnly: true }
 		);
 
 		// 15:00 choca con el turno; 16:00 invade su buffer. 16:15 es la primera
 		// disponibilidad real y se ofrece aunque caiga fuera de la grilla; 18:00 no
 		// entra porque su propio buffer sale de la regla.
-		expect(timesFor(slots, 'pro-1')).toEqual(['16:15', '17:00']);
+		expect(timesFor(slots, '00000000-0000-4000-8000-000000000003')).toEqual(['16:15', '17:00']);
 	});
 
 	it('los slots duran exactamente lo configurado en el servicio', async () => {
 		const slots = await getAvailabilitySlots(
 			supabaseFor({
 				service: service({ duration_minutes: 45 }),
-				assignments: [professional('pro-1', 'Dra. Uno')],
-				rules: [rule('pro-1', '15:00', '17:00', 30)],
+				assignments: [professional('00000000-0000-4000-8000-000000000003', 'Dra. Uno')],
+				rules: [rule('00000000-0000-4000-8000-000000000003', '15:00', '17:00', 30)],
 				appointments: []
-			}) as never,
-			{ business: business as never, serviceId: 'svc-1', fromDate: DATE, toDate: DATE, publicOnly: true }
+			}),
+			{ business, serviceId: '00000000-0000-4000-8000-000000000002', fromDate: DATE, toDate: DATE, publicOnly: true }
 		);
 
 		expect(slots.length).toBeGreaterThan(0);
@@ -165,7 +178,7 @@ describe('auditoría disponibilidad: turno tomado por profesional', () => {
 			expect(minutes).toBe(45);
 		}
 		// Con regla 15:00–17:00 cada 30': 15:00, 15:30, 16:00 y 16:15 no (no entra 45').
-		expect(timesFor(slots, 'pro-1')).toEqual(['15:00', '15:30', '16:00']);
+		expect(timesFor(slots, '00000000-0000-4000-8000-000000000003')).toEqual(['15:00', '15:30', '16:00']);
 	});
 });
 
@@ -177,15 +190,15 @@ describe('auditoría disponibilidad: anticipación mínima del negocio', () => {
 	};
 	const mockData = (): MockData => ({
 		service: service(),
-		assignments: [professional('pro-1', 'Dra. Uno')],
-		rules: [rule('pro-1', '15:00', '18:00')],
+		assignments: [professional('00000000-0000-4000-8000-000000000003', 'Dra. Uno')],
+		rules: [rule('00000000-0000-4000-8000-000000000003', '15:00', '18:00')],
 		appointments: []
 	});
 
 	it('oculta al público los horarios con menos anticipación que la configurada', async () => {
-		const slots = await getAvailabilitySlots(supabaseFor(mockData()) as never, {
-			business: businessWithNotice as never,
-			serviceId: 'svc-1',
+		const slots = await getAvailabilitySlots(supabaseFor(mockData(), businessWithNotice), {
+			business: businessWithNotice,
+			serviceId: '00000000-0000-4000-8000-000000000002',
 			fromDate: DATE,
 			toDate: DATE,
 			publicOnly: true
@@ -194,13 +207,13 @@ describe('auditoría disponibilidad: anticipación mínima del negocio', () => {
 	});
 
 	it('no afecta al panel: recepción sigue viendo esos horarios', async () => {
-		const slots = await getAvailabilitySlots(supabaseFor(mockData()) as never, {
-			business: businessWithNotice as never,
-			serviceId: 'svc-1',
+		const slots = await getAvailabilitySlots(supabaseFor(mockData(), businessWithNotice), {
+			business: businessWithNotice,
+			serviceId: '00000000-0000-4000-8000-000000000002',
 			fromDate: DATE,
 			toDate: DATE,
 			publicOnly: false
 		});
-		expect(timesFor(slots, 'pro-1')).toEqual(['15:00', '16:00', '17:00']);
+		expect(timesFor(slots, '00000000-0000-4000-8000-000000000003')).toEqual(['15:00', '16:00', '17:00']);
 	});
 });
