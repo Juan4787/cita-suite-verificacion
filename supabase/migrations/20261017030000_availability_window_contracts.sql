@@ -148,7 +148,12 @@ begin
     'blocks',coalesce((select jsonb_agg(to_jsonb(row) order by row.professional_id,row.blocking_starts_at,row.id) from (
       select a.id,a.appointment_id,a.professional_id,a.starts_at,a.ends_at,a.base_blocking_starts_at,a.base_blocking_ends_at,a.blocking_starts_at,a.blocking_ends_at
       from public.appointment_professionals a where a.business_id=p_business_id and a.professional_id=any(p_professional_ids)
-        and a.status in ('reserved','confirmed','reschedule_requested') and a.blocking_starts_at<range_end and a.blocking_ends_at>range_start) row),'[]'::jsonb));
+        and a.status in ('reserved','confirmed','reschedule_requested') and a.blocking_starts_at<range_end and a.blocking_ends_at>range_start
+        -- Match the existing appointment_professionals_select policy. The
+        -- function owner must not turn an internal professional into a reader
+        -- of every colleague's allocations merely by bypassing table RLS.
+        and (p_public or coalesce(auth.role(),'')='service_role'
+          or coalesce(public.user_can_read_appointment(a.business_id,a.appointment_id),false))) row),'[]'::jsonb));
   if octet_length(result::text)>5000000 then raise exception 'AVAILABILITY_RESPONSE_LIMIT'; end if;
   return result||jsonb_build_object('counts',jsonb_build_object(
     'exceptions',jsonb_array_length(result->'exceptions'),'blocks',jsonb_array_length(result->'blocks')));
