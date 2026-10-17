@@ -83,17 +83,17 @@ export function previewMonthlyPrices(
   }
   const [year, month] = baseMonth.split("-").map(Number);
   const [startYear, startNumber] = startMonth.split("-").map(Number);
-  const startOffset = Math.max(
-    0,
-    (startYear - year) * 12 + startNumber - month,
-  );
+  const startOffset = (startYear - year) * 12 + startNumber - month;
   if (
     !Number.isInteger(count) ||
     count < 1 ||
-    count > 120 ||
-    startOffset + count > 600
+    count > 120
   )
     throw invalid();
+  // Offsets are inclusive: a one-item preview at month 600 is valid. A
+  // pre-base date must not silently become the base month's quote.
+  if (startOffset < 0 || startOffset + count - 1 > 600)
+    throw new Error('PRICE_DATE_INVALID');
   const result = [];
   const defaults = adjustments
     .filter((row) => row.kind === "default")
@@ -119,6 +119,7 @@ export function previewMonthlyPrices(
     // Round only this month's quote. Keep the exact rational series unchanged.
     const divisor = denominator * unit;
     const amount = ((numerator * 2n + divisor) / (divisor * 2n)) * unit;
+    if (amount > 1000000000000n) throw new Error('PRICE_AMOUNT_INVALID');
     if (offset >= startOffset)
       result.push({ month: current, amount: Number(amount) });
   }
