@@ -1,8 +1,17 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@turnos-saas/shared';
 import { randomUUID } from 'node:crypto';
 import { signInWithPassword } from './helpers/shared-auth';
+
+async function captureStorageSurface(page: Page, name: string) {
+	for (const width of [1280, 320]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.evaluate(() => window.scrollTo(0, 0));
+		await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+		await page.screenshot({ path: test.info().outputPath(`${name}-${width}.png`), fullPage: true });
+	}
+}
 
 test('master storage policy preserves drafts, enforces clinic scope and renders desktop/mobile', async ({ page, browser }) => {
 	const url = process.env.ODONTO_SUPABASE_URL;
@@ -104,6 +113,7 @@ test('master storage policy preserves drafts, enforces clinic scope and renders 
 		await ownerPage.goto('/odonto/configuracion/documentos');
 		await expect(ownerPage.getByText('La carga de documentos está pausada. Los archivos guardados siguen disponibles.')).toBeVisible();
 		await expect(ownerPage.getByRole('button', { name: 'Guardar permisos', exact: true })).toBeDisabled();
+		await captureStorageSurface(ownerPage, 'storage-clinic-paused');
 		const denied = await ownerPage.request.post(`/odonto/pacientes/${patientId}/radiografias/uploads`, { data: {
 			clientRequestId: randomUUID(), originalFilename: 'synthetic.pdf', mimeType: 'application/pdf', bytes: 100, sha256: 'a'.repeat(64)
 		} });
@@ -115,15 +125,12 @@ test('master storage policy preserves drafts, enforces clinic scope and renders 
 		await ownerPage.goto(`/odonto/pacientes/${patientId}?tab=radiografias`);
 		await expect(ownerPage.getByText('La carga de documentos está pausada. Podés consultar los documentos guardados.')).toBeVisible();
 		await expect(ownerPage.getByRole('button', { name: 'Añadir documento', exact: true })).toHaveCount(0);
+		await captureStorageSurface(ownerPage, 'storage-patient-paused');
 		await ownerPage.goto('/odonto/maestro/almacenamiento');
 		await expect(ownerPage).not.toHaveURL(/\/maestro/);
 		await expect(ownerPage.getByLabel('Límite inicial por consultorio (MB)')).toHaveCount(0);
 
-		for (const width of [1280, 320]) {
-			await page.setViewportSize({ width, height: 900 });
-			await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-			await page.screenshot({ path: test.info().outputPath(`storage-master-${width}.png`), fullPage: true });
-		}
+		await captureStorageSurface(page, 'storage-master');
 	} finally {
 		await ownerContext.close();
 		const restored = await admin.rpc('set_clinical_storage_defaults', { p_actor_id: masterId,
