@@ -46,6 +46,7 @@
 				professionals: Professional[];
 				slots: Slot[];
 				days: Day[];
+				dateWindow?: { fromDate: string; toDate: string; previousFromDate: string | null; nextFromDate: string | null; horizonEnd: string };
 				issue: string | null;
 			};
 			selected: {
@@ -54,6 +55,7 @@
 				professionalId: string;
 				professionalIds: string[];
 				date: string;
+				datesFrom?: string;
 			};
 			mapsLink: string | null;
 			turnstileSiteKey: string | null;
@@ -112,6 +114,7 @@
 			professionalId: bookingMode === 'individual' ? (params.get('professional_id') ?? '') : '',
 			professionalIds: bookingMode === 'joint' ? professionalIds : [],
 			date: params.get('date') ?? '',
+			datesFrom: params.get('dates_from') ?? '',
 			slot: params.get('slot') ?? ''
 		};
 	};
@@ -132,7 +135,8 @@
 			(Boolean(pendingSelection) &&
 				(selection.bookingMode !== data.selected.bookingMode ||
 					selection.professionalId !== data.selected.professionalId ||
-					selection.professionalIds.join(',') !== data.selected.professionalIds.join(',')))
+					selection.professionalIds.join(',') !== data.selected.professionalIds.join(',') ||
+					selection.datesFrom !== (data.selected.datesFrom ?? '')))
 	);
 	const slotsStale = $derived(
 		daysStale || (Boolean(pendingSelection) && selection.date !== data.selected.date)
@@ -183,7 +187,7 @@
 	const queryFor = (
 		params: Partial<
 			Record<
-				'service_id' | 'booking_mode' | 'professional_id' | 'professional_ids' | 'date' | 'slot',
+				'service_id' | 'booking_mode' | 'professional_id' | 'professional_ids' | 'date' | 'slot' | 'dates_from',
 				string
 			>
 		>
@@ -210,6 +214,9 @@
 		} else if (professionalId) {
 			search.set('professional_id', professionalId);
 		}
+		const resetsDates = ['service_id', 'booking_mode', 'professional_id', 'professional_ids'].some(key => key in params);
+		const datesFrom = params.dates_from ?? (resetsDates ? '' : selection.datesFrom);
+		if (datesFrom) search.set('dates_from', datesFrom);
 		if (date) search.set('date', date);
 		if (slot) search.set('slot', slot);
 		const value = search.toString();
@@ -252,6 +259,16 @@
 
 	let visibleDayCount = $state(6);
 	const visibleDays = $derived(data.state.days.slice(0, visibleDayCount));
+	const dateWindow = $derived(data.state.dateWindow);
+	const dateWindowLabel = $derived.by(() => {
+		if (!dateWindow) return '';
+		const formatter = new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+		return formatter.formatRange(new Date(dateWindow.fromDate + 'T12:00:00Z'), new Date(dateWindow.toDate + 'T12:00:00Z'));
+	});
+	$effect(() => {
+		void dateWindow?.fromDate;
+		visibleDayCount = 6;
+	});
 	let teamDraftIds = $state<string[]>([]);
 	let teamDraftContext = $state('');
 	$effect(() => {
@@ -676,6 +693,7 @@
 				{:else}
 					<section class="ux-card scroll-mt-5" bind:this={activeStepCard}>
 						<h2 class="ux-section-title">Elegí un día</h2>
+						{#if dateWindowLabel}<p class="mt-2 text-sm text-white/70">{dateWindowLabel}</p>{/if}
 						<div class="mt-5 grid gap-3 sm:grid-cols-2">
 							{#each visibleDays as day (day.date)}
 								<a
@@ -703,14 +721,10 @@
 						{#if data.state.days.length === 0}
 							<div class="ux-empty mt-4">
 								<p class="font-bold text-white/80">
-									{selection.bookingMode === 'joint'
-										? 'No encontramos un horario común para todo el equipo seleccionado.'
-										: 'No encontramos horarios para ese profesional.'}
+									No hay horarios disponibles entre estas fechas.
 								</p>
 								<p class="mt-2 text-sm text-white/55">
-									{compact ? 'Elegí otro servicio o comunicate con el consultorio para consultar nuevas fechas.' : selection.bookingMode === 'joint'
-										? 'Volvé al paso del equipo, cambiá uno o más integrantes y buscá nuevamente.'
-										: 'Volvé al paso anterior y elegí otro profesional.'}
+									{dateWindow?.nextFromDate ? 'Probá con las siguientes fechas.' : 'Elegí otro servicio o profesional, o consultá al consultorio.'}
 								</p>
 								<a
 									data-sveltekit-noscroll
@@ -728,6 +742,18 @@
 								</a>
 							</div>
 						{/if}
+                        {#if dateWindow?.previousFromDate || dateWindow?.nextFromDate}
+                            <nav aria-label="Otras fechas para reservar" class="mt-5 grid grid-cols-2 gap-3">
+                                {#if dateWindow.previousFromDate}
+                                    <a class="ux-btn-secondary min-w-0 text-center" data-sveltekit-noscroll data-sveltekit-preload-data="off"
+                                        href={queryFor({ dates_from: dateWindow.previousFromDate, date: '', slot: '' })}>Fechas anteriores</a>
+                                {/if}
+                                {#if dateWindow.nextFromDate}
+                                    <a class="ux-btn-secondary col-start-2 min-w-0 text-center" data-sveltekit-noscroll data-sveltekit-preload-data="off"
+                                        href={queryFor({ dates_from: dateWindow.nextFromDate, date: '', slot: '' })}>Fechas siguientes</a>
+                                {/if}
+                            </nav>
+                        {/if}
 					</section>
 				{/if}
 			{:else if step > 3}

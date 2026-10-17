@@ -49,6 +49,7 @@ describe('public integration request isolation', () => {
     const layout = resolveBookingIntegrationRequest(request);
     const page = resolveBookingIntegrationRequest(request);
     expect(await layout).toEqual(await page);
+    expect(await page).not.toHaveProperty('supabase');
     expect(mocks.admin).toHaveBeenCalledTimes(1);
     expect(mocks.rpc).toHaveBeenCalledTimes(1);
     expect(mocks.load).toHaveBeenCalledTimes(1);

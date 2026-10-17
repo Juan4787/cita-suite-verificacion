@@ -1,3 +1,4 @@
+import { createSupabaseAdminClient } from '$lib/server/supabase';
 import { json, error } from '@sveltejs/kit';
 import { resolveBookingIntegrationRequest } from '$lib/server/booking-integration-request';
 import { parseServicePriceLabels } from '$lib/server/price-contracts';
@@ -7,7 +8,8 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async (event) => {
   try {
-  const { supabase, integration } = await resolveBookingIntegrationRequest(event);
+  const { integration } = await resolveBookingIntegrationRequest(event);
+  const supabase = await createSupabaseAdminClient('odonto', event.fetch);
   const origin = event.request.headers.get('origin');
   if (origin && !integration.allowedOrigins.includes(origin)) error(403, 'Este sitio no está habilitado para consultar las prestaciones.');
   if (!integration.isActive || !(await canUsePublicBusiness(supabase, integration.businessId))) error(404, 'Las reservas todavía no están disponibles.');

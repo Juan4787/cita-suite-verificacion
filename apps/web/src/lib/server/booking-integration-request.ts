@@ -1,14 +1,12 @@
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { error, isHttpError, type RequestEvent } from '@sveltejs/kit';
-import type { CitaSupabaseClient } from '$lib/types/database';
 import { BOOKING_INTEGRATION_KEY_PATTERN, normalizeBookingOrigin } from '@turnos-saas/shared/booking-integration';
 import { loadBookingIntegration, type BookingIntegration } from './booking-integrations';
 import { createSupabaseAdminClient } from './supabase';
 import { hashRateLimitSubject } from './rate-limits';
 
 export type ResolvedBookingIntegration = {
-	supabase: CitaSupabaseClient;
 	integration: BookingIntegration;
 	embed: { parentOrigin: string; instanceId: string } | null;
 };
@@ -46,7 +44,9 @@ async function readBookingIntegrationRequest(event: RequestEvent, publicKey: str
 			embed = { parentOrigin, instanceId };
 			event.locals.bookingFrameAncestors = integration.allowedOrigins;
 		}
-		return { supabase, integration, embed };
+		// Only data is shared between sibling load functions. A client captures the
+  // initiating load's event.fetch and must not escape into a later page load.
+  return { integration, embed };
 	} catch (cause) {
 		if (isHttpError(cause)) throw cause;
 		error(503, 'No pudimos cargar las reservas. Esperá unos segundos y volvé a intentar o contactá al consultorio.');

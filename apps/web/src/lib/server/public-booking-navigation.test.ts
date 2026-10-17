@@ -69,7 +69,7 @@ beforeEach(() => {
   mocks.state.mockImplementation(async () => structuredClone(state));
   mocks.create.mockResolvedValue({ appointment: { confirmation_token: token } });
   mocks.verify.mockResolvedValue(undefined);
-  mocks.resolve.mockResolvedValue({ supabase: {}, integration, embed: null });
+  mocks.resolve.mockResolvedValue({ integration, embed: null });
   mocks.appointment.mockResolvedValue({ booking_context: { theme: 'natalia' } });
 });
 
@@ -116,6 +116,7 @@ describe('one Cita Suite flow for shared and Natalia links', () => {
   it('redirects old standalone receipt links only after validating the integration and appointment', async () => {
     await expect(receiptLoad(event('&creado=1&recuperado=1'))).rejects.toMatchObject({ status: 303, location: '/turno/' + token + '?creado=1&recuperado=1' });
     expect(mocks.appointment).toHaveBeenCalledWith(expect.anything(), token, expect.any(Date), integrationId);
+    expect(mocks.admin).toHaveBeenCalledWith('odonto', expect.any(Function));
     mocks.appointment.mockResolvedValue(null);
     await expect(receiptLoad(event())).rejects.toMatchObject({ status: 404 });
   });
