@@ -483,7 +483,7 @@
 		maxSlotsPerDate?: number;
 	}): Slot[] | null => {
 		const snapshot = availabilitySnapshot;
-		if (!snapshot || !snapshotContainsRange(snapshot, input.fromDate, input.fromDate)) return null;
+		if (!snapshot || Date.parse(snapshot.valid_until) <= Date.now() || !snapshotContainsRange(snapshot, input.fromDate, input.fromDate)) return null;
 		// Nunca afirmamos que una semana está vacía usando un snapshot que sólo
 		// cubre una parte de esos siete días. En ese borde se consulta al servidor.
 		if (input.maxSlotsPerDate && snapshot.to_date < addDays(input.fromDate, 6)) return null;
@@ -1056,7 +1056,7 @@
 						</button>
 					{/each}
 				</div>
-			{:else}
+			{:else if !slotsError}
 				<div class="ux-empty mt-6">
 					<p class="text-lg font-bold text-white/85">
 						{bookingMode === 'joint'
@@ -1124,7 +1124,7 @@
 						{/each}
 					</div>
 				{/if}
-				{#if selectedDaySlots.length === 0}
+				{#if selectedDaySlots.length === 0 && !slotsError}
 					<p class="ux-empty mt-6 text-base">No hay horarios para ese día. Probá con otro día.</p>
 				{/if}
 			{/if}

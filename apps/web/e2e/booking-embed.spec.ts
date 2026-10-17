@@ -284,4 +284,48 @@ test.describe('isolated booking integration', () => {
     }
   });
 
+  test('internal calendar requests only the visible week and exposes malformed responses with a working recovery', async ({ browser }) => {
+    test.setTimeout(90_000);
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    try {
+      await context.addCookies([
+        { name: 'sb-module', value: 'odonto', url: fixture.appOrigin },
+        { name: 'sb-access-token', value: fixture.ownerToken, url: fixture.appOrigin },
+        { name: 'sb-refresh-token', value: fixture.ownerRefreshToken, url: fixture.appOrigin },
+        { name: 'active-business-id', value: fixture.businessId, url: fixture.appOrigin }
+      ]);
+      const page = await context.newPage();
+      let fail = false;
+      const requests: URL[] = [];
+      await page.route('**/odonto/disponibilidad/slots?**', async route => {
+        requests.push(new URL(route.request().url()));
+        if (fail) await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+        else await route.continue();
+      });
+      await page.goto(fixture.appOrigin + '/odonto/agenda');
+      await page.getByRole('button', { name: '+ Nuevo turno', exact: true }).click();
+      await page.getByRole('button', { name: /Consulta de prueba/ }).click();
+      await page.getByRole('button', { name: /Profesional de prueba/ }).click();
+      await expect(page.getByRole('heading', { name: 'Elegí un día', exact: true })).toBeVisible();
+      await page.getByRole('button', { name: 'Semana siguiente', exact: true }).click();
+      fail = true;
+      const failed = page.waitForResponse(response => response.url().includes('/odonto/disponibilidad/slots?'));
+      await page.getByRole('button', { name: 'Semana siguiente', exact: true }).click();
+      await failed;
+      await expect(page.getByText('No pudimos actualizar los horarios.', { exact: false })).toBeVisible();
+      await expect(page.getByText('No hay días disponibles esta semana.', { exact: true })).toHaveCount(0);
+      const query = requests.at(-1)!;
+      expect((Date.parse(query.searchParams.get('to')!) - Date.parse(query.searchParams.get('from')!)) / 86_400_000).toBe(6);
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({ path: test.info().outputPath('availability-internal-error-desktop.png'), fullPage: true });
+      fail = false;
+      const recovered = page.waitForResponse(response => response.url().includes('/odonto/disponibilidad/slots?'));
+      await page.getByRole('button', { name: 'Semana siguiente', exact: true }).click();
+      await recovered;
+      await expect(page.getByText('No pudimos actualizar los horarios.', { exact: false })).toHaveCount(0);
+      // Each recovered day is a task button with an actual date, not a fabricated successful empty list.
+      await expect(page.getByRole('button', { name: /lunes|martes|miércoles|jueves|viernes|sábado|domingo/i }).first()).toBeVisible();
+    } finally { await context.close(); }
+  });
+
 });

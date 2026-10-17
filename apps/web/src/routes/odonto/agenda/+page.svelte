@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { parseAvailabilitySnapshot } from '$lib/availability/http';
+	import { readRecord } from '$lib/contracts/json';
 	import { afterNavigate } from '$app/navigation';
 	import DayFilterPicker from '$lib/components/agenda/DayFilterPicker.svelte';
 	import ManualAppointmentWizard from '$lib/components/agenda/ManualAppointmentWizard.svelte';
@@ -386,6 +388,7 @@
 	);
 
 	const loadReferences = async () => {
+		if (data.demo) return;
 		const snapshotCoversAgendaDate = Boolean(
 			availabilitySnapshot &&
 				snapshotContainsRange(availabilitySnapshot, data.date, data.date)
@@ -401,16 +404,18 @@
 			const response = await fetch(
 				'/odonto/agenda/referencias?from=' + encodeURIComponent(data.date)
 			);
-			const payload = await response.json().catch(() => ({}));
-			if (!response.ok) {
-				throw new Error(
-					payload?.message ?? 'No se pudieron cargar profesionales y servicios.'
-				);
-			}
-			professionals = Array.isArray(payload?.professionals) ? payload.professionals : [];
-			services = Array.isArray(payload?.services) ? payload.services : [];
-			serviceProfessionalIds = payload?.service_professional_ids ?? {};
-			availabilitySnapshot = payload?.availability_snapshot ?? null;
+			const payload = readRecord(await response.json(), 'availability.http.references');
+			if (!response.ok) throw new Error(typeof payload.message === 'string' ? payload.message : 'No se pudieron cargar profesionales y servicios.');
+            const snapshot = parseAvailabilitySnapshot(payload.availability_snapshot, {
+                businessId: String(data.context.business?.id ?? ''), date: data.date
+            });
+            // Publish all references together only after the whole snapshot passes.
+            professionals = snapshot.professionals;
+            services = snapshot.services;
+            serviceProfessionalIds = snapshot.assignments.reduce<Record<string, string[]>>((mapping, row) => {
+                (mapping[row.service_id] ??= []).push(row.professional_id); return mapping;
+            }, {});
+            availabilitySnapshot = snapshot;
 			referencesLoaded = true;
 		} catch (error) {
 			referencesError =

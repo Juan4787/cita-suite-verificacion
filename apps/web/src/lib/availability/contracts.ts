@@ -48,19 +48,29 @@ function envelope(value: unknown, expected: { businessId: string; scope: Availab
 		generated_at: timestamp(root.generated_at, 'generatedAt') };
 }
 
-export function parseAvailabilityCatalog(value: unknown, expected: { businessId: string; scope: AvailabilityScope }): AvailabilityCatalog {
-	const { root, ...metadata } = envelope(value, expected);
-	const rawBusiness = readRecord(root.business, 'availability.business');
+export function parseAvailabilityBusiness(value: unknown) {
+	const rawBusiness = readRecord(value, 'availability.business');
 	const timezone = readText(rawBusiness.timezone, 'availability.timezone');
 	try { new Intl.DateTimeFormat('en', { timeZone: timezone }); } catch { invalid('timezone'); }
-	const business = {
+	return {
 		timezone,
 		max_booking_days_ahead: integer(rawBusiness.max_booking_days_ahead, 1, 'horizon'),
 		min_booking_notice_minutes: integer(rawBusiness.min_booking_notice_minutes, 0, 'notice'),
 		is_active: readBoolean(rawBusiness.is_active, 'availability.isActive'),
 		public_booking_enabled: readBoolean(rawBusiness.public_booking_enabled, 'availability.publicEnabled')
 	};
+}
+
+export function parseAvailabilityCatalog(value: unknown, expected: { businessId: string; scope: AvailabilityScope }): AvailabilityCatalog {
+	const { root, ...metadata } = envelope(value, expected);
+	const business = parseAvailabilityBusiness(root.business);
 	const rows = parseIntegratedAvailabilityRows({ ...root, exceptions: [], blocks: [] });
+	validateAvailabilityConfiguration(rows, expected);
+	return { schema_version: 2, ...metadata, business, services: rows.services,
+		professionals: rows.professionals, assignments: rows.assignments, rules: rows.rules };
+}
+
+export function validateAvailabilityConfiguration(rows: Pick<IntegratedAvailabilityRows, 'services' | 'professionals' | 'assignments' | 'rules'>, expected: { businessId: string; scope: AvailabilityScope }): void {
 	identifiers(rows.services.map(row => row.id), 'services');
 	identifiers(rows.professionals.map(row => row.id), 'professionals');
 	identifiers(rows.rules.map(row => row.id), 'rules');
@@ -92,8 +102,6 @@ export function parseAvailabilityCatalog(value: unknown, expected: { businessId:
 		const time = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,6})?)?$|^24:00(?::00(?:\.0{1,6})?)?$/;
 		if (!time.test(rule.start_time) || !time.test(rule.end_time) || rule.start_time >= rule.end_time) invalid('rule.time');
 	}
-	return { schema_version: 2, ...metadata, business, services: rows.services,
-		professionals: rows.professionals, assignments: rows.assignments, rules: rows.rules };
 }
 
 export function parseAvailabilityWindow(value: unknown, expected: {
@@ -115,6 +123,12 @@ export function parseAvailabilityWindow(value: unknown, expected: {
 	const counts = readRecord(root.counts, 'availability.counts');
 	if (integer(counts.blocks, 0, 'counts.blocks') !== rows.blocks.length ||
 		integer(counts.exceptions, 0, 'counts.exceptions') !== rows.exceptions.length) invalid('window.incomplete');
+	validateAvailabilityOccupancy(rows, professionalIds);
+	return { schema_version: 2, complete: true, ...metadata, from_date: expected.fromDate, to_date: expected.toDate,
+		professional_ids: professionalIds, exceptions: rows.exceptions, blocks: rows.blocks };
+}
+
+export function validateAvailabilityOccupancy(rows: Pick<IntegratedAvailabilityRows, 'blocks' | 'exceptions'>, professionalIds: readonly string[]): void {
 	identifiers(rows.blocks.map(row => row.id), 'blocks');
 	identifiers(rows.exceptions.map(row => row.id), 'exceptions');
 	const professionals = new Set(professionalIds);
@@ -134,6 +148,4 @@ export function parseAvailabilityWindow(value: unknown, expected: {
 		const blockingEnd = Date.parse(timestamp(row.blocking_ends_at, 'block.blockingEnd'));
 		if (!(blockingStart <= baseStart && baseStart <= start && start < end && end <= baseEnd && baseEnd <= blockingEnd)) invalid('block.interval');
 	}
-	return { schema_version: 2, complete: true, ...metadata, from_date: expected.fromDate, to_date: expected.toDate,
-		professional_ids: professionalIds, exceptions: rows.exceptions, blocks: rows.blocks };
 }
