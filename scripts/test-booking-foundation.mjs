@@ -1,6 +1,6 @@
 import { fixturePath } from './lib/fixture-path.mjs';
 import { spawnSync } from "node:child_process";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
 import { writeFileSync, rmSync } from "node:fs";
@@ -60,6 +60,13 @@ function sql(input) {
     ],
     input,
   );
+}
+function assertSqlSuite(file, output) {
+  const plan = output.match(/^\s*1\.\.(\d+)\s*$/m);
+  const assertions = [...output.matchAll(/^\s*ok \d+\b/gm)].length;
+  if (/\bnot ok\b|Bail out!/.test(output) || !plan || Number(plan[1]) === 0 || assertions !== Number(plan[1]))
+    throw new Error(file + ': pgTAP failed.\n' + output);
+  console.log(file + '\n' + output.trim());
 }
 const platform = `
 create schema if not exists realtime;
@@ -263,9 +270,21 @@ try {
   const migrations = readdirSync(root + "supabase/migrations")
     .filter((file) => file.endsWith(".sql"))
     .sort();
+  const upgradeDirectory = root + 'supabase/tests/migrations/';
+  const upgradeFiles = existsSync(upgradeDirectory) ? readdirSync(upgradeDirectory).sort() : [];
+  for (const path of upgradeFiles) {
+    const match = path.match(/^(.*\.sql)\.(before|after)\.sql$/);
+    if (!match || !migrations.includes(match[1]) ||
+      !upgradeFiles.includes(match[1] + '.before.sql') || !upgradeFiles.includes(match[1] + '.after.sql'))
+      throw new Error('Unpaired or unrecognized migration upgrade fixture: ' + path);
+  }
   for (const file of migrations) {
     try {
+      const upgrade = upgradeFiles.includes(file + '.before.sql');
+      if (upgrade && !prepareOnly) sql(readFileSync(upgradeDirectory + file + '.before.sql', 'utf8'));
       sql(readFileSync(root + "supabase/migrations/" + file, "utf8"));
+      if (upgrade && !prepareOnly) assertSqlSuite('migration-upgrade/' + file,
+        sql(readFileSync(upgradeDirectory + file + '.after.sql', 'utf8')));
     } catch (error) {
       throw new Error(file + ": " + error.message);
     }
@@ -285,11 +304,7 @@ try {
     throw new Error('SQL suite discovery is empty or pgTAP setup is missing.');
   for (const file of sqlTests) {
     const output = sql(readFileSync(root + "supabase/tests/" + file, "utf8"));
-    const plan = output.match(/^\s*1\.\.(\d+)\s*$/m);
-    const assertions = [...output.matchAll(/^\s*ok \d+\b/gm)].length;
-    if (/\bnot ok\b|Bail out!/.test(output) || !plan || Number(plan[1]) === 0 || assertions !== Number(plan[1]))
-      throw new Error(file + ": pgTAP failed.\n" + output);
-    console.log(file + "\n" + output.trim());
+    assertSqlSuite(file, output);
   }
   const concurrencyTests = readdirSync(root + 'supabase/tests').filter(file => /^run_.*_concurrency\.sh$/.test(file)).sort();
   if (!concurrencyTests.length) throw new Error('No concurrency SQL suites discovered.');
