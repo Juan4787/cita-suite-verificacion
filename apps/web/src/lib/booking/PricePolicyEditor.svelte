@@ -4,6 +4,7 @@
   import { enhance } from "$app/forms";
   import {
     previewMonthlyPrices,
+    MAX_PRICE_MONTH_OFFSET,
     formatQuotedPrice,
     type PriceAdjustment,
   } from "./pricing";
@@ -123,22 +124,29 @@
       adjustments,
     }),
   );
-  const preview = $derived.by(() => {
+  const previewResult = $derived.by(() => {
+    if (![base, rate, rounding, baseMonth, firstMonth].every(value => value.trim()))
+      return { rows: [], error: null };
     try {
-      return previewMonthlyPrices(
-        base,
-        rate,
-        rounding,
-        baseMonth,
-        firstMonth,
-        adjustments,
-        6,
-        currentMonth,
-      );
-    } catch {
-      return [];
+      const [baseYear, baseNumber] = baseMonth.split("-").map(Number);
+      const [startYear, startNumber] = currentMonth.split("-").map(Number);
+      const offset = (startYear - baseYear) * 12 + startNumber - baseNumber;
+      // The editor asks for up to six valid results. It must still display the
+      // inclusive last month, rather than requesting five out-of-range months.
+      const count = Math.min(6, Math.max(1, MAX_PRICE_MONTH_OFFSET - offset + 1));
+      return { rows: previewMonthlyPrices(base, rate, rounding, baseMonth, firstMonth, adjustments, count, currentMonth), error: null };
+    } catch (cause) {
+      const code = cause instanceof Error ? cause.message : '';
+      const message = code === 'PRICE_DATE_INVALID'
+        ? 'El mes de referencia no puede ser posterior al actual ni tener más de 50 años de antigüedad.'
+        : code === 'PRICE_AMOUNT_INVALID'
+          ? 'Los ajustes superan el arancel máximo admitido. Reducí el importe o el porcentaje.'
+          : 'Revisá el importe, los porcentajes y los meses de los ajustes.';
+      return { rows: [], error: message };
     }
   });
+  const preview = $derived(previewResult.rows);
+
 </script>
 
 <form
@@ -351,7 +359,7 @@
               >{/each}</tbody
           >
         </table>
-      </div>{:else}<p class="mt-4 text-sm text-white/70">
+      </div>{:else if previewResult.error}<p role="status" class="ux-alert mt-4">{previewResult.error}</p>{:else}<p class="mt-4 text-sm text-white/70">
         Completá el importe y los meses para ver los aranceles antes de guardar.
       </p>{/if}
     <button

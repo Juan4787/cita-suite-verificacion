@@ -32,6 +32,8 @@ export const formatQuotedPrice = (
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(quote.amount);
+export const MAX_PRICE_MONTH_OFFSET = 600;
+export const MAX_PRICE_PREVIEW_RESULTS = 120;
 const invalid = () => new Error("PRICE_CONFIGURATION_INVALID");
 const percentageUnits = (text: string) => {
   const match = /^(\d+)(?:[.,](\d{1,4}))?$/.exec(text);
@@ -87,12 +89,12 @@ export function previewMonthlyPrices(
   if (
     !Number.isInteger(count) ||
     count < 1 ||
-    count > 120
+    count > MAX_PRICE_PREVIEW_RESULTS
   )
     throw invalid();
   // Offsets are inclusive: a one-item preview at month 600 is valid. A
   // pre-base date must not silently become the base month's quote.
-  if (startOffset < 0 || startOffset + count - 1 > 600)
+  if (startOffset < 0 || startOffset + count - 1 > MAX_PRICE_MONTH_OFFSET)
     throw new Error('PRICE_DATE_INVALID');
   const result = [];
   const defaults = adjustments

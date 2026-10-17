@@ -326,6 +326,24 @@ test.describe('isolated booking integration', () => {
       await expect(page.getByText('No pudimos actualizar los horarios.', { exact: false })).toHaveCount(0);
       // Each recovered day is a task button with an actual date, not a fabricated successful empty list.
       await expect(page.getByRole('button', { name: /lunes|martes|miércoles|jueves|viernes|sábado|domingo/i }).first()).toBeVisible();
+      await page.goto(fixture.appOrigin + '/odonto/profesionales/' + fixture.professionalId + '/aranceles');
+      const editor = page.locator('form.price-policy');
+      await expect(editor).toBeVisible();
+      const rate = editor.getByLabel(/^Aumento mensual desde el primer ajuste/);
+      await rate.fill('1001');
+      await expect(editor.getByRole('status')).toContainText('Revisá el importe, los porcentajes y los meses');
+      await expect(editor.getByRole('button', { name: 'Guardar aranceles', exact: true })).toBeDisabled();
+      for (const width of [1280, 320]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.screenshot({ path: test.info().outputPath('price-preview-error-' + (width === 320 ? 'mobile' : 'desktop') + '.png'), fullPage: true });
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      }
+      await rate.fill('0');
+      await expect(editor.getByRole('table')).toBeVisible();
+      await expect(editor.getByRole('status')).toHaveCount(0);
+      await expect(editor.getByRole('button', { name: 'Guardar aranceles', exact: true })).toBeEnabled();
+
     } finally { await context.close(); }
   });
 
