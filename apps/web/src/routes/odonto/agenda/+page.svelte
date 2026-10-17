@@ -583,6 +583,7 @@
 					type="button"
 					class="ux-btn-primary w-full sm:w-auto"
 					onclick={toggleCreate}
+					disabled={!initialized}
 					onpointerenter={() => void loadReferences()}
 					onfocus={() => void loadReferences()}
 				>
@@ -596,6 +597,7 @@
 				type="button"
 				class="ux-btn-secondary"
 				onclick={toggleSearch}
+				disabled={!initialized}
 				onpointerenter={() => void loadLiveSnapshot()}
 				onfocus={() => void loadLiveSnapshot()}
 			>

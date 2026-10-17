@@ -237,6 +237,8 @@ test.describe('isolated booking integration', () => {
     try {
       for (const variant of [
         { theme: 'cita-suite', width: 1280, path: '/reservar/' + fixture.businessId },
+        { theme: 'cita-suite', width: 320, path: '/reservar/' + fixture.businessId },
+        { theme: 'natalia', width: 1280, path: '/embed/v1/' + fixture.key },
         { theme: 'natalia', width: 320, path: '/embed/v1/' + fixture.key },
       ]) {
         const context = await browser.newContext({ viewport: { width: variant.width, height: 900 }, colorScheme: 'light' });
@@ -253,7 +255,7 @@ test.describe('isolated booking integration', () => {
           await expect(next).toBeVisible();
           expect(new URL(await next.getAttribute('href') ?? '', fixture.appOrigin).searchParams.get('dates_from')).toBe(addDays(15));
           await page.evaluate(() => window.scrollTo(0, 0));
-          await page.screenshot({ path: test.info().outputPath('availability-empty-' + variant.theme + '.png'), fullPage: true });
+          await page.screenshot({ path: test.info().outputPath('availability-empty-' + variant.theme + '-' + variant.width + '.png'), fullPage: true });
           // Real keyboard activation, retaining the same service/professional/theme.
           await next.focus(); await expect(next).toBeFocused();
           await next.press('Enter');
@@ -266,7 +268,7 @@ test.describe('isolated booking integration', () => {
           const previous = navigation.getByRole('link', { name: 'Fechas anteriores', exact: true });
           await expect(previous).toBeVisible();
           await page.evaluate(() => window.scrollTo(0, 0));
-          await page.screenshot({ path: test.info().outputPath('availability-dates-' + variant.theme + '.png'), fullPage: true });
+          await page.screenshot({ path: test.info().outputPath('availability-dates-' + variant.theme + '-' + variant.width + '.png'), fullPage: true });
           expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
           await days.first().click();
           await expect(page.getByRole('link', { name: /^\d{2}:\d{2}$/ }).first()).toBeVisible();
@@ -303,8 +305,21 @@ test.describe('isolated booking integration', () => {
         if (fail) await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
         else await route.continue();
       });
-      await page.goto(fixture.appOrigin + '/odonto/agenda');
+      // These actions require client handlers. Do not advertise them as ready
+      // while scripts and initial state are still pending (the first click was lost).
+      let releaseScripts!: () => void;
+      const scriptsReady = new Promise<void>(resolve => { releaseScripts = resolve; });
+      await page.route('**/*', async route => {
+        if (route.request().resourceType() === 'script') await scriptsReady;
+        await route.fallback();
+      });
+      try {
+        await page.goto(fixture.appOrigin + '/odonto/agenda', { waitUntil: 'commit' });
+        await expect(page.getByRole('button', { name: '+ Nuevo turno', exact: true })).toBeDisabled();
+        await expect(page.getByRole('button', { name: 'Buscar', exact: true })).toBeDisabled();
+      } finally { releaseScripts(); }
       await page.getByRole('button', { name: '+ Nuevo turno', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Cerrar', exact: true })).toBeVisible();
       await page.getByRole('button', { name: /Consulta de prueba/ }).click();
       await page.getByRole('button', { name: /Profesional de prueba/ }).click();
       await expect(page.getByRole('heading', { name: 'Elegí un día', exact: true })).toBeVisible();

@@ -71,6 +71,8 @@ Los desplazamientos válidos son de 0 a 600, inclusive. Una previsualización de
 | CI `39050404355` | 28 controles SQL de disponibilidad y diez carreras aprobados; catálogo mayor que un grupo, 1.001 asignaciones completas, DST, identidad, ámbitos y consistencia real con dos conexiones. Generación oficial reproducible. No incluye los dos controles posteriores del alcance profesional. |
 | CI `39051242102` | Full con 30/30 disponibilidad: comparación negativa/positiva de lectura profesional, SQL completo, diez carreras, tipos y regresiones. |
 | CI `39070230569` | Full de consumidores nuevos: 1.129 servidor, 119 cliente, SQL completo, diez carreras, 27 navegador, Natalia nativa y dos demo. No cubre las nuevas pruebas HTTP/ventana vacía/ciclo de cotización posteriores. |
+| CI `39071528383` | SQL con 14 controles de cambios reales entre cotización/confirmación y replay; atomicidad, aceptación del nuevo importe y fotografía histórica preservada. Incluye todas las suites y diez carreras. |
+| CI `39072048885` | Fast del resultado actual de aplicación: 1.147 servidor, 123 cliente; últimos tres casos comprueban preview UI al mes 600, rechazo del 601 y error humano de configuración completa. Capturas/E2E ampliados posteriores aún requieren full. |
 | CI `39051023222` | Fast aprobado sobre `982ef9a`: once controles de fechas/JSON y cuatro del coordinador. Sus respuestas HTTP son simuladas; no se presentan como PostgreSQL ni como navegador desplegado. |
 
 Las verificaciones alojadas, capacidad, UI completa, reserva desde Natalia/enlace directo y auditoría transversal tienen sus puertas posteriores. El estado provisional de este documento no reduce ninguna condición del plan.
