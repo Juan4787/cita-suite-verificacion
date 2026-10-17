@@ -1,19 +1,20 @@
 begin;
-select extensions.plan(28);
-create temporary table window_fixture(business uuid,other_business uuid,actor uuid,service uuid,
+select extensions.plan(30);
+create temporary table window_fixture(business uuid,other_business uuid,actor uuid,doctor uuid,service uuid,
   private_service uuid,professionals uuid[],private_professional uuid,revision bigint);
 do $$
-declare b uuid:=gen_random_uuid(); other uuid:=gen_random_uuid(); actor uuid:=gen_random_uuid();
+declare b uuid:=gen_random_uuid(); other uuid:=gen_random_uuid(); actor uuid:=gen_random_uuid(); doctor uuid:=gen_random_uuid();
   service uuid:=gen_random_uuid(); private_service uuid:=gen_random_uuid(); private_professional uuid:=gen_random_uuid();
   patient uuid:=gen_random_uuid(); ids uuid[]; p uuid; counter integer;
 begin
   perform set_config('request.jwt.claim.role','service_role',true);
-  insert into auth.users(id,email) values(actor,actor||'@example.test');
+  insert into auth.users(id,email) values(actor,actor||'@example.test'),(doctor,doctor||'@example.test');
   insert into public.businesses(id,name,slug,industry,timezone)
     values(b,'Synthetic window contract',b::text,'other','UTC'),(other,'Other synthetic window',other::text,'other','UTC');
   update public.business_subscriptions set commercial_access_enabled=true,is_permanent=true,subscription_status='active',
     paid_until=null,grace_until=null,restricted_until=null,archived_at=null where business_id=b;
   insert into public.business_users(business_id,user_id,role,status,accepted_at) values(b,actor,'owner','active',now());
+  insert into public.business_users(business_id,user_id,role,status,accepted_at) values(b,doctor,'professional','active',now());
   insert into public.patients(id,business_id,owner_id,full_name) values(patient,b,actor,'Synthetic window patient');
   insert into public.services(id,business_id,name,duration_minutes,buffer_before_minutes,buffer_after_minutes,is_public)
     values(service,b,'Public synthetic service',30,15,10,true),(private_service,b,'Private synthetic service',30,0,0,false);
@@ -24,10 +25,12 @@ begin
     insert into public.availability_rules(business_id,professional_id,weekday,start_time,end_time,slot_interval_minutes,break_minutes)
       select b,p,weekday,'09:00','19:00',30,15 from generate_series(0,6) weekday;
   end loop;
+  update public.professionals set email=doctor||'@example.test' where id=ids[1];
+  insert into public.professional_users(business_id,professional_id,user_id) values(b,ids[1],doctor);
   insert into public.professionals(id,business_id,name,is_public) values(private_professional,b,'Private synthetic professional',false);
   insert into public.availability_rules(business_id,professional_id,weekday,start_time,end_time,slot_interval_minutes,break_minutes,service_scope)
     values(b,private_professional,1,'09:00','19:00',30,15,'restricted');
-  insert into window_fixture values(b,other,actor,service,private_service,ids,private_professional,
+  insert into window_fixture values(b,other,actor,doctor,service,private_service,ids,private_professional,
     (select revision from private.availability_configuration_versions where business_id=b));
   -- 1,001 actual, non-overlapping appointments across 16 professionals and
   -- eleven dates. All ordinary triggers, FK and exclusion constraints remain.
@@ -79,6 +82,13 @@ select set_config('request.jwt.claim.sub',(select actor::text from window_fixtur
 select extensions.lives_ok($q$select public.get_availability_catalog(business,false) from window_fixture$q$,'active member retains the internal read contract');
 select extensions.throws_ok($q$select public.get_availability_catalog(other_business,false) from window_fixture$q$,'P0001','AVAILABILITY_ACCESS_DENIED','member cannot read another clinic catalog');
 select extensions.throws_ok($q$select public.get_availability_catalog(business,true) from window_fixture$q$,'P0001','AVAILABILITY_ACCESS_DENIED','public scope requires its trusted server even for an internal member');
+select set_config('request.jwt.claim.sub',(select doctor::text from window_fixture),true);
+grant select on window_fixture to authenticated;
+set local role authenticated;
+select extensions.is((select jsonb_array_length(public.get_availability_window(business,false,null,professionals[1:2],'2099-01-15','2099-01-29',revision)->'blocks') from window_fixture),63,'professional window preserves the existing RLS scope of their own appointments');
+select extensions.is((select jsonb_array_length(public.get_availability_window(business,false,null,array[professionals[2]],'2099-01-15','2099-01-29',revision)->'blocks') from window_fixture),0,'professional does not receive a colleague appointment allocation through the new RPC');
+reset role;
+select set_config('request.jwt.claim.sub',(select actor::text from window_fixture),true);
 update public.business_users set status='disabled' where business_id=(select business from window_fixture);
 select extensions.throws_ok($q$select public.get_availability_catalog(business,false) from window_fixture$q$,'P0001','AVAILABILITY_ACCESS_DENIED','revocation takes effect on the next SQL call');
 select * from extensions.finish();
