@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { acquireVerificationLock } from './lib/verification-lock.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
 import { capturePlatformDiagnostics } from './lib/platform-diagnostics.mjs';
+import { fixtureDatabaseBudget } from './lib/fixture-database-budget.mjs';
 const root = fileURLToPath(new URL("../", import.meta.url)).replace(/\/$/, "");
 const db = process.argv[2];
 assertHostedIntegrationResources();
@@ -175,7 +176,7 @@ try {
     "-e",
     "PGRST_JWT_SECRET=" + secret,
     "-e",
-    "PGRST_DB_POOL=2",
+    `PGRST_DB_POOL=${fixtureDatabaseBudget.rest}`,
     "-e",
     "PGRST_DB_MAX_ROWS=1000",
     "public.ecr.aws/supabase/postgrest:v16.1",
@@ -322,6 +323,8 @@ try {
     const authEnvironment = {
       GOTRUE_API_HOST: '0.0.0.0', PORT: '9999', GOTRUE_API_PORT: '9999',
       GOTRUE_DB_DRIVER: 'postgres',
+      GOTRUE_DB_MAX_POOL_SIZE: String(fixtureDatabaseBudget.auth),
+      GOTRUE_DB_MAX_IDLE_POOL_SIZE: String(fixtureDatabaseBudget.auth),
       GOTRUE_DB_DATABASE_URL: `postgres://supabase_auth_admin:cita-disposable-test-only@${db}:5432/postgres`,
       GOTRUE_SITE_URL: appOrigin, API_EXTERNAL_URL: apiOrigin + '/auth/v1',
       GOTRUE_JWT_SECRET: secret, GOTRUE_JWT_EXP: '7200', GOTRUE_JWT_AUD: 'authenticated',

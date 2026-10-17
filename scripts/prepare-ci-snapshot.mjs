@@ -50,7 +50,10 @@ const extras = [
 	...readdirSync(join(root, 'scripts/lib')).filter(name => name.endsWith('.mjs')).map(name => 'scripts/lib/' + name)
 ];
 function permitted(path) {
-	if (path.split('/').some(part => part === '.env') || path.includes('/output/') || path.includes('/dist/') || path.includes('/test-results/')) return false;
+	if (path.split('/').some(part =>
+		(part.startsWith('.env') && part !== '.env.example') ||
+		((part === '.dev.vars' || part.startsWith('.dev.vars.')) && part !== '.dev.vars.example')) ||
+		path.includes('/output/') || path.includes('/dist/') || path.includes('/test-results/')) return false;
 	return rootFiles.has(path) || /^(?:apps|packages|supabase|scripts)\//.test(path);
 }
 try {

@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
 import { writeFileSync, rmSync } from "node:fs";
 import { acquireVerificationLock } from './lib/verification-lock.mjs';
+import { fixtureDatabaseBudget } from './lib/fixture-database-budget.mjs';
 // This runner cannot target a supplied URL or existing database. Only its own
 // disposable, portless container is ever mutated. All work is sequential.
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -111,7 +112,9 @@ try {
     "-c",
     "shared_buffers=32MB",
     "-c",
-    "max_connections=12",
+    `max_connections=${fixtureDatabaseBudget.maximum}`,
+    "-c",
+    `superuser_reserved_connections=${fixtureDatabaseBudget.superuserReserved}`,
     "-c",
     "listen_addresses=*",
     "-c",
@@ -192,7 +195,7 @@ try {
         container +
         ":5432/postgres",
       "-e",
-      "DATABASE_MAX_CONNECTIONS=2",
+      `DATABASE_MAX_CONNECTIONS=${fixtureDatabaseBudget.storage}`,
       "-e",
       "DB_SUPER_USER=supabase_admin",
       "-e",

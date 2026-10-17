@@ -25,6 +25,10 @@ No se descargan imágenes grandes implícitamente. La configuración local manti
 
 GoTrue crea las identidades sintéticas por su API y realiza login real. Antes del navegador se comprueban identidad, rol y membresía con RLS. Storage transfiere archivos reales en el entorno descartable. Las pruebas SQL que usan claims configuradas en una conexión se distinguen de ese Auth HTTP real.
 
+El presupuesto de conexiones de este stack pequeño está centralizado en `scripts/lib/fixture-database-budget.mjs`: máximo 12, tres reservadas, Auth 2, Storage 2, REST 2 y listener 1, administración 2. Ningún pool puede quedar en cero (ilimitado). Se conservan los límites de memoria. Tras generar tipos se ejercitan 240 lecturas HTTP reales con hasta cuatro en vuelo; el recibo `service-connections.json` separa servicios y no contiene credenciales. Es una prueba acotada de integración, sin reintentos; no sustituye los escenarios de capacidad.
+
+Al terminar se conserva `platform-state.json` antes de limpiar. Incluye estado/OOM/uso de contenedores y conexiones agrupadas, sin texto SQL ni env. Los errores Auth se conservan como SQLSTATE/categorías, nunca cuerpos o logs crudos. Un error de infraestructura, SQL, OOM o diagnóstico ausente rechaza la corrida aunque el navegador haya aprobado. El fixture no levanta Realtime: su validación de transporte y revocación entre sesiones sigue correspondiendo al staging real; el 404 de ese servicio ausente no acredita una falla de producción.
+
 ## Exclusión, limpieza y recibos
 
 Un lease por checkout identifica PID, raíz canónica y nonce. Los ejecutores hijos heredan esa autorización. Una segunda verificación independiente es rechazada. Si el dueño murió, se debe comprobar primero su PID y sus recursos antes de retirar el lease; no hay recuperación automática que pueda borrar trabajo todavía activo.
@@ -74,7 +78,7 @@ El perfil manual `types` del workflow prepara exclusivamente la base/Storage des
 
 El recibo `.verification/type-generation.json` identifica expresamente `types-generation-only` y `fullVerification: false`; las suites SQL, Auth y navegador no se consideran ejecutadas. El perfil no usa proyectos vinculados, contraseñas remotas ni datos reales. Al terminar o interrumpirse limpia únicamente contenedores con las dos etiquetas de propiedad correctas y redes internas con el identificador exacto de corrida; un fallo de limpieza hace fallar el recibo.
 
-La generación independiente todavía debe ensayarse en el workflow sobre una revisión exacta antes de considerarse comprobada. El primer arranque exportado de la etapa 2 ya fue incorporado; la comparación completa sigue pendiente de la nueva corrida full, y no se conserva una excepción que permita aprobar con tipos diferentes.
+La generación independiente y las comparaciones completas posteriores fueron ejecutadas; el registro identifica revisiones y recibos. No se conserva una excepción que permita aprobar con tipos diferentes.
 
 
 ### Preparación del staging identificado
@@ -95,4 +99,4 @@ La apertura nativa de XLSX se clasifica como integración, no como unidad portab
 
 ### Controles del propio ejecutor
 
-El perfil Node descubre todos los archivos `scripts/lib/*.test.mjs` y usa un solo proceso de pruebas a la vez. Conserva eventos `test:summary` por archivo y el acumulado final, según la API de Node 22.23.2 fijada. Exige que cada archivo contenga pruebas efectivas y que el total coincida, sin omisiones, cancelaciones, pendientes ni fallos. Una terminación exitosa del proceso no sustituye ese recibo; una interrupción o reporte incompleto falla. El recibo no incorpora stdout ni detalles de error de las pruebas; TAP conserva el diagnóstico separado. Su circuito real está pendiente hasta constar en el registro. Referencia: https://nodejs.org/download/release/v22.23.2/docs/api/test.html#event-testsummary .
+El perfil Node descubre todos los archivos `scripts/lib/*.test.mjs` y usa un solo proceso de pruebas a la vez. Conserva eventos `test:summary` por archivo y el acumulado final, según la API de Node 22.23.2 fijada. Exige que cada archivo contenga pruebas efectivas y que el total coincida, sin omisiones, cancelaciones, pendientes ni fallos. Una terminación exitosa del proceso no sustituye ese recibo; una interrupción o reporte incompleto falla. El recibo no incorpora stdout ni detalles de error de las pruebas; TAP conserva el diagnóstico separado. El registro identifica sus ejecuciones reales y las adversarias añadidas posteriormente. Referencia: https://nodejs.org/download/release/v22.23.2/docs/api/test.html#event-testsummary .

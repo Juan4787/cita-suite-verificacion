@@ -29,7 +29,9 @@ select jsonb_build_object('maximum',current_setting('max_connections')::int,'gro
 	const authErrors = [];
 	if (auth) {
 		try {
-			for (const line of docker(['logs', '--tail', '100', auth]).split('\n')) {
+			// The owned, short-lived Auth service logs only errors. Inspect the
+			// complete run so a later healthy period cannot hide exhaustion.
+			for (const line of docker(['logs', auth]).split('\n')) {
 				const codes = [...line.matchAll(/SQLSTATE\s+([0-9A-Z]{5})/g)].map(match => match[1]);
 				const categories = ['too many clients', 'remaining connection', 'connection refused', 'connection reset', 'deadline exceeded', 'out of memory', 'rate limit']
 					.filter(category => line.toLowerCase().includes(category));
@@ -38,4 +40,12 @@ select jsonb_build_object('maximum',current_setting('max_connections')::int,'gro
 		} catch { authErrors.push({ unavailable: true }); }
 	}
 	return { at: new Date().toISOString(), containers, stats, connections, authErrors };
+}
+
+export function assertPlatformDiagnostics(state) {
+	if (!Array.isArray(state.containers) || state.containers.length !== 4 ||
+		state.containers.some(value => value.unavailable || !value.running || value.oomKilled) ||
+		!Number.isSafeInteger(state.connections?.maximum) || !Array.isArray(state.authErrors) ||
+		state.authErrors.some(value => value.unavailable || value.sqlStates?.length || value.categories?.length))
+		throw new Error('Disposable platform diagnostics are unavailable or report infrastructure errors. See platform-state.json.');
 }

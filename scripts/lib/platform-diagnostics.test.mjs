@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { capturePlatformDiagnostics } from './platform-diagnostics.mjs';
+import { capturePlatformDiagnostics, assertPlatformDiagnostics } from './platform-diagnostics.mjs';
 
 test('preserves OOM/connection evidence without raw errors, logs or credentials', () => {
 	const value = capturePlatformDiagnostics(args => {
@@ -15,6 +15,21 @@ test('preserves OOM/connection evidence without raw errors, logs or credentials'
 	assert.equal(value.stats[0].memory, '90MiB / 96MiB');
 	assert.deepEqual(value.authErrors, [{ sqlStates: ['53300'], categories: ['too many clients'] }]);
 	assert.doesNotMatch(JSON.stringify(value), /password|private-token|must not/);
+});
+
+test('a functionally green run cannot conceal connection exhaustion or missing platform evidence', () => {
+	const healthy = () => ({ containers: Array.from({ length: 4 }, () => ({ running: true, oomKilled: false })),
+		connections: { maximum: 12 }, authErrors: [] });
+	assert.doesNotThrow(() => assertPlatformDiagnostics(healthy()));
+	for (const change of [
+		value => value.authErrors.push({ sqlStates: ['53300'], categories: ['remaining connection'] }),
+		value => value.authErrors.push({ unavailable: true }),
+		value => { value.containers[1].oomKilled = true; },
+		value => { value.connections = { unavailable: true }; }
+	]) {
+		const value = healthy(); change(value);
+		assert.throws(() => assertPlatformDiagnostics(value), /infrastructure/);
+	}
 });
 test('missing diagnostic sources are explicitly unavailable and never fabricated healthy', () => {
 	const value = capturePlatformDiagnostics(() => { throw new Error('private connection string'); }, { database: 'synthetic-db', auth: 'synthetic-auth' });

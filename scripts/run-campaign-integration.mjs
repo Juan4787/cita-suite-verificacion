@@ -8,6 +8,8 @@ import { acquireVerificationLock } from './lib/verification-lock.mjs';
 import { assertBrowserReport } from './lib/browser-report.mjs';
 import { cleanupFixtureResources } from './lib/fixture-cleanup.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
+import { checkFixtureConnections } from './lib/fixture-connection-check.mjs';
+import { assertPlatformDiagnostics } from './lib/platform-diagnostics.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const diagnostic = process.argv[2] === '--grep' ? process.argv[3] : null;
@@ -93,6 +95,8 @@ try {
 	if (!membership.ok || !Array.isArray(memberships) || memberships.length !== 1)
 		throw new Error(`Authenticated RLS membership was not verified (HTTP ${membership.status}, rows ${Array.isArray(memberships) ? memberships.length : 'invalid'}).`);
 	await run('node', ['scripts/generate-database-types.mjs', '--check']);
+	writeFileSync(join(evidence, 'service-connections.json'), JSON.stringify({ ok: false, startedAt: new Date().toISOString() }) + '\n');
+	writeFileSync(join(evidence, 'service-connections.json'), JSON.stringify(await checkFixtureConnections(runtime), null, 2) + '\n');
 	const address = spawnSync('docker', ['inspect', '--format', '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}', database], { encoding: 'utf8' });
 	// Inspect the specific network: concatenating addresses of a multi-network container is invalid.
 	const details = spawnSync('docker', ['inspect', database], { encoding: 'utf8' });
@@ -148,9 +152,12 @@ try {
 			if (existsSync(source)) copyFileSync(source, join(evidence, `${name}.log`));
 		}
 		const state = fixturePath(`platform-state-${runId}.json`);
-		if (existsSync(state)) copyFileSync(state, join(evidence, 'platform-state.json'));
-	} catch {
-		console.error('Could not preserve this run\'s application diagnostics.');
+		if (existsSync(state)) {
+			copyFileSync(state, join(evidence, 'platform-state.json'));
+			assertPlatformDiagnostics(JSON.parse(readFileSync(state, 'utf8')));
+		} else if (platform) throw new Error('This run\'s platform diagnostics are missing.');
+	} catch (error) {
+		console.error(error.message || 'Could not preserve this run\'s application diagnostics.');
 		process.exitCode = 1;
 	}
 	cleanupDatabase();
