@@ -23,7 +23,7 @@ Las capacidades conservan cuatro dimensiones: disponibilidad operativa global, d
 
 Las tablas de cuotas tienen RLS y no admiten acceso directo de `anon` ni `authenticated`. El servidor maestro exige identidad Auth verificada y aplica las RPC administrativas mediante service_role. Las RPC no aceptan que un usuario ordinario se convierta en maestro suministrando un identificador. Las revisiones de política son independientes de los contadores: una carga normal no invalida el formulario, pero dos ediciones de la misma política no se sobrescriben silenciosamente. La UI siempre envía la revisión observada; el argumento opcional de revisión permite herramientas administrativas explícitas compatibles, no acceso público.
 
-`set_clinical_storage_defaults` modifica el valor inicial de futuros consultorios y la pausa global. `set_business_clinical_storage_policy` modifica una excepción individual. No alteran archivos, pendientes ni otras cuotas. Reducir el máximo por debajo de usados más reservados falla; no se borra información para hacerlo caber. El panel maestro pagina de 50 en 50 y preserva borradores independientes al guardar otro consultorio.
+`set_clinical_storage_defaults` modifica el valor inicial de futuros consultorios y la pausa global. `set_business_clinical_storage_policy` modifica una excepción individual. No alteran archivos, pendientes ni otras cuotas. Reducir el máximo por debajo de usados más reservados falla; no se borra información para hacerlo caber. El panel maestro pagina de 50 en 50 y preserva borradores independientes al guardar otro consultorio. Éxito, rechazo y conflicto aparecen dentro del formulario utilizado; sólo un rechazo del importe marca ese campo como inválido. Un conflicto de revisión pide recargar, conserva lo escrito y no atribuye el problema al importe. Los cambios anteriores a la hidratación se conservan con bindings de Svelte, incluido el FileList de una selección pública.
 
 ## Reserva y emisión de URLs
 
@@ -62,6 +62,6 @@ Este mecanismo detecta discrepancias visibles en el catálogo. No certifica obje
 | `booking_extension_contracts.sql` | Límites por turno y diferencia entre tamaños reales/declarados y reserva pesimista. |
 | Unidades de archivos/disponibilidad/MB | Range ignorado/inválido, expiración malformada, disponibilidad fallida, importes exactos y mensajes humanos. |
 | `clinical-files.spec.ts`, `booking-embed.spec.ts` | PDF profesional/paciente real, persistencia en ficha y descarga idéntica con nombre correcto. |
-| `clinical-storage-policy.spec.ts` | Política maestra real, borradores, error preservado, pausa en UI y API, permisos y capturas de escritorio/móvil. |
+| `clinical-storage-policy.spec.ts` | Política maestra real, borradores, errores/conflictos en su formulario, edición antes de hidratación, pausa en UI y API, permisos, geometría de navegación con nombre largo y capturas de escritorio/móvil. |
 
 Todo cambio de cuota, emisión de URL, cleanup, nueva ruta de carga o bucket debe revisar estos contratos. No se añade un contador alternativo ni una carga propia que eluda el presupuesto global. Migraciones nuevas conservan firmas públicas o definen una transición explícita; las aplicadas no se editan. Los tipos se regeneran desde todas las migraciones en PostgreSQL descartable y se comprueban dos veces antes de importarlos.

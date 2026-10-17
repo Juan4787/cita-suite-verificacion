@@ -1,0 +1,425 @@
+[
+  {
+    "name": "exact series does not compound rounded pesos",
+    "base": "15",
+    "monthly": "50",
+    "rounding": "1",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2026-01",
+    "count": 3,
+    "adjustments": [],
+    "expected": [
+      {
+        "month": "2026-01",
+        "amount": 15
+      },
+      {
+        "month": "2026-02",
+        "amount": 23
+      },
+      {
+        "month": "2026-03",
+        "amount": 34
+      }
+    ],
+    "error": null
+  },
+  {
+    "name": "whole peso monthly fee with zero exception",
+    "base": "20000",
+    "monthly": "2",
+    "rounding": "1",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2026-01",
+    "count": 6,
+    "adjustments": [
+      {
+        "month": "2026-04-01",
+        "kind": "override",
+        "percentage": 1
+      },
+      {
+        "month": "2026-05-01",
+        "kind": "override",
+        "percentage": 0
+      }
+    ],
+    "expected": [
+      {
+        "month": "2026-01",
+        "amount": 20000
+      },
+      {
+        "month": "2026-02",
+        "amount": 20400
+      },
+      {
+        "month": "2026-03",
+        "amount": 20808
+      },
+      {
+        "month": "2026-04",
+        "amount": 21016
+      },
+      {
+        "month": "2026-05",
+        "amount": 21016
+      },
+      {
+        "month": "2026-06",
+        "amount": 21436
+      }
+    ],
+    "error": null
+  },
+  {
+    "name": "recurring changes preserve one month exception",
+    "base": "1000",
+    "monthly": "2",
+    "rounding": "1",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2026-01",
+    "count": 6,
+    "adjustments": [
+      {
+        "month": "2026-03-01",
+        "kind": "default",
+        "percentage": 3
+      },
+      {
+        "month": "2026-04-01",
+        "kind": "override",
+        "percentage": 0
+      }
+    ],
+    "expected": [
+      {
+        "month": "2026-01",
+        "amount": 1000
+      },
+      {
+        "month": "2026-02",
+        "amount": 1020
+      },
+      {
+        "month": "2026-03",
+        "amount": 1051
+      },
+      {
+        "month": "2026-04",
+        "amount": 1051
+      },
+      {
+        "month": "2026-05",
+        "amount": 1082
+      },
+      {
+        "month": "2026-06",
+        "amount": 1115
+      }
+    ],
+    "error": null
+  },
+  {
+    "name": "override before first recurring month is explicit",
+    "base": "100",
+    "monthly": "10",
+    "rounding": "1",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-03",
+    "startMonth": "2026-01",
+    "count": 3,
+    "adjustments": [
+      {
+        "month": "2026-02-01",
+        "kind": "override",
+        "percentage": 20
+      }
+    ],
+    "expected": [
+      {
+        "month": "2026-01",
+        "amount": 100
+      },
+      {
+        "month": "2026-02",
+        "amount": 120
+      },
+      {
+        "month": "2026-03",
+        "amount": 132
+      }
+    ],
+    "error": null
+  },
+  {
+    "name": "round final quote to configured multiple",
+    "base": "1000",
+    "monthly": "2",
+    "rounding": "100",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2026-01",
+    "count": 4,
+    "adjustments": [],
+    "expected": [
+      {
+        "month": "2026-01",
+        "amount": 1000
+      },
+      {
+        "month": "2026-02",
+        "amount": 1000
+      },
+      {
+        "month": "2026-03",
+        "amount": 1000
+      },
+      {
+        "month": "2026-04",
+        "amount": 1100
+      }
+    ],
+    "error": null
+  },
+  {
+    "name": "four decimal percentage and exact half peso",
+    "base": "500000",
+    "monthly": "0.0001",
+    "rounding": "1",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2026-01",
+    "count": 3,
+    "adjustments": [],
+    "expected": [
+      {
+        "month": "2026-01",
+        "amount": 500000
+      },
+      {
+        "month": "2026-02",
+        "amount": 500001
+      },
+      {
+        "month": "2026-03",
+        "amount": 500001
+      }
+    ],
+    "error": null
+  },
+  {
+    "name": "maximum percentage is accepted",
+    "base": "1",
+    "monthly": "1000",
+    "rounding": "1",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2026-01",
+    "count": 4,
+    "adjustments": [],
+    "expected": [
+      {
+        "month": "2026-01",
+        "amount": 1
+      },
+      {
+        "month": "2026-02",
+        "amount": 11
+      },
+      {
+        "month": "2026-03",
+        "amount": 121
+      },
+      {
+        "month": "2026-04",
+        "amount": 1331
+      }
+    ],
+    "error": null
+  },
+  {
+    "name": "rounding may produce zero",
+    "base": "1",
+    "monthly": "0",
+    "rounding": "1000",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2026-01",
+    "count": 2,
+    "adjustments": [],
+    "expected": [
+      {
+        "month": "2026-01",
+        "amount": 0
+      },
+      {
+        "month": "2026-02",
+        "amount": 0
+      }
+    ],
+    "error": null
+  },
+  {
+    "name": "maximum amount remains valid after rounding",
+    "base": "1000000000000",
+    "monthly": "0",
+    "rounding": "1",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2026-01",
+    "count": 1,
+    "adjustments": [],
+    "expected": [
+      {
+        "month": "2026-01",
+        "amount": 1000000000000
+      }
+    ],
+    "error": null
+  },
+  {
+    "name": "largest nearby valid multiple stays below cap",
+    "base": "999999999997",
+    "monthly": "0",
+    "rounding": "6",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2026-01",
+    "count": 1,
+    "adjustments": [],
+    "expected": [
+      {
+        "month": "2026-01",
+        "amount": 999999999996
+      }
+    ],
+    "error": null
+  },
+  {
+    "name": "month 600 is included",
+    "base": "7",
+    "monthly": "0",
+    "rounding": "1",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2076-01",
+    "count": 1,
+    "adjustments": [],
+    "expected": [
+      {
+        "month": "2076-01",
+        "amount": 7
+      }
+    ],
+    "error": null
+  },
+  {
+    "name": "last two allowed months fit a single preview",
+    "base": "7",
+    "monthly": "0",
+    "rounding": "1",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2075-12",
+    "count": 2,
+    "adjustments": [],
+    "expected": [
+      {
+        "month": "2075-12",
+        "amount": 7
+      },
+      {
+        "month": "2076-01",
+        "amount": 7
+      }
+    ],
+    "error": null
+  },
+  {
+    "name": "zero never overflows after 600 maximum increases",
+    "base": "0",
+    "monthly": "1000",
+    "rounding": "1",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2076-01",
+    "count": 1,
+    "adjustments": [],
+    "expected": [
+      {
+        "month": "2076-01",
+        "amount": 0
+      }
+    ],
+    "error": null
+  },
+  {
+    "name": "before base month is rejected",
+    "base": "100",
+    "monthly": "2",
+    "rounding": "1",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2025-12",
+    "count": 1,
+    "adjustments": [],
+    "expected": [],
+    "error": "PRICE_DATE_INVALID"
+  },
+  {
+    "name": "month 601 is rejected",
+    "base": "7",
+    "monthly": "0",
+    "rounding": "1",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2076-02",
+    "count": 1,
+    "adjustments": [],
+    "expected": [],
+    "error": "PRICE_DATE_INVALID"
+  },
+  {
+    "name": "rounded amount cannot exceed cap at base month",
+    "base": "1000000000000",
+    "monthly": "0",
+    "rounding": "6",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2026-01",
+    "count": 1,
+    "adjustments": [],
+    "expected": [],
+    "error": "PRICE_AMOUNT_INVALID"
+  },
+  {
+    "name": "rounded amount cannot exceed cap in later month",
+    "base": "1000000000000",
+    "monthly": "0",
+    "rounding": "6",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2026-02",
+    "count": 1,
+    "adjustments": [],
+    "expected": [],
+    "error": "PRICE_AMOUNT_INVALID"
+  },
+  {
+    "name": "exact amount cannot exceed cap before rounding",
+    "base": "1000000000000",
+    "monthly": "1",
+    "rounding": "1",
+    "baseMonth": "2026-01",
+    "firstMonth": "2026-02",
+    "startMonth": "2026-02",
+    "count": 1,
+    "adjustments": [],
+    "expected": [],
+    "error": "PRICE_AMOUNT_INVALID"
+  }
+]

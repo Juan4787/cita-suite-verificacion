@@ -303,7 +303,13 @@ try {
   if (!sqlTests.length || sqlTests[0] !== '000_pgtap_setup.sql')
     throw new Error('SQL suite discovery is empty or pgTAP setup is missing.');
   for (const file of sqlTests) {
-    const output = sql(readFileSync(root + "supabase/tests/" + file, "utf8"));
+    // Pass the same immutable vectors used by TypeScript to this psql session.
+    // Only fixture data is quoted here; no environment or remote SQL target.
+    const context = file === 'price_contract_parity.sql'
+      ? "select set_config('cita.test_price_vectors','" +
+        JSON.stringify(JSON.parse(readFileSync(root + 'packages/shared/src/price-contract-vectors.json', 'utf8'))).replaceAll("'", "''") + "',false);\n"
+      : '';
+    const output = sql(context + readFileSync(root + "supabase/tests/" + file, "utf8"));
     assertSqlSuite(file, output);
   }
   const concurrencyTests = readdirSync(root + 'supabase/tests').filter(file => /^run_.*_concurrency\.sh$/.test(file)).sort();

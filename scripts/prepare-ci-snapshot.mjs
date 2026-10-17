@@ -35,6 +35,8 @@ const extras = [
 	'docs/architecture/base-de-campana.md', 'docs/architecture/verificacion.md',
 	'docs/architecture/identidad-cita-suite.md', 'docs/architecture/relaciones-entre-consultorios.md',
 	'docs/architecture/tipado-contexto-aislamiento.md', 'docs/architecture/contabilidad-documentos.md',
+	'docs/architecture/evidencia-etapa3-documentos.md',
+	'docs/architecture/revision-ui-documentos.md',
 	'docs/archive/administrativo-inactivo/README.md', 'docs/archive/administrativo-inactivo/integridad.json',
 	...JSON.parse(readFileSync(join(root, 'docs/archive/administrativo-inactivo/integridad.json'), 'utf8')).map(entry => entry.archive),
 	'docs/architecture/functional-contracts.md', 'docs/architecture/refactoring-campaign.md',
