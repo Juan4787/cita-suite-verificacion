@@ -12,6 +12,7 @@ import {
 	createManualAppointment,
 	findAppointmentCreationReplay,
 	getHumanAppointmentErrorMessage,
+	getAppointmentCreationErrorStatus,
 	isAppointmentStatus,
 	updateAppointmentStatus
 } from '$lib/server/appointments';
@@ -423,7 +424,7 @@ export const actions: Actions = {
 			} catch (error) {
 				if (isRedirect(error)) throw error;
 				console.error('Error recuperando un turno ya creado', error);
-				return fail(500, { message: getHumanAppointmentErrorMessage(error), values });
+				return fail(getAppointmentCreationErrorStatus(error), { message: getHumanAppointmentErrorMessage(error), values });
 			}
 			if (selectedPatientBlocked) {
 				return fail(400, { message: 'Ese paciente está bloqueado.', values });
@@ -490,7 +491,7 @@ export const actions: Actions = {
 			if (isRedirect(error)) throw error;
 			console.error('Error creando turno', error);
 			const message = getHumanAppointmentErrorMessage(error);
-			return fail(isRecord(error) && error.code === '23P01' ? 409 : 500, { message, values });
+			return fail(getAppointmentCreationErrorStatus(error), { message, values });
 		}
 	},
 	update_status: async ({ request, locals, fetch, cookies }) => {

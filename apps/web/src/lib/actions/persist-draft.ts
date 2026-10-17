@@ -1,4 +1,5 @@
 import type { Action } from 'svelte/action';
+import { isRecord } from '$lib/contracts/json';
 
 // Persistencia temporal de borradores de formularios (sessionStorage).
 //
@@ -22,7 +23,7 @@ const fieldsOf = (form: HTMLFormElement): FormField[] =>
 				el instanceof HTMLTextAreaElement ||
 				el instanceof HTMLSelectElement) &&
 			Boolean(el.name) &&
-			!SKIP_TYPES.has((el as HTMLInputElement).type)
+			!SKIP_TYPES.has(el.type)
 	);
 
 export const clearDraft = (key: string) => {
@@ -58,18 +59,20 @@ export const persistDraft: Action<HTMLFormElement, string | undefined> = (form, 
 		let saved: Record<string, unknown> | null = null;
 		try {
 			const raw = sessionStorage.getItem(storageKey);
-			saved = raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+			const parsed: unknown = raw ? JSON.parse(raw) : null;
+			saved = isRecord(parsed) ? parsed : null;
 		} catch {
 			saved = null;
 		}
 		if (!saved) return;
 
 		for (const field of fieldsOf(form)) {
-			if (!(field.name in saved)) continue;
+			if (!Object.hasOwn(saved, field.name)) continue;
 			const value = saved[field.name];
 
 			if (field instanceof HTMLInputElement && field.type === 'checkbox') {
-				field.checked = Boolean(value);
+				if (typeof value !== 'boolean') continue;
+				field.checked = value;
 				field.dispatchEvent(new Event('change', { bubbles: true }));
 			} else if (field instanceof HTMLInputElement && field.type === 'radio') {
 				if (field.value === value) {

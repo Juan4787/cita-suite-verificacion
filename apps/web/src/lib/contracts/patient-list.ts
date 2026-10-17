@@ -34,9 +34,16 @@ const readCount = (value: unknown) => {
 };
 
 /** A successful HTTP status alone cannot certify a complete list or its scope. */
-export function parsePatientListData(value: unknown): PatientListData {
+export function parsePatientListData(value: unknown, expected?: Partial<Pick<PatientListData, 'businessId' | 'query' | 'showArchived'>>): PatientListData {
 	const row = readRecord(value, contract);
 	const businessId = readNullableText(row.businessId, contract);
+	const query = readText(row.query, contract);
+	const showArchived = readBoolean(row.showArchived, contract);
+	if (expected && (('businessId' in expected && businessId !== expected.businessId) ||
+		('query' in expected && query !== expected.query) ||
+		('showArchived' in expected && showArchived !== expected.showArchived))) {
+		throw new InvalidDataContractError(contract);
+	}
 	const cacheable = readBoolean(row.cacheable, contract);
 	const revision = readNullableText(row.revision, contract);
 	const cacheScope = readNullableText(row.cacheScope, contract);
@@ -68,8 +75,8 @@ export function parsePatientListData(value: unknown): PatientListData {
 					: {})
 			};
 		}),
-		query: readText(row.query, contract),
-		showArchived: readBoolean(row.showArchived, contract),
+		query,
+		showArchived,
 		demo: readBoolean(row.demo, contract),
 		canCreatePatient: readBoolean(row.canCreatePatient, contract),
 		canAccessRadiographTrash: readBoolean(row.canAccessRadiographTrash, contract),

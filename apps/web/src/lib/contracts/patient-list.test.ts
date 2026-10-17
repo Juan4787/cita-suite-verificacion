@@ -38,4 +38,12 @@ describe('patient list HTTP contract', () => {
 		const data = { ...snapshot(), businessId: null, cacheable: false, revision: null, cacheScope: null, demo: true };
 		expect(parsePatientListData(data)).toEqual(data);
 	});
+
+	it('accepts only the requested clinic, archive state and normalized query', () => {
+		const data = snapshot();
+		expect(parsePatientListData(data, { businessId: data.businessId, showArchived: false, query: '' })).toEqual(data);
+		for (const expected of [{ businessId: 'different-clinic' }, { showArchived: true }, { query: 'different' }]) {
+			expect(() => parsePatientListData(data, expected)).toThrow(InvalidDataContractError);
+		}
+	});
 });

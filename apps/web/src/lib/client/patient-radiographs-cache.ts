@@ -1,3 +1,5 @@
+import { InvalidDataContractError, isRecord, readArray, readBoolean, readChoice, readFiniteNumber, readNullableText, readRecord, readText } from '$lib/contracts/json';
+
 export type PatientRadiographItem = {
  source?:'professional'|'patient'; appointment_id?:string|null;
 	id: string;
@@ -180,16 +182,32 @@ export const removePatientRadiographFromCache = (cacheScope: string, radiographI
 };
 
 const parseRadiographPage = (value: unknown): PatientRadiographPage => {
-	const payload = (value ?? {}) as Record<string, unknown>;
+	const contract = 'patients.documents.page';
+	const payload = readRecord(value, contract);
+	const has_more = readBoolean(payload.has_more, contract);
+	const next_cursor = readNullableText(payload.next_cursor, contract);
+	if (has_more && !next_cursor) throw new InvalidDataContractError(contract);
+	const optionalText = (value: unknown) => value === undefined ? undefined : readNullableText(value, contract);
 	return {
-		items: Array.isArray(payload.items)
-			? payload.items.filter(
-					(item): item is PatientRadiographItem =>
-						Boolean(item) && typeof item === 'object' && typeof (item as { id?: unknown }).id === 'string'
-			  )
-			: [],
-		has_more: payload.has_more === true,
-		next_cursor: typeof payload.next_cursor === 'string' && payload.next_cursor ? payload.next_cursor : null
+		items: readArray(payload.items, contract).map((value): PatientRadiographItem => {
+			const item = readRecord(value, contract);
+			const id = readText(item.id, contract);
+			const bytes = item.bytes === undefined || item.bytes === null ? item.bytes : readFiniteNumber(item.bytes, contract);
+			if (!id || (typeof bytes === 'number' && (!Number.isSafeInteger(bytes) || bytes < 0))) throw new InvalidDataContractError(contract);
+			return {
+				...item, id, bytes,
+				patient_id: item.patient_id === undefined ? undefined : readText(item.patient_id, contract),
+				source: item.source === undefined ? undefined : readChoice(item.source, ['professional', 'patient'], contract),
+				appointment_id: optionalText(item.appointment_id),
+				status: item.status === undefined ? undefined : readText(item.status, contract),
+				original_filename: optionalText(item.original_filename), mime_type: optionalText(item.mime_type),
+				taken_at: optionalText(item.taken_at), note: optionalText(item.note), created_at: optionalText(item.created_at),
+				ready_at: optionalText(item.ready_at), integrity_status: optionalText(item.integrity_status),
+				thumbnail_url: optionalText(item.thumbnail_url),
+				is_mine: item.is_mine === undefined ? undefined : readBoolean(item.is_mine, contract)
+			};
+		}),
+		has_more, next_cursor
 	};
 };
 
@@ -231,13 +249,10 @@ export const loadPatientRadiographPage = async ({
 			: { signal }
 	)
 		.then(async (response) => {
-			const payload = await response.json().catch(() => ({}));
+			const payload: unknown = await response.json().catch(() => null);
 			if (!response.ok) {
-				const message = String(
-					(payload as { message?: unknown }).message ??
-						'No pudimos cargar las imágenes. Probá de nuevo.'
-				);
-				throw new Error(message);
+				const message = isRecord(payload) && typeof payload.message === 'string' ? payload.message.trim() : '';
+				throw new Error(message || 'No pudimos cargar los documentos. Probá de nuevo.');
 			}
 			const page = parseRadiographPage(payload);
 			entry.value = page;

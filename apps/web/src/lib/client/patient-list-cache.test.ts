@@ -14,6 +14,7 @@ import {
 	patientRevisionState,
 	rememberPatientListNavigation,
 	resetPatientListClientState,
+	verifyPatientRevision,
 	setCachedPatientList,
 	type PatientListSnapshot
 } from './patient-list-cache';
@@ -244,4 +245,27 @@ describe('patient list private memory cache', () => {
 			})
 		).toBeNull();
 	});
+
+	it('verifies a complete HTTP revision with its exact clinic scope', async () => {
+		const payload = { resource: 'patients', businessId: 'business-1', cacheable: true,
+			revision: '4', cacheScope: 'private-scope-1', topic: 'business-data:synthetic', checkedAt: '2026-10-17T03:00:00Z' };
+		const fetcher: typeof fetch = async () => new Response(JSON.stringify(payload));
+		expect(await verifyPatientRevision(fetcher, 'business-1')).toEqual(payload);
+		expect(get(patientRevisionState).status).toBe('verified');
+	});
+
+	it.each([null, [], {}, { cacheable: 'true' }, { businessId: 123 }, { revision: {} }, { checkedAt: 'invalid' }, { topic: [] }])(
+		'rejects malformed revision metadata and never certifies its cache: %j', async patch => {
+			const payload = patch === null || Array.isArray(patch) ? patch : {
+				resource: 'patients', businessId: 'business-1', cacheable: true,
+				revision: '4', cacheScope: 'private-scope-1', topic: 'business-data:synthetic', checkedAt: '2026-10-17T03:00:00Z',
+				...patch
+			};
+			// The empty object is intentionally a wholly missing response.
+			const body = patch && !Array.isArray(patch) && Object.keys(patch).length === 0 ? {} : payload;
+			const fetcher: typeof fetch = async () => new Response(JSON.stringify(body));
+			await expect(verifyPatientRevision(fetcher, 'business-1')).rejects.toThrow();
+			expect(get(patientRevisionState).status).not.toBe('verified');
+		}
+	);
 });

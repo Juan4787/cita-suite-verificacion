@@ -390,6 +390,18 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 		await expect(page.locator('.animate-spin')).toHaveCount(0, { timeout: 3_000 });
 		await page.unroute('**/odonto/pacientes/lista?**');
 
+		// A 200 with a partial body must not erase the list or masquerade as
+		// an empty search. Exercise the component's own fetch, beyond PageLoad.
+		await page.route('**/odonto/pacientes/lista?**', route => route.fulfill({
+			status: 200, contentType: 'application/json', body: JSON.stringify({ patients: [] })
+		}), { times: 1 });
+		await search.fill('Z');
+		await expect(page.getByRole('alert')).toContainText('No pudimos validar la respuesta');
+		await expect(desktopPatientName).toBeVisible();
+		await clear.click();
+		await expect(search).toHaveValue('');
+		await expect(desktopPatientName).toBeVisible();
+
 		const row = page.locator('tr').filter({ hasText: fixture.patientName });
 		await expect(row).toBeVisible();
 		await row.locator('td').nth(1).click();

@@ -8,6 +8,7 @@ import {
 	createManualAppointment,
 	findAppointmentCreationReplay,
 	getHumanAppointmentErrorMessage,
+	getAppointmentCreationErrorStatus,
 	rescheduleAppointment,
 	updateAppointmentStatus
 } from './appointments';
@@ -172,6 +173,15 @@ describe('appointment transitions', () => {
 });
 
 describe('appointment error messages', () => {
+	it('reports a changed actor as forbidden while preserving overlap and unexpected failure statuses', () => {
+		expect(getAppointmentCreationErrorStatus(new Error('APPOINTMENT_CREATOR_INVALID'))).toBe(403);
+		expect(getAppointmentCreationErrorStatus({ code: 'P0001', message: 'PATIENT_OWNER_INVALID' })).toBe(403);
+		expect(getAppointmentCreationErrorStatus({ code: '23P01' })).toBe(409);
+		expect(getAppointmentCreationErrorStatus(null)).toBe(500);
+		expect(getAppointmentCreationErrorStatus({ message: {} })).toBe(500);
+		expect(getAppointmentCreationErrorStatus(new Error('Unexpected provider failure'))).toBe(500);
+	});
+
 	it('maps overlap and domain errors to human messages', () => {
 		const overlapMessage = getHumanAppointmentErrorMessage({ code: '23P01' });
 		expect(overlapMessage).toContain('al menos uno de los profesionales');

@@ -125,6 +125,20 @@ describe('patient radiograph memory cache', () => {
 		expect(fetchMock).toHaveBeenCalledTimes(5);
 	});
 
+	it.each([
+		null, {}, { items: [], has_more: 'false' }, { items: [], has_more: true, next_cursor: null },
+		{ items: [{ id: 42 }], has_more: false }, { items: [null], has_more: false },
+		{ items: [{ id: 'document', bytes: -1 }], has_more: false },
+		{ items: [{ id: 'document', source: 'unknown' }], has_more: false },
+		{ items: [{ id: 'document', thumbnail_url: {} }], has_more: false }
+	])('rejects a partial or malformed page instead of caching an empty list: %j', async payload => {
+		activatePatientRadiographCache(scopeA);
+		const fetcher: typeof fetch = async () => response({ json: payload });
+		await expect(loadPatientRadiographPage({ cacheScope: scopeA, endpoint, fetcher })).rejects.toThrow();
+		const healthy: typeof fetch = async () => response({ json: { items: [], has_more: false, next_cursor: null } });
+		expect(await loadPatientRadiographPage({ cacheScope: scopeA, endpoint, fetcher: healthy })).toEqual({ items: [], has_more: false, next_cursor: null });
+	});
+
 	it('keeps every explicitly opened original and never runs its loader twice', async () => {
 		activatePatientRadiographCache(scopeA);
 		const loadFirst = vi.fn(async () => new Blob(['original-1'], { type: 'image/jpeg' }));

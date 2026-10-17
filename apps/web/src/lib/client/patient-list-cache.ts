@@ -1,4 +1,5 @@
 import { get, writable } from 'svelte/store';
+import { InvalidDataContractError, isRecord, readBoolean, readNullableText, readRecord, readText } from '$lib/contracts/json';
 
 export const PATIENT_LIST_CACHE_TTL_MS = 2 * 60 * 1000;
 export const PATIENT_REVISION_VERIFICATION_MAX_AGE_MS = 35_000;
@@ -140,18 +141,22 @@ export const invalidatePatientListCache = (cacheScope?: string | null) => {
 };
 
 const parseRevisionSnapshot = (value: unknown): PatientRevisionSnapshot => {
-	const row = (value ?? {}) as Record<string, unknown>;
-	const businessId = String(row.businessId ?? '').trim();
-	const cacheable = row.cacheable === true;
-	const revision = normalizeRevision(row.revision);
-	const cacheScope = String(row.cacheScope ?? '').trim() || null;
-	const topic = String(row.topic ?? '').trim() || null;
+	const contract = 'patients.revision';
+	const payload = readRecord(value, contract);
+	const businessId = readText(payload.businessId, contract).trim();
+	const cacheable = readBoolean(payload.cacheable, contract);
+	const rawRevision = readNullableText(payload.revision, contract);
+	const revision = normalizeRevision(rawRevision);
+	const cacheScope = readNullableText(payload.cacheScope, contract)?.trim() || null;
+	const topic = readNullableText(payload.topic, contract)?.trim() || null;
+	const checkedAt = readText(payload.checkedAt, contract);
 	if (
-		row.resource !== 'patients' ||
+		payload.resource !== 'patients' ||
 		!businessId ||
+		!Number.isFinite(Date.parse(checkedAt)) ||
 		(cacheable && (!revision || !cacheScope || !topic))
 	) {
-		throw new Error('No pudimos verificar si la lista de pacientes está actualizada.');
+		throw new InvalidDataContractError(contract);
 	}
 	return {
 		resource: 'patients',
@@ -160,7 +165,7 @@ const parseRevisionSnapshot = (value: unknown): PatientRevisionSnapshot => {
 		revision: cacheable ? revision : null,
 		cacheScope: cacheable ? cacheScope : null,
 		topic: cacheable ? topic : null,
-		checkedAt: String(row.checkedAt ?? '')
+		checkedAt
 	};
 };
 
@@ -292,7 +297,7 @@ export const verifyPatientRevision = async (
 			payload = null;
 		}
 		if (!response.ok) {
-			const message = String((payload as { message?: unknown } | null)?.message ?? '').trim();
+			const message = isRecord(payload) && typeof payload.message === 'string' ? payload.message.trim() : '';
 			throw new Error(message || 'No pudimos verificar la lista de pacientes.');
 		}
 		const snapshot = parseRevisionSnapshot(payload);

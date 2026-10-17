@@ -4,14 +4,15 @@
 	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/stores';
 	import Modal from '$lib/components/Modal.svelte';
+	import { isRecord } from '$lib/contracts/json';
+	import { parsePatientListData, type PatientListData } from '$lib/contracts/patient-list';
 	import {
 		acceptPatientListSnapshot,
 		consumePatientListNavigation,
 		markPatientRevisionUnverified,
 		patientRevisionState,
 		rememberPatientListNavigation,
-		setCachedPatientList,
-		type PatientListSnapshot
+		setCachedPatientList
 	} from '$lib/client/patient-list-cache';
 	import { formatDate } from '$lib/utils/format';
 	import { patientMatchesListQuery } from '$lib/utils/patient-list-local-search';
@@ -30,18 +31,17 @@
 		phone?: string;
 	};
 
-	let { data } = $props<{ data: any; form: FormResult }>();
+	let { data } = $props<{ data: PatientListData; form: FormResult }>();
 	const formState = $derived(($page.form as FormResult | null) ?? null);
-	let listData = $state<any>();
-	let patients = $state<any[]>([]);
-	let unfilteredPatients = $state<any[]>([]);
+	const initialData = untrack(() => data);
+	let listData = $state<PatientListData>(initialData);
+	let patients = $state<PatientListData['patients']>([]);
+	let unfilteredPatients = $state<PatientListData['patients']>([]);
 	let search = $state('');
 	let appliedQuery = $state('');
 	let hasMore = $state(false);
 	let nextCursor = $state<string | null>(null);
-	const initialData = untrack(() => data);
 	let appliedServerData = initialData;
-	listData = initialData;
 	patients = initialData.patients ?? [];
 	unfilteredPatients = initialData.query ? [] : (initialData.patients ?? []);
 	search = initialData.query ?? '';
@@ -101,17 +101,18 @@
 		return `/odonto/pacientes${params.size ? `?${params.toString()}` : ''}`;
 	};
 
-	const readListResponse = async (response: Response) => {
-		const payload = await response.json().catch(() => ({}));
+	const readListResponse = async (response: Response, expected: Pick<PatientListData, 'businessId' | 'query' | 'showArchived'>): Promise<PatientListData> => {
+		const payload: unknown = await response.json().catch(() => null);
 		if (!response.ok) {
-			throw new Error(payload.message || 'No se pudieron cargar los pacientes.');
+			const message = isRecord(payload) && typeof payload.message === 'string' ? payload.message.trim() : '';
+			throw new Error(message || 'No se pudieron cargar los pacientes.');
 		}
-		return payload as any;
+		return parsePatientListData(payload, expected);
 	};
 
-	const storeSnapshot = (snapshot: any) => {
-		if (snapshot.cacheable && acceptPatientListSnapshot(snapshot as PatientListSnapshot)) {
-			setCachedPatientList(snapshot as PatientListSnapshot);
+	const storeSnapshot = (snapshot: PatientListData) => {
+		if (snapshot.cacheable && acceptPatientListSnapshot(snapshot)) {
+			setCachedPatientList(snapshot);
 		}
 	};
 
@@ -140,7 +141,9 @@
 				cache: 'no-store',
 				signal: reset ? activeController?.signal : undefined
 			});
-			const payload = await readListResponse(response);
+			const payload = await readListResponse(response, {
+				businessId: listData.businessId, query: requestedQuery, showArchived: listData.showArchived
+			});
 			if (sequence !== requestSequence) return false;
 
 			if (reset) {
@@ -162,7 +165,7 @@
 				const existing = new Set(patients.map((patient) => patient.id));
 				patients = [
 					...patients,
-					...(payload.patients ?? []).filter((patient: any) => !existing.has(patient.id))
+					...payload.patients.filter((patient) => !existing.has(patient.id))
 				];
 				if (!appliedQuery) unfilteredPatients = patients;
 				listData = {
@@ -180,7 +183,7 @@
 			nextCursor = payload.nextCursor ?? null;
 			return true;
 		} catch (error) {
-			if ((error as Error)?.name !== 'AbortError' && sequence === requestSequence) {
+			if (!(error instanceof Error && error.name === 'AbortError') && sequence === requestSequence) {
 				listError = error instanceof Error ? error.message : 'No se pudieron cargar los pacientes.';
 			}
 			return false;
