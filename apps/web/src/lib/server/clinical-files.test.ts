@@ -140,6 +140,12 @@ describe('clinical files server boundary', () => {
 	});
 
 	it('maps backend failures to stable human messages without exposing internals', () => {
+		expect(clinicalFileError(new Error('RADIOGRAPH_SIZE_INVALID'))).toMatchObject({
+			status: 400, code: 'FILE_TOO_LARGE', userMessage: 'El archivo debe pesar hasta 5 MB.'
+		});
+		expect(clinicalFileError(new Error('RADIOGRAPH_FORMAT_INVALID'))).toMatchObject({
+			status: 400, code: 'INVALID_FILE_TYPE', userMessage: 'Elegí un archivo PDF, JPG o PNG.'
+		});
 		expect(clinicalFileError(new Error('RADIOGRAPH_ACCESS_DENIED: row 123'))).toMatchObject({
 			status: 403,
 			code: 'ACCESS_DENIED',
@@ -183,9 +189,10 @@ describe('clinical files server boundary', () => {
 	it('creates two exact non-upsert upload grants and fails closed if either one is unavailable', async () => {
 		const expires = Math.floor(Date.now() / 1000) + 4 * 3600;
 		const token = 'synthetic.' + Buffer.from(JSON.stringify({ exp: expires })).toString('base64url') + '.signature';
+		const originalToken = 'synthetic.' + Buffer.from(JSON.stringify({ exp: expires - 3600 })).toString('base64url') + '.signature';
 		const createSignedUploadUrl = vi
 			.fn()
-			.mockResolvedValueOnce({ data: { signedUrl: 'https://storage/original', token }, error: null })
+			.mockResolvedValueOnce({ data: { signedUrl: 'https://storage/original', token: originalToken }, error: null })
 			.mockResolvedValueOnce({ data: { signedUrl: 'https://storage/thumbnail', token }, error: null });
 		const protect = vi.fn().mockResolvedValue({ data: null, error: null });
 		const admin = { rpc: protect, storage: { from: vi.fn(() => ({ createSignedUploadUrl })) } } as never;

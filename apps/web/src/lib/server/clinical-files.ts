@@ -132,7 +132,7 @@ export const clinicalFileError = (
 		});
 	}
 	if (message.includes('RADIOGRAPH_NOT_FOUND')) {
-		return new ClinicalFileHttpError(404, 'La imagen ya no está disponible en esta ficha.', {
+		return new ClinicalFileHttpError(404, 'El documento ya no está disponible en esta ficha.', {
 			code: 'FILE_NOT_FOUND'
 		});
 	}
@@ -155,12 +155,12 @@ export const clinicalFileError = (
 		});
 	}
 	if (message.includes('RADIOGRAPH_FORMAT_INVALID')) {
-		return new ClinicalFileHttpError(400, 'Elegí una imagen JPG o PNG.', {
+		return new ClinicalFileHttpError(400, 'Elegí un archivo PDF, JPG o PNG.', {
 			code: 'INVALID_FILE_TYPE'
 		});
 	}
 	if (message.includes('RADIOGRAPH_SIZE_INVALID')) {
-		return new ClinicalFileHttpError(400, 'La imagen debe pesar hasta 25 MB.', {
+		return new ClinicalFileHttpError(400, 'El archivo debe pesar hasta 5 MB.', {
 			code: 'FILE_TOO_LARGE'
 		});
 	}
@@ -175,7 +175,7 @@ export const clinicalFileError = (
 		message.includes('RADIOGRAPH_NOTE_INVALID') ||
 		message.includes('RADIOGRAPH_UPLOAD_INVALID')
 	) {
-		return new ClinicalFileHttpError(400, 'Revisá los datos de la imagen e intentá de nuevo.', {
+		return new ClinicalFileHttpError(400, 'Revisá los datos del documento e intentá de nuevo.', {
 			code: 'INVALID_METADATA'
 		});
 	}
@@ -187,7 +187,7 @@ export const clinicalFileError = (
 		);
 	}
 	if (message.includes('RADIOGRAPH_REQUEST_CONFLICT')) {
-		return new ClinicalFileHttpError(409, 'Esta carga cambió. Volvé a elegir la imagen.', {
+		return new ClinicalFileHttpError(409, 'Esta carga cambió. Volvé a elegir el archivo.', {
 			code: 'UPLOAD_CONFLICT'
 		});
 	}
@@ -205,7 +205,7 @@ export const clinicalFileError = (
 	) {
 		return new ClinicalFileHttpError(
 			409,
-			'La imagen cambió de estado. Actualizá la ficha e intentá de nuevo.',
+			'El documento cambió de estado. Actualizá la ficha e intentá de nuevo.',
 			{ code: 'STATE_CONFLICT' }
 		);
 	}

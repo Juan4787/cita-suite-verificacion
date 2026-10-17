@@ -56,6 +56,7 @@ Este mecanismo detecta discrepancias visibles en el catálogo. No certifica obje
 | Evidencia | Garantía |
 |---|---|
 | `clinical_business_storage_budget.sql` | Cuenta automática, activación, máximos, pausas, CAS, ampliación, expiración real, repetición, borrado/renovación, reconciliación, aislamiento y privilegios. |
+| `clinical_storage_reconciliation.sql` | Reconciliación de los cuatro estados, derivados, abandonados, otros buckets, objetos sin atribución/tamaño y excesos preexistentes conservando información. |
 | Ensayo antes/después de migración | Preserva un objeto de 3,5 MB, una carga pendiente de 5 MB, sus slots y el máximo previo. |
 | `run_clinical_budget_concurrency.sh` | Dos conexiones con bloqueo observado: no exceder presupuesto global entre dos consultorios ni máximo individual. |
 | `booking_extension_contracts.sql` | Límites por turno y diferencia entre tamaños reales/declarados y reserva pesimista. |

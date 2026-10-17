@@ -47,12 +47,27 @@ test('master storage policy preserves drafts, enforces clinic scope and renders 
 		]) if (result.error) throw result.error;
 
 		await signInWithPassword(page, masterEmail, masterPassword);
-		await page.goto('/odonto/maestro/almacenamiento');
+		// A usable server-rendered form must retain edits while its JS is still
+		// loading. Hold scripts to reproduce that real condition deterministically.
+		let releaseScripts!: () => void;
+		const scripts = new Promise<void>(resolve => { releaseScripts = resolve; });
+		await page.route('**/*', async route => {
+			if (route.request().resourceType() === 'script') await scripts;
+			await route.continue();
+		});
+		await page.goto('/odonto/maestro/almacenamiento', { waitUntil: 'commit' });
 		await expect(page.getByRole('heading', { name: 'Espacio para documentos', exact: true })).toBeVisible();
 		const initial = page.getByLabel('Límite inicial por consultorio (MB)');
-		await initial.fill('110,5');
+		try { await initial.fill('110,5'); }
+		finally { releaseScripts(); }
+		// Svelte removes the server's default value attribute when this actual
+		// input is hydrated. No arbitrary delay, injected state or repeated fill.
+		await expect(initial).not.toHaveAttribute('value');
+		await expect(initial).toHaveValue('110,5');
 		await page.getByLabel('Permitir nuevas cargas en Cita Suite', { exact: true }).check();
+		const submittedDefault = page.waitForRequest(request => request.method() === 'POST' && request.url().includes('?/defaults'));
 		await page.getByRole('button', { name: 'Guardar configuración general', exact: true }).click();
+		expect(new URLSearchParams((await submittedDefault).postData() ?? '').get('megabytes')).toBe('110,5');
 		await expect(page.getByRole('status')).toContainText('Configuración general guardada');
 		const updatedDefault = await admin.from('clinical_storage_budget').select('default_business_max_bytes').eq('singleton', true).single();
 		expect(updatedDefault.error).toBeNull();
