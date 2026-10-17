@@ -2,7 +2,7 @@
 
 Fuente de verdad: [plan aprobado íntegro](refactorizacion-cita-suite.md). Integridad de la copia: [huellas SHA-256](refactorizacion-cita-suite.integridad.json).
 
-Estado general: **en ejecución; campaña no terminada**. Rama: `refactor/maintainability-20261015`. No se modificó producción, datos reales ni se contrataron servicios.
+Estado general: **en ejecución; campaña no terminada**. Rama: `refactor/maintainability-20261015`. Hasta este registro no se modificó producción ni se contrataron servicios. La autorización se amplió el 17 de octubre; ver el apartado correspondiente, sin atribuirle operaciones aún no ejecutadas.
 
 ## Regla de continuidad
 
@@ -266,3 +266,11 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
 
 - El usuario confirmó explícitamente **Workers Free**. Se registra como dato comercial aportado por su titular, sin atribuirlo a la consulta API de facturación que respondió 403. La etapa 6 deberá demostrar CPU/subpeticiones/cron bajo Free; no se contratará Paid.
 - CI [38893210813](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/38893210813), fuente `1a152e375760d2688addb77a2e1b7b2eff7eaf4f`: las nueve aserciones de resolución privilegiada aprobaron, comparadas con ocho fallos de la misma suite antes del endurecimiento. También aprobaron 1.069 unidades servidor, 100 cliente, una reapertura nativa y SQL/carreras/generación. Navegador: diez aprobadas y un fallo, catorce sin ejecutar. La captura muestra el esqueleto «Buscando días…»; `evaluateAll` se ejecutó antes de existir enlaces. Se añade espera del primer enlace visible antes de seleccionar la fecha futura; no se amplía timeout ni se cambia disponibilidad. Paquete `.verification/remote-38893210813/`, SHA-256 `8f744ef0334da69d00d912182c490b3b4133b9cb73479b80fd77124fa7ea0607`. Sigue pendiente el cierre completo sobre esta corrección de sincronización.
+
+
+### Autorización ampliada y continuación del 17 de octubre
+
+- Pedido posterior explícito incorporado íntegramente al plan: producción, pruebas masivas y auditoría final autorizadas, cuidando RAM. Se mantienen secuencia de verificación, respaldo, staging, reversión, datos sintéticos identificables y preservación de datos reales. No autoriza contratar Paid. Las huellas del plan original, instrucción y ampliación de identidad permanecen intactas; se registra la huella anterior al nuevo apéndice. AGENTS refleja esta autorización para no solicitarla nuevamente tras compactar.
+- CI `38927832130`, fuente `61f830340510a97f8f6e86066199b41f97c2280f`: SQL/carreras/tipos y perfiles estrictos aprobados; el recorrido de reserva y solapamiento pasó tras esperar enlaces reales. Navegador llegó a veinte aprobadas y falló en Seguimientos con página de error, cuatro no ejecutadas. No demuestra un fallo de permisos ni una causa específica. El ejecutor no conservaba stdout/stderr de Vite; se corrige esa pérdida con nombres por corrida y copia al directorio de evidencias incluso al fallar. Nueva corrida `38997749314`, fuente `442bbb07060ca26cc2bef822ef225f947b313608`, en curso. Paquete anterior `.verification/remote-38927832130/`, SHA-256 `e7e74a50148b025c408ed30303d710833a1c8ee52973b9be931581a794aa2d32`.
+- El control de integridad encontró caracteres ajenos al título aprobado (`^{ }`) y un renglón vacío adicional. Se preservó el archivo recibido byte a byte en `.verification/user-plan-format-edit-20261017.md`; se restauraron exclusivamente esas diferencias de formato y se comprobó la huella íntegra anterior antes de incorporar la autorización. No se quitó ninguna condición del usuario. La fuente `442bbb0` ya contenía esos caracteres y puede fallar el control inicial; no se atribuirá a pruebas funcionales no ejecutadas.
+- Se prepara una prueba SQL adicional del cambio de rol entre preflight del servidor y RPC privilegiada de creación de turno, incluida recuperación idempotente. Es un candidato a reproducir; aún no se afirma que haya pasado una creación indebida. Fixture sintético, rol service_role real y controles positivos de admin/recepción. No se aplicó una corrección especulativa.

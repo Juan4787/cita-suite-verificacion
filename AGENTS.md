@@ -14,5 +14,5 @@
 - Después de cada compactación y antes de comenzar cada etapa, leer el documento original completo y contrastarlo con `docs/plans/registro-refactorizacion-cita-suite.md` y sus evidencias. No reconstruir el plan de memoria ni considerar eliminado un requisito porque falte en un resumen.
 - Identificar el último punto verificado y continuar desde el siguiente trabajo pendiente, sin repetir innecesariamente operaciones ya comprobadas ni dar por terminadas tareas incompletas.
 - Mantener el registro separado con etapas, cambios, pruebas, resultados, decisiones, bloqueos y pendientes. No modificar el plan original para hacerlo coincidir con una implementación incompleta.
-- La autonomía cubre la campaña íntegra en rama aislada y pruebas autorizadas; no autoriza producción, modificaciones de datos reales ni contrataciones.
+- La autonomía cubre la campaña íntegra en rama aislada. El usuario autorizó además publicación y pruebas masivas en producción el 17 de octubre: consultar la ampliación literal del plan. Mantener la secuencia de validación/respaldo/reversión y usar datos sintéticos acotados, preservando los reales. No se autorizaron contrataciones; conservar todas las restricciones de RAM.
 - Antes de declarar la campaña terminada, verificar punto por punto todos los requisitos y criterios de aceptación del documento original mediante evidencia comprobable.

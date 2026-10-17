@@ -1,6 +1,4 @@
-# Plan integral de refactorización de Cita Suite^{
-    
-}
+# Plan integral de refactorización de Cita Suite
 
 ## 1. Objetivo, alcance y condiciones de partida
 
@@ -11,7 +9,6 @@ La estrategia es conservar el monolito, PostgreSQL/Supabase, Cloudflare y la web
 La campaña se realizará en entregas pequeñas sobre una rama aislada. **La publicación será posterior al cierre de toda la campaña y su auditoría.** Un avance parcial no se presentará como refactorización terminada.
 
 ### Decisiones que quedan fijadas
-
 
 | Tema | Decisión |
 |---|---|
@@ -510,3 +507,23 @@ Esta ampliación agrega un objetivo de cierre a la campaña original; no sustitu
 ## Información operativa aportada por el usuario
 
 El adjunto del 16 de octubre muestra login de GitHub con `Juan4787`, Actions habilitado y permisos de workflow predeterminados de escritura, sin aprobación de revisiones de PR. Muestra también el proyecto Supabase vinculado `yjzferwuzbtgpmdnzlcb` llamado «Odontologia», intentos fallidos de listar migraciones por timeout/reset y una sesión Wrangler en la cuenta `fc592fdc570803acbf4b523d106e446e`. Estos datos son evidencia de los comandos adjuntos, no prueba de que una ejecución posterior, conexión SQL o destino Cloudflare correcto ya funcione. Contrastar el estado vigente antes de utilizarlo; conservar credenciales fuera del proyecto y la conversación.
+
+---
+
+# Autorización adicional del usuario: producción y pruebas masivas
+
+## Pedido original íntegro — 17 de octubre de 2026
+
+produccion, testeo masivo en produccion y auditoria final estan autorizadas tambien, que no quede ni un solo hueco sin auditar ni una sola deuda tecnica. siempre cuidando la ram eso si
+
+## Aplicación a la campaña
+
+Esta autorización posterior amplía el alcance operativo: permite publicar y efectuar pruebas masivas y auditoría final en producción. Sustituye las prohibiciones anteriores de intervenir producción y la necesidad de volver a solicitar autorización para esas acciones ya autorizadas. No elimina etapas, criterios de aceptación ni garantías del plan.
+
+Se conserva la secuencia de reconstrucción, pruebas aisladas, respaldo/recuperación, staging y auditoría previa a publicar. Cada acción deberá identificar destino, revisión, migraciones y reversión compatibles; el permiso no convierte una prueba pendiente en aprobada.
+
+Las pruebas de producción emplearán consultorios y datos sintéticos identificables, sin modificar, exportar ni eliminar datos clínicos reales para preparar o limpiar los ensayos. La limpieza verificará pertenencia a la corrida y respetará las relaciones y contabilidad. La carga se ejecutará desde recursos externos con límites de plataforma vigentes, sin falsificar IP ni eludir protecciones. Se conservarán evidencia y criterios de interrupción ante errores o impacto sobre datos reales.
+
+Workers permanece en Free por confirmación expresa del usuario; no se autorizaron contrataciones ni cambios a planes pagos. Cualquier límite comercial que impida demostrar un criterio deberá quedar medido y expuesto, sin fingir su cumplimiento. La computadora local conserva pruebas livianas secuenciales, sin bases/navegadores/cargas pesadas ni procesos pesados concurrentes.
+
+El cierre exige la auditoría punto por punto, corrección y repetición de los casos fallidos. No se declarará ausencia de deuda por omitir pruebas, ocultar incertidumbres o posponer defectos dentro del alcance aprobado.
