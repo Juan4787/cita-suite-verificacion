@@ -1,6 +1,6 @@
 -- Real PostgreSQL accounting/permissions; no physical file transfer claimed.
 begin;
-select extensions.plan(37);
+select extensions.plan(36);
 create temporary table quota_fixture(a uuid,b uuid,c uuid,actor uuid,patient uuid,file_id uuid,path text);
 do $$
 declare a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); actor uuid:=gen_random_uuid(); patient uuid:=gen_random_uuid(); f record;

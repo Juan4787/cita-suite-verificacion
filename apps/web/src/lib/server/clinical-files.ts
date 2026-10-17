@@ -101,6 +101,8 @@ export const clinicalFileError = (
     if(message.includes('CLINICAL_STORAGE_QUOTA'))return new ClinicalFileHttpError(409,'El consultorio no tiene espacio disponible para nuevas cargas. Tu turno y los archivos anteriores se conservan.',{code:'UPLOAD_LIMIT_REACHED'});
     if(message.includes('CLINICAL_PATIENT_QUOTA'))return new ClinicalFileHttpError(409,'Podés adjuntar hasta tres documentos y 10 MB en total para este turno. Contactá al consultorio si necesitás enviar más.',{code:'UPLOAD_LIMIT_REACHED'});
     if(message.includes('CLINICAL_PATIENT_DOCUMENTS_DISABLED'))return new ClinicalFileHttpError(409,'El consultorio todavía no habilitó el envío de documentos. Tu turno se conserva.',{code:'ACCESS_DENIED'});
+    if(message.includes('CLINICAL_DOCUMENTS_DISABLED'))return new ClinicalFileHttpError(409,'La carga de documentos está desactivada para este consultorio. Los archivos anteriores se conservan.',{code:'ACCESS_DENIED'});
+    if(message.includes('CLINICAL_STORAGE_ACCOUNT_MISSING'))return new ClinicalFileHttpError(503,'No pudimos consultar el espacio del consultorio. Probá nuevamente en unos minutos.',{code:'STORAGE_UNAVAILABLE'});
 	if (message.includes('AUTH_REQUIRED')) {
 		return new ClinicalFileHttpError(401, 'Tu sesión terminó. Volvé a iniciar sesión.', {
 			code: 'AUTH_REQUIRED'

@@ -350,7 +350,7 @@ begin
     patient_documents_enabled=coalesce((p_settings->>'patient_documents_enabled')::boolean,false),
     public_contact_enabled=coalesce((p_settings->>'public_contact_enabled')::boolean,false),
     whatsapp_contact_enabled=coalesce((p_settings->>'whatsapp_contact_enabled')::boolean,false),
-    whatsapp_phone=nullif(p_settings->>'whatsapp_phone',''),whatsapp_message=nullif(trim(p_settings->>'whatsapp_message),'')
+    whatsapp_phone=nullif(p_settings->>'whatsapp_phone',''),whatsapp_message=nullif(trim(p_settings->>'whatsapp_message'),'')
     where id=p_business_id;
   insert into public.audit_logs(business_id,user_id,action,entity_type,entity_id)
     values(p_business_id,auth.uid(),'business.public_practice_settings_saved','business',p_business_id);
