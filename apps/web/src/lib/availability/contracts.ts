@@ -24,7 +24,7 @@ export type AvailabilityWindow = Pick<IntegratedAvailabilityRows, 'exceptions' |
 	professional_ids: string[];
 };
 
-const invalid = (field: string): never => { throw new InvalidDataContractError('availability.' + field); };
+function invalid(field: string): never { throw new InvalidDataContractError('availability.' + field); }
 const uuid = (value: string) => /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value);
 const integer = (value: unknown, minimum: number, field: string) => {
 	const number = readFiniteNumber(value, 'availability.' + field);
