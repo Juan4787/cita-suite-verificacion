@@ -1,6 +1,6 @@
 -- Real PostgreSQL accounting/permissions; no physical file transfer claimed.
 begin;
-select extensions.plan(36);
+select extensions.plan(42);
 create temporary table quota_fixture(a uuid,b uuid,c uuid,actor uuid,patient uuid,file_id uuid,path text);
 do $$
 declare a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); actor uuid:=gen_random_uuid(); patient uuid:=gen_random_uuid(); f record;
@@ -39,6 +39,7 @@ select extensions.throws_ok($q$select private.reserve_clinical_document(file_id)
 select extensions.is((select count(*) from storage.objects where name=(select path from quota_fixture)),1::bigint,'disabling uploads preserves historical stored objects');
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub',(select actor::text from quota_fixture),true);
+select extensions.throws_ok($q$select public.get_clinical_storage_budget(b) from quota_fixture$q$,'P0001','RADIOGRAPH_ACCESS_DENIED','a clinic owner cannot read another clinic quota');
 select extensions.throws_ok($q$select public.save_public_practice_settings(a,'{"patient_documents_enabled":true}',(select updated_at from public.businesses where id=a)) from quota_fixture$q$,'P0001','CLINICAL_DOCUMENTS_DISABLED','activation cannot report success for a disabled account');
 select extensions.is((select patient_documents_enabled from public.businesses where id=(select a from quota_fixture)),false,'rejected activation is atomic');
 select set_config('request.jwt.claim.role','service_role',true);
@@ -50,6 +51,8 @@ select public.save_public_practice_settings(a,'{"patient_documents_enabled":true
 select extensions.is((select max_bytes from public.clinical_business_storage_budget where business_id=(select a from quota_fixture)),6000000::bigint,'deactivation and reactivation preserve the configured quota');
 select set_config('request.jwt.claim.role','service_role',true);
 select public.set_clinical_storage_defaults(actor,150000000,true) from quota_fixture;
+select extensions.throws_ok($q$select public.set_clinical_storage_defaults(actor,0,true) from quota_fixture$q$,'23514',null,'no zero default can create an unusable activation');
+select extensions.throws_ok($q$insert into public.clinical_upload_slots(bucket,path,file_id,business_id,expires_at,reserved_bytes) select 'patient-clinical-files','foreign-tenant-slot',file_id,b,now()+interval '1 hour',0 from quota_fixture$q$,'23503',null,'a lease cannot refer to a file in another clinic');
 insert into public.businesses(id,name,slug,industry) select c,'Synthetic quota C',c::text,'other' from quota_fixture;
 select extensions.is((select max_bytes from public.clinical_business_storage_budget where business_id=(select c from quota_fixture)),150000000::bigint,'new default applies automatically to subsequent clinics');
 select extensions.is((select max_bytes from public.clinical_business_storage_budget where business_id=(select b from quota_fixture)),100000000::bigint,'default changes preserve previously assigned quotas');
@@ -74,6 +77,10 @@ delete from storage.objects where name=(select path from quota_fixture);
 select extensions.is((select used_bytes+reserved_bytes from public.clinical_business_storage_budget where business_id=(select a from quota_fixture)),0::bigint,'expired URL requires no re-reservation after object deletion');
 select private.reserve_clinical_document(file_id) from quota_fixture;
 select extensions.is((select reserved_bytes from public.clinical_business_storage_budget where business_id=(select a from quota_fixture)),5000000::bigint,'an expired pending upload can renew with full backing');
+select public.set_business_clinical_storage_policy(actor,a,20000000,true) from quota_fixture;
+select extensions.is((select reserved_bytes from public.clinical_business_storage_budget where business_id=(select a from quota_fixture)),5000000::bigint,'increasing capacity preserves outstanding reservations');
+select extensions.is((select sha256 from public.patient_radiographs where id=(select file_id from quota_fixture)),repeat('a',64),'increasing capacity preserves file identity');
+select extensions.is((select count(*) from public.clinical_upload_slots where file_id=(select file_id from quota_fixture)),1::bigint,'increasing capacity does not duplicate or discard the pending lease');
 update public.clinical_upload_slots set expires_at=clock_timestamp()-interval '1 second' where file_id=(select file_id from quota_fixture);
 select private.release_expired_clinical_reservations();
 select private.release_expired_clinical_reservations();

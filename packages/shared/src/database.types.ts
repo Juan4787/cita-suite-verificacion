@@ -1421,6 +1421,41 @@ export type Database = {
         }
         Relationships: []
       }
+      clinical_business_storage_budget: {
+        Row: {
+          business_id: string
+          max_bytes: number
+          reserved_bytes: number
+          updated_at: string
+          uploads_enabled: boolean
+          used_bytes: number
+        }
+        Insert: {
+          business_id: string
+          max_bytes: number
+          reserved_bytes?: number
+          updated_at?: string
+          uploads_enabled?: boolean
+          used_bytes?: number
+        }
+        Update: {
+          business_id?: string
+          max_bytes?: number
+          reserved_bytes?: number
+          updated_at?: string
+          uploads_enabled?: boolean
+          used_bytes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_business_storage_budget_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinical_entries: {
         Row: {
           amount: number | null
@@ -1543,24 +1578,30 @@ export type Database = {
       }
       clinical_storage_budget: {
         Row: {
+          default_business_max_bytes: number
           max_bytes: number
           reserved_bytes: number
           singleton: boolean
           updated_at: string
+          uploads_enabled: boolean
           used_bytes: number
         }
         Insert: {
+          default_business_max_bytes?: number
           max_bytes?: number
           reserved_bytes?: number
           singleton?: boolean
           updated_at?: string
+          uploads_enabled?: boolean
           used_bytes: number
         }
         Update: {
+          default_business_max_bytes?: number
           max_bytes?: number
           reserved_bytes?: number
           singleton?: boolean
           updated_at?: string
+          uploads_enabled?: boolean
           used_bytes?: number
         }
         Relationships: []
@@ -1568,6 +1609,7 @@ export type Database = {
       clinical_upload_slots: {
         Row: {
           bucket: string
+          business_id: string
           expires_at: string
           file_id: string
           path: string
@@ -1575,6 +1617,7 @@ export type Database = {
         }
         Insert: {
           bucket: string
+          business_id: string
           expires_at: string
           file_id: string
           path: string
@@ -1582,12 +1625,20 @@ export type Database = {
         }
         Update: {
           bucket?: string
+          business_id?: string
           expires_at?: string
           file_id?: string
           path?: string
           reserved_bytes?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "clinical_upload_slots_business_file_fkey"
+            columns: ["business_id", "file_id"]
+            isOneToOne: false
+            referencedRelation: "patient_radiographs"
+            referencedColumns: ["business_id", "id"]
+          },
           {
             foreignKeyName: "clinical_upload_slots_file_id_fkey"
             columns: ["file_id"]
@@ -4574,6 +4625,10 @@ export type Database = {
           superseded_push_attempts: number
         }[]
       }
+      reconcile_clinical_storage_budget: {
+        Args: { p_max_businesses?: number }
+        Returns: Json
+      }
       record_calendar_action: {
         Args: { p_action: string; p_appointment_id: string; p_provider: string }
         Returns: undefined
@@ -4776,6 +4831,23 @@ export type Database = {
       search_upcoming_active_appointments: {
         Args: { p_business_id: string; p_limit?: number; p_query: string }
         Returns: Json
+      }
+      set_business_clinical_storage_policy: {
+        Args: {
+          p_actor_id: string
+          p_business_id: string
+          p_max_bytes: number
+          p_uploads_enabled: boolean
+        }
+        Returns: undefined
+      }
+      set_clinical_storage_defaults: {
+        Args: {
+          p_actor_id: string
+          p_default_business_max_bytes: number
+          p_uploads_enabled: boolean
+        }
+        Returns: undefined
       }
       set_patient_archive_state_safely: {
         Args: {
