@@ -793,9 +793,9 @@
 				></button>
 			</div>
 		{/if}
-		<div class="mx-auto hidden max-w-7xl items-center justify-between gap-6 px-6 py-4 md:flex">
-			<div class="flex min-w-0 items-center gap-3">
-				<picture>
+		<div class="mx-auto hidden max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-3 px-6 py-4 md:grid xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+			<div class="col-start-1 row-start-1 flex min-w-0 items-center gap-3">
+				<picture class="shrink-0">
 					<img
 						src="/logo-cita-suite.png"
 						alt="Cita Suite"
@@ -812,22 +812,22 @@
 					</div>
 				{:else if activeBusiness?.business}
 					<div class="min-w-0">
-						<p class="truncate text-sm font-semibold text-neutral-900 dark:text-white">
+						<p class="truncate text-sm font-semibold text-neutral-900 dark:text-white" title={activeBusiness.business.name}>
 							{activeBusiness.business.name}
 						</p>
 					</div>
 				{/if}
 			</div>
 			<nav
-				class="flex min-w-0 flex-1 items-center justify-center gap-2 text-sm font-semibold"
+				class="col-span-2 col-start-1 row-start-2 flex min-w-0 flex-wrap items-center justify-center gap-2 text-sm font-semibold xl:col-span-1 xl:col-start-2 xl:row-start-1 xl:flex-nowrap"
 				data-sveltekit-preload-code="viewport"
 			>
 				{#each visibleNav as item}
 					{#if item.label === 'Configuración' && canShowConfigMenu}
-							<div class="relative" data-menu-root>
+							<div class="relative shrink-0" data-menu-root>
 							<button
 								type="button"
-								class={`group rounded-2xl px-4 py-3 transition-all duration-200 ${
+								class={`group whitespace-nowrap rounded-2xl px-4 py-3 transition-all duration-200 ${
 									isNavItemActive(item)
 										? 'bg-[#7c3aed]/90 text-white shadow-sm shadow-[#7c3aed]/20'
 										: 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-white/10 dark:hover:text-white'
@@ -876,7 +876,7 @@
 						<a
 							href={item.href}
 							data-sveltekit-preload-data="hover"
-							class={`group rounded-2xl px-4 py-3 transition-all duration-200 ${
+							class={`group shrink-0 whitespace-nowrap rounded-2xl px-4 py-3 transition-all duration-200 ${
 								isNavItemActive(item)
 									? 'bg-[#7c3aed]/90 text-white shadow-sm shadow-[#7c3aed]/20'
 									: 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-white/10 dark:hover:text-white'
@@ -895,7 +895,7 @@
 					{/if}
 				{/each}
 			</nav>
-				<div class="relative flex min-w-0 justify-end" data-menu-root>
+				<div class="relative col-start-2 row-start-1 flex min-w-0 justify-end xl:col-start-3" data-menu-root>
 				<button
 					type="button"
 					class="flex max-w-64 items-center gap-3 rounded-2xl border border-neutral-200 bg-white/70 px-3 py-2 text-left shadow-sm transition hover:border-[#7c3aed]/40 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.07]"

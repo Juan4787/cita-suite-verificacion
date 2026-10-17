@@ -624,7 +624,11 @@
 			<div class="mt-6 rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-5 py-8 text-center">
 				<p class="text-base font-semibold text-white">Todavía no hay documentos en esta ficha</p>
 				<p class="mx-auto mt-2 max-w-lg text-sm text-white/55">
-					Podés adjuntar imágenes y estudios en JPG, PNG o PDF, de hasta 5 MB.
+					{#if canUpload && !demo}
+						Podés adjuntar imágenes y estudios en JPG, PNG o PDF, de hasta 5 MB.
+					{:else}
+						Los documentos guardados aparecerán en esta ficha.
+					{/if}
 				</p>
 				{#if canUpload && !demo}
 					<button type="button" class="ux-btn-primary mt-5" onclick={() => chooseFile('files')}>Añadir el primer documento</button>

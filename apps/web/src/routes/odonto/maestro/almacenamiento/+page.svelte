@@ -40,9 +40,6 @@
 		<h1 class="ux-title">Espacio para documentos</h1>
 		<p class="mt-3 text-[var(--text-muted)]">{mb(data.budget.used_bytes)} MB utilizados y {mb(data.budget.reserved_bytes)} MB en cargas pendientes, de {mb(data.budget.max_bytes)} MB compartidos.</p>
 	</header>
-	{#if form?.message}
-		<p class={form.saved ? 'ux-alert ux-alert-success' : 'ux-alert'} role={form.saved ? 'status' : 'alert'}>{form.message}</p>
-	{/if}
 	<form method="POST" action="?/defaults" class="ux-card" use:enhance={submit('defaults')} aria-busy={pending === 'defaults'}>
 		<h2 class="ux-section-title">Configuración general</h2>
 		<p class="mt-2 text-sm text-[var(--text-muted)]">El valor inicial se aplica a nuevos consultorios. Cada límite usa el espacio compartido.</p>
@@ -50,8 +47,13 @@
 		<label class="mt-5 grid gap-2 max-w-sm">
 			<span class="font-semibold">Límite inicial por consultorio (MB)</span>
 			<input class="ux-input" name="megabytes" inputmode="decimal" required maxlength="30" disabled={pending !== null}
+				aria-invalid={form?.target === 'defaults' && form.field === 'megabytes' ? true : undefined}
+				aria-describedby={form?.target === 'defaults' && form.message ? 'storage-defaults-feedback' : undefined}
 				bind:value={() => amount('defaults', data.budget.default_business_max_bytes), (value: string) => edit('defaults', data.budget.default_business_max_bytes, data.budget.uploads_enabled, data.budget.policy_revision, { megabytes: value })} />
 		</label>
+		{#if form?.target === 'defaults' && form.message}
+			<p id="storage-defaults-feedback" class={form.saved ? 'ux-alert ux-alert-success mt-4' : 'ux-alert mt-4'} role={form.saved ? 'status' : 'alert'}>{form.message}</p>
+		{/if}
 		<label class="mt-4 flex min-h-11 items-center gap-3">
 			<input type="checkbox" name="uploads_enabled" value="true" disabled={pending !== null}
 				bind:checked={() => enabled('defaults', data.budget.uploads_enabled), (checked: boolean) => edit('defaults', data.budget.default_business_max_bytes, data.budget.uploads_enabled, data.budget.policy_revision, { enabled: checked })} />
@@ -73,10 +75,15 @@
 					<label class="grid gap-2 min-w-0">
 						<span class="font-semibold">Límite de {account.business.name} (MB)</span>
 						<input class="ux-input" name="megabytes" inputmode="decimal" required maxlength="30" disabled={pending !== null}
+							aria-invalid={form?.target === account.business_id && form.field === 'megabytes' ? true : undefined}
+							aria-describedby={form?.target === account.business_id && form.message ? `storage-${account.business_id}-feedback` : undefined}
 							bind:value={() => amount(account.business_id, account.max_bytes), (value: string) => edit(account.business_id, account.max_bytes, account.uploads_enabled, account.policy_revision, { megabytes: value })} />
 					</label>
 					<button class="ux-btn-secondary" disabled={pending !== null}>{pending === account.business_id ? 'Guardando…' : 'Guardar límite'}</button>
 				</div>
+				{#if form?.target === account.business_id && form.message}
+					<p id={`storage-${account.business_id}-feedback`} class={form.saved ? 'ux-alert ux-alert-success mt-4' : 'ux-alert mt-4'} role={form.saved ? 'status' : 'alert'}>{form.message}</p>
+				{/if}
 				<label class="mt-3 flex min-h-11 items-center gap-3">
 					<input type="checkbox" name="uploads_enabled" value="true" disabled={pending !== null}
 						bind:checked={() => enabled(account.business_id, account.uploads_enabled), (checked: boolean) => edit(account.business_id, account.max_bytes, account.uploads_enabled, account.policy_revision, { enabled: checked })} />

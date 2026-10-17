@@ -13,6 +13,20 @@ async function captureStorageSurface(page: Page, name: string) {
 	}
 }
 
+async function assertReadableDesktopNavigation(page: Page) {
+	for (const width of [768, 1024, 1280, 1600]) {
+		await page.setViewportSize({ width, height: 900 });
+		const navigation = page.locator('header nav:visible');
+		await expect(navigation).toHaveCount(1);
+		await expect.poll(() => navigation.evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(104);
+		const controls = navigation.locator(':scope > a, :scope > div > button');
+		expect(await controls.count()).toBeGreaterThanOrEqual(4);
+		await expect.poll(() => controls.evaluateAll(elements => elements
+			.filter(element => element.getBoundingClientRect().height > 60 || element.getBoundingClientRect().width < 44)
+			.map(element => element.textContent?.trim()))).toEqual([]);
+	}
+}
+
 test('master storage policy preserves drafts, enforces clinic scope and renders desktop/mobile', async ({ page, browser }) => {
 	const url = process.env.ODONTO_SUPABASE_URL;
 	const key = process.env.ODONTO_SUPABASE_SERVICE_ROLE_KEY;
@@ -88,7 +102,19 @@ test('master storage policy preserves drafts, enforces clinic scope and renders 
 		await initial.fill('111'); // A different form's pending edit must survive.
 		await quota.fill('21');
 		await row.getByRole('button', { name: 'Guardar límite', exact: true }).click();
-		await expect(page.getByRole('status')).toContainText('Configuración del consultorio guardada');
+		await expect(row.getByRole('status')).toContainText('Configuración del consultorio guardada');
+		await expect(initial).toHaveValue('111');
+		// A concurrent administrator must not silently overwrite this form's
+		// observed revision. Its error belongs to the row, preserving other edits.
+		const concurrent = await admin.rpc('set_business_clinical_storage_policy', { p_actor_id: masterId,
+			p_business_id: businessId, p_max_bytes: 22000000, p_uploads_enabled: true });
+		expect(concurrent.error).toBeNull();
+		await quota.fill('23');
+		await row.getByRole('button', { name: 'Guardar límite', exact: true }).click();
+		await expect(row.getByRole('alert')).toContainText('Otra persona cambió esta configuración');
+		await expect(row.getByRole('alert')).toBeVisible();
+		await expect(quota).not.toHaveAttribute('aria-invalid');
+		await expect(quota).toHaveValue('23');
 		await expect(initial).toHaveValue('111');
 		await page.getByRole('link', { name: 'Panel maestro', exact: true }).click();
 		const unsaved = page.getByRole('dialog', { name: 'Cambios sin guardar' });
@@ -96,14 +122,19 @@ test('master storage policy preserves drafts, enforces clinic scope and renders 
 		await unsaved.getByRole('button', { name: 'Seguir editando', exact: true }).click();
 		await expect(initial).toHaveValue('111');
 		await initial.fill('110,5');
+		await quota.fill('21'); // Restore both drafts before the explicit reload.
+		await page.reload();
+		await expect(quota).toHaveValue('22');
 		await quota.fill('1.000');
 		await row.getByRole('button', { name: 'Guardar límite', exact: true }).click();
-		await expect(page.getByRole('alert')).toContainText('Usá coma');
+		await expect(row.getByRole('alert')).toContainText('Usá coma');
+		await expect(row.getByRole('alert')).toBeVisible();
+		await expect(quota).toHaveAttribute('aria-invalid', 'true');
 		await expect(quota).toHaveValue('1.000');
 		await quota.fill('21');
 		await row.getByLabel('Permitir nuevas cargas en este consultorio').uncheck();
 		await row.getByRole('button', { name: 'Guardar límite', exact: true }).click();
-		await expect(page.getByRole('status')).toContainText('Configuración del consultorio guardada');
+		await expect(row.getByRole('status')).toContainText('Configuración del consultorio guardada');
 		const clinic = await admin.from('clinical_business_storage_budget').select('max_bytes,uploads_enabled').eq('business_id', businessId).single();
 		expect(clinic.error).toBeNull();
 		expect(clinic.data).toMatchObject({ max_bytes: 21000000, uploads_enabled: false });
@@ -113,6 +144,7 @@ test('master storage policy preserves drafts, enforces clinic scope and renders 
 		await ownerPage.goto('/odonto/configuracion/documentos');
 		await expect(ownerPage.getByText('La carga de documentos está pausada. Los archivos guardados siguen disponibles.')).toBeVisible();
 		await expect(ownerPage.getByRole('button', { name: 'Guardar permisos', exact: true })).toBeDisabled();
+		await assertReadableDesktopNavigation(ownerPage);
 		await captureStorageSurface(ownerPage, 'storage-clinic-paused');
 		const denied = await ownerPage.request.post(`/odonto/pacientes/${patientId}/radiografias/uploads`, { data: {
 			clientRequestId: randomUUID(), originalFilename: 'synthetic.pdf', mimeType: 'application/pdf', bytes: 100, sha256: 'a'.repeat(64)
@@ -124,6 +156,8 @@ test('master storage policy preserves drafts, enforces clinic scope and renders 
 		expect(files.data).toHaveLength(0);
 		await ownerPage.goto(`/odonto/pacientes/${patientId}?tab=radiografias`);
 		await expect(ownerPage.getByText('La carga de documentos está pausada. Podés consultar los documentos guardados.')).toBeVisible();
+		await expect(ownerPage.getByText('Los documentos guardados aparecerán en esta ficha.', { exact: true })).toBeVisible();
+		await expect(ownerPage.getByText('Podés adjuntar imágenes y estudios', { exact: false })).toHaveCount(0);
 		await expect(ownerPage.getByRole('button', { name: 'Añadir documento', exact: true })).toHaveCount(0);
 		await captureStorageSurface(ownerPage, 'storage-patient-paused');
 		await ownerPage.goto('/odonto/maestro/almacenamiento');

@@ -36,12 +36,13 @@ async function savePolicy(event: RequestEvent, defaults: boolean) {
 	const form = await readBoundedBookingForm(event.request);
 	const target = defaults ? 'defaults' : String(form.get('business_id') ?? '');
 	const values = { megabytes: String(form.get('megabytes') ?? '').slice(0, 40), enabled: form.get('uploads_enabled') === 'true' };
-	const invalid = (status: number, message: string) => fail(status, { saved: false, target, values, message });
+	const invalid = (status: number, message: string, field: 'megabytes' | null = null) => fail(status, { saved: false, target, values, field, message });
 	const bytes = parseStorageMegabytes(values.megabytes);
 	const versionText = String(form.get('policy_revision') ?? '');
 	const revision = Number(versionText);
-	if (!bytes || !/^[1-9]\d{0,9}$/.test(versionText) || !Number.isSafeInteger(revision) || revision > 2147483647 || (!defaults && !uuid.test(target)))
-		return invalid(400, 'Revisá el límite en MB. Usá coma para decimales y no agregues puntos.');
+	if (!bytes) return invalid(400, 'Revisá el límite en MB. Usá coma para decimales y no agregues puntos.', 'megabytes');
+	if (!/^[1-9]\d{0,9}$/.test(versionText) || !Number.isSafeInteger(revision) || revision > 2147483647 || (!defaults && !uuid.test(target)))
+		return invalid(400, 'La configuración ya no es válida. Recargá para revisar los valores actuales antes de guardar.');
 	const response = defaults
 		? await admin.rpc('set_clinical_storage_defaults', { p_actor_id: user.id, p_default_business_max_bytes: bytes,
 			p_uploads_enabled: values.enabled, p_expected_revision: revision })
@@ -49,12 +50,12 @@ async function savePolicy(event: RequestEvent, defaults: boolean) {
 			p_max_bytes: bytes, p_uploads_enabled: values.enabled, p_expected_revision: revision });
 	if (response.error) {
 		if (response.error.message.includes('CLINICAL_STORAGE_COMMITTED'))
-			return invalid(409, 'Ese límite es menor que el espacio utilizado y las cargas pendientes. Aumentalo para guardar.');
+			return invalid(409, 'Ese límite es menor que el espacio utilizado y las cargas pendientes. Aumentalo para guardar.', 'megabytes');
 		if (response.error.message.includes('CLINICAL_STORAGE_POLICY_CHANGED'))
 			return invalid(409, 'Otra persona cambió esta configuración. Recargá para revisar los valores actuales antes de guardar.');
 		return invalid(503, 'No pudimos guardar el límite. Tus cambios se conservan; probá de nuevo.');
 	}
-	return { saved: true, target, values: null, message: defaults
+	return { saved: true, target, values: null, field: null, message: defaults
 		? 'Configuración general guardada. Los límites existentes se conservaron.'
 		: 'Configuración del consultorio guardada. Los documentos y las cargas pendientes se conservaron.' };
 }
