@@ -14,6 +14,7 @@
 		const originalAmount = storageMegabytesInput(bytes);
 		const current = drafts[target] ?? { megabytes: originalAmount, enabled: allowed, revision, originalAmount, originalEnabled: allowed };
 		const next = { ...current, ...changes };
+		if (!drafts[target] && next.megabytes === originalAmount && next.enabled === allowed) return;
 		drafts[target] = next;
 	}
 	const mb = (value: number) => new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 }).format(value / 1_000_000);
@@ -48,12 +49,12 @@
 		<input type="hidden" name="policy_revision" value={drafts.defaults?.revision ?? data.budget.policy_revision} />
 		<label class="mt-5 grid gap-2 max-w-sm">
 			<span class="font-semibold">Límite inicial por consultorio (MB)</span>
-			<input class="ux-input" name="megabytes" inputmode="decimal" required maxlength="30" value={amount('defaults', data.budget.default_business_max_bytes)} disabled={pending !== null}
-				oninput={event => edit('defaults', data.budget.default_business_max_bytes, data.budget.uploads_enabled, data.budget.policy_revision, { megabytes: event.currentTarget.value })} />
+			<input class="ux-input" name="megabytes" inputmode="decimal" required maxlength="30" disabled={pending !== null}
+				bind:value={() => amount('defaults', data.budget.default_business_max_bytes), (value: string) => edit('defaults', data.budget.default_business_max_bytes, data.budget.uploads_enabled, data.budget.policy_revision, { megabytes: value })} />
 		</label>
 		<label class="mt-4 flex min-h-11 items-center gap-3">
-			<input type="checkbox" name="uploads_enabled" value="true" checked={enabled('defaults', data.budget.uploads_enabled)} disabled={pending !== null}
-				onchange={event => edit('defaults', data.budget.default_business_max_bytes, data.budget.uploads_enabled, data.budget.policy_revision, { enabled: event.currentTarget.checked })} />
+			<input type="checkbox" name="uploads_enabled" value="true" disabled={pending !== null}
+				bind:checked={() => enabled('defaults', data.budget.uploads_enabled), (checked: boolean) => edit('defaults', data.budget.default_business_max_bytes, data.budget.uploads_enabled, data.budget.policy_revision, { enabled: checked })} />
 			<span>Permitir nuevas cargas en Cita Suite</span>
 		</label>
 		<p class="mt-1 text-sm text-[var(--text-muted)]">Pausar conserva los documentos guardados.</p>
@@ -71,14 +72,14 @@
 				<div class="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
 					<label class="grid gap-2 min-w-0">
 						<span class="font-semibold">Límite de {account.business.name} (MB)</span>
-						<input class="ux-input" name="megabytes" inputmode="decimal" required maxlength="30" value={amount(account.business_id, account.max_bytes)} disabled={pending !== null}
-							oninput={event => edit(account.business_id, account.max_bytes, account.uploads_enabled, account.policy_revision, { megabytes: event.currentTarget.value })} />
+						<input class="ux-input" name="megabytes" inputmode="decimal" required maxlength="30" disabled={pending !== null}
+							bind:value={() => amount(account.business_id, account.max_bytes), (value: string) => edit(account.business_id, account.max_bytes, account.uploads_enabled, account.policy_revision, { megabytes: value })} />
 					</label>
 					<button class="ux-btn-secondary" disabled={pending !== null}>{pending === account.business_id ? 'Guardando…' : 'Guardar límite'}</button>
 				</div>
 				<label class="mt-3 flex min-h-11 items-center gap-3">
-					<input type="checkbox" name="uploads_enabled" value="true" checked={enabled(account.business_id, account.uploads_enabled)} disabled={pending !== null}
-						onchange={event => edit(account.business_id, account.max_bytes, account.uploads_enabled, account.policy_revision, { enabled: event.currentTarget.checked })} />
+					<input type="checkbox" name="uploads_enabled" value="true" disabled={pending !== null}
+						bind:checked={() => enabled(account.business_id, account.uploads_enabled), (checked: boolean) => edit(account.business_id, account.max_bytes, account.uploads_enabled, account.policy_revision, { enabled: checked })} />
 					<span>Permitir nuevas cargas en este consultorio</span>
 				</label>
 			</form>
