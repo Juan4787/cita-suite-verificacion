@@ -78,6 +78,8 @@ El perfil manual `types` del workflow prepara exclusivamente la base/Storage des
 
 El recibo `.verification/type-generation.json` identifica expresamente `types-generation-only` y `fullVerification: false`; las suites SQL, Auth y navegador no se consideran ejecutadas. El perfil no usa proyectos vinculados, contraseñas remotas ni datos reales. Al terminar o interrumpirse limpia únicamente contenedores con las dos etiquetas de propiedad correctas y redes internas con el identificador exacto de corrida; un fallo de limpieza hace fallar el recibo.
 
+El perfil diagnóstico `sql` utiliza el mismo ejecutor con `--verify-sql`: aplica todas las migraciones, ensayos de actualización, suites SQL y carreras antes de exportar tipos. Conserva `kind: sql-and-types-generation-only`, `sqlVerified: true` sólo al completarlas, y `fullVerification: false`. Permite corregir SQL sin repetir navegador/unidades sin cambios; no sustituye la corrida full final. Sigue siendo exclusivo de CI, secuencial y descartable.
+
 La generación independiente y las comparaciones completas posteriores fueron ejecutadas; el registro identifica revisiones y recibos. No se conserva una excepción que permita aprobar con tipos diferentes.
 
 

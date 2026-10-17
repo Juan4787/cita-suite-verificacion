@@ -9,7 +9,7 @@ on:
         type: choice
         required: true
         default: full
-        options: [fast, full, types]
+        options: [fast, full, types, sql]
 
 permissions:
   contents: read
@@ -70,6 +70,7 @@ jobs:
           case "$VERIFICATION_LEVEL" in
             fast|full) pnpm "verify:$VERIFICATION_LEVEL" ;;
             types) node scripts/run-campaign-type-generation.mjs ;;
+            sql) node scripts/run-campaign-type-generation.mjs --verify-sql ;;
             *) exit 2 ;;
           esac
       - name: Retain verification evidence

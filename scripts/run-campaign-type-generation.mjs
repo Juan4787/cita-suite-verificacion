@@ -8,7 +8,8 @@ import { runVerificationProcess } from './lib/verification-process.mjs';
 import { cleanupFixtureResources } from './lib/fixture-cleanup.mjs';
 import { fixturePath } from './lib/fixture-path.mjs';
 
-if (process.argv.length !== 2) throw new Error('Type generation accepts no remote target or credentials.');
+const verifySql = process.argv[2] === '--verify-sql';
+if (process.argv.length !== (verifySql ? 3 : 2)) throw new Error('Only --verify-sql is accepted; remote targets and credentials are forbidden.');
 assertHostedIntegrationResources();
 const root = fileURLToPath(new URL('../', import.meta.url));
 const lease = acquireVerificationLock(root);
@@ -19,7 +20,8 @@ const interrupt = () => controller.abort();
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, interrupt);
 const directory = join(root, '.verification');
 mkdirSync(directory, { recursive: true });
-const receipt = { runId, kind: 'types-generation-only', fullVerification: false, startedAt: new Date().toISOString(), steps: [], ok: false };
+const receipt = { runId, kind: verifySql ? 'sql-and-types-generation-only' : 'types-generation-only', fullVerification: false,
+  sqlVerified: false, startedAt: new Date().toISOString(), steps: [], ok: false };
 function save() {
   const path = join(directory, 'type-generation.json');
   writeFileSync(path + '.tmp', JSON.stringify(receipt, null, 2) + '\n');
@@ -29,13 +31,18 @@ try {
   save();
   for (const args of [
     ['scripts/check-refactoring-plan.mjs'],
-    ['scripts/test-booking-foundation.mjs', '--real-storage', '--keep', '--prepare-only'],
+    ['scripts/test-booking-foundation.mjs', '--real-storage', '--keep', ...(verifySql ? [] : ['--prepare-only'])],
     ['scripts/generate-database-types.mjs', '--export']
   ]) {
     const result = await runVerificationProcess('node', args, { cwd: root, env: process.env, stdio: 'inherit', signal: controller.signal });
     receipt.steps.push({ name: args[0], status: result.status, signal: result.signal });
     save();
     if (controller.signal.aborted || result.error || result.status !== 0) throw new Error('Disposable type generation failed; application verification was not executed.');
+  }
+  if (verifySql) {
+    const database = JSON.parse(readFileSync(fixturePath('database.json'), 'utf8'));
+    if (database.runId !== runId || database.sqlVerified !== true) throw new Error('SQL diagnostics did not produce the required complete receipt.');
+    receipt.sqlVerified = true;
   }
   receipt.ok = true;
 } catch (error) {
