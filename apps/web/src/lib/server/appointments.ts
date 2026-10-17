@@ -1,4 +1,5 @@
 import type { CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
+import { isRecord } from '$lib/contracts/json';
 import type { IntegratedBookingInput } from './booking-integrations';
 import { writeAuditLog } from './audit';
 import { normalizePhoneE164, normalizePhoneRaw } from './phone';
@@ -114,8 +115,8 @@ export const assertCanTransitionAppointment = (input: {
 };
 
 export const getHumanAppointmentErrorMessage = (error: unknown) => {
-	const anyError = error as { code?: string; message?: string; details?: string };
-	const raw = `${anyError?.message ?? ''} ${anyError?.details ?? ''}`;
+	const candidate = isRecord(error) ? error : {};
+	const raw = `${typeof candidate.message === 'string' ? candidate.message : ''} ${typeof candidate.details === 'string' ? candidate.details : ''}`;
 
 	if(raw.includes('SCHEDULE_SERVICE_UNAVAILABLE'))return 'Esta franja está reservada para otras prestaciones. Elegí una prestación permitida u otro horario.';
  if(raw.includes('SCHEDULE_BLOCKED'))return 'El consultorio bloqueó ese horario. Actualizá la agenda y elegí otro disponible.';
@@ -123,12 +124,12 @@ export const getHumanAppointmentErrorMessage = (error: unknown) => {
 	if (raw.includes('appointment_professionals_no_break_overlap')) {
 		return 'Ese horario invade el descanso configurado de al menos uno de los profesionales. Elegí la primera hora disponible que muestra la agenda. Si estás cargando el turno manualmente y confirmaste que nadie estará atendiendo a otro paciente al mismo tiempo, activá “Ignorar descanso” y volvé a elegir el horario.';
 	}
-	if (anyError?.code === '23P01' || raw.includes('appointments_no_overlapping_active')) {
+	if (candidate.code === '23P01' || raw.includes('appointments_no_overlapping_active')) {
 		return 'Ese horario dejó de estar disponible porque al menos uno de los profesionales ya tiene otro turno que se superpone. No se reservó a ningún integrante del equipo. Volvé a la agenda, actualizá los horarios y elegí otra opción disponible.';
 	}
-	const patientConflictField = getPatientUniqueConflictField(anyError);
+	const patientConflictField = getPatientUniqueConflictField(candidate);
 	if (patientConflictField) return PATIENT_UNIQUE_CONFLICT_MESSAGES[patientConflictField];
-	if (isLegacyPatientNameConflict(anyError)) return LEGACY_PATIENT_NAME_CONFLICT_MESSAGE;
+	if (isLegacyPatientNameConflict(candidate)) return LEGACY_PATIENT_NAME_CONFLICT_MESSAGE;
 	if (raw.includes('APPOINTMENT_NOT_FOUND')) {
 		return 'No encontramos ese turno. Volvé a la agenda y abrilo otra vez; es posible que haya sido eliminado o que ya no tengas acceso.';
 	}

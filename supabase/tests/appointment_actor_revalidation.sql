@@ -74,7 +74,7 @@ select set_config('request.jwt.claim.sub',(select owner_id::text from appointmen
 select extensions.lives_ok('select public.update_business_role_access(membership_id,''readonly'') from appointment_actor_fixture',
  'owner downgrades the actor through the real role RPC');
 select set_config('request.jwt.claim.sub',(select actor_id::text from appointment_actor_fixture),true);
-select extensions.is(public.user_business_role((select business_id from appointment_actor_fixture)),'readonly','role change is committed before the server call');
+select extensions.is(public.user_business_role((select business_id from appointment_actor_fixture)),'readonly','role change is visible before the server call');
 select extensions.is(public.user_can_operate_business((select business_id from appointment_actor_fixture)),false,
  'a new application preflight would now deny the actor');
 reset role;
