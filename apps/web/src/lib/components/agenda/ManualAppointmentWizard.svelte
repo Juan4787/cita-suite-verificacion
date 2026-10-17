@@ -10,6 +10,7 @@
 		type AvailabilitySnapshotProfessional,
 		type AvailabilitySnapshotService
 	} from '$lib/availability/snapshot';
+	import { parseAvailabilitySlots } from '$lib/availability/http';
 	import { classifyCommunicationPhone } from '$lib/utils/communication-phone';
 	import { onDestroy, tick, untrack } from 'svelte';
 
@@ -574,15 +575,11 @@
 			});
 			const payload = await response.json().catch(() => ({}));
 			if (request !== slotRequest) return;
-			if (!response.ok) {
-				if (silent) return;
-				slots = [];
-				slotsError =
-					payload?.message ??
-					'No pudimos cargar los horarios. No se reservó nada. Revisá la conexión y volvé a intentar.';
-				return;
-			}
-			const liveSlots: Slot[] = Array.isArray(payload?.slots) ? payload.slots : [];
+			if (!response.ok) throw new Error('Availability request failed');
+            const liveSlots = parseAvailabilitySlots(payload, {
+                fromDate: input.fromDate, toDate: input.toDate,
+                professionalIds: input.teamProfessionalIds.length >= 2 ? input.teamProfessionalIds : [input.professionalId]
+            });
 			slots = liveSlots;
 			slotsLoaded = true;
 			if (
@@ -598,10 +595,12 @@
 		} catch (error) {
 			if (request !== slotRequest) return;
 			if (error instanceof DOMException && error.name === 'AbortError') return;
-			if (silent) return;
 			slots = [];
+			slotsLoaded = false;
+			selectedSlotStartsAt = '';
+			if (step > 4) step = 4;
 			slotsError =
-				'No pudimos cargar los horarios porque se interrumpió la conexión. No se reservó nada. Revisá internet y volvé a intentar.';
+				'No pudimos actualizar los horarios. No se reservó nada. Volvé a elegir el día para intentar nuevamente.';
 		} finally {
 			if (request === slotRequest) {
 				if (!silent) loadingSlots = false;
@@ -656,7 +655,8 @@
 		const requestInput = {
 			serviceId,
 			fromDate,
-			toDate: isTimeRequest ? fromDate : addDays(fromDate, 27),
+			// The UI displays one week. Request only that week, within one SQL window.
+			toDate: isTimeRequest ? fromDate : addDays(fromDate, 6),
 			professionalId: individualProfessionalId,
 			teamProfessionalIds,
 			shouldIgnoreBreak: ignoreBreak,

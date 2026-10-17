@@ -269,6 +269,7 @@ const reservableProfessionals = (catalog: AvailabilityCatalog, serviceId: string
  const assigned = new Set(catalog.assignments.filter(row => row.service_id === serviceId).map(row => row.professional_id));
  return catalog.professionals.filter(row => scheduled.has(row.id) && assigned.has(row.id) &&
   (!scope?.professionalIds.length || scope.professionalIds.includes(row.id)))
+  .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
   .map(({ id, name, specialty, avatar_url }) => ({ id, name: name.trim(), specialty, avatar_url: sanitizePublicImageUrl(avatar_url) }));
 };
 
