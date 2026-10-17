@@ -4,10 +4,17 @@ import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertApprovedPlan } from './lib/plan-integrity.mjs';
 
 // Prepare an exact source snapshot without changing the user's index, branch or
 // working tree. This script does not create a repository or push anything.
 const root = fileURLToPath(new URL('../', import.meta.url));
+// Keep the gate inside this command too. A separate preceding shell command
+// can fail while the caller still prepares/pushes an invalid source snapshot.
+assertApprovedPlan(
+	readFileSync(join(root, 'docs/plans/refactorizacion-cita-suite.md'), 'utf8'),
+	JSON.parse(readFileSync(join(root, 'docs/plans/refactorizacion-cita-suite.integridad.json'), 'utf8'))
+);
 const temporary = mkdtempSync(join(tmpdir(), 'cita-ci-index-'));
 const gitEnv = { ...process.env, GIT_INDEX_FILE: join(temporary, 'index') };
 const directory = join(root, '.verification');

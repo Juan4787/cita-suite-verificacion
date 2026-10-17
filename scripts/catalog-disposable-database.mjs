@@ -14,6 +14,10 @@ if (labels['com.cita-suite.booking-fixture'] !== 'true' || labels['com.cita-suit
 	throw new Error('Disposable database ownership does not match its receipt.');
 const query = `select jsonb_build_object(
  'scope','Reconstructed disposable database; not a production catalog',
+ 'schemas',(select jsonb_agg(jsonb_build_object('name',n.nspname,'owner',pg_get_userbyid(n.nspowner),
+   'privileges',n.nspacl::text,'anonCanCreate',has_schema_privilege('anon',n.oid,'CREATE'),
+   'authenticatedCanCreate',has_schema_privilege('authenticated',n.oid,'CREATE')) order by n.nspname)
+   from pg_namespace n where n.nspname in('public','private','extensions','storage','auth','realtime','pg_catalog')),
  'functions',(select jsonb_agg(jsonb_build_object(
    'schema',n.nspname,'name',p.proname,'arguments',pg_get_function_identity_arguments(p.oid),
    'result',pg_get_function_result(p.oid),'securityDefiner',p.prosecdef,

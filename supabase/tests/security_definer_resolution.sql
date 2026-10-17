@@ -1,7 +1,7 @@
 -- Actual RLS and SECURITY DEFINER calls under a synthetic authenticated role.
 -- Malicious temporary tables exist only in this rolled-back disposable test.
 begin;
-select extensions.plan(9);
+select extensions.plan(23);
 do $fixture$
 declare
  actor uuid:=gen_random_uuid(); business uuid:=gen_random_uuid(); professional uuid:=gen_random_uuid();
@@ -41,5 +41,11 @@ select extensions.is((select count(*) from public.patients where id=current_sett
 select extensions.is((select count(*) from public.patient_clinical_profiles where patient_id=current_setting('cita.tests.shadow.linked')::uuid),1::bigint,'the real linked clinical profile remains visible');
 reset role;
 select extensions.ok((select count(*)>0 and bool_and(coalesce((select split_part(setting,'=',2) ~ '(^|,)[[:space:]]*pg_temp[[:space:]]*$' from unnest(p.proconfig) setting where setting like 'search_path=%'),false)) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in('public','private') and p.prosecdef and not exists(select 1 from pg_depend d where d.classid='pg_proc'::regclass and d.objid=p.oid and d.deptype='e')),'application privileged functions explicitly resolve temporary schemas last');
+-- A schema is trusted only if untrusted API roles cannot create objects in it.
+-- Verify effective privileges (including PUBLIC inheritance), not just ACL text.
+select extensions.is(has_schema_privilege(actor,namespace,'CREATE'),false,
+ format('%s cannot create objects in trusted schema %s',actor,namespace))
+from unnest(array['anon','authenticated']) actor
+cross join unnest(array['public','private','extensions','storage','auth','realtime','pg_catalog']) namespace;
 select * from extensions.finish();
 rollback;
