@@ -365,7 +365,7 @@ export const createClinicalFileUploadUrls = async (
 	const bucket = admin.storage.from(CLINICAL_FILES_BUCKET);
 	const [original, thumbnail] = await Promise.all([
 		bucket.createSignedUploadUrl(paths.original, { upsert: false }),
-		paths.thumbnail?bucket.createSignedUploadUrl(paths.thumbnail, { upsert: false }):Promise.resolve({data:{signedUrl:null},error:null})
+		paths.thumbnail?bucket.createSignedUploadUrl(paths.thumbnail, { upsert: false }):Promise.resolve({data:{signedUrl:null,token:null},error:null})
 	]);
 
 	if (original.error || !original.data?.signedUrl || thumbnail.error || (paths.thumbnail&&!thumbnail.data?.signedUrl)) {
@@ -375,12 +375,35 @@ export const createClinicalFileUploadUrls = async (
 			{ code: 'STORAGE_UNAVAILABLE' }
 		);
 	}
+	const expirations = [readStorageUploadExpiration(original.data.token)];
+	if (paths.thumbnail) expirations.push(readStorageUploadExpiration(thumbnail.data?.token));
+	const protection = await admin.rpc('protect_clinical_upload_urls', {
+		p_bucket: CLINICAL_FILES_BUCKET, p_paths: paths.thumbnail ? [paths.original, paths.thumbnail] : [paths.original],
+		p_expires_at: new Date(Math.max(...expirations)).toISOString()
+	});
+	if (protection.error) throw new ClinicalFileHttpError(503, 'No pudimos asegurar el espacio para la carga. Volvé a intentar.', { code: 'STORAGE_UNAVAILABLE' });
 
 	return {
 		originalUrl: original.data.signedUrl,
 		thumbnailUrl: thumbnail.data.signedUrl
 	};
 };
+
+function readStorageUploadExpiration(token: unknown): number {
+	try {
+		if (typeof token !== 'string' || token.length>8192) throw new Error();
+		const parts = token.split('.');
+		if (parts.length!==3 || !parts[1] || parts[1].length>4096) throw new Error();
+		const payload = readRecord(JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/'))), 'storageUploadExpiration');
+		if (typeof payload.exp!=='number' || !Number.isSafeInteger(payload.exp) || !Number.isSafeInteger(payload.exp*1000)
+			|| payload.exp*1000<=Date.now() || !Number.isFinite(new Date(payload.exp*1000).getTime())) throw new Error();
+		// This observes a response from our authenticated Storage client; it never
+		// authenticates a user or accepts a token supplied by a caller.
+		return payload.exp*1000;
+	} catch {
+		throw new ClinicalFileHttpError(503, 'No pudimos comprobar el plazo de la carga. Volvé a intentar.', { code: 'STORAGE_UNAVAILABLE' });
+	}
+}
 
 export const createSignedClinicalFileUrl = async ({
 	admin,

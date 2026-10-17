@@ -181,11 +181,14 @@ describe('clinical files server boundary', () => {
 	});
 
 	it('creates two exact non-upsert upload grants and fails closed if either one is unavailable', async () => {
+		const expires = Math.floor(Date.now() / 1000) + 4 * 3600;
+		const token = 'synthetic.' + Buffer.from(JSON.stringify({ exp: expires })).toString('base64url') + '.signature';
 		const createSignedUploadUrl = vi
 			.fn()
-			.mockResolvedValueOnce({ data: { signedUrl: 'https://storage/original' }, error: null })
-			.mockResolvedValueOnce({ data: { signedUrl: 'https://storage/thumbnail' }, error: null });
-		const admin = { storage: { from: vi.fn(() => ({ createSignedUploadUrl })) } } as never;
+			.mockResolvedValueOnce({ data: { signedUrl: 'https://storage/original', token }, error: null })
+			.mockResolvedValueOnce({ data: { signedUrl: 'https://storage/thumbnail', token }, error: null });
+		const protect = vi.fn().mockResolvedValue({ data: null, error: null });
+		const admin = { rpc: protect, storage: { from: vi.fn(() => ({ createSignedUploadUrl })) } } as never;
 
 		await expect(
 			createClinicalFileUploadUrls(admin, {
@@ -195,6 +198,10 @@ describe('clinical files server boundary', () => {
 		).resolves.toEqual({
 			originalUrl: 'https://storage/original',
 			thumbnailUrl: 'https://storage/thumbnail'
+		});
+		expect(protect).toHaveBeenCalledWith('protect_clinical_upload_urls', {
+			p_bucket: 'patient-clinical-files', p_paths: ['business/patient/file/original.jpg', 'business/patient/file/thumbnail.webp'],
+			p_expires_at: new Date(expires * 1000).toISOString()
 		});
 		expect(createSignedUploadUrl).toHaveBeenNthCalledWith(
 			1,
@@ -217,6 +224,20 @@ describe('clinical files server boundary', () => {
 				thumbnail: 'business/patient/file/thumbnail.webp'
 			})
 		).rejects.toMatchObject({ status: 503 });
+	});
+
+	it('never exposes upload URLs with unknown/expired expiration or failed SQL protection', async () => {
+		const expired = 'synthetic.' + Buffer.from(JSON.stringify({ exp: 1 })).toString('base64url') + '.signature';
+		const valid = 'synthetic.' + Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 7200 })).toString('base64url') + '.signature';
+		for (const token of [undefined, 'malformed-private-provider-token', expired, valid]) {
+			const protect = vi.fn().mockResolvedValue({ error: { message: 'protection failed' } });
+			const admin = { rpc: protect, storage: { from: () => ({ createSignedUploadUrl: async () => ({
+				data: { signedUrl: 'https://storage/private-url', token }, error: null
+			}) }) } } as never;
+			await expect(createClinicalFileUploadUrls(admin, { original: 'owned/original.pdf', thumbnail: null }))
+				.rejects.toMatchObject({ status: 503 });
+			if (token !== valid) expect(protect).not.toHaveBeenCalled();
+		}
 	});
 
 	it('verifies stored size, MIME and magic bytes before accepting an original', async () => {

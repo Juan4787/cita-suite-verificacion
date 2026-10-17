@@ -175,7 +175,7 @@ begin
     end if;
     insert into public.clinical_upload_slots(bucket,path,file_id,business_id,expires_at,reserved_bytes)
       values(file.storage_bucket,path_value,file.id,file.business_id,clock_timestamp()+interval '2 hours 15 minutes',target_reserved)
-      on conflict(bucket,path) do update set expires_at=excluded.expires_at,reserved_bytes=excluded.reserved_bytes;
+      on conflict(bucket,path) do update set expires_at=greatest(public.clinical_upload_slots.expires_at,excluded.expires_at),reserved_bytes=excluded.reserved_bytes;
   end loop;
   if exists(select 1 from public.clinical_storage_budget where singleton and used_bytes+reserved_bytes+additional>max_bytes)
     or exists(select 1 from public.clinical_business_storage_budget where business_id=file.business_id
@@ -339,6 +339,34 @@ begin
   return enabled;
 end $$;
 
+-- Storage signs first; the server observes the actual token expiration and
+-- extends protection before exposing either URL to a browser. Initial leases
+-- already back their full permitted size throughout that network round-trip.
+create function public.protect_clinical_upload_urls(p_bucket text,p_paths text[],p_expires_at timestamptz)
+returns void language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
+declare v_file_id uuid; v_business_id uuid; matches integer; distinct_files integer;
+begin
+  perform private.require_clinical_file_service_call();
+  perform private.clinical_budget_lock();
+  if p_bucket is distinct from 'patient-clinical-files' or p_paths is null or cardinality(p_paths) not between 1 and 2
+    or p_expires_at is null or not isfinite(p_expires_at) or p_expires_at<=clock_timestamp() then
+    raise exception 'CLINICAL_UPLOAD_PROTECTION_INVALID';
+  end if;
+  select count(*),count(distinct s.file_id),min(s.file_id::text)::uuid into matches,distinct_files,v_file_id
+    from public.clinical_upload_slots s where s.bucket=p_bucket and s.path=any(p_paths);
+  if matches<>cardinality(p_paths) or distinct_files<>1 then raise exception 'CLINICAL_UPLOAD_PROTECTION_INVALID'; end if;
+  select business_id into v_business_id from public.patient_radiographs where id=v_file_id;
+  perform private.lock_clinical_business_budget(v_business_id);
+  perform 1 from public.patient_radiographs f where f.id=v_file_id and f.status='uploading' for update;
+  if not found or exists(select 1 from public.clinical_upload_slots s where s.file_id=v_file_id and s.path=any(p_paths)
+    and (s.expires_at<=clock_timestamp() or s.reserved_bytes<>case when exists(select 1 from storage.objects o
+      where o.bucket_id=s.bucket and o.name=s.path and private.clinical_object_bytes(o.metadata)>0) then 0 else 5000000 end)) then
+    raise exception 'CLINICAL_UPLOAD_PROTECTION_INVALID';
+  end if;
+  update public.clinical_upload_slots s set expires_at=greatest(s.expires_at,p_expires_at+interval '15 minutes')
+    where s.bucket=p_bucket and s.path=any(p_paths) and s.file_id=v_file_id;
+end $$;
+
 -- New functions have no implicit PUBLIC execution; only the trusted backend
 -- can administer defaults/exceptions or reconcile the complete project.
 revoke all on function private.clinical_storage_business(text,text),private.clinical_object_bytes(jsonb),
@@ -347,10 +375,12 @@ revoke all on function private.clinical_storage_business(text,text),private.clin
   private.check_patient_document_budget(uuid) from public,anon,authenticated,service_role;
 revoke all on function public.reconcile_clinical_storage_budget(integer),
   public.clinical_document_uploads_enabled(uuid),
+  public.protect_clinical_upload_urls(text,text[],timestamptz),
   public.set_clinical_storage_defaults(uuid,bigint,boolean,integer),public.set_business_clinical_storage_policy(uuid,uuid,bigint,boolean,integer)
   from public,anon,authenticated,service_role;
 grant execute on function public.reconcile_clinical_storage_budget(integer),
   public.clinical_document_uploads_enabled(uuid),
+  public.protect_clinical_upload_urls(text,text[],timestamptz),
   public.set_clinical_storage_defaults(uuid,bigint,boolean,integer),public.set_business_clinical_storage_policy(uuid,uuid,bigint,boolean,integer) to service_role;
 
 -- Preserve the public settings contract, acquiring the shared budget before

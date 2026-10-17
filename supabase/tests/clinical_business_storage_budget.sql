@@ -3,7 +3,7 @@ begin;
 -- Synthetic metadata-only tests use the same transaction-local permission as
 -- Storage's own database tests. The application never bypasses Storage API.
 set local storage.allow_delete_query='true';
-select extensions.plan(48);
+select extensions.plan(52);
 create temporary table quota_fixture(a uuid,b uuid,c uuid,actor uuid,patient uuid,file_id uuid,path text);
 do $$
 declare a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); actor uuid:=gen_random_uuid(); patient uuid:=gen_random_uuid(); f record;
@@ -23,6 +23,12 @@ select extensions.is((select reserved_bytes from public.clinical_business_storag
 select extensions.is((select reserved_bytes from public.clinical_business_storage_budget where business_id=(select b from quota_fixture)),0::bigint,'individual maxima do not allocate the shared project budget');
 select extensions.is((select max_bytes from public.clinical_storage_budget where singleton),700000000::bigint,'global capacity remains 700 decimal MB');
 select extensions.ok((select business_id=(select a from quota_fixture) from public.clinical_upload_slots where file_id=(select file_id from quota_fixture)),'lease carries its constrained tenant identity');
+select public.protect_clinical_upload_urls('patient-clinical-files',array[path],clock_timestamp()+interval '4 hours') from quota_fixture;
+select extensions.ok((select expires_at>clock_timestamp()+interval '4 hours 14 minutes' from public.clinical_upload_slots where file_id=(select file_id from quota_fixture)),'observed provider expiration is backed with the full safety margin');
+select extensions.is((select reserved_bytes from public.clinical_storage_budget where singleton),5000000::bigint,'extending a valid URL does not allocate its size twice');
+select private.reserve_clinical_document(file_id) from quota_fixture;
+select extensions.ok((select expires_at>clock_timestamp()+interval '4 hours 14 minutes' from public.clinical_upload_slots where file_id=(select file_id from quota_fixture)),'a later refresh never shortens protection for an earlier URL');
+select extensions.throws_ok($q$select public.protect_clinical_upload_urls('patient-clinical-files',array[path,'unowned-path'],clock_timestamp()+interval '4 hours') from quota_fixture$q$,'P0001','CLINICAL_UPLOAD_PROTECTION_INVALID','URL protection cannot extend an unknown path');
 select extensions.throws_ok($q$select public.set_business_clinical_storage_policy(actor,a,4999999,true) from quota_fixture$q$,'P0001','CLINICAL_STORAGE_COMMITTED','cannot reduce a clinic below an outstanding signed URL');
 select extensions.throws_ok($q$update public.clinical_storage_budget set max_bytes=4999999 where singleton$q$,'P0001','CLINICAL_STORAGE_COMMITTED','cannot reduce the project below its outstanding URL');
 select public.set_business_clinical_storage_policy(actor,a,5000000,true) from quota_fixture;
