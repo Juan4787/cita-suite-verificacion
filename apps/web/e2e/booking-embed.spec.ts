@@ -317,8 +317,12 @@ test.describe('isolated booking integration', () => {
       await expect(page.getByText('No hay días disponibles esta semana.', { exact: true })).toHaveCount(0);
       const query = requests.at(-1)!;
       expect((Date.parse(query.searchParams.get('to')!) - Date.parse(query.searchParams.get('from')!)) / 86_400_000).toBe(6);
-      await page.evaluate(() => window.scrollTo(0, 0));
-      await page.screenshot({ path: test.info().outputPath('availability-internal-error-desktop.png'), fullPage: true });
+      for (const width of [1280, 320]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.screenshot({ path: test.info().outputPath('availability-internal-error-' + (width === 320 ? 'mobile' : 'desktop') + '.png'), fullPage: true });
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      }
       fail = false;
       const recovered = page.waitForResponse(response => response.url().includes('/odonto/disponibilidad/slots?'));
       await page.getByRole('button', { name: 'Semana siguiente', exact: true }).click();
@@ -326,7 +330,10 @@ test.describe('isolated booking integration', () => {
       await expect(page.getByText('No pudimos actualizar los horarios.', { exact: false })).toHaveCount(0);
       // Each recovered day is a task button with an actual date, not a fabricated successful empty list.
       await expect(page.getByRole('button', { name: /lunes|martes|miércoles|jueves|viernes|sábado|domingo/i }).first()).toBeVisible();
-      await page.goto(fixture.appOrigin + '/odonto/profesionales/' + fixture.professionalId + '/aranceles');
+      const pricePath = '/odonto/profesionales/' + fixture.professionalId + '/aranceles';
+      let priceWrites = 0;
+      page.on('request', request => { if (request.method() === 'POST' && new URL(request.url()).pathname === pricePath) priceWrites++; });
+      await page.goto(fixture.appOrigin + pricePath);
       const editor = page.locator('form.price-policy');
       await expect(editor).toBeVisible();
       const rate = editor.getByLabel(/^Aumento mensual desde el primer ajuste/);
@@ -343,6 +350,7 @@ test.describe('isolated booking integration', () => {
       await expect(editor.getByRole('table')).toBeVisible();
       await expect(editor.getByRole('status')).toHaveCount(0);
       await expect(editor.getByRole('button', { name: 'Guardar aranceles', exact: true })).toBeEnabled();
+      expect(priceWrites).toBe(0);
 
     } finally { await context.close(); }
   });
