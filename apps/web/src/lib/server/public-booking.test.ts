@@ -526,6 +526,31 @@ const subscription = {
 	expiration_notice_enabled: false
 };
 
+const queryBuilder = (data: unknown) => {
+	const builder: Record<string, unknown> = {};
+	for (const method of [
+		'eq',
+		'in',
+		'gte',
+		'lte',
+		'lt',
+		'gt',
+		'or',
+		'order',
+		'limit',
+		'is',
+		'neq',
+		'not'
+	]) {
+		builder[method] = () => builder;
+	}
+	builder.maybeSingle = async () => ({ data, error: null });
+	builder.single = async () => ({ data, error: null });
+	(builder as { then: unknown }).then = (resolve: (value: unknown) => unknown) =>
+		resolve({ data, error: null });
+	return builder;
+};
+
 // Real typed SDK with simulated HTTP. SQL completeness/permissions have their
 // own database tests; these cases verify selection, calculation and read cost.
 const createSupabaseMock = (overrides: {

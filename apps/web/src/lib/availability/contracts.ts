@@ -10,7 +10,7 @@ export type AvailabilityCatalog = Pick<IntegratedAvailabilityRows, 'services' | 
 	scope: AvailabilityScope;
 	configuration_revision: number;
 	generated_at: string;
-	business: AvailabilityBusiness;
+	business: AvailabilityBusiness & { min_booking_notice_minutes: number };
 };
 export type AvailabilityWindow = Pick<IntegratedAvailabilityRows, 'exceptions' | 'blocks'> & {
 	schema_version: 2;
