@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
+import { clinicalPdfFixture } from './helpers/clinical-pdf';
 
 // Deliberately opt-in and local only. Fixtures must belong to a disposable DB;
 // the regular production/staging suites never create these records.
@@ -77,6 +78,17 @@ test.describe('isolated booking integration', () => {
     await popup.getByRole('button', {name: 'Guardar información'}).click(); await expect(popup.getByRole('status')).toContainText('guardada');
     expect((await sending).postData()).toContain(encodeURIComponent('Medicación sintética ampliada').replaceAll('%20','+'));
     const expanded = await db.from('patient_clinical_profiles').select('medication').eq('patient_id', saved.data![0].patient_id).single(); expect(expanded.data!.medication).toBe('Medicación sintética ampliada');
+    // Use this existing booking, without another reservation or resetting IP limits.
+    const patientPdf = clinicalPdfFixture();
+    const documents = popup.getByRole('region', { name: 'Documentos para tu consulta', exact: true });
+    await expect(documents).toBeVisible();
+    await documents.getByLabel('Documento', { exact: true }).setInputFiles({ name: 'estudio-del-paciente.pdf', mimeType: 'application/pdf', buffer: patientPdf });
+    await documents.getByLabel('Descripción (opcional)', { exact: true }).fill('PDF adjuntado por Ana');
+    await documents.getByRole('button', { name: 'Adjuntar documento', exact: true }).click();
+    await expect(documents.getByRole('status')).toContainText('El documento quedó guardado');
+    const patientDocument = await db.from('patient_radiographs').select('id,status,source,appointment_id,patient_id,bytes').eq('business_id', fixture.businessId).eq('appointment_id', saved.data![0].id).single();
+    expect(patientDocument.error).toBeNull();
+    expect(patientDocument.data).toMatchObject({ status: 'ready', source: 'patient', patient_id: saved.data![0].patient_id, bytes: patientPdf.length });
     await popup.getByRole('link', {name: 'Volver a mi turno'}).click();
     await popup.getByText('Cancelar turno', { exact: true }).first().click();
     await expect(popup.getByText('Confirmo que quiero cancelar este turno.')).toBeVisible();
@@ -146,6 +158,16 @@ test.describe('isolated booking integration', () => {
     await expect(panel.getByRole('article')).toHaveCount(2);
     await panel.locator('summary').first().click(); await expect(panel.getByText('Medicación sintética ampliada',{exact:true}).first()).toBeVisible();
     await panel.screenshot({path: test.info().outputPath('patient-history.png'),fullPage:true});
+    await panel.goto(fixture.appOrigin + '/odonto/pacientes/' + saved.data![0].patient_id + '?tab=radiografias');
+    await expect(panel.getByRole('heading', { name: 'PDF adjuntado por Ana', exact: true })).toBeVisible();
+    await expect(panel.getByText('Adjuntado desde el enlace del turno', { exact: true })).toBeVisible();
+    const patientDownloadPromise = panel.waitForEvent('download');
+    await panel.getByRole('button', { name: 'Descargar PDF', exact: true }).click();
+    const patientDownload = await patientDownloadPromise;
+    expect(patientDownload.suggestedFilename()).toMatch(/^Ana_Prueba_.+\.pdf$/);
+    const patientDownloadPath = await patientDownload.path();
+    if (!patientDownloadPath) throw new Error('No se generó el archivo de descarga del estudio del paciente.');
+    expect(readFileSync(patientDownloadPath).equals(patientPdf)).toBe(true);
     await panel.goto(fixture.appOrigin + '/odonto/profesionales/' + fixture.professionalId + '/preguntas');
     await expect(panel.getByRole('heading',{name:'Preguntas al paciente',exact:true})).toBeVisible();
     await panel.getByRole('checkbox',{name:'Antecedentes',exact:true}).check();

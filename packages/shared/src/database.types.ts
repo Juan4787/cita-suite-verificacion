@@ -1425,6 +1425,7 @@ export type Database = {
         Row: {
           business_id: string
           max_bytes: number
+          policy_revision: number
           reserved_bytes: number
           updated_at: string
           uploads_enabled: boolean
@@ -1433,6 +1434,7 @@ export type Database = {
         Insert: {
           business_id: string
           max_bytes: number
+          policy_revision?: number
           reserved_bytes?: number
           updated_at?: string
           uploads_enabled?: boolean
@@ -1441,6 +1443,7 @@ export type Database = {
         Update: {
           business_id?: string
           max_bytes?: number
+          policy_revision?: number
           reserved_bytes?: number
           updated_at?: string
           uploads_enabled?: boolean
@@ -1580,6 +1583,7 @@ export type Database = {
         Row: {
           default_business_max_bytes: number
           max_bytes: number
+          policy_revision: number
           reserved_bytes: number
           singleton: boolean
           updated_at: string
@@ -1589,6 +1593,7 @@ export type Database = {
         Insert: {
           default_business_max_bytes?: number
           max_bytes?: number
+          policy_revision?: number
           reserved_bytes?: number
           singleton?: boolean
           updated_at?: string
@@ -1598,6 +1603,7 @@ export type Database = {
         Update: {
           default_business_max_bytes?: number
           max_bytes?: number
+          policy_revision?: number
           reserved_bytes?: number
           singleton?: boolean
           updated_at?: string
@@ -3898,6 +3904,10 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: undefined
       }
+      clinical_document_uploads_enabled: {
+        Args: { p_business_id: string }
+        Returns: boolean
+      }
       complete_google_calendar_event_delete: {
         Args: { p_event_row_id: string; p_now?: string }
         Returns: string
@@ -4595,6 +4605,10 @@ export type Database = {
         }
         Returns: number
       }
+      protect_clinical_upload_urls: {
+        Args: { p_bucket: string; p_expires_at: string; p_paths: string[] }
+        Returns: undefined
+      }
       read_patient_export_page: {
         Args: {
           p_actor_user_id: string
@@ -4836,6 +4850,7 @@ export type Database = {
         Args: {
           p_actor_id: string
           p_business_id: string
+          p_expected_revision?: number
           p_max_bytes: number
           p_uploads_enabled: boolean
         }
@@ -4845,6 +4860,7 @@ export type Database = {
         Args: {
           p_actor_id: string
           p_default_business_max_bytes: number
+          p_expected_revision?: number
           p_uploads_enabled: boolean
         }
         Returns: undefined

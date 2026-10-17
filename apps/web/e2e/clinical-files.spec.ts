@@ -3,6 +3,8 @@ import { signInWithPassword } from './helpers/shared-auth';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { clinicalPdfFixture } from './helpers/clinical-pdf';
 
 const supabaseUrl = process.env.ODONTO_SUPABASE_URL;
 const serviceRoleKey = process.env.ODONTO_SUPABASE_SERVICE_ROLE_KEY;
@@ -362,6 +364,31 @@ test.describe('Archivos clínicos privados', () => {
 	test.afterEach(async () => {
 		if (!supabaseUrl || !serviceRoleKey) return;
 		try { await cleanupFixture(adminClient(), fixture); } finally { fixture = null; }
+	});
+
+	test('carga un PDF real, lo guarda en la ficha y descarga los mismos bytes con el nombre del paciente', async ({ page }) => {
+		if (!fixture) throw new Error('Fixture no preparado.');
+		const pdf = clinicalPdfFixture();
+		await login(page, fixture.ownerEmail);
+		await page.goto(`/odonto/pacientes/${fixture.patientId}?tab=radiografias`);
+		await expect(page.getByRole('heading', { name: 'Estudios y documentos' })).toBeVisible();
+		await page.locator('input[type="file"]:not([capture])').setInputFiles({ name: 'informe-sintetico.pdf', mimeType: 'application/pdf', buffer: pdf });
+		await expect(page.getByRole('heading', { name: 'Añadir documento clínico' })).toBeVisible();
+		await page.getByLabel('Descripción (opcional)').fill('Informe PDF sintético');
+		await page.getByRole('button', { name: 'Guardar documento', exact: true }).click();
+		await expect(page.getByText('Documento guardado en la ficha del paciente.')).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Informe PDF sintético', exact: true })).toBeVisible();
+		const downloadPromise = page.waitForEvent('download');
+		await page.getByRole('button', { name: 'Descargar PDF', exact: true }).click();
+		const download = await downloadPromise;
+		expect(download.suggestedFilename().startsWith(fixture.patientName.replaceAll(' ', '_') + '_')).toBe(true);
+		expect(download.suggestedFilename().endsWith('.pdf')).toBe(true);
+		const downloaded = await download.path();
+		if (!downloaded) throw new Error('La descarga real no generó archivo verificable.');
+		expect(readFileSync(downloaded).equals(pdf)).toBe(true);
+		const account = await adminClient().from('clinical_business_storage_budget').select('used_bytes,reserved_bytes').eq('business_id', fixture.businessId).single();
+		expect(account.error).toBeNull();
+		expect(account.data).toMatchObject({ used_bytes: pdf.length, reserved_bytes: 0 });
 	});
 
 	test('el dueño carga una imagen privada y la consulta en escritorio y móvil', async ({ page, browser }) => {

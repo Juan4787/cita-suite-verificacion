@@ -32,15 +32,7 @@ export const POST: RequestHandler = async (event) => {
 			}
 		);
 		if (error) throw error;
-		const row = (Array.isArray(data) ? data[0] : data) as
-			| {
-					storage_bucket: string;
-					storage_path: string;
-					original_filename: string | null;
-					mime_type: string;
-					bytes: number;
-			  }
-			| null;
+		const row = data?.[0];
 		if (!row?.storage_path || !row.storage_bucket) throw new Error('RADIOGRAPH_NOT_FOUND');
         const {data:patient,error:patientError}=await context.supabase.from('patients').select('full_name').eq('business_id',context.businessId).eq('id',event.params.id).single();
         if(patientError||!patient)throw new Error('PATIENT_NOT_FOUND');
