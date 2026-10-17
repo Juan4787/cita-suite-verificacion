@@ -1,15 +1,3 @@
-import type { CitaSupabaseClient } from '$lib/types/database';
-import { parseIntegratedAvailabilityRows, type IntegratedAvailabilityRows } from '$lib/availability/rows';
+// Compatibility export for callers of the former server parser. All active
+// availability reads use availability-windows; no legacy RPC/table fallback.
 export { parseIntegratedAvailabilityRows, type IntegratedAvailabilityRows } from '$lib/availability/rows';
-
-export async function loadIntegratedAvailabilityRows(supabase: CitaSupabaseClient, input: {
-	businessId: string; serviceId: string; professionalIds: string[]; rangeStart: Date; rangeEnd: Date;
-}): Promise<IntegratedAvailabilityRows> {
-	const { data, error } = await supabase.rpc('get_integrated_public_availability_snapshot', {
-		p_business_id: input.businessId, p_service_id: input.serviceId,
-		p_professional_ids: input.professionalIds,
-		p_range_start: input.rangeStart.toISOString(), p_range_end: input.rangeEnd.toISOString()
-	});
-	if (error) throw error;
-	return parseIntegratedAvailabilityRows(data);
-}

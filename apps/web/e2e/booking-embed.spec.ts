@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
+import type { CitaDatabase } from '../src/lib/types/database';
+import { randomUUID } from 'node:crypto';
 import { clinicalPdfFixture } from './helpers/clinical-pdf';
 
 // Deliberately opt-in and local only. Fixtures must belong to a disposable DB;
@@ -218,4 +220,68 @@ test.describe('isolated booking integration', () => {
     await doctor.close();
     expect(exceptions).toEqual([]);
   });
+  test('pages real dates after an empty window in shared and Natalia booking, with keyboard and mobile layout', async ({ browser }) => {
+    test.setTimeout(120_000);
+    for (const origin of [fixture.appOrigin, fixture.apiOrigin]) expect(new URL(origin).hostname).toBe('127.0.0.1');
+    const db = createClient<CitaDatabase>(fixture.apiOrigin, fixture.service, { auth: { persistSession: false, autoRefreshToken: false } });
+    const business = await db.from('businesses').select('timezone,max_booking_days_ahead').eq('id', fixture.businessId).single();
+    expect(business.error).toBeNull();
+    expect(business.data?.timezone).toBe('America/Argentina/Buenos_Aires');
+    expect(business.data!.max_booking_days_ahead).toBeGreaterThanOrEqual(20);
+    const today = new Intl.DateTimeFormat('sv-SE', { timeZone: business.data!.timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const addDays = (days: number) => { const date = new Date(today + 'T12:00:00Z'); date.setUTCDate(date.getUTCDate() + days); return date.toISOString().slice(0, 10); };
+    const exceptionId = randomUUID();
+    const blocked = await db.from('availability_exceptions').insert({ id: exceptionId, business_id: fixture.businessId,
+      professional_id: null, type: 'blocked', starts_at: today + 'T03:00:00Z', ends_at: addDays(15) + 'T03:00:00Z', reason: 'Synthetic bounded-window proof' });
+    expect(blocked.error).toBeNull();
+    try {
+      for (const variant of [
+        { theme: 'cita-suite', width: 1280, path: '/reservar/' + fixture.businessId },
+        { theme: 'natalia', width: 320, path: '/embed/v1/' + fixture.key },
+      ]) {
+        const context = await browser.newContext({ viewport: { width: variant.width, height: 900 }, colorScheme: 'light' });
+        try {
+          const page = await context.newPage();
+          const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+          await page.goto(fixture.appOrigin + variant.path + '?service_id=' + fixture.serviceId + '&professional_id=' + fixture.professionalId + '&modality=in_person');
+          await expect(page.locator('[data-booking-theme="' + variant.theme + '"]')).toBeVisible();
+          await expect(page.getByRole('heading', { name: 'Elegí un día', exact: true })).toBeVisible();
+          await expect(page.getByText('No hay horarios disponibles entre estas fechas.', { exact: true })).toBeVisible();
+          await expect(page.getByRole('link', { name: /Horarios disponibles/ })).toHaveCount(0);
+          const navigation = page.getByRole('navigation', { name: 'Otras fechas para reservar', exact: true });
+          const next = navigation.getByRole('link', { name: 'Fechas siguientes', exact: true });
+          await expect(next).toBeVisible();
+          expect(new URL(await next.getAttribute('href') ?? '', fixture.appOrigin).searchParams.get('dates_from')).toBe(addDays(15));
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.screenshot({ path: test.info().outputPath('availability-empty-' + variant.theme + '.png'), fullPage: true });
+          // Real keyboard activation, retaining the same service/professional/theme.
+          await next.focus(); await expect(next).toBeFocused();
+          await next.press('Enter');
+          await expect(page).toHaveURL(new RegExp('dates_from=' + addDays(15)));
+          const days = page.getByRole('link', { name: /Horarios disponibles/ });
+          await expect(days.first()).toBeVisible();
+          const dates = await days.evaluateAll(links => links.map(link => new URL((link as HTMLAnchorElement).href).searchParams.get('date')!));
+          expect(dates.length).toBeGreaterThan(0);
+          expect(dates.every(date => date >= addDays(15) && date <= addDays(29))).toBe(true);
+          const previous = navigation.getByRole('link', { name: 'Fechas anteriores', exact: true });
+          await expect(previous).toBeVisible();
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.screenshot({ path: test.info().outputPath('availability-dates-' + variant.theme + '.png'), fullPage: true });
+          expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+          await days.first().click();
+          await expect(page.getByRole('link', { name: /^\d{2}:\d{2}$/ }).first()).toBeVisible();
+          await page.goBack();
+          await expect(page.getByRole('heading', { name: 'Elegí un día', exact: true })).toBeVisible();
+          await previous.click();
+          await expect(page.getByText('No hay horarios disponibles entre estas fechas.', { exact: true })).toBeVisible();
+          expect(new URL(page.url()).searchParams.get('dates_from')).toBe(today);
+          expect(errors).toEqual([]);
+        } finally { await context.close(); }
+      }
+    } finally {
+      const cleanup = await db.from('availability_exceptions').delete().eq('business_id', fixture.businessId).eq('id', exceptionId);
+      expect(cleanup.error).toBeNull();
+    }
+  });
+
 });
