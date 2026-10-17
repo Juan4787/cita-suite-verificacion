@@ -1,4 +1,5 @@
 import { expect, type BrowserContext, type Page } from '@playwright/test';
+import { observeBrowserDiagnostics } from './browser-diagnostics';
 
 type StoredSession = Awaited<ReturnType<BrowserContext['storageState']>>;
 
@@ -39,6 +40,7 @@ const restoreSession = async (page: Page, session: StoredSession, readyLinkNames
 };
 
 export async function signInWithPassword(page: Page, email: string, password: string, loginPath = '/login') {
+	observeBrowserDiagnostics(page);
 	await page.goto(loginPath);
 	await page.getByLabel('Correo electrónico').fill(email);
 	await page.getByLabel('Contraseña').fill(password);
@@ -59,6 +61,7 @@ export const loginWithSharedSession = async (
 		loginPath = '/login'
 	}: SharedLoginOptions
 ) => {
+	observeBrowserDiagnostics(page);
 	const cacheKey = email.trim().toLocaleLowerCase('es-AR');
 	const cached = sessionsByEmail.get(cacheKey);
 	if (cached && (await restoreSession(page, cached, readyLinkNames))) return;

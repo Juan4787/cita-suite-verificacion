@@ -6,6 +6,7 @@ import { writeFileSync, openSync, rmSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { acquireVerificationLock } from './lib/verification-lock.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
+import { capturePlatformDiagnostics } from './lib/platform-diagnostics.mjs';
 const root = fileURLToPath(new URL("../", import.meta.url)).replace(/\/$/, "");
 const db = process.argv[2];
 assertHostedIntegrationResources();
@@ -29,10 +30,10 @@ const key = "ab".repeat(16),
   businessId = "90000000-0000-4000-8000-000000000001",
   serviceId = "90000000-0000-4000-8000-000000000002",
   professionalId = "90000000-0000-4000-8000-000000000003";
-function docker(args, input) {
+function docker(args, input, includeStderr = false) {
   const r = spawnSync("docker", args, { input, encoding: "utf8" });
   if (r.status !== 0) throw new Error(r.stderr);
-  return r.stdout.trim();
+  return (r.stdout + (includeStderr ? '\n' + r.stderr : '')).trim();
 }
 const secret = "cita-local-disposable-jwt-secret-with-more-than-32-characters";
 function jwt(role, sub) {
@@ -80,6 +81,9 @@ function cleanup() {
     } catch {}
   if (gateway) gateway.close();
   if (!verified) { verificationLease.release(); return; }
+  writeFileSync(fixturePath(`platform-state-${fixtureRunId}.json`), JSON.stringify(capturePlatformDiagnostics((args, input) => docker(args, input, args[0] === 'logs'), {
+    database: db, auth: authCreated ? authContainer : undefined, rest, storage: storageFixture?.container
+  }), null, 2), { mode: 0o600 });
   if (authCreated) {
     try { docker(['rm', '-f', '-v', authContainer]); } catch {}
   }
@@ -287,6 +291,10 @@ try {
         },
       );
       res.statusCode = response.status;
+      if (response.status >= 500 || (isAuth && response.status === 429)) console.error(JSON.stringify({
+        kind: 'gateway-upstream-error', service: isAuth ? 'auth' : isStorage ? 'storage' : 'rest',
+        path: req.url.split('?')[0], status: response.status
+      }));
       response.headers.forEach((value, name) => {
         if (
           !["content-encoding", "content-length", "transfer-encoding"].includes(
@@ -296,7 +304,10 @@ try {
           res.setHeader(name, value);
       });
       res.end(Buffer.from(await response.arrayBuffer()));
-    } catch {
+    } catch (error) {
+      console.error(JSON.stringify({ kind: 'gateway-transport-error',
+        service: isAuth ? 'auth' : isStorage ? 'storage' : 'rest', path: req.url.split('?')[0],
+        name: error?.name, code: error?.cause?.code ?? error?.code ?? null }));
       res.statusCode = 503;
       res.end("Local gateway unavailable");
     }

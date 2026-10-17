@@ -147,6 +147,8 @@ try {
 			const source = fixturePath(`${name}-${runId}.log`);
 			if (existsSync(source)) copyFileSync(source, join(evidence, `${name}.log`));
 		}
+		const state = fixturePath(`platform-state-${runId}.json`);
+		if (existsSync(state)) copyFileSync(state, join(evidence, 'platform-state.json'));
 	} catch {
 		console.error('Could not preserve this run\'s application diagnostics.');
 		process.exitCode = 1;

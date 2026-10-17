@@ -36,7 +36,7 @@ const extras = [
 	'scripts/run-campaign-demo.mjs', 'scripts/verify-campaign.mjs',
 	'scripts/verify-campaign-staging.mjs', 'scripts/prepare-ci-snapshot.mjs',
 	'scripts/prepare-ci-services.mjs',
-	'scripts/run-campaign-unit-tests.mjs', 'apps/web/vitest.office.config.ts',
+	'scripts/run-campaign-unit-tests.mjs', 'scripts/run-campaign-node-tests.mjs', 'apps/web/vitest.office.config.ts',
 	'scripts/test-verification-evidence.py',
 	'scripts/generate-database-types.mjs', 'scripts/run-campaign-type-generation.mjs',
 	'scripts/package-verification-evidence.py', 'scripts/collect-verification-evidence.py',
