@@ -1,4 +1,5 @@
 import { isRecord } from '$lib/contracts/json';
+import { loadClinicalUploadAvailability, type ClinicalUploadAvailability } from '$lib/server/clinical-files';
 import { readClinicalEntryAmount } from '$lib/server/clinical-entry-costs';
 import { bookingInformationEnabled } from '$lib/server/booking-information';
 import { env } from '$env/dynamic/private';
@@ -437,6 +438,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, dep
 				canTrashRadiographs: true,
 				canExportPatientData: false
 			},
+			documentUploads: 'available' as const,
 			followUpParticipates: false,
 			followUpCanAssign: false,
 			followUpTodayISO: '',
@@ -457,6 +459,8 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, dep
 	const permissions = resolvePatientPermissions(context);
 	const nowIso = new Date().toISOString();
 	const admin = await createSupabaseAdminClient('odonto', fetch);
+	const documentUploads: Promise<ClinicalUploadAvailability> = permissions.canUploadRadiographs
+		? loadClinicalUploadAvailability(admin, context.business.id) : Promise.resolve('not_permitted');
 	const currentProfessional =
 		context.role === 'professional'
 			? await getCurrentProfessional({
@@ -583,6 +587,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, dep
 		role: context.role,
 		currentUserId: ownerId,
 		permissions,
+		documentUploads: await documentUploads,
 		followUpParticipates: roleParticipatesInFollowUps(context.role),
 		followUpCanAssign: roleSeesAllFollowUps(context.role),
 		followUpTodayISO: businessTodayISO(context.business.timezone),

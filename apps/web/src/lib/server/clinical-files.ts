@@ -49,6 +49,24 @@ export type ClinicalFileRequestContext = {
 	canTrash: boolean;
 };
 
+export async function loadClinicalUploadsEnabled(admin: CitaSupabaseClient, businessId: string): Promise<boolean> {
+	const result = await admin.rpc('clinical_document_uploads_enabled', { p_business_id: businessId });
+	if (result.error || typeof result.data !== 'boolean')
+		throw new ClinicalFileHttpError(503, 'No pudimos consultar la disponibilidad para nuevas cargas. Volvé a intentar.', { code: 'STORAGE_UNAVAILABLE' });
+	return result.data;
+}
+
+export type ClinicalUploadAvailability = 'available' | 'paused' | 'unavailable' | 'not_permitted';
+export async function loadClinicalUploadAvailability(admin: CitaSupabaseClient, businessId: string): Promise<ClinicalUploadAvailability> {
+	try { return await loadClinicalUploadsEnabled(admin, businessId) ? 'available' : 'paused'; }
+	catch {
+		// A partial feature outage must not hide valid historical clinical data.
+		// The page explicitly reports unavailable and offers reload, never an
+		// empty document list or an apparently successful activation.
+		return 'unavailable';
+	}
+}
+
 export class ClinicalFileHttpError extends Error {
 	status: number;
 	code: ClinicalFileErrorCode;

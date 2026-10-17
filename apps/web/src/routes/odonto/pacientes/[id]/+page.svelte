@@ -1074,7 +1074,8 @@ const preventEnterSubmit = (event: KeyboardEvent) => {
 			cacheScope={radiographCacheScope}
 			initialItems={data.demo ? data.radiographs : []}
 			canView={permissions.canViewRadiographs}
-			canUpload={permissions.canUploadRadiographs}
+			canUpload={permissions.canUploadRadiographs && data.documentUploads === 'available'}
+			uploadAvailability={data.documentUploads}
 			canViewTrash={permissions.canViewRadiographTrash}
 			canTrash={permissions.canTrashRadiographs}
 			todayISO={data.clinicalTodayISO}

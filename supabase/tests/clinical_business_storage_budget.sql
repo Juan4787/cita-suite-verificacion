@@ -3,7 +3,7 @@ begin;
 -- Synthetic metadata-only tests use the same transaction-local permission as
 -- Storage's own database tests. The application never bypasses Storage API.
 set local storage.allow_delete_query='true';
-select extensions.plan(45);
+select extensions.plan(48);
 create temporary table quota_fixture(a uuid,b uuid,c uuid,actor uuid,patient uuid,file_id uuid,path text);
 do $$
 declare a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); actor uuid:=gen_random_uuid(); patient uuid:=gen_random_uuid(); f record;
@@ -38,6 +38,7 @@ select private.reserve_clinical_document(file_id) from quota_fixture;
 select extensions.ok((select expires_at>clock_timestamp()+interval '2 hours' from public.clinical_upload_slots where file_id=(select file_id from quota_fixture)),'refresh extends protection even when an original already exists');
 select extensions.is((select reserved_bytes from public.clinical_business_storage_budget where business_id=(select a from quota_fixture)),0::bigint,'refresh does not charge a stored original twice');
 select public.set_business_clinical_storage_policy(actor,a,6000000,false) from quota_fixture;
+select extensions.is((select public.clinical_document_uploads_enabled(a) from quota_fixture),false,'effective module availability respects the clinic pause');
 select extensions.throws_ok($q$select private.reserve_clinical_document(file_id) from quota_fixture$q$,'P0001','CLINICAL_DOCUMENTS_DISABLED','clinic availability prevents issuing new upload URLs');
 select extensions.is((select count(*) from storage.objects where name=(select path from quota_fixture)),1::bigint,'disabling uploads preserves historical stored objects');
 select set_config('request.jwt.claim.role','authenticated',true);
@@ -60,6 +61,7 @@ insert into public.businesses(id,name,slug,industry) select c,'Synthetic quota C
 select extensions.is((select max_bytes from public.clinical_business_storage_budget where business_id=(select c from quota_fixture)),150000000::bigint,'new default applies automatically to subsequent clinics');
 select extensions.is((select max_bytes from public.clinical_business_storage_budget where business_id=(select b from quota_fixture)),100000000::bigint,'default changes preserve previously assigned quotas');
 select public.set_clinical_storage_defaults(actor,150000000,false) from quota_fixture;
+select extensions.is((select public.clinical_document_uploads_enabled(a) from quota_fixture),false,'effective module availability also respects the global pause');
 select extensions.throws_ok($q$select private.reserve_clinical_document(file_id) from quota_fixture$q$,'P0001','CLINICAL_DOCUMENTS_DISABLED','global operational availability is separate from the clinic setting');
 select public.set_clinical_storage_defaults(actor,150000000,true) from quota_fixture;
 select extensions.throws_ok($q$select public.reconcile_clinical_storage_budget(1)$q$,'P0001','CLINICAL_RECONCILIATION_LIMIT','bounded reconciliation fails explicitly rather than omitting clinics');
@@ -93,6 +95,7 @@ select extensions.ok(not has_function_privilege('anon','public.set_clinical_stor
 select extensions.ok(not has_function_privilege('authenticated','public.reconcile_clinical_storage_budget(integer)','execute'),'global reconciliation is backend-only');
 select extensions.ok(not has_table_privilege('authenticated','public.clinical_business_storage_budget','update'),'direct table writes cannot bypass quota administration');
 select extensions.ok(not has_function_privilege('service_role','private.lock_clinical_business_budget(uuid,boolean)','execute'),'internal helpers are not separately callable by the backend');
+select extensions.ok(not has_function_privilege('authenticated','public.clinical_document_uploads_enabled(uuid)','execute'),'module availability is resolved only within the verified server context');
 select extensions.throws_ok($q$select public.set_business_clinical_storage_policy(actor,a,100000000,true,1) from quota_fixture$q$,'P0001','CLINICAL_STORAGE_POLICY_CHANGED','stale quota settings cannot overwrite another administrator');
 select extensions.throws_ok($q$select public.set_clinical_storage_defaults(actor,100000000,true,1) from quota_fixture$q$,'P0001','CLINICAL_STORAGE_POLICY_CHANGED','stale defaults cannot overwrite global operational availability');
 select extensions.is((select policy_revision from public.clinical_business_storage_budget where business_id=(select b from quota_fixture)),1,'ordinary accounting leaves configuration revisions stable');

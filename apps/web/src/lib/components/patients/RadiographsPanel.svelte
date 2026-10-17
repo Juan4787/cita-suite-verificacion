@@ -38,6 +38,7 @@
 		initialItems = [],
 		canView = false,
 		canUpload = false,
+		uploadAvailability = 'available',
 		canViewTrash = false,
 		canTrash = false,
 		todayISO,
@@ -48,6 +49,7 @@
 		initialItems?: RadiographItem[];
 		canView?: boolean;
 		canUpload?: boolean;
+		uploadAvailability?: 'available' | 'paused' | 'unavailable' | 'not_permitted';
 		canViewTrash?: boolean;
 		canTrash?: boolean;
 		todayISO: string;
@@ -582,6 +584,11 @@
 			</div>
 		{/if}
 	</div>
+	{#if canView && uploadAvailability === 'paused'}
+		<p class="ux-alert mt-4">La carga de documentos está pausada. Podés consultar los documentos guardados.</p>
+	{:else if canView && uploadAvailability === 'unavailable'}
+		<p class="ux-alert mt-4" role="alert">No pudimos consultar la disponibilidad para nuevas cargas. Recargá para volver a intentar; los documentos guardados siguen disponibles.</p>
+	{/if}
 
 	{#if !canView}
 		<p class="ux-alert mt-5">Tu rol no permite ver documentos clínicos.</p>

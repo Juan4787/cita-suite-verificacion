@@ -328,6 +328,17 @@ begin
       jsonb_build_object('max_bytes',p_max_bytes,'uploads_enabled',p_uploads_enabled));
 end $$;
 
+create function public.clinical_document_uploads_enabled(p_business_id uuid)
+returns boolean language plpgsql stable security definer set search_path=pg_catalog,pg_temp as $$
+declare enabled boolean;
+begin
+  perform private.require_clinical_file_service_call();
+  select g.uploads_enabled and b.uploads_enabled into enabled from public.clinical_storage_budget g
+    cross join public.clinical_business_storage_budget b where g.singleton and b.business_id=p_business_id;
+  if not found then raise exception 'CLINICAL_STORAGE_ACCOUNT_MISSING'; end if;
+  return enabled;
+end $$;
+
 -- New functions have no implicit PUBLIC execution; only the trusted backend
 -- can administer defaults/exceptions or reconcile the complete project.
 revoke all on function private.clinical_storage_business(text,text),private.clinical_object_bytes(jsonb),
@@ -335,9 +346,11 @@ revoke all on function private.clinical_storage_business(text,text),private.clin
   private.check_clinical_activation(),private.check_new_clinical_file_budget(),private.guard_clinical_budget_reduction(),
   private.check_patient_document_budget(uuid) from public,anon,authenticated,service_role;
 revoke all on function public.reconcile_clinical_storage_budget(integer),
+  public.clinical_document_uploads_enabled(uuid),
   public.set_clinical_storage_defaults(uuid,bigint,boolean,integer),public.set_business_clinical_storage_policy(uuid,uuid,bigint,boolean,integer)
   from public,anon,authenticated,service_role;
 grant execute on function public.reconcile_clinical_storage_budget(integer),
+  public.clinical_document_uploads_enabled(uuid),
   public.set_clinical_storage_defaults(uuid,bigint,boolean,integer),public.set_business_clinical_storage_policy(uuid,uuid,bigint,boolean,integer) to service_role;
 
 -- Preserve the public settings contract, acquiring the shared budget before

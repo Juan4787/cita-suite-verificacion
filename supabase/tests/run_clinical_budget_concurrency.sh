@@ -6,6 +6,7 @@ case "$database_url" in
  *) echo 'Refusing quota races outside disposable loopback PostgreSQL.' >&2; exit 2 ;;
 esac
 actor='6b000000-0000-4000-8000-000000000001'
+other_actor='6b000000-0000-4000-8000-000000000006'
 a='6b000000-0000-4000-8000-000000000002'
 b='6b000000-0000-4000-8000-000000000003'
 pa='6b000000-0000-4000-8000-000000000004'
@@ -25,7 +26,7 @@ select private.release_expired_clinical_reservations();
 delete from public.clinical_upload_slots where business_id in('$a','$b');
 delete from public.patient_radiographs where business_id in('$a','$b');
 delete from public.businesses where id in('$a','$b');
-delete from auth.users where id='$actor';
+delete from auth.users where id in('$actor','$other_actor');
 commit;
 SQL
 }
@@ -40,22 +41,22 @@ cleanup() {
 trap cleanup EXIT
 
 run_case() {
- local scope="$1" second_business="$b" second_patient="$pb"
+ local scope="$1" second_business="$b" second_patient="$pb" second_actor="$other_actor"
  clear_fixture > /dev/null
  psql "$database_url" -X -v ON_ERROR_STOP=1 -q <<SQL
-insert into auth.users(id,email) values('$actor','clinical-budget-race@example.test');
+insert into auth.users(id,email) values('$actor','clinical-budget-race@example.test'),('$other_actor','clinical-budget-race-other@example.test');
 insert into public.businesses(id,name,slug,industry) values('$a','Synthetic budget race A','$a','other'),('$b','Synthetic budget race B','$b','other');
 update public.business_subscriptions set commercial_access_enabled=true,is_permanent=true,subscription_status='active',
  paid_until=null,grace_until=null,restricted_until=null,archived_at=null where business_id in('$a','$b');
 insert into public.business_users(business_id,user_id,role,status,accepted_at)
- values('$a','$actor','owner','active',now()),('$b','$actor','owner','active',now());
+ values('$a','$actor','owner','active',now()),('$b','$other_actor','owner','active',now());
 insert into public.patients(id,business_id,owner_id,full_name)
- values('$pa','$a','$actor','Synthetic budget A'),('$pb','$b','$actor','Synthetic budget B');
+ values('$pa','$a','$actor','Synthetic budget A'),('$pb','$b','$other_actor','Synthetic budget B');
 SQL
  if [[ "$scope" == 'global' ]]; then
   psql "$database_url" -X -v ON_ERROR_STOP=1 -qAtc 'update public.clinical_storage_budget set max_bytes=5000000 where singleton'
  else
-  second_business="$a"; second_patient="$pa"
+  second_business="$a"; second_patient="$pa"; second_actor="$actor"
   psql "$database_url" -X -v ON_ERROR_STOP=1 -qAtc "update public.clinical_business_storage_budget set max_bytes=5000000 where business_id='$a'"
  fi
 
@@ -94,7 +95,7 @@ set statement_timeout='15s';
 begin;
 set local role service_role;
 select set_config('request.jwt.claim.role','service_role',true);
-select radiograph_id from public.begin_patient_radiograph_upload('$actor','$second_business','$second_patient',gen_random_uuid(),'race-b.pdf','application/pdf',100,repeat('b',64));
+select radiograph_id from public.begin_patient_radiograph_upload('$second_actor','$second_business','$second_patient',gen_random_uuid(),'race-b.pdf','application/pdf',100,repeat('b',64));
 commit;
 SQL
  local second_status=$?

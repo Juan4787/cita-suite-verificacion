@@ -1,0 +1,120 @@
+import { expect, test } from '@playwright/test';
+import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@cita-suite/shared';
+import { randomUUID } from 'node:crypto';
+import { signInWithPassword } from './helpers/shared-auth';
+
+test('master storage policy preserves drafts, enforces clinic scope and renders desktop/mobile', async ({ page, browser }) => {
+	const url = process.env.ODONTO_SUPABASE_URL;
+	const key = process.env.ODONTO_SUPABASE_SERVICE_ROLE_KEY;
+	const masterEmail = process.env.MASTER_EMAIL;
+	const masterPassword = process.env.E2E_MASTER_PASSWORD;
+	if (!url || !key || !masterEmail || !masterPassword) throw new Error('Explicit synthetic storage test identities are required.');
+	const admin = createClient<Database>(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+	const original = await admin.from('clinical_storage_budget').select('default_business_max_bytes,uploads_enabled').eq('singleton', true).single();
+	if (original.error || !original.data) throw new Error('Cannot preserve the original storage policy.');
+	let masterId: string | undefined;
+	for (let index = 1; !masterId; index++) {
+		const users = await admin.auth.admin.listUsers({ page: index, perPage: 200 });
+		if (users.error) throw users.error;
+		masterId = users.data.users.find(user => user.email?.toLowerCase() === masterEmail.toLowerCase())?.id;
+		if (users.data.users.length < 200) break;
+	}
+	if (!masterId) {
+		const result = await admin.auth.admin.createUser({ email: masterEmail, password: masterPassword, email_confirm: true });
+		if (result.error || !result.data.user) throw new Error('Could not prepare the synthetic master identity.');
+		masterId = result.data.user.id;
+	}
+	// This shared synthetic identity also owns global audit entries; keep it for
+	// the disposable platform teardown / provisioned isolated staging environment.
+	const ownerEmail = 'storage-policy-' + randomUUID() + '@example.test';
+	const password = 'CitaStoragePolicy!2026';
+	const owner = await admin.auth.admin.createUser({ email: ownerEmail, password, email_confirm: true });
+	if (owner.error || !owner.data.user) throw new Error('Could not prepare the synthetic clinic owner.');
+	const ownerId = owner.data.user.id;
+	const businessId = randomUUID();
+	const patientId = randomUUID();
+	const businessName = 'Consultorio sintético de nombre extenso para comprobar límites de documentos en pantallas pequeñas';
+	const ownerContext = await browser.newContext();
+	try {
+		for (const result of [
+			await admin.from('allowed_emails').insert({ email: ownerEmail, enabled: true }),
+			await admin.from('businesses').insert({ id: businessId, name: businessName, slug: 'storage-' + businessId, industry: 'other' }),
+			await admin.from('business_subscriptions').update({ commercial_access_enabled: true, is_permanent: true, subscription_status: 'active',
+				paid_until: null, grace_until: null, restricted_until: null, archived_at: null }).eq('business_id', businessId),
+			await admin.from('business_users').insert({ business_id: businessId, user_id: ownerId, role: 'owner', status: 'active', accepted_at: new Date().toISOString() }),
+			await admin.from('patients').insert({ id: patientId, business_id: businessId, owner_id: ownerId, full_name: 'Paciente sintético de cuota' })
+		]) if (result.error) throw result.error;
+
+		await signInWithPassword(page, masterEmail, masterPassword);
+		await page.goto('/odonto/maestro/almacenamiento');
+		await expect(page.getByRole('heading', { name: 'Espacio para documentos', exact: true })).toBeVisible();
+		const initial = page.getByLabel('Límite inicial por consultorio (MB)');
+		await initial.fill('110,5');
+		await page.getByLabel('Permitir nuevas cargas en Cita Suite', { exact: true }).check();
+		await page.getByRole('button', { name: 'Guardar configuración general', exact: true }).click();
+		await expect(page.getByRole('status')).toContainText('Configuración general guardada');
+		const updatedDefault = await admin.from('clinical_storage_budget').select('default_business_max_bytes').eq('singleton', true).single();
+		expect(updatedDefault.error).toBeNull();
+		expect(updatedDefault.data?.default_business_max_bytes).toBe(110500000);
+		const row = page.locator('form').filter({ has: page.getByRole('heading', { name: businessName, exact: true }) });
+		const quota = row.getByLabel(`Límite de ${businessName} (MB)`);
+		await initial.fill('111'); // A different form's pending edit must survive.
+		await quota.fill('21');
+		await row.getByRole('button', { name: 'Guardar límite', exact: true }).click();
+		await expect(page.getByRole('status')).toContainText('Configuración del consultorio guardada');
+		await expect(initial).toHaveValue('111');
+		await page.getByRole('link', { name: 'Panel maestro', exact: true }).click();
+		const unsaved = page.getByRole('dialog', { name: 'Cambios sin guardar' });
+		await expect(unsaved).toBeVisible();
+		await unsaved.getByRole('button', { name: 'Seguir editando', exact: true }).click();
+		await expect(initial).toHaveValue('111');
+		await initial.fill('110,5');
+		await quota.fill('1.000');
+		await row.getByRole('button', { name: 'Guardar límite', exact: true }).click();
+		await expect(page.getByRole('alert')).toContainText('Usá coma');
+		await expect(quota).toHaveValue('1.000');
+		await quota.fill('21');
+		await row.getByLabel('Permitir nuevas cargas en este consultorio').uncheck();
+		await row.getByRole('button', { name: 'Guardar límite', exact: true }).click();
+		await expect(page.getByRole('status')).toContainText('Configuración del consultorio guardada');
+		const clinic = await admin.from('clinical_business_storage_budget').select('max_bytes,uploads_enabled').eq('business_id', businessId).single();
+		expect(clinic.error).toBeNull();
+		expect(clinic.data).toMatchObject({ max_bytes: 21000000, uploads_enabled: false });
+
+		const ownerPage = await ownerContext.newPage();
+		await signInWithPassword(ownerPage, ownerEmail, password);
+		await ownerPage.goto('/odonto/configuracion/documentos');
+		await expect(ownerPage.getByText('La carga de documentos está pausada. Los archivos guardados siguen disponibles.')).toBeVisible();
+		await expect(ownerPage.getByRole('button', { name: 'Guardar permisos', exact: true })).toBeDisabled();
+		const denied = await ownerPage.request.post(`/odonto/pacientes/${patientId}/radiografias/uploads`, { data: {
+			clientRequestId: randomUUID(), originalFilename: 'synthetic.pdf', mimeType: 'application/pdf', bytes: 100, sha256: 'a'.repeat(64)
+		} });
+		expect(denied.status()).toBe(409);
+		expect((await denied.json()).message).toContain('desactivada');
+		const files = await admin.from('patient_radiographs').select('id').eq('business_id', businessId);
+		expect(files.error).toBeNull();
+		expect(files.data).toHaveLength(0);
+		await ownerPage.goto(`/odonto/pacientes/${patientId}?tab=radiografias`);
+		await expect(ownerPage.getByText('La carga de documentos está pausada. Podés consultar los documentos guardados.')).toBeVisible();
+		await expect(ownerPage.getByRole('button', { name: 'Añadir documento', exact: true })).toHaveCount(0);
+		await ownerPage.goto('/odonto/maestro/almacenamiento');
+		await expect(ownerPage).not.toHaveURL(/\/maestro/);
+		await expect(ownerPage.getByLabel('Límite inicial por consultorio (MB)')).toHaveCount(0);
+
+		for (const width of [1280, 320]) {
+			await page.setViewportSize({ width, height: 900 });
+			await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+			await page.screenshot({ path: test.info().outputPath(`storage-master-${width}.png`), fullPage: true });
+		}
+	} finally {
+		await ownerContext.close();
+		const restored = await admin.rpc('set_clinical_storage_defaults', { p_actor_id: masterId,
+			p_default_business_max_bytes: original.data.default_business_max_bytes, p_uploads_enabled: original.data.uploads_enabled });
+		for (const result of [restored,
+			await admin.from('businesses').delete().eq('id', businessId),
+			await admin.from('allowed_emails').delete().eq('email', ownerEmail),
+			await admin.auth.admin.deleteUser(ownerId)
+		]) if (result.error) throw new Error('Synthetic storage policy cleanup was incomplete.');
+	}
+});

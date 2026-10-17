@@ -2,22 +2,37 @@
 	import { enhance } from '$app/forms';
 	import BackLink from '$lib/components/BackLink.svelte';
 	import { storageMegabytesInput } from '$lib/clinical-storage-units';
+	import { guardUnsavedChanges } from '$lib/ui/confirm-action';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	let { data, form } = $props();
 	let pending = $state<string | null>(null);
+	type Draft = { megabytes: string; enabled: boolean; revision: number; originalAmount: string; originalEnabled: boolean };
+	let drafts = $state<Record<string, Draft>>({});
+	const dirty = $derived(Object.values(drafts).some(draft => draft.megabytes !== draft.originalAmount || draft.enabled !== draft.originalEnabled));
+	guardUnsavedChanges(() => dirty, 'Tenés límites sin guardar.', () => { drafts = {}; });
+	function edit(target: string, bytes: number, allowed: boolean, revision: number, changes: Partial<Pick<Draft, 'megabytes' | 'enabled'>>) {
+		const originalAmount = storageMegabytesInput(bytes);
+		const current = drafts[target] ?? { megabytes: originalAmount, enabled: allowed, revision, originalAmount, originalEnabled: allowed };
+		const next = { ...current, ...changes };
+		drafts[target] = next;
+	}
 	const mb = (value: number) => new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 }).format(value / 1_000_000);
-	const amount = (target: string, bytes: number) => form?.target === target && form.values ? form.values.megabytes : storageMegabytesInput(bytes);
-	const enabled = (target: string, value: boolean) => form?.target === target && form.values ? form.values.enabled : value;
+	const amount = (target: string, bytes: number) => drafts[target]?.megabytes ?? (form?.target === target && form.values ? form.values.megabytes : storageMegabytesInput(bytes));
+	const enabled = (target: string, value: boolean) => drafts[target]?.enabled ?? (form?.target === target && form.values ? form.values.enabled : value);
 	const submit = (target: string): SubmitFunction => () => {
 		pending = target;
 		return async ({ result, update }) => {
-			try { await update({ reset: false, invalidateAll: result.type === 'success' }); }
+			try {
+				await update({ reset: false, invalidateAll: result.type === 'success' });
+				if (result.type === 'success') delete drafts[target];
+			}
 			finally { pending = null; }
 		};
 	};
 </script>
 
 <svelte:head><title>Espacio para documentos · Cita Suite</title></svelte:head>
+<svelte:window onbeforeunload={event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } }} />
 <section class="ux-page mx-auto max-w-4xl">
 	<header>
 		<BackLink href="/odonto/maestro" label="Panel maestro" class="mb-5" />
@@ -30,13 +45,15 @@
 	<form method="POST" action="?/defaults" class="ux-card" use:enhance={submit('defaults')} aria-busy={pending === 'defaults'}>
 		<h2 class="ux-section-title">Configuración general</h2>
 		<p class="mt-2 text-sm text-[var(--text-muted)]">El valor inicial se aplica a nuevos consultorios. Cada límite usa el espacio compartido.</p>
-		<input type="hidden" name="policy_revision" value={data.budget.policy_revision} />
+		<input type="hidden" name="policy_revision" value={drafts.defaults?.revision ?? data.budget.policy_revision} />
 		<label class="mt-5 grid gap-2 max-w-sm">
 			<span class="font-semibold">Límite inicial por consultorio (MB)</span>
-			<input class="ux-input" name="megabytes" inputmode="decimal" required maxlength="30" value={amount('defaults', data.budget.default_business_max_bytes)} disabled={pending !== null} />
+			<input class="ux-input" name="megabytes" inputmode="decimal" required maxlength="30" value={amount('defaults', data.budget.default_business_max_bytes)} disabled={pending !== null}
+				oninput={event => edit('defaults', data.budget.default_business_max_bytes, data.budget.uploads_enabled, data.budget.policy_revision, { megabytes: event.currentTarget.value })} />
 		</label>
 		<label class="mt-4 flex min-h-11 items-center gap-3">
-			<input type="checkbox" name="uploads_enabled" value="true" checked={enabled('defaults', data.budget.uploads_enabled)} disabled={pending !== null} />
+			<input type="checkbox" name="uploads_enabled" value="true" checked={enabled('defaults', data.budget.uploads_enabled)} disabled={pending !== null}
+				onchange={event => edit('defaults', data.budget.default_business_max_bytes, data.budget.uploads_enabled, data.budget.policy_revision, { enabled: event.currentTarget.checked })} />
 			<span>Permitir nuevas cargas en Cita Suite</span>
 		</label>
 		<p class="mt-1 text-sm text-[var(--text-muted)]">Pausar conserva los documentos guardados.</p>
@@ -50,16 +67,18 @@
 				<h3 class="font-bold break-words">{account.business.name}</h3>
 				<p class="mt-2 text-sm text-[var(--text-muted)]">{mb(account.used_bytes)} MB utilizados · {mb(account.reserved_bytes)} MB en cargas pendientes</p>
 				<input type="hidden" name="business_id" value={account.business_id} />
-				<input type="hidden" name="policy_revision" value={account.policy_revision} />
+				<input type="hidden" name="policy_revision" value={drafts[account.business_id]?.revision ?? account.policy_revision} />
 				<div class="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
 					<label class="grid gap-2 min-w-0">
 						<span class="font-semibold">Límite de {account.business.name} (MB)</span>
-						<input class="ux-input" name="megabytes" inputmode="decimal" required maxlength="30" value={amount(account.business_id, account.max_bytes)} disabled={pending !== null} />
+						<input class="ux-input" name="megabytes" inputmode="decimal" required maxlength="30" value={amount(account.business_id, account.max_bytes)} disabled={pending !== null}
+							oninput={event => edit(account.business_id, account.max_bytes, account.uploads_enabled, account.policy_revision, { megabytes: event.currentTarget.value })} />
 					</label>
 					<button class="ux-btn-secondary" disabled={pending !== null}>{pending === account.business_id ? 'Guardando…' : 'Guardar límite'}</button>
 				</div>
 				<label class="mt-3 flex min-h-11 items-center gap-3">
-					<input type="checkbox" name="uploads_enabled" value="true" checked={enabled(account.business_id, account.uploads_enabled)} disabled={pending !== null} />
+					<input type="checkbox" name="uploads_enabled" value="true" checked={enabled(account.business_id, account.uploads_enabled)} disabled={pending !== null}
+						onchange={event => edit(account.business_id, account.max_bytes, account.uploads_enabled, account.policy_revision, { enabled: event.currentTarget.checked })} />
 					<span>Permitir nuevas cargas en este consultorio</span>
 				</label>
 			</form>
