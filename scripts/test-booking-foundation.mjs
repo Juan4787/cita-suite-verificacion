@@ -307,7 +307,7 @@ try {
     // Only fixture data is quoted here; no environment or remote SQL target.
     const context = file === 'price_contract_parity.sql'
       ? "select set_config('cita.test_price_vectors','" +
-        JSON.stringify(JSON.parse(readFileSync(root + 'packages/shared/src/price-contract-vectors.json', 'utf8'))).replaceAll("'", "''") + "',false);\n"
+        JSON.stringify(JSON.parse(readFileSync(root + 'packages/shared/src/price-contract-vectors.json', 'utf8'))).replaceAll("'", "''") + "',false) is not null;\n"
       : '';
     const output = sql(context + readFileSync(root + "supabase/tests/" + file, "utf8"));
     assertSqlSuite(file, output);
