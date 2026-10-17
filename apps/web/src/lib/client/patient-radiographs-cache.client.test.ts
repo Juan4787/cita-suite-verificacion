@@ -130,6 +130,8 @@ describe('patient radiograph memory cache', () => {
 		{ items: [{ id: 42 }], has_more: false }, { items: [null], has_more: false },
 		{ items: [{ id: 'document', bytes: -1 }], has_more: false },
 		{ items: [{ id: 'document', source: 'unknown' }], has_more: false },
+		{ items: [{ id: 'document', status: 'unknown' }], has_more: false },
+		{ items: [{ id: 'document', integrity_status: 'unknown' }], has_more: false },
 		{ items: [{ id: 'document', thumbnail_url: {} }], has_more: false }
 	])('rejects a partial or malformed page instead of caching an empty list: %j', async payload => {
 		activatePatientRadiographCache(scopeA);

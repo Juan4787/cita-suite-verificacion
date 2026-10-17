@@ -1,4 +1,5 @@
 import { get, writable } from 'svelte/store';
+import { patientListQueryKey } from '$lib/utils/patient-list-query';
 import { InvalidDataContractError, isRecord, readBoolean, readNullableText, readRecord, readText } from '$lib/contracts/json';
 
 export const PATIENT_LIST_CACHE_TTL_MS = 2 * 60 * 1000;
@@ -72,7 +73,7 @@ const compareRevisions = (left: string, right: string) => {
 	return leftValue === rightValue ? 0 : leftValue > rightValue ? 1 : -1;
 };
 
-const normalizeQuery = (query: string) => query.trim().toLocaleLowerCase('es');
+const normalizeQuery = patientListQueryKey;
 
 const cacheKey = (cacheScope: string, showArchived: boolean, query: string) =>
 	`${cacheScope}:${showArchived ? 'archived' : 'active'}:${normalizeQuery(query)}`;

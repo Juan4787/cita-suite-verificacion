@@ -199,10 +199,12 @@ const parseRadiographPage = (value: unknown): PatientRadiographPage => {
 				patient_id: item.patient_id === undefined ? undefined : readText(item.patient_id, contract),
 				source: item.source === undefined ? undefined : readChoice(item.source, ['professional', 'patient'], contract),
 				appointment_id: optionalText(item.appointment_id),
-				status: item.status === undefined ? undefined : readText(item.status, contract),
+				status: item.status === undefined ? undefined : readChoice(item.status, ['uploading', 'ready', 'failed', 'trashed'], contract),
 				original_filename: optionalText(item.original_filename), mime_type: optionalText(item.mime_type),
 				taken_at: optionalText(item.taken_at), note: optionalText(item.note), created_at: optionalText(item.created_at),
-				ready_at: optionalText(item.ready_at), integrity_status: optionalText(item.integrity_status),
+				ready_at: optionalText(item.ready_at),
+				integrity_status: item.integrity_status === undefined || item.integrity_status === null ? item.integrity_status :
+					readChoice(item.integrity_status, ['unchecked', 'ok', 'missing', 'checksum_mismatch'], contract),
 				thumbnail_url: optionalText(item.thumbnail_url),
 				is_mine: item.is_mine === undefined ? undefined : readBoolean(item.is_mine, contract)
 			};

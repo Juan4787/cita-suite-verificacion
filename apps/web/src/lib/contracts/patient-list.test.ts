@@ -46,4 +46,9 @@ describe('patient list HTTP contract', () => {
 			expect(() => parsePatientListData(data, expected)).toThrow(InvalidDataContractError);
 		}
 	});
+
+	it('keeps the cache search identity when only case or edge whitespace differs', () => {
+		const data = { ...snapshot(), query: 'Juan' };
+		expect(parsePatientListData(data, { query: '  JUAN  ' })).toEqual(data);
+	});
 });

@@ -1,4 +1,5 @@
 import type { Patient } from '$lib/types';
+import { patientListQueryKey } from '$lib/utils/patient-list-query';
 import { InvalidDataContractError, readArray, readBoolean, readChoice, readFiniteNumber, readNullableText, readRecord, readText } from './json';
 
 type CountsSource = 'rpc' | 'fallback_planned';
@@ -40,7 +41,7 @@ export function parsePatientListData(value: unknown, expected?: Partial<Pick<Pat
 	const query = readText(row.query, contract);
 	const showArchived = readBoolean(row.showArchived, contract);
 	if (expected && (('businessId' in expected && businessId !== expected.businessId) ||
-		('query' in expected && query !== expected.query) ||
+		('query' in expected && patientListQueryKey(query) !== patientListQueryKey(expected.query)) ||
 		('showArchived' in expected && showArchived !== expected.showArchived))) {
 		throw new InvalidDataContractError(contract);
 	}
