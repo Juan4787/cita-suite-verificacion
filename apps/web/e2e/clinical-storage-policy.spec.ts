@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@cita-suite/shared';
+import type { Database } from '@turnos-saas/shared';
 import { randomUUID } from 'node:crypto';
 import { signInWithPassword } from './helpers/shared-auth';
 
