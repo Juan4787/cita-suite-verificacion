@@ -37,10 +37,7 @@ const renderWizard = (
 							starts_at: startsAt,
 							ends_at: '2099-08-25T13:30:00.000Z',
 							professional_name: 'Dra. Prueba',
-							professional_names: ['Dra. Prueba'],
-							is_joint: false,
-							professional_id: 'professional-1',
-							professional_ids: ['professional-1']
+							professional_id: 'professional-1'
 						}
 					]
 				}),

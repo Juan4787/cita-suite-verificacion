@@ -18,7 +18,12 @@ if (isProd && !buildVersion) {
 }
 
 // Cloudflare Workers es el único destino de publicación del candidato comercial.
-const adapter = cloudflareAdapter();
+// Disposable verification must not share a local workerd SQLite directory.
+// Keep real bindings emulated; only filesystem persistence is ephemeral in CI.
+// https://developers.cloudflare.com/workers/wrangler/api/#getplatformproxy
+const adapter = cloudflareAdapter({
+ platformProxy: process.env.CITA_VERIFICATION_RUN_ID ? { persist: false } : undefined
+});
 
 const config = {
 	// Consult https://svelte.dev/docs/kit/integrations

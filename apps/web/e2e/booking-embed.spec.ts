@@ -341,7 +341,9 @@ test.describe('isolated booking integration', () => {
       fail = false;
       const recovered = page.waitForResponse(response => response.url().includes('/odonto/disponibilidad/slots?'));
       await page.getByRole('button', { name: 'Semana siguiente', exact: true }).click();
-      await recovered;
+      const recoveredResponse = await recovered;
+      expect(recoveredResponse.status()).toBe(200);
+      expect((await recoveredResponse.json()).slots.length).toBeGreaterThan(0);
       await expect(page.getByText('No pudimos actualizar los horarios.', { exact: false })).toHaveCount(0);
       // Each recovered day is a task button with an actual date, not a fabricated successful empty list.
       await expect(page.getByRole('button', { name: /lunes|martes|miércoles|jueves|viernes|sábado|domingo/i }).first()).toBeVisible();

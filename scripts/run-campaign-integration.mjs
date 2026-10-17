@@ -9,7 +9,7 @@ import { assertBrowserReport } from './lib/browser-report.mjs';
 import { cleanupFixtureResources } from './lib/fixture-cleanup.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
 import { checkFixtureConnections } from './lib/fixture-connection-check.mjs';
-import { assertPlatformDiagnostics } from './lib/platform-diagnostics.mjs';
+import { assertPlatformDiagnostics, assertRuntimeDiagnostics } from './lib/platform-diagnostics.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const diagnostic = process.argv[2] === '--grep' ? process.argv[3] : null;
@@ -156,6 +156,11 @@ try {
 			copyFileSync(state, join(evidence, 'platform-state.json'));
 			assertPlatformDiagnostics(JSON.parse(readFileSync(state, 'utf8')));
 		} else if (platform) throw new Error('This run\'s platform diagnostics are missing.');
+		if (platform) for (const name of ['vite', 'vite-errors']) {
+			const logPath = join(evidence, `${name}.log`);
+			if (!existsSync(logPath)) throw new Error('Owned runtime diagnostics are missing.');
+			assertRuntimeDiagnostics(readFileSync(logPath, 'utf8'));
+		}
 	} catch (error) {
 		console.error(error.message || 'Could not preserve this run\'s application diagnostics.');
 		process.exitCode = 1;

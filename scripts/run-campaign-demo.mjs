@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { assertRuntimeDiagnostics } from './lib/platform-diagnostics.mjs';
 import { mkdtempSync, mkdirSync, openSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -60,6 +61,8 @@ try {
 	terminate(browser);
 	terminate(app);
 	if (!appExit) await new Promise(resolve => app.once('exit', resolve));
+	try { assertRuntimeDiagnostics(readFileSync(join(evidence, 'demo-platform.log'), 'utf8')); }
+	catch (error) { console.error(error.message); process.exitCode = 1; }
 	rmSync(directory, { recursive: true });
 	lease.release();
 }

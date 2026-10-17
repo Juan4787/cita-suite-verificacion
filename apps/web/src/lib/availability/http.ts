@@ -25,9 +25,9 @@ export function parseAvailabilitySlots(value: unknown, expected: {
   const ends_at = readText(row.ends_at, 'availability.http.end');
   const professional_id = readText(row.professional_id, 'availability.http.professional');
   const professional_name = readText(row.professional_name, 'availability.http.name');
-  const professional_ids = readArray(row.professional_ids, 'availability.http.professionals').map(value => readText(value, 'availability.http.professional'));
-  const professional_names = readArray(row.professional_names, 'availability.http.names').map(value => readText(value, 'availability.http.name'));
-  const is_joint = readBoolean(row.is_joint, 'availability.http.joint');
+  const professional_ids = row.professional_ids === undefined ? [professional_id] : readArray(row.professional_ids, 'availability.http.professionals').map(value => readText(value, 'availability.http.professional'));
+  const professional_names = row.professional_names === undefined ? [professional_name] : readArray(row.professional_names, 'availability.http.names').map(value => readText(value, 'availability.http.name'));
+  const is_joint = row.is_joint === undefined ? professional_ids.length > 1 : readBoolean(row.is_joint, 'availability.http.joint');
   const key = professional_ids.join(',') + ':' + starts_at;
   if (!isAvailabilityDate(date) || date < expected.fromDate || date > expected.toDate || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time) ||
    !isTimestamp(starts_at) || !isTimestamp(ends_at) || Date.parse(starts_at) >= Date.parse(ends_at) ||

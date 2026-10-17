@@ -49,3 +49,9 @@ export function assertPlatformDiagnostics(state) {
 		state.authErrors.some(value => value.unavailable || value.sqlStates?.length || value.categories?.length))
 		throw new Error('Disposable platform diagnostics are unavailable or report infrastructure errors. See platform-state.json.');
 }
+
+/** A passing browser assertion cannot certify a crashed auxiliary runtime. */
+export function assertRuntimeDiagnostics(log) {
+ if (typeof log !== 'string' || /Fatal uncaught|kj::Exception|SQLITE_BUSY|JavaScript heap out of memory/i.test(log))
+  throw new Error('Application runtime diagnostics are unavailable or report a fatal infrastructure error. See the owned Vite logs.');
+}

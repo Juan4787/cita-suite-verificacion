@@ -10,6 +10,10 @@ describe('availability HTTP boundary', () => {
   expect(parseAvailabilitySlots({ slots: [] }, expected)).toEqual([]);
   expect(parseAvailabilitySlots({ slots: [slot] }, expected)).toEqual([slot]);
  });
+ it('accepts the existing individual projection without optional team fields', () => {
+  const { professional_ids: _ids, professional_names: _names, is_joint: _joint, ...individual } = slot;
+  expect(parseAvailabilitySlots({ slots: [individual] }, expected)).toEqual([slot]);
+ });
  it.each([{}, { slots: null }, { slots: [{}] }, { slots: [slot, slot] },
   { slots: [{ ...slot, date: '2026-10-27' }] }, { slots: [{ ...slot, ends_at: slot.starts_at }] },
   { slots: [{ ...slot, professional_ids: ['another-professional'], professional_id: 'another-professional' }] },

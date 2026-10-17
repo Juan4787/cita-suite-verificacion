@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { capturePlatformDiagnostics, assertPlatformDiagnostics } from './platform-diagnostics.mjs';
+import { capturePlatformDiagnostics, assertPlatformDiagnostics, assertRuntimeDiagnostics } from './platform-diagnostics.mjs';
 
 test('preserves OOM/connection evidence without raw errors, logs or credentials', () => {
 	const value = capturePlatformDiagnostics(args => {
@@ -37,4 +37,10 @@ test('missing diagnostic sources are explicitly unavailable and never fabricated
 	assert.deepEqual(value.connections, { unavailable: true });
 	assert.deepEqual(value.authErrors, [{ unavailable: true }]);
 	assert.doesNotMatch(JSON.stringify(value), /private connection/);
+});
+
+test('a browser pass cannot conceal the observed workerd SQLite crash or a V8 memory failure', () => {
+ assert.doesNotThrow(() => assertRuntimeDiagnostics('Vite ready. Expected booking rejection: PRICE_QUOTE_CHANGED'));
+ for (const log of [undefined, 'Fatal uncaught kj::Exception: SENTRY_DO database is locked: SQLITE_BUSY', 'JavaScript heap out of memory'])
+  assert.throws(() => assertRuntimeDiagnostics(log), /fatal infrastructure/);
 });
