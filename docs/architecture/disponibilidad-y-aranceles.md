@@ -1,6 +1,6 @@
 # Disponibilidad y aranceles
 
-Autoridad: [plan íntegro, etapa 4](../plans/refactorizacion-cita-suite.md). El [registro](../plans/registro-refactorizacion-cita-suite.md) distingue cada fuente y resultado. **La etapa sigue abierta:** aranceles comprobados; contratos SQL y filtro profesional comprobados; consumidores internos aprobados en fast; estado público, carga perezosa y equivalencia integral pendientes. No se aplicaron migraciones remotas.
+Autoridad: [plan íntegro, etapa 4](../plans/refactorizacion-cita-suite.md). El [registro](../plans/registro-refactorizacion-cita-suite.md) distingue cada fuente y resultado. **La etapa sigue abierta:** aranceles comprobados; contratos SQL y filtro profesional comprobados; consumidores internos/públicos y regresión integral aprobados sobre `0569de5`; controles posteriores de ventanas vacías, ciclo de cotización e integridad HTTP todavía por verificar. No se aplicaron migraciones remotas.
 
 ## Propiedad y límites
 
@@ -39,7 +39,17 @@ No se usa paginación implícita de una tabla PostgREST para construir estos agr
 
 El parser anterior se movió a `availability/rows.ts` para compartir contratos sin importar servidor desde navegador. El adaptador anterior lo reexporta durante la transición. Esto no crea otro calculador ni otra autoridad de reglas.
 
-El calculador de servidor y el snapshot interno usan catálogo/ventanas y retiraron su fallback de tablas (fast 39051788001). El endpoint interno fija su contexto interno aunque filtre visibilidad pública. El snapshot HTTP conserva su forma y predetermina quince fechas; solicitudes explícitas mayores se dividen en ventanas fijas. **Pendientes:** estado público, carga perezosa de interfaz y verificación integral de estos consumidores en SQL/navegador real.
+El calculador de servidor y el snapshot interno usan catálogo/ventanas y retiraron su fallback de tablas (fast 39051788001 y full 39070230569). El endpoint interno fija su contexto interno aunque filtre visibilidad pública. El snapshot HTTP conserva su forma y predetermina quince fechas; solicitudes explícitas mayores se dividen en ventanas fijas. El estado público también recibe un único catálogo por petición, aplica el alcance de integración y conserva el requisito de horario semanal activo para mostrar servicios/profesionales. Carga inicialmente quince fechas naturales, permite una fecha directa y ofrece navegación con `dates_from`, sin descargar automáticamente todo el horizonte. El plazo público conserva el límite existente de 1–90 días, independiente del tamaño de ventana. La modalidad y las ventanas de modalidad siguen siendo entradas del mismo calculador. Los enlaces de siguiente/anterior conservan identidad visual y selección; una ventana vacía no elimina la navegación.
+
+El adaptador histórico queda sólo como reexportación del parser compartido. Ningún consumidor activo llama a los snapshots SQL históricos ni usa una alternativa de tablas. Las funciones SQL anteriores permanecen para transición compatible; no deben confundirse con una recuperación activa.
+
+Las confirmaciones por fecha, recuperación sin duplicación, cuestionarios y ambos temas volvieron a aprobar en full 39070230569. **Pendientes:** controles posteriores específicos de navegación desde quince días bloqueados, frontera HTTP interna, ciclo real de cotización y revisión visual de los controles nuevos.
+
+## Frontera HTTP y vida de cada petición
+
+El resuelto de integración comparte únicamente configuración y contexto de marco entre layout y página. Un cliente Supabase captura su `event.fetch` de origen: compartirlo permitía que una página consultara mediante el fetch de un layout ya terminado. Cada consumidor de datos crea ahora su cliente con el fetch de su propio load. La coalescencia del control de acceso/configuración sigue limitada a la petición; no se agrega una caché de permisos. Full 39070230569 dejó de emitir ese aviso específico. Dos avisos genéricos de fetch durante SSR conservan un diagnóstico pendiente separado.
+
+En revisión posterior, el asistente manual deja de solicitar 28 fechas para mostrar siete. `availability/http.ts` valida slots y snapshots internos usando los mismos validadores de configuración/ocupación; no sintetiza revisiones ni permisos para hacerlos aprobar. Una respuesta incompleta no se convierte en una agenda vacía; referencias se actualizan juntas sólo tras validarlas. El cálculo local no usa un snapshot vencido. Estas correcciones posteriores aún requieren CI sobre su revisión exacta.
 
 ## Aranceles exactos
 
@@ -59,6 +69,8 @@ Los desplazamientos válidos son de 0 a 600, inclusive. Una previsualización de
 | CI `39049638614` / `39049648311` | Ocho fallos TypeScript y dos SQL conservados antes de la corrección. |
 | CI `39049884855` | Full aprobado sobre `11d6d78`: los 18 casos SQL y 19 de TypeScript, incluido el límite de 120 resultados; regresiones de SQL/carreras/browser/Natalia/demo aprobadas. No incluye nuevos consumidores de disponibilidad. |
 | CI `39050404355` | 28 controles SQL de disponibilidad y diez carreras aprobados; catálogo mayor que un grupo, 1.001 asignaciones completas, DST, identidad, ámbitos y consistencia real con dos conexiones. Generación oficial reproducible. No incluye los dos controles posteriores del alcance profesional. |
+| CI `39051242102` | Full con 30/30 disponibilidad: comparación negativa/positiva de lectura profesional, SQL completo, diez carreras, tipos y regresiones. |
+| CI `39070230569` | Full de consumidores nuevos: 1.129 servidor, 119 cliente, SQL completo, diez carreras, 27 navegador, Natalia nativa y dos demo. No cubre las nuevas pruebas HTTP/ventana vacía/ciclo de cotización posteriores. |
 | CI `39051023222` | Fast aprobado sobre `982ef9a`: once controles de fechas/JSON y cuatro del coordinador. Sus respuestas HTTP son simuladas; no se presentan como PostgreSQL ni como navegador desplegado. |
 
 Las verificaciones alojadas, capacidad, UI completa, reserva desde Natalia/enlace directo y auditoría transversal tienen sus puertas posteriores. El estado provisional de este documento no reduce ninguna condición del plan.

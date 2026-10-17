@@ -23,18 +23,22 @@ type WizardPatient = {
 
 const renderWizard = (
 	phone: string,
-	options: { patients?: WizardPatient[]; initialPatientId?: string } = {}
+	options: { patients?: WizardPatient[]; initialPatientId?: string; availability?: unknown } = {}
 ) => {
 	vi.stubGlobal(
 		'fetch',
 		vi.fn().mockResolvedValue(
 			new Response(
-				JSON.stringify({
+				JSON.stringify(options.availability ?? {
 					slots: [
 						{
 							date,
 							time: '10:00',
 							starts_at: startsAt,
+							ends_at: '2099-08-25T13:30:00.000Z',
+							professional_name: 'Dra. Prueba',
+							professional_names: ['Dra. Prueba'],
+							is_joint: false,
 							professional_id: 'professional-1',
 							professional_ids: ['professional-1']
 						}
@@ -98,6 +102,15 @@ afterEach(() => {
 });
 
 describe('validación previa del teléfono al crear un turno', () => {
+ it('retira un horario no certificado y muestra recuperación ante un 200 incompleto', async () => {
+  const { container } = renderWizard('3425048209', { availability: { slots: [{}] } });
+  expect(await screen.findByText(/No pudimos actualizar los horarios/)).toBeInTheDocument();
+  expect(screen.queryByText(/No hay horarios para ese día/)).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Confirmar turno', exact: true })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Cambiar día', exact: true })).toBeInTheDocument();
+  expect(container.querySelector('[name="slot_starts_at"]')).toBeNull();
+ });
+
 	it('no presenta el campo como problemático mientras se completa normalmente', async () => {
 		const user = userEvent.setup();
 		renderWizard('');

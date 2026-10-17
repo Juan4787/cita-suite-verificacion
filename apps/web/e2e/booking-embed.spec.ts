@@ -286,6 +286,7 @@ test.describe('isolated booking integration', () => {
 
   test('internal calendar requests only the visible week and exposes malformed responses with a working recovery', async ({ browser }) => {
     test.setTimeout(90_000);
+    for (const origin of [fixture.appOrigin, fixture.apiOrigin]) expect(new URL(origin).hostname).toBe('127.0.0.1');
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     try {
       await context.addCookies([
