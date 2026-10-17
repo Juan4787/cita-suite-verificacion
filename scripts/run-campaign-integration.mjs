@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -139,6 +139,17 @@ try {
 		platform.kill('SIGTERM');
 		await Promise.race([new Promise(resolve => platform.once('exit', resolve)), new Promise(resolve => setTimeout(resolve, 10000))]);
 		if (!platformExit) { platform.kill('SIGKILL'); process.exitCode = 1; }
+	}
+	// These logs belong to this run's labelled database. Preserve them even
+	// when a page fails; never take another run's last temporary log instead.
+	try {
+		for (const name of ['vite', 'vite-errors']) {
+			const source = fixturePath(`${name}-${runId}.log`);
+			if (existsSync(source)) copyFileSync(source, join(evidence, `${name}.log`));
+		}
+	} catch {
+		console.error('Could not preserve this run\'s application diagnostics.');
+		process.exitCode = 1;
 	}
 	cleanupDatabase();
 	lease.release();

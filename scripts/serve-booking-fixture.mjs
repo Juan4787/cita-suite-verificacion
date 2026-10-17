@@ -428,8 +428,8 @@ try {
       detached: true,
       stdio: [
         "ignore",
-        openSync(fixturePath("vite.log"), "w", 0o600),
-        openSync(fixturePath("vite-errors.log"), "w", 0o600),
+        openSync(fixturePath(`vite-${fixtureRunId}.log`), "w", 0o600),
+        openSync(fixturePath(`vite-errors-${fixtureRunId}.log`), "w", 0o600),
       ],
       env: {
         ...process.env,

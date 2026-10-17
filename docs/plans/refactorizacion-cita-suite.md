@@ -1,4 +1,6 @@
-# Plan integral de refactorización de Cita Suite
+# Plan integral de refactorización de Cita Suite^{
+    
+}
 
 ## 1. Objetivo, alcance y condiciones de partida
 
@@ -9,6 +11,7 @@ La estrategia es conservar el monolito, PostgreSQL/Supabase, Cloudflare y la web
 La campaña se realizará en entregas pequeñas sobre una rama aislada. **La publicación será posterior al cierre de toda la campaña y su auditoría.** Un avance parcial no se presentará como refactorización terminada.
 
 ### Decisiones que quedan fijadas
+
 
 | Tema | Decisión |
 |---|---|
