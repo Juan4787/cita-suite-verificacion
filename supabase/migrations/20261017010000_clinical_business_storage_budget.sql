@@ -4,7 +4,8 @@ begin;
 alter table public.clinical_storage_budget
   add column default_business_max_bytes bigint not null default 100000000
     check (default_business_max_bytes between 1 and 9007199254740991),
-  add column uploads_enabled boolean not null default true;
+  add column uploads_enabled boolean not null default true,
+  add column policy_revision integer not null default 1 check (policy_revision>0);
 
 create table public.clinical_business_storage_budget (
   business_id uuid primary key references public.businesses(id) on delete cascade,
@@ -12,6 +13,7 @@ create table public.clinical_business_storage_budget (
   used_bytes bigint not null default 0 check (used_bytes >= 0),
   reserved_bytes bigint not null default 0 check (reserved_bytes >= 0),
   uploads_enabled boolean not null default true,
+  policy_revision integer not null default 1 check (policy_revision>0),
   updated_at timestamptz not null default now()
 );
 alter table public.clinical_business_storage_budget enable row level security;
@@ -297,25 +299,29 @@ begin
     'over_business_limit',(select count(*) from public.clinical_business_storage_budget where used_bytes+reserved_bytes>max_bytes));
 end $$;
 
-create function public.set_clinical_storage_defaults(p_actor_id uuid,p_default_business_max_bytes bigint,p_uploads_enabled boolean)
+create function public.set_clinical_storage_defaults(p_actor_id uuid,p_default_business_max_bytes bigint,p_uploads_enabled boolean,p_expected_revision integer default null)
 returns void language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
 begin
   perform private.require_clinical_file_service_call();
   perform private.clinical_budget_lock();
   if p_actor_id is null or p_default_business_max_bytes is null or p_uploads_enabled is null then raise exception 'CLINICAL_STORAGE_POLICY_INVALID'; end if;
+  if p_expected_revision is not null and not exists(select 1 from public.clinical_storage_budget
+    where singleton and policy_revision=p_expected_revision) then raise exception 'CLINICAL_STORAGE_POLICY_CHANGED'; end if;
   update public.clinical_storage_budget set default_business_max_bytes=p_default_business_max_bytes,
-    uploads_enabled=p_uploads_enabled,updated_at=clock_timestamp() where singleton;
+    uploads_enabled=p_uploads_enabled,policy_revision=policy_revision+1,updated_at=clock_timestamp() where singleton;
   insert into public.audit_logs(user_id,action,entity_type,metadata)
     values(p_actor_id,'clinical_storage.defaults_changed','clinical_storage_budget',
       jsonb_build_object('default_business_max_bytes',p_default_business_max_bytes,'uploads_enabled',p_uploads_enabled));
 end $$;
-create function public.set_business_clinical_storage_policy(p_actor_id uuid,p_business_id uuid,p_max_bytes bigint,p_uploads_enabled boolean)
+create function public.set_business_clinical_storage_policy(p_actor_id uuid,p_business_id uuid,p_max_bytes bigint,p_uploads_enabled boolean,p_expected_revision integer default null)
 returns void language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
 begin
   perform private.require_clinical_file_service_call();
   perform private.lock_clinical_business_budget(p_business_id);
   if p_actor_id is null or p_max_bytes is null or p_uploads_enabled is null then raise exception 'CLINICAL_STORAGE_POLICY_INVALID'; end if;
-  update public.clinical_business_storage_budget set max_bytes=p_max_bytes,uploads_enabled=p_uploads_enabled,
+  if p_expected_revision is not null and not exists(select 1 from public.clinical_business_storage_budget
+    where business_id=p_business_id and policy_revision=p_expected_revision) then raise exception 'CLINICAL_STORAGE_POLICY_CHANGED'; end if;
+  update public.clinical_business_storage_budget set max_bytes=p_max_bytes,uploads_enabled=p_uploads_enabled,policy_revision=policy_revision+1,
     updated_at=clock_timestamp() where business_id=p_business_id;
   insert into public.audit_logs(business_id,user_id,action,entity_type,entity_id,metadata)
     values(p_business_id,p_actor_id,'clinical_storage.business_policy_changed','clinical_business_storage_budget',p_business_id,
@@ -329,10 +335,10 @@ revoke all on function private.clinical_storage_business(text,text),private.clin
   private.check_clinical_activation(),private.check_new_clinical_file_budget(),private.guard_clinical_budget_reduction(),
   private.check_patient_document_budget(uuid) from public,anon,authenticated,service_role;
 revoke all on function public.reconcile_clinical_storage_budget(integer),
-  public.set_clinical_storage_defaults(uuid,bigint,boolean),public.set_business_clinical_storage_policy(uuid,uuid,bigint,boolean)
+  public.set_clinical_storage_defaults(uuid,bigint,boolean,integer),public.set_business_clinical_storage_policy(uuid,uuid,bigint,boolean,integer)
   from public,anon,authenticated,service_role;
 grant execute on function public.reconcile_clinical_storage_budget(integer),
-  public.set_clinical_storage_defaults(uuid,bigint,boolean),public.set_business_clinical_storage_policy(uuid,uuid,bigint,boolean) to service_role;
+  public.set_clinical_storage_defaults(uuid,bigint,boolean,integer),public.set_business_clinical_storage_policy(uuid,uuid,bigint,boolean,integer) to service_role;
 
 -- Preserve the public settings contract, acquiring the shared budget before
 -- the business row so activation cannot reverse the upload lock order.

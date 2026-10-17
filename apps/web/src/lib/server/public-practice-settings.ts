@@ -1,4 +1,4 @@
-import { InvalidDataContractError, readArray, readFiniteNumber, readRecord, readText } from '$lib/contracts/json';
+import { InvalidDataContractError, readArray, readBoolean, readFiniteNumber, readRecord, readText } from '$lib/contracts/json';
 import { env } from "$env/dynamic/private";
 import { createSupabaseAdminClient } from "$lib/server/supabase";
 import { getOdontoContext } from "$lib/server/odonto-context";
@@ -213,6 +213,10 @@ export async function savePublicPracticePart(
       p_settings: settings,
       p_expected_updated_at: String(form.get("settings_updated_at") ?? ""),
     });
+    if (result.error?.message.includes('CLINICAL_DOCUMENTS_DISABLED'))
+      return fail(409, { message: 'La carga de documentos está pausada. Los archivos guardados se conservan.' });
+    if (result.error?.message.includes('CLINICAL_STORAGE_ACCOUNT_MISSING'))
+      return fail(503, { message: 'No pudimos consultar el espacio del consultorio. Probá nuevamente en unos minutos.' });
     if (result.error)
       return fail(
         result.error.message.includes("CARE_CONFIGURATION_CHANGED") ? 409 : 400,
@@ -244,6 +248,17 @@ export function parseStorageBudget(value: unknown) {
   };
   const percentage = readFiniteNumber(row.percentage, 'clinicalStorageBudget.percentage');
   if (percentage < 0) throw new InvalidDataContractError('clinicalStorageBudget.percentage');
+  const account = readRecord(row.business, 'clinicalStorageBudget.business');
+  const accountBytes = (key: string) => {
+    const value = readFiniteNumber(account[key], 'clinicalStorageBudget.business.' + key);
+    if (!Number.isSafeInteger(value) || value < 0 || (key === 'max_bytes' && value === 0))
+      throw new InvalidDataContractError('clinicalStorageBudget.business.' + key);
+    return value;
+  };
+  if (bytes('max_bytes') === 0) throw new InvalidDataContractError('clinicalStorageBudget.max_bytes');
   return { used_bytes: bytes('used_bytes'), reserved_bytes: bytes('reserved_bytes'), max_bytes: bytes('max_bytes'),
-    database_bytes: bytes('database_bytes'), monthly_authorized_download_bytes: bytes('monthly_authorized_download_bytes'), percentage };
+    database_bytes: bytes('database_bytes'), monthly_authorized_download_bytes: bytes('monthly_authorized_download_bytes'), percentage,
+    uploads_enabled: readBoolean(row.uploads_enabled, 'clinicalStorageBudget.uploads_enabled'),
+    business: { used_bytes: accountBytes('used_bytes'), reserved_bytes: accountBytes('reserved_bytes'), max_bytes: accountBytes('max_bytes'),
+      uploads_enabled: readBoolean(account.uploads_enabled, 'clinicalStorageBudget.business.uploads_enabled') } };
 }

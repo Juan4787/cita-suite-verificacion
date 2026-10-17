@@ -9,6 +9,8 @@
   let dirty = $state(false);
   let allowed = $state(untrack(() => data.settings.patient_documents_enabled));
   let version = $state(untrack(() => data.settings.updated_at));
+  const uploadsPaused = $derived(!data.budget.uploads_enabled || !data.budget.business.uploads_enabled);
+  const clinicPercentage = $derived(100 * (data.budget.business.used_bytes + data.budget.business.reserved_bytes) / data.budget.business.max_bytes);
   $effect(() => {
     if (!dirty && version !== data.settings.updated_at) {
       allowed = data.settings.patient_documents_enabled;
@@ -71,41 +73,50 @@
   >
     <input type="hidden" name="settings_updated_at" value={version} />
     <h2 class="ux-section-title">Envíos del paciente</h2>
+    {#if uploadsPaused}
+      <p class="ux-alert mt-4">La carga de documentos está pausada. Los archivos guardados siguen disponibles.</p>
+    {/if}
     <label class="mt-4 flex min-h-11 items-center gap-3"
       ><input
         type="checkbox"
         name="patient_documents_enabled"
         value="true"
         bind:checked={allowed}
-        disabled={saving || cleaning}
+        disabled={saving || cleaning || uploadsPaused}
       /><span>Permitir que adjunten archivos al turno</span></label
     >
     <p class="mt-2 text-sm text-white/75">
       PDF, JPG o PNG. Hasta 5 MB por archivo y 3 archivos por turno, con un
       total de 10 MB.
     </p>
-    <button class="ux-btn-primary mt-5" disabled={saving || cleaning}
+    <button class="ux-btn-primary mt-5" disabled={saving || cleaning || uploadsPaused}
       >{saving ? "Guardando…" : "Guardar permisos"}</button
     >
   </form>
   <section class="ux-card" aria-labelledby="storage-title">
-    <h2 id="storage-title" class="ux-section-title">Espacio para archivos</h2>
+    <h2 id="storage-title" class="ux-section-title">Espacio de este consultorio</h2>
     <p class="mt-4">
-      <strong>{mb(data.budget.used_bytes)} MB utilizados</strong> de {mb(
-        data.budget.max_bytes,
+      <strong>{mb(data.budget.business.used_bytes)} MB utilizados</strong> de {mb(
+        data.budget.business.max_bytes,
       )} MB.
     </p>
     <progress
       class="mt-3 w-full"
       max="100"
-      value={Number(data.budget.percentage)}
-      aria-label="Uso del espacio para archivos"
+      value={Math.min(100, clinicPercentage)}
+      aria-label="Uso del espacio de este consultorio, incluidas cargas pendientes"
     ></progress>
     <p class="mt-2 text-sm text-white/75">
-      {mb(data.budget.reserved_bytes)} MB reservados para cargas pendientes.
+      {mb(data.budget.business.reserved_bytes)} MB reservados para cargas pendientes.
     </p>
-    {#if Number(data.budget.percentage) >= 85}<p class="ux-alert mt-4">
-        Queda poco espacio. Al agotarse, se detendrán las cargas nuevas.
+    {#if clinicPercentage >= 100}<p class="ux-alert mt-4">
+        Se alcanzó el límite del consultorio. Los documentos anteriores se conservan.
+      </p>
+    {:else if clinicPercentage >= 85}<p class="ux-alert mt-4">
+        Queda poco espacio en el consultorio. Al agotarse, se detendrán las cargas nuevas.
+      </p>{/if}
+    {#if data.budget.percentage >= 100}<p class="ux-alert mt-4">
+        El espacio compartido está completo. No se pueden iniciar nuevas cargas aunque quede cuota en el consultorio.
       </p>{/if}
     <form
       class="mt-5"
@@ -135,6 +146,10 @@
     <details class="mt-5 border-t border-white/10 pt-4">
       <summary class="cursor-pointer min-h-11">Detalle de consumo</summary>
       <div class="mt-2 space-y-3 text-sm text-white/75">
+        <p>
+          Espacio compartido: {mb(data.budget.used_bytes + data.budget.reserved_bytes)} MB de {mb(data.budget.max_bytes)} MB.
+          Los límites por consultorio comparten esa capacidad.
+        </p>
         <p>
           Base de datos: {mb(data.budget.database_bytes)} MB. Se controla por separado
           del espacio para archivos.

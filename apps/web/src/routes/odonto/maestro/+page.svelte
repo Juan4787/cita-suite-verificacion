@@ -496,6 +496,7 @@
 				<p class="ux-badge">Uso ocasional</p>
 				<h2 id="tools-title" class="mt-4 text-2xl font-black text-white">Herramientas administrativas</h2>
 				<p class="mt-2 text-sm text-white/55">Se mantienen fuera del flujo diario para que no compitan con la gestión de accesos.</p>
+				<a class="ux-btn-secondary mt-4" href="/odonto/maestro/almacenamiento">Administrar espacio para documentos</a>
 			</div>
 
 			<div class="mt-6 grid gap-4 lg:grid-cols-2">

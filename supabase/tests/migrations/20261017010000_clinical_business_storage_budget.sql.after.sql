@@ -1,5 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 begin;
+-- Only these synthetic catalog rows exist; no physical object is being deleted.
+set local storage.allow_delete_query='true';
 select extensions.plan(6);
 select extensions.is((select max_bytes from public.clinical_business_storage_budget where business_id='6a000000-0000-4000-8000-000000000001'),700000000::bigint,'upgrade preserves the previously applicable maximum');
 select extensions.is((select used_bytes from public.clinical_business_storage_budget where business_id='6a000000-0000-4000-8000-000000000001'),3500000::bigint,'upgrade preserves and attributes the stored object');

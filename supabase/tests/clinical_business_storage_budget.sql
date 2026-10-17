@@ -1,6 +1,9 @@
 -- Real PostgreSQL accounting/permissions; no physical file transfer claimed.
 begin;
-select extensions.plan(42);
+-- Synthetic metadata-only tests use the same transaction-local permission as
+-- Storage's own database tests. The application never bypasses Storage API.
+set local storage.allow_delete_query='true';
+select extensions.plan(45);
 create temporary table quota_fixture(a uuid,b uuid,c uuid,actor uuid,patient uuid,file_id uuid,path text);
 do $$
 declare a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); actor uuid:=gen_random_uuid(); patient uuid:=gen_random_uuid(); f record;
@@ -85,10 +88,13 @@ update public.clinical_upload_slots set expires_at=clock_timestamp()-interval '1
 select private.release_expired_clinical_reservations();
 select private.release_expired_clinical_reservations();
 select extensions.is((select reserved_bytes from public.clinical_business_storage_budget where business_id=(select a from quota_fixture)),0::bigint,'expiration is repeatable and releases the clinic ledger once');
-select extensions.ok(not has_function_privilege('authenticated','public.set_business_clinical_storage_policy(uuid,uuid,bigint,boolean)','execute'),'ordinary users cannot administer individual quotas directly');
-select extensions.ok(not has_function_privilege('anon','public.set_clinical_storage_defaults(uuid,bigint,boolean)','execute'),'anonymous users cannot change operational defaults');
+select extensions.ok(not has_function_privilege('authenticated','public.set_business_clinical_storage_policy(uuid,uuid,bigint,boolean,integer)','execute'),'ordinary users cannot administer individual quotas directly');
+select extensions.ok(not has_function_privilege('anon','public.set_clinical_storage_defaults(uuid,bigint,boolean,integer)','execute'),'anonymous users cannot change operational defaults');
 select extensions.ok(not has_function_privilege('authenticated','public.reconcile_clinical_storage_budget(integer)','execute'),'global reconciliation is backend-only');
 select extensions.ok(not has_table_privilege('authenticated','public.clinical_business_storage_budget','update'),'direct table writes cannot bypass quota administration');
 select extensions.ok(not has_function_privilege('service_role','private.lock_clinical_business_budget(uuid,boolean)','execute'),'internal helpers are not separately callable by the backend');
+select extensions.throws_ok($q$select public.set_business_clinical_storage_policy(actor,a,100000000,true,1) from quota_fixture$q$,'P0001','CLINICAL_STORAGE_POLICY_CHANGED','stale quota settings cannot overwrite another administrator');
+select extensions.throws_ok($q$select public.set_clinical_storage_defaults(actor,100000000,true,1) from quota_fixture$q$,'P0001','CLINICAL_STORAGE_POLICY_CHANGED','stale defaults cannot overwrite global operational availability');
+select extensions.is((select policy_revision from public.clinical_business_storage_budget where business_id=(select b from quota_fixture)),1,'ordinary accounting leaves configuration revisions stable');
 select * from extensions.finish();
 rollback;

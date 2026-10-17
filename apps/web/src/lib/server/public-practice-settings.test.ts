@@ -5,6 +5,7 @@ vi.mock("$env/dynamic/private", () => ({ env: { DEMO_MODE: "false" } }));
 import {
   savePublicPracticePart,
   loadPublicPracticeSettings,
+  parseStorageBudget,
 } from "./public-practice-settings";
 let client: any;
 const current = {
@@ -14,6 +15,9 @@ const current = {
   whatsapp_phone: "+5491112345678",
   whatsapp_message: "Consulta general",
 };
+const budget = { used_bytes: 0, reserved_bytes: 0, max_bytes: 700000000, database_bytes: 0,
+  monthly_authorized_download_bytes: 0, percentage: 0, uploads_enabled: true,
+  business: { used_bytes: 0, reserved_bytes: 0, max_bytes: 100000000, uploads_enabled: true } };
 function setup(canManage = true) {
   const builder: any = {
     select: () => builder,
@@ -22,7 +26,7 @@ function setup(canManage = true) {
   };
   client = {
     from: vi.fn(() => builder),
-    rpc: vi.fn().mockResolvedValue({ error: null, data: { used_bytes: 0, reserved_bytes: 0, max_bytes: 700000000, database_bytes: 0, monthly_authorized_download_bytes: 0, percentage: 0 } }),
+    rpc: vi.fn().mockResolvedValue({ error: null, data: budget }),
   };
   getContext.mockResolvedValue({
     supabase: client,
@@ -76,9 +80,21 @@ describe("public practice tasks have independent state", () => {
     expect(client.rpc).not.toHaveBeenCalled();
   });
   it("loads the budget only for the document task", async () => {
-    await loadPublicPracticeSettings(event(), true);
+    const loaded = await loadPublicPracticeSettings(event(), true);
+    expect(loaded.budget.business.max_bytes).toBe(100000000);
     expect(client.rpc).toHaveBeenCalledWith("get_clinical_storage_budget", {
       p_business_id: "practice",
+    });
+  });
+  it('a partial or zero quota cannot be displayed as a successful activation', () => {
+    expect(() => parseStorageBudget({ ...budget, business: null })).toThrow();
+    expect(() => parseStorageBudget({ ...budget, business: { ...budget.business, max_bytes: 0 } })).toThrow();
+    expect(() => parseStorageBudget({ ...budget, max_bytes: 0 })).toThrow();
+  });
+  it('a paused document capability gives the user a recovery message', async () => {
+    client.rpc.mockResolvedValue({ error: { message: 'CLINICAL_DOCUMENTS_DISABLED' } });
+    expect(await savePublicPracticePart(event({ patient_documents_enabled: 'true' }), 'documents')).toMatchObject({
+      status: 409, data: { message: 'La carga de documentos está pausada. Los archivos guardados se conservan.' }
     });
   });
   it("protects concurrent edits with the existing settings revision", async () => {
