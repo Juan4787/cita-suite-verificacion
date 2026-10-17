@@ -5,7 +5,8 @@
     uploadClinicalFileWithProgress,
   } from "$lib/client/clinical-files";
   let { token }: { token: string } = $props();
-  let selected = $state<File | null>(null);
+  let files = $state<FileList | null>(null);
+  let selected = $derived(files?.[0] ?? null);
   let note = $state("");
   let busy = $state(false);
   let progress = $state(0);
@@ -87,7 +88,7 @@
       }
       await post(`/turno/${token}/documentos/${pendingId}/complete`);
       message = "El documento quedó guardado en tu ficha para la profesional.";
-      selected = null;
+      files = null;
       if (picker) picker.value = "";
       pendingId = "";
       requestId = "";
@@ -109,7 +110,7 @@
  <h2 id="patient-documents-title" class="ux-section-title">Documentos para tu consulta</h2>
  <p class="text-sm text-white/75">Podés adjuntar JPG, PNG o PDF de hasta 5 MB. Para este turno se admiten hasta tres documentos y 10 MB en total.</p>
  <form onsubmit={upload} class="space-y-4"><fieldset disabled={busy} class="space-y-4">
-  <label class="block"><span class="ux-label">Documento</span><input bind:this={picker} type="file" accept="image/jpeg,image/png,application/pdf" class="ux-input mt-2" required onchange={event=>{selected=event.currentTarget.files?.[0]??null;requestId='';pendingId='';uploaded=false;progress=0;message='';}}/></label>
+  <label class="block"><span class="ux-label">Documento</span><input bind:this={picker} bind:files type="file" accept="image/jpeg,image/png,application/pdf" class="ux-input mt-2" required onchange={()=>{requestId='';pendingId='';uploaded=false;progress=0;message='';}}/></label>
   <label class="block"><span class="ux-label">Descripción (opcional)</span><input class="ux-input mt-2" maxlength="500" disabled={Boolean(pendingId)} bind:value={note}/></label>
   <button class="ux-btn-primary" disabled={!selected}>{busy?'Guardando documento…':uploaded?'Reintentar confirmación':'Adjuntar documento'}</button>
  </fieldset></form>

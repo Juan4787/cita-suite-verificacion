@@ -55,10 +55,12 @@ test('master storage policy preserves drafts, enforces clinic scope and renders 
 			if (route.request().resourceType() === 'script') await scripts;
 			await route.continue();
 		});
-		await page.goto('/odonto/maestro/almacenamiento', { waitUntil: 'commit' });
-		await expect(page.getByRole('heading', { name: 'Espacio para documentos', exact: true })).toBeVisible();
 		const initial = page.getByLabel('Límite inicial por consultorio (MB)');
-		try { await initial.fill('110,5'); }
+		try {
+			await page.goto('/odonto/maestro/almacenamiento', { waitUntil: 'commit' });
+			await expect(page.getByRole('heading', { name: 'Espacio para documentos', exact: true })).toBeVisible();
+			await initial.fill('110,5');
+		}
 		finally { releaseScripts(); }
 		// Svelte removes the server's default value attribute when this actual
 		// input is hydrated. No arbitrary delay, injected state or repeated fill.

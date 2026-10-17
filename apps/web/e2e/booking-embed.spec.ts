@@ -80,10 +80,20 @@ test.describe('isolated booking integration', () => {
     const expanded = await db.from('patient_clinical_profiles').select('medication').eq('patient_id', saved.data![0].patient_id).single(); expect(expanded.data!.medication).toBe('Medicación sintética ampliada');
     // Use this existing booking, without another reservation or resetting IP limits.
     const patientPdf = clinicalPdfFixture();
+    let releaseDocumentScripts!: () => void;
+    const documentScripts = new Promise<void>(resolve => { releaseDocumentScripts = resolve; });
+    await popup.route('**/*', async route => {
+      if (route.request().resourceType() === 'script') await documentScripts;
+      await route.continue();
+    });
     const documents = popup.getByRole('region', { name: 'Documentos para tu consulta', exact: true });
-    await expect(documents).toBeVisible();
-    await documents.getByLabel('Documento', { exact: true }).setInputFiles({ name: 'estudio-del-paciente.pdf', mimeType: 'application/pdf', buffer: patientPdf });
-    await documents.getByLabel('Descripción (opcional)', { exact: true }).fill('PDF adjuntado por Ana');
+    try {
+      await popup.goto(fixture.appOrigin + '/turno/' + saved.data![0].confirmation_token + '/informacion', { waitUntil: 'commit' });
+      await expect(documents).toBeVisible();
+      await documents.getByLabel('Documento', { exact: true }).setInputFiles({ name: 'estudio-del-paciente.pdf', mimeType: 'application/pdf', buffer: patientPdf });
+      await documents.getByLabel('Descripción (opcional)', { exact: true }).fill('PDF adjuntado por Ana');
+    } finally { releaseDocumentScripts(); }
+    await expect(documents.getByRole('button', { name: 'Adjuntar documento', exact: true })).toBeEnabled();
     await documents.getByRole('button', { name: 'Adjuntar documento', exact: true }).click();
     await expect(documents.getByRole('status')).toContainText('El documento quedó guardado');
     const patientDocument = await db.from('patient_radiographs').select('id,status,source,appointment_id,patient_id,bytes').eq('business_id', fixture.businessId).eq('appointment_id', saved.data![0].id).single();
