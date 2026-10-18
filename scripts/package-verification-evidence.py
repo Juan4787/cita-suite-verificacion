@@ -17,10 +17,10 @@ with tarfile.open(fileobj=archive, mode="w:gz") as bundle:
         if not directory.exists():
             continue
         for path in sorted(directory.rglob("*")):
-            if not path.is_file() or path.is_symlink() or path.suffix not in {".json", ".png", ".md", ".log"}:
+            if not path.is_file() or path.is_symlink() or path.suffix not in {".json", ".png", ".jpg", ".jpeg", ".md", ".log"}:
                 continue
             data = path.read_bytes()
-            if path.suffix != ".png":
+            if path.suffix not in {".png", ".jpg", ".jpeg"}:
                 text = data.decode("utf-8")
                 text = re.sub(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+", "[redacted-jwt]", text)
                 text = re.sub(r"/turno/[a-f0-9]{32,128}", "/turno/[redacted]", text)

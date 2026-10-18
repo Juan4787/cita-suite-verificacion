@@ -34,6 +34,8 @@ class EvidenceTests(unittest.TestCase):
         (self.root / ".verification").mkdir()
         payload = {"ok": False, "token": "eyJabc.def.ghi", "link": "/turno/" + "a" * 64}
         (self.root / ".verification/failed.json").write_text(json.dumps(payload))
+        jpeg = b"\xff\xd8\xff\xe0synthetic-binary-screenshot\xff\xd9"
+        (self.root / ".verification/synthetic.jpg").write_bytes(jpeg)
         packed = subprocess.run(["python3", str(self.root / "scripts/package-verification-evidence.py")],
                                 capture_output=True, text=True, check=True).stdout
         result = self.collect(packed)
@@ -42,6 +44,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertIs(recovered["ok"], False)
         self.assertEqual(recovered["token"], "[redacted-jwt]")
         self.assertEqual(recovered["link"], "/turno/[redacted]")
+        self.assertEqual((self.root / "result/.verification/synthetic.jpg").read_bytes(), jpeg)
         self.assertNotEqual(self.collect(packed).returncode, 0, "must not overwrite prior evidence")
         corrupted = packed.replace("CITA_EVIDENCE_CHUNK ", "CITA_EVIDENCE_CHUNK A", 1)
         self.assertNotEqual(self.collect(corrupted, "corrupt").returncode, 0)
