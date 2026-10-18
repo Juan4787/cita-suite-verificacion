@@ -64,10 +64,7 @@ describe('professional editor cross-task coordination', () => {
 	it('deselecting a service preserves a closed restricted schedule in the shared atomic payload', async () => {
 		render(ProfessionalEditor, { data: professionalEditorData() });
 		await fireEvent.click(screen.getByRole('button', { name: 'Servicios y aranceles' }));
-		const checkbox = document.querySelector<HTMLInputElement>(
-			'input[name="service_id"][value="service-one"]'
-		);
-		if (!checkbox) throw new Error('Missing assigned service');
+		const checkbox = screen.getByRole('checkbox', {name:/Consulta sintética/});
 		await fireEvent.change(checkbox, { target: { checked: false } });
 		expect(checkbox).not.toBeChecked();
 		const payload = document.querySelector<HTMLInputElement>(
