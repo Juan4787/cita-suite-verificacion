@@ -1,92 +1,23 @@
 <script lang="ts">
-	import PublicBookingIntakeField from "./PublicBookingIntakeField.svelte";
+	import PublicBookingConfirmation from './PublicBookingConfirmation.svelte';
+ import type { BookingViewData, BookingFormState, BookingService as Service, BookingProfessional as Professional, BookingSlot as Slot } from '$lib/scheduling/booking-view';
 	import "./patient-booking.css";
- import { formatQuotedPrice, type PriceQuote } from './pricing';
-	import { enhance } from '$app/forms';
+ import { formatQuotedPrice } from './pricing';
 	import BookingAppearance from '$lib/booking/BookingAppearance.svelte';
 	import BookingFrameBridge from '$lib/booking/BookingFrameBridge.svelte';
-	import { BOOKING_MODALITY_LABELS, type BookingModality, type BookingPresentation, type BookingIntakeField } from '@turnos-saas/shared/booking-integration';
+	import { BOOKING_MODALITY_LABELS } from '@turnos-saas/shared/booking-integration';
 	import { afterNavigate } from '$app/navigation';
 	import { navigating, page } from '$app/state';
-	import type { SubmitFunction } from '@sveltejs/kit';
-	import { formatInTimeZone } from '$lib/utils/format';
-	import {
-		normalizePatientFullName,
-		patientFullNameErrorMessage,
-		PATIENT_FULL_NAME_INVALID_ERROR_MESSAGE
-	} from '$lib/utils/patient-name';
 
-	type Service = {
-		id: string;
-		name: string;
-		description: string | null;
-		duration_minutes: number;
-		price_label: string | null;
-	};
-	type Professional = { id: string; name: string; specialty: string | null; avatar_url?: string | null; next_available_at?: string | null };
-	type Slot = {
-		date: string;
-		time: string;
-		starts_at: string;
-		ends_at: string;
-		professional_id: string;
-		professional_name: string;
-		professional_ids?: string[];
-		professional_names?: string[];
-		is_joint?: boolean;
-	};
-	type Day = { date: string; label: string; count: number };
 
-	let { data, form } = $props<{
-		data: {
-            priceQuote?: PriceQuote | null;
-			state: {
-				business: any;
-				services: Service[];
-				professionals: Professional[];
-				slots: Slot[];
-				days: Day[];
-				dateWindow?: { fromDate: string; toDate: string; previousFromDate: string | null; nextFromDate: string | null; horizonEnd: string };
-				issue: string | null;
-			};
-			selected: {
-				serviceId: string;
-				bookingMode: 'individual' | 'joint';
-				professionalId: string;
-				professionalIds: string[];
-				date: string;
-				datesFrom?: string;
-			};
-			mapsLink: string | null;
-			turnstileSiteKey: string | null;
-			bookingRequestId: string;
-			recoveryCheckId?: string;
-            patientFields?: { fields: BookingIntakeField[]; hash: string } | null;
-			integration?: { publicKey: string; revision: number } | null;
-			presentation?: (BookingPresentation & { compact?: boolean }) | null;
-			embed?: { parentOrigin: string; instanceId: string } | null;
-			demo: boolean;
-		};
-		form?: { message?: string; values?: Record<string, unknown>; uncertain?: boolean } | null;
-	}>();
+	let { data, form } = $props<{ data: BookingViewData; form?: BookingFormState | null }>();
 
-	const intakeFields = $derived(data.patientFields?.fields ?? data.presentation?.intakeFields ?? []);
-	const requiredIntakeFields = $derived(
-		intakeFields.filter((field: BookingIntakeField) => field.required)
-	);
-	const optionalIntakeFields = $derived(
-		intakeFields.filter((field: BookingIntakeField) => !field.required)
-	);
 	const business = $derived(data.state.business);
 	const timezone = $derived(business?.timezone ?? 'America/Argentina/Cordoba');
-	const patientToday = $derived(
-		new Intl.DateTimeFormat('sv-SE', {
-			year: 'numeric', month: '2-digit', day: '2-digit', timeZone: timezone
-		}).format(new Date())
-	);
+
 	const bookingPath = $derived(page.url.pathname);
 	const navigationURL = $derived(navigating.to?.url.pathname === page.url.pathname ? navigating.to.url : page.url);
-	const modality = $derived(data.presentation?.modalities.includes(navigationURL.searchParams.get('modality') as BookingModality) ? navigationURL.searchParams.get('modality')! : data.presentation?.modalities[0] ?? 'in_person');
+	const modality = $derived(data.presentation?.modalities.find(option => option === navigationURL.searchParams.get('modality')) ?? data.presentation?.modalities[0] ?? 'in_person');
 
 	// ------------------------------------------------------------------
 	// Selección efectiva. El `slot` vive SOLO en la URL (el load del server
@@ -241,7 +172,6 @@
 	let uncertainBooking = $state(false);
 	let uncertainRecoveryId = $state('');
 	const requiresRecovery = $derived(uncertainBooking || form?.uncertain === true);
-	const values = $derived((form?.values ?? localDraft) as Record<string, unknown>);
 	$effect(() => {
 		if (uncertainBooking && data.recoveryCheckId && data.recoveryCheckId !== uncertainRecoveryId) uncertainBooking = false;
 	});
@@ -294,75 +224,6 @@
 			: (selectedProfessional?.name ?? '')
 	);
 
-	// ------------------------------ Turnstile ------------------------------
-	// Render explícito: el form aparece tras navegaciones client-side y el modo
-	// implícito de Cloudflare solo escanea el DOM al cargar el documento.
-	let turnstileContainer = $state<HTMLDivElement | null>(null);
-	let turnstileWidgetId: string | null = null;
-
-	$effect(() => {
-		const el = turnstileContainer;
-		if (!el || !data.turnstileSiteKey) return;
-		let cancelled = false;
-		let timer: ReturnType<typeof setTimeout> | null = null;
-		const tryRender = () => {
-			if (cancelled) return;
-			const api = (window as unknown as { turnstile?: any }).turnstile;
-			if (!api) {
-				timer = setTimeout(tryRender, 250);
-				return;
-			}
-			if (el.childElementCount === 0) {
-				turnstileWidgetId = api.render(el, { sitekey: data.turnstileSiteKey });
-			}
-		};
-		tryRender();
-		return () => {
-			cancelled = true;
-			if (timer) clearTimeout(timer);
-			turnstileWidgetId = null;
-		};
-	});
-
-	const resetTurnstile = () => {
-		const api = (window as unknown as { turnstile?: any }).turnstile;
-		if (api && turnstileWidgetId !== null) {
-			try {
-				api.reset(turnstileWidgetId);
-			} catch {
-				/* el widget pudo desmontarse junto con el form */
-			}
-		}
-	};
-
-	let bookingSubmitting = $state(false);
-	const validatePatientNameInput = (event: Event) => {
-		const input = event.currentTarget as HTMLInputElement;
-		input.setCustomValidity(patientFullNameErrorMessage(input.value));
-	};
-	const normalizePatientNameInput = (event: FocusEvent) => {
-		const input = event.currentTarget as HTMLInputElement;
-		input.value = normalizePatientFullName(input.value);
-		validatePatientNameInput(event);
-	};
-	const onBookingSubmit: SubmitFunction = ({ formData, cancel }) => {
-		if (requiresRecovery) { cancel(); return; }
-		localDraft = Object.fromEntries(formData.entries());
-		bookingSubmitting = true;
-		return async ({ result, update }) => {
-			try {
-				if (data.integration && (result.type === 'error' || (result.type === 'failure' && result.data?.uncertain === true))) {
-					if (result.type === 'failure') await update({ reset: false });
-					uncertainRecoveryId = data.recoveryCheckId ?? '';
-					uncertainBooking = true;
-				} else await update({ reset: false });
-			} finally { bookingSubmitting = false; }
-			// El token de Turnstile es de un solo uso: tras un intento fallido hay
-			// que regenerarlo o el reintento moriría siempre en el captcha.
-			if (result.type === 'failure' || result.type === 'error') resetTurnstile();
-			requestAnimationFrame(() => activeStepCard?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-		};
-	};
 
 	// Solo hay UNA card de paso activa a la vez: los pasos resueltos colapsan.
 	let activeStepCard = $state<HTMLElement | null>(null);
@@ -814,217 +675,14 @@
 
 			<!-- Paso 5 · Datos del paciente -->
 			{#if step === 5 && selectedService && professionalSelectionComplete && selectedSlot}
-				<form
-				  method="POST"
-				  action={data.integration
-				    ? queryFor({}) + "&/create_booking"
-				    : "?/create_booking"}
-				  class="ux-card patient-booking-form scroll-mt-5"
-				  aria-labelledby="patient-booking-title"
-				  bind:this={activeStepCard}
-				  use:enhance={onBookingSubmit}
-				>
-				  <section class="patient-booking-summary" aria-label="Resumen del turno">
-				    <div class="patient-summary-heading">
-				      <p class="patient-summary-context">Estás reservando</p>
-				      <h2 id="patient-booking-title">
-				        {selectedService.name}
-				        {selection.bookingMode === "joint" ? "con el equipo" : "con"}
-				        {professionalSelectionLabel}
-				      </h2>
-				      {#if currentPriceQuote || selectedService.price_label}<p
-				          class="patient-price"
-				        >
-				          <span class="sr-only"
-				            >Arancel para la fecha elegida:
-				          </span>{currentPriceQuote
-				            ? formatQuotedPrice(currentPriceQuote)
-				            : selectedService.price_label}
-				        </p>{/if}
-				    </div>
-				    <p class="patient-summary-date">
-				      {new Intl.DateTimeFormat("es-AR", {
-				        weekday: "short",
-				        day: "numeric",
-				        month: "long",
-				        year: "numeric",
-				        timeZone: timezone,
-				      }).format(new Date(selectedSlot.starts_at))} · {selectedSlot.time} h · {selectedService.duration_minutes}
-				      min
-				    </p>
-				    {#if data.presentation && (data.presentation.modalities.length > 1 || modality === "video")}<p
-				        class="patient-summary-modality"
-				      >
-				        {BOOKING_MODALITY_LABELS[modality as BookingModality]}
-				      </p>{/if}
-				    {#if currentPriceQuote?.adjusted}<p class="patient-price-notice">
-				        Este arancel incluye los ajustes del consultorio para la fecha elegida.
-				      </p>{/if}
-				  </section>
-
-				  {#if data.integration}
-				    <input
-				      type="hidden"
-				      name="integration_revision"
-				      value={data.integration.revision}
-				    />
-				    <input type="hidden" name="modality" value={modality} />
-				  {/if}
-				  <input type="hidden" name="service_id" value={selectedService.id} />
-				  <input type="hidden" name="booking_mode" value={selection.bookingMode} />
-				  <input
-				    type="hidden"
-				    name="professional_id"
-				    value={selectedProfessional?.id ?? selection.professionalIds[0] ?? ""}
-				  />
-				  {#if selection.bookingMode === "joint"}
-				    <input
-				      type="hidden"
-				      name="professional_ids"
-				      value={selection.professionalIds.join(",")}
-				    />
-				  {/if}
-				  <input type="hidden" name="slot_starts_at" value={selectedSlot.starts_at} />
-				  <input
-				    type="hidden"
-				    name="price_quote_hash"
-				    value={data.priceQuote?.hash ?? ""}
-				  />
-				  <input
-				    type="hidden"
-				    name="idempotency_key"
-				    value={String(values.idempotency_key ?? data.bookingRequestId)}
-				  />
-
-				  <input
-				    type="hidden"
-				    name="patient_schema_hash"
-				    value={data.patientFields?.hash ?? ""}
-				  />
-
-				  <fieldset class="patient-required-fields" disabled={bookingSubmitting}>
-				    <legend class="sr-only">Datos obligatorios</legend>
-				    <div class="patient-field">
-				      <label for="patient-name" class="patient-label"
-				        ><span>Nombre y apellido</span><span
-				          class="patient-required"
-				          aria-hidden="true">*</span
-				        ></label
-				      >
-				      <input
-				        id="patient-name"
-				        aria-label="Nombre y apellido"
-				        name="patient_name"
-				        maxlength={data.integration ? 200 : undefined}
-				        required
-				        minlength="5"
-				        pattern=".*[^ ] +[^ ].*"
-				        title={PATIENT_FULL_NAME_INVALID_ERROR_MESSAGE}
-				        autocomplete="name"
-				        value={String(values.patient_name ?? "")}
-				        oninput={validatePatientNameInput}
-				        onblur={normalizePatientNameInput}
-				        class="ux-input patient-control"
-				      />
-				    </div>
-				    <div class="patient-field">
-				      <label for="patient-phone" class="patient-label"
-				        ><span>Teléfono de contacto</span><span
-				          class="patient-required"
-				          aria-hidden="true">*</span
-				        ></label
-				      >
-				      <input
-				        id="patient-phone"
-				        aria-label="Teléfono de contacto"
-				        name="patient_phone"
-				        maxlength={data.integration ? 50 : undefined}
-				        required
-				        inputmode="tel"
-				        autocomplete="tel"
-				        placeholder="Código de área y número"
-				        value={String(values.patient_phone ?? "")}
-				        class="ux-input patient-control"
-				      />
-				    </div>
-				    {#each requiredIntakeFields as field (field.id)}<PublicBookingIntakeField
-				        {field}
-				        today={patientToday}
-				        value={String(values["intake_" + field.id] ?? "")}
-				      />{/each}
-				  </fieldset>
-				  <fieldset class="patient-optional-fields" disabled={bookingSubmitting}>
-				    <legend class="sr-only">Datos opcionales</legend>
-				    {#each optionalIntakeFields as field (field.id)}<PublicBookingIntakeField
-				        {field}
-				        today={patientToday}
-				        value={String(values["intake_" + field.id] ?? "")}
-				      />{/each}
-				    <div class="patient-field">
-				      <label for="patient-comment" class="patient-label"
-				        ><span>Comentario</span><span
-				          class="patient-optional"
-				          aria-hidden="true">Opcional</span
-				        ></label
-				      >
-				      <textarea
-				        id="patient-comment"
-				        aria-label="Comentario"
-				        name="note"
-				        maxlength={data.integration ? 2000 : undefined}
-				        rows="3"
-				        class="ux-textarea patient-control"
-				        placeholder="Podés agregar algo que quieras consultar."
-				        >{String(values.note ?? "")}</textarea
-				      >
-				    </div>
-				    <div class="patient-field">
-				      <label for="patient-email" class="patient-label"
-				        ><span>Correo electrónico</span><span
-				          class="patient-optional"
-				          aria-hidden="true">Opcional</span
-				        ></label
-				      >
-				      <input
-				        id="patient-email"
-				        aria-label="Correo electrónico"
-				        name="patient_email"
-				        maxlength={data.integration ? 254 : undefined}
-				        type="email"
-				        autocomplete="email"
-				        value={String(values.patient_email ?? "")}
-				        class="ux-input patient-control"
-				      />
-				    </div>
-				  </fieldset>
-
-				  {#if data.turnstileSiteKey}
-				    <div class="mt-5" bind:this={turnstileContainer}></div>
-				  {/if}
-				  {#if form?.message}
-				    <p class="ux-alert mt-5" role="alert">{form.message}</p>
-				  {/if}
-
-				  <button
-				    type="submit"
-				    disabled={bookingSubmitting || requiresRecovery}
-				    class="ux-btn-primary patient-confirm-button"
-				  >
-				    {bookingSubmitting ? "Confirmando reserva…" : "Confirmar reserva"}
-				  </button>
-
-				  <p class="patient-privacy">
-				    Tus datos quedan disponibles para el equipo autorizado del consultorio.
-				  </p>
-				  <p class="patient-next-step">
-				    Al confirmar podés agregar el turno al calendario, pedir un cambio o
-				    cancelarlo.
-				  </p>
-
-				  {#if business?.cancellation_policy}
-				    <p class="ux-empty mt-4">{business.cancellation_policy}</p>
-				  {/if}
-				</form>
+                <PublicBookingConfirmation {data} {form} {requiresRecovery}
+                    confirmation={{ service: selectedService, slot: selectedSlot, selection,
+                        professionalLabel: professionalSelectionLabel,
+                        professionalId: selectedProfessional?.id ?? selection.professionalIds[0] ?? '',
+                        priceQuote: currentPriceQuote, timezone, modality,
+                        action: data.integration ? queryFor({}) + '&/create_booking' : '?/create_booking' }}
+                    bind:localDraft bind:activeStepCard
+                    onUncertain={() => { uncertainRecoveryId = data.recoveryCheckId ?? ''; uncertainBooking = true; }} />
 			{/if}
 
 			{#if data.demo}

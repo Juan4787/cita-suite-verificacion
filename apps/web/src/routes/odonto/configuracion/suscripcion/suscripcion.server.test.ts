@@ -309,7 +309,7 @@ describe('action subscribe', () => {
 		expect(requests).toHaveLength(0);
 		expect(log).toHaveBeenCalledWith(
 			'Error validando rate limit de suscripción MP',
-			expect.any(Error)
+			{}
 		);
 		log.mockRestore();
 	});

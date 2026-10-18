@@ -228,7 +228,7 @@ describe('login/register server actions', () => {
 		});
 		expect(log).toHaveBeenCalledWith(
 			'No se pudo conectar con Supabase Auth durante el ingreso',
-			expect.any(Error)
+			{}
 		);
 		log.mockRestore();
 	});

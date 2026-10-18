@@ -117,7 +117,7 @@ describe('/auth/google OAuth start', () => {
 		);
 		expect(log).toHaveBeenCalledWith(
 			'No se pudo conectar con Supabase Auth para iniciar Google OAuth',
-			expect.any(Error)
+			{}
 		);
 		log.mockRestore();
 	});

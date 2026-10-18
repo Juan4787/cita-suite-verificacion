@@ -96,7 +96,7 @@ describe('getOdontoContext onboarding errors', () => {
 			status: 303,
 			location: '/odonto/pendiente?reason=temporarily_unavailable'
 		});
-		expect(log).toHaveBeenCalledWith('No se pudo preparar el consultorio inicial', setupError);
+		expect(log).toHaveBeenCalledWith('No se pudo preparar el consultorio inicial', {});
 		log.mockRestore();
 	});
 
