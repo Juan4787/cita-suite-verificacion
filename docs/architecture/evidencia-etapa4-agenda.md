@@ -1,6 +1,6 @@
 # Evidencia de etapa 4: disponibilidad, reservas y aranceles
 
-Fuente de verdad: [plan íntegro](../plans/refactorizacion-cita-suite.md), etapa 4. Historial y huellas: [registro de ejecución](../plans/registro-refactorizacion-cita-suite.md). **Etapa cerrada en entorno descartable** sobre `c0129e4` (full 39090572628), con revisión independiente y documentación. Esta matriz no certifica despliegue ni sustituye las puertas posteriores.
+Fuente de verdad: [plan íntegro](../plans/refactorizacion-cita-suite.md), etapa 4. Historial y huellas: [registro de ejecución](../plans/registro-refactorizacion-cita-suite.md). **Cierre previo reabierto en concurrencia de configuración**: full39090572628 aprobó y conserva su evidencia visual;39092194979 detectó40P01 en inserciones concurrentes de profesionales. La nueva carrera y corrección compatible requieren comparación antes de cerrar esta garantía. Esta matriz no certifica despliegue ni sustituye las puertas posteriores.
 
 | Requisito | Mecanismo y evidencia | Estado |
 |---|---|---|

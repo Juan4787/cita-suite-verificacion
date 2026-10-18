@@ -8,7 +8,7 @@ test('preserves OOM/connection evidence without raw errors, logs or credentials'
 			Error: 'private password and token must not enter the receipt', StartedAt: 'start', FinishedAt: 'end' }, memoryBytes: 96e6, nanoCpus: 5e8 });
 		if (args[0] === 'logs') return 'password=private-token: too many clients (SQLSTATE 53300)';
 		if (args[0] === 'stats') return '{"Name":"synthetic-auth","MemUsage":"90MiB / 96MiB","MemPerc":"93.75%","CPUPerc":"0.1%","PIDs":"5"}';
-		return '{"maximum":12,"groups":[{"usename":"supabase_auth_admin","count":2}]}';
+		return '{"maximum":12,"deadlocks":0,"groups":[{"usename":"supabase_auth_admin","count":2}]}';
 	}, { database: 'synthetic-db', auth: 'synthetic-auth' });
 	assert.equal(value.containers[1].oomKilled, true);
 	assert.equal(value.connections.maximum, 12);
@@ -19,13 +19,15 @@ test('preserves OOM/connection evidence without raw errors, logs or credentials'
 
 test('a functionally green run cannot conceal connection exhaustion or missing platform evidence', () => {
 	const healthy = () => ({ containers: Array.from({ length: 4 }, () => ({ running: true, oomKilled: false })),
-		connections: { maximum: 12 }, authErrors: [] });
+		connections: { maximum: 12, deadlocks: 0 }, authErrors: [] });
 	assert.doesNotThrow(() => assertPlatformDiagnostics(healthy()));
 	for (const change of [
 		value => value.authErrors.push({ sqlStates: ['53300'], categories: ['remaining connection'] }),
 		value => value.authErrors.push({ unavailable: true }),
 		value => { value.containers[1].oomKilled = true; },
-		value => { value.connections = { unavailable: true }; }
+		value => { value.connections = { unavailable: true }; },
+		value => { value.connections.deadlocks = 1; },
+		value => { delete value.connections.deadlocks; }
 	]) {
 		const value = healthy(); change(value);
 		assert.throws(() => assertPlatformDiagnostics(value), /infrastructure/);

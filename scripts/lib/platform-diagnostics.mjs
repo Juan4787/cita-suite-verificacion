@@ -21,7 +21,8 @@ export function capturePlatformDiagnostics(docker, { database, auth, rest, stora
 	let connections;
 	try {
 		connections = JSON.parse(docker(['exec', '-e', 'PGCONNECT_TIMEOUT=2', '-e', 'PGOPTIONS=-c statement_timeout=2000', '-i', database, 'psql', '-X', '-U', 'supabase_admin', '-d', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1'], `
-select jsonb_build_object('maximum',current_setting('max_connections')::int,'groups',coalesce((
+select jsonb_build_object('maximum',current_setting('max_connections')::int,
+ 'deadlocks',(select deadlocks from pg_stat_database where datname=current_database()),'groups',coalesce((
  select jsonb_agg(x) from (select usename,application_name,state,wait_event_type,count(*) as count
  from pg_catalog.pg_stat_activity where backend_type='client backend'
  group by usename,application_name,state,wait_event_type) x),'[]'::jsonb));`));
@@ -45,7 +46,7 @@ select jsonb_build_object('maximum',current_setting('max_connections')::int,'gro
 export function assertPlatformDiagnostics(state) {
 	if (!Array.isArray(state.containers) || state.containers.length !== 4 ||
 		state.containers.some(value => value.unavailable || !value.running || value.oomKilled) ||
-		!Number.isSafeInteger(state.connections?.maximum) || !Array.isArray(state.authErrors) ||
+		!Number.isSafeInteger(state.connections?.maximum) || state.connections?.deadlocks !== 0 || !Array.isArray(state.authErrors) ||
 		state.authErrors.some(value => value.unavailable || value.sqlStates?.length || value.categories?.length))
 		throw new Error('Disposable platform diagnostics are unavailable or report infrastructure errors. See platform-state.json.');
 }
