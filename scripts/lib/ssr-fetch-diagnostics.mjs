@@ -7,8 +7,12 @@ if (process.env.CITA_VERIFICATION_RUN_ID) {
  console.warn = (...args) => {
   original(...args);
   if (args[0] !== warning || remaining-- <= 0) return;
-  const stack = new Error('CITA_SSR_FETCH_CALLSITE').stack?.split('\n').slice(1, 10)
-   .map(line => line.replace(/\?[^\s)]*/g, '').slice(0, 500));
+  const previousLimit = Error.stackTraceLimit;
+  Error.stackTraceLimit = 24;
+  let stack;
+  try { stack = new Error('CITA_SSR_FETCH_CALLSITE').stack?.split('\n').slice(1, 25)
+   .map(line => line.replace(/\?[^\s)]*/g, '').slice(0, 500)); }
+  finally { Error.stackTraceLimit = previousLimit; }
   original('CITA_SSR_FETCH_CALLSITE', stack ?? []);
  };
 }

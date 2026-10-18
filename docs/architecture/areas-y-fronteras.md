@@ -27,3 +27,7 @@ La primera extracción elimina la separación artificial entre formas de UI y ti
 - Corregir y comprobar deuda de presentación/logs/SSR registrada, matriz320/390/768/1280/1600, teclado/foco/errores/carga/contenido largo y presupuesto de JS/hidratación.
 - Preparar identidad y transición de repositorio/proveedores sin activar producción; ejecución externa conjunta en release autorizado.
 - Fast/full y auditoría de esta revisión exacta antes de cerrar. Cursos/noticias permanecen fuera.
+
+## Trazabilidad de la extracción inicial
+
+[module-relocations.json](module-relocations.json) conserva ubicaciones anteriores/nuevas y el diff real entre snapshotsccb1398/e30daa4, incluyendo imports operativos, scripts y pruebas. El diff Git se usa como inventario completo; el log auxiliar del transformador no sustituye esa referencia. Las operaciones extraídas después tienen sus fuentes y verificaciones propias. Ningún movimiento equivale por sí solo al cierre de la etapa.

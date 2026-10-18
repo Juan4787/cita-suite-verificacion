@@ -1,0 +1,2088 @@
+{
+  "scope": "stage5 initial relocation only; later operation changes have separate receipts",
+  "beforeSource": "ccb1398e996d3a280b983b8aa16f5a3dbb70355c",
+  "afterSource": "e30daa4c0415832cd09ac66d3059a4a32c232b36",
+  "movedModulesAndTests": [
+    {
+      "from": "apps/web/src/lib/server/clinical-files.test.ts",
+      "to": "apps/web/src/lib/server/patients/public/clinical-files.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/demo-store.ts",
+      "to": "apps/web/src/lib/server/platform/demo-store.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/price-contracts.test.ts",
+      "to": "apps/web/src/lib/scheduling/price-contracts.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/availability-snapshot.test.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/availability-snapshot.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/hmac.test.ts",
+      "to": "apps/web/src/lib/server/platform/hmac.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/odonto-context.ts",
+      "to": "apps/web/src/lib/server/access/public/odonto-context.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/commercial-access.test.ts",
+      "to": "apps/web/src/lib/access/commercial-access.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/hmac.ts",
+      "to": "apps/web/src/lib/server/platform/hmac.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/google-calendar.ts",
+      "to": "apps/web/src/lib/server/integrations/public/google-calendar.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/audit.test.ts",
+      "to": "apps/web/src/lib/server/platform/audit.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/location.test.ts",
+      "to": "apps/web/src/lib/sites/location.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/appointment-token.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/appointment-token.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/business-email-association.ts",
+      "to": "apps/web/src/lib/server/access/public/business-email-association.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/clinical-files.ts",
+      "to": "apps/web/src/lib/server/patients/public/clinical-files.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/patient-identity.test.ts",
+      "to": "apps/web/src/lib/server/patients/public/patient-identity.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/booking-integration-request.ts",
+      "to": "apps/web/src/lib/server/sites/public/booking-integration-request.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/default-services.ts",
+      "to": "apps/web/src/lib/server/team/public/default-services.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/account-assistance.test.ts",
+      "to": "apps/web/src/lib/server/access/public/account-assistance.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/appointments.test.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/appointments.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/ics.test.ts",
+      "to": "apps/web/src/lib/server/integrations/public/ics.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/professional-questions.ts",
+      "to": "apps/web/src/lib/server/patients/public/professional-questions.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/patient-data-revision.test.ts",
+      "to": "apps/web/src/lib/server/patients/public/patient-data-revision.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/patient-exports.test.ts",
+      "to": "apps/web/src/lib/server/patients/public/patient-exports.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/patient-list.ts",
+      "to": "apps/web/src/lib/server/patients/public/patient-list.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/push.ts",
+      "to": "apps/web/src/lib/server/integrations/public/push.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/mercadopago.test.ts",
+      "to": "apps/web/src/lib/server/integrations/public/mercadopago.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/ics.ts",
+      "to": "apps/web/src/lib/server/integrations/public/ics.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/google-reviews.test.ts",
+      "to": "apps/web/src/lib/server/integrations/public/google-reviews.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/business-email-association.test.ts",
+      "to": "apps/web/src/lib/server/access/public/business-email-association.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/patient-data-revision.ts",
+      "to": "apps/web/src/lib/server/patients/public/patient-data-revision.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/calendar-links.test.ts",
+      "to": "apps/web/src/lib/server/integrations/public/calendar-links.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/google-calendar.test.ts",
+      "to": "apps/web/src/lib/server/integrations/public/google-calendar.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/booking-integrations.ts",
+      "to": "apps/web/src/lib/server/sites/public/booking-integrations.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/booking-integration-request.test.ts",
+      "to": "apps/web/src/lib/server/sites/public/booking-integration-request.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/professional-questions.test.ts",
+      "to": "apps/web/src/lib/server/patients/public/professional-questions.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/reminders.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/reminders.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/business.test.ts",
+      "to": "apps/web/src/lib/server/access/public/business.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/follow-ups.test.ts",
+      "to": "apps/web/src/lib/server/patients/public/follow-ups.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/calendar-links.ts",
+      "to": "apps/web/src/lib/server/integrations/public/calendar-links.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/push.test.ts",
+      "to": "apps/web/src/lib/server/integrations/public/push.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/public-appointments.test.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/public-appointments.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/patient-exports.ts",
+      "to": "apps/web/src/lib/server/patients/public/patient-exports.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/patient-booking-profile.ts",
+      "to": "apps/web/src/lib/patients/booking-profile.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/account-assistance.ts",
+      "to": "apps/web/src/lib/server/access/public/account-assistance.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/availability.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/availability.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/public-practice-settings.ts",
+      "to": "apps/web/src/lib/server/sites/public/public-practice-settings.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/calendar-content.test.ts",
+      "to": "apps/web/src/lib/server/integrations/public/calendar-content.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/google-reviews.ts",
+      "to": "apps/web/src/lib/server/integrations/public/google-reviews.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/calendar-tracking.ts",
+      "to": "apps/web/src/lib/server/integrations/public/calendar-tracking.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/booking-settings.ts",
+      "to": "apps/web/src/lib/server/sites/public/booking-settings.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/business.ts",
+      "to": "apps/web/src/lib/server/access/public/business.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/public-image.ts",
+      "to": "apps/web/src/lib/server/sites/public/public-image.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/patient-export-http.ts",
+      "to": "apps/web/src/lib/server/patients/public/patient-export-http.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/availability-snapshot.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/availability-snapshot.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/professional-services.ts",
+      "to": "apps/web/src/lib/server/team/public/professional-services.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/patient-identity.ts",
+      "to": "apps/web/src/lib/server/patients/public/patient-identity.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/booking-integrations.test.ts",
+      "to": "apps/web/src/lib/server/sites/public/booking-integrations.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/appointments.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/appointments.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/patient-permissions.test.ts",
+      "to": "apps/web/src/lib/server/patients/public/patient-permissions.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/availability-rules.test.ts",
+      "to": "apps/web/src/lib/server/team/public/availability-rules.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/availability.test.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/availability.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/audit.ts",
+      "to": "apps/web/src/lib/server/platform/audit.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/supabase.ts",
+      "to": "apps/web/src/lib/server/platform/supabase.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/availability-exceptions.test.ts",
+      "to": "apps/web/src/lib/server/team/public/availability-exceptions.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/patient-list-cursor.ts",
+      "to": "apps/web/src/lib/server/patients/public/patient-list-cursor.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/availability-rules.ts",
+      "to": "apps/web/src/lib/server/team/public/availability-rules.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/phone.test.ts",
+      "to": "apps/web/src/lib/utils/phone.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/price-policy-editor.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/price-policy-editor.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/public-booking.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/public-booking.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/demo-data.ts",
+      "to": "apps/web/src/lib/server/platform/demo-data.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/public-appointments.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/public-appointments.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/professionals.ts",
+      "to": "apps/web/src/lib/server/team/public/professionals.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/public-catalogue.ts",
+      "to": "apps/web/src/lib/sites/catalogue.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/public-booking-page.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/public-booking-page.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/internal-jobs.ts",
+      "to": "apps/web/src/lib/server/integrations/public/internal-jobs.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/availability-windows.test.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/availability-windows.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/phone.ts",
+      "to": "apps/web/src/lib/utils/phone.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/reminders.test.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/reminders.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/receipt-pdf.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/receipt-pdf.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/booking-information.ts",
+      "to": "apps/web/src/lib/server/patients/public/booking-information.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/public-booking.test.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/public-booking.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/booking-information.test.ts",
+      "to": "apps/web/src/lib/server/patients/public/booking-information.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/agenda-navigation.test.ts",
+      "to": "apps/web/src/lib/scheduling/agenda-navigation.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/messaging.ts",
+      "to": "apps/web/src/lib/server/integrations/public/messaging.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/rate-limits.test.ts",
+      "to": "apps/web/src/lib/server/platform/rate-limits.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/calendar-content.ts",
+      "to": "apps/web/src/lib/server/integrations/public/calendar-content.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/location.ts",
+      "to": "apps/web/src/lib/sites/location.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/price-contracts.ts",
+      "to": "apps/web/src/lib/scheduling/price-contracts.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/android-calendar-intent.ts",
+      "to": "apps/web/src/lib/server/integrations/public/android-calendar-intent.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/rate-limits.ts",
+      "to": "apps/web/src/lib/server/platform/rate-limits.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/availability-windows.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/availability-windows.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/patient-list-cursor.test.ts",
+      "to": "apps/web/src/lib/server/patients/public/patient-list-cursor.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/messaging.test.ts",
+      "to": "apps/web/src/lib/server/integrations/public/messaging.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/receipt-pdf.test.ts",
+      "to": "apps/web/src/lib/server/scheduling/public/receipt-pdf.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/public-practice-settings.test.ts",
+      "to": "apps/web/src/lib/server/sites/public/public-practice-settings.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/patient-permissions.ts",
+      "to": "apps/web/src/lib/server/patients/public/patient-permissions.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/agenda-navigation.ts",
+      "to": "apps/web/src/lib/scheduling/agenda-navigation.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/clinical-entry-costs.ts",
+      "to": "apps/web/src/lib/server/patients/public/clinical-entry-costs.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/booking-settings.test.ts",
+      "to": "apps/web/src/lib/server/sites/public/booking-settings.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/mercadopago.ts",
+      "to": "apps/web/src/lib/server/integrations/public/mercadopago.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/patient-list.test.ts",
+      "to": "apps/web/src/lib/server/patients/public/patient-list.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/availability-exceptions.ts",
+      "to": "apps/web/src/lib/server/team/public/availability-exceptions.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/public-image.test.ts",
+      "to": "apps/web/src/lib/server/sites/public/public-image.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/follow-ups.ts",
+      "to": "apps/web/src/lib/server/patients/public/follow-ups.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/odonto-context.test.ts",
+      "to": "apps/web/src/lib/server/access/public/odonto-context.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/android-calendar-intent.test.ts",
+      "to": "apps/web/src/lib/server/integrations/public/android-calendar-intent.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/clinical-entry-costs.test.ts",
+      "to": "apps/web/src/lib/server/patients/public/clinical-entry-costs.test.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/booking-integration-flags.ts",
+      "to": "apps/web/src/lib/server/sites/public/booking-integration-flags.ts"
+    },
+    {
+      "from": "apps/web/src/lib/server/booking-profile-config.ts",
+      "to": "apps/web/src/lib/server/sites/public/booking-profile-config.ts"
+    }
+  ],
+  "removedRedundantFacades": {
+    "apps/web/src/lib/server/agenda-search.ts": "apps/web/src/lib/utils/agenda-search.ts",
+    "apps/web/src/lib/server/integrated-availability.ts": "apps/web/src/lib/availability/rows.ts"
+  },
+  "exactGitChanges": [
+    {
+      "status": "M",
+      "paths": [
+        ".dependency-cruiser.cjs"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/scripts/staging-preflight.mjs"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/app.d.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/hooks.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/hooks.server.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/commercial-access.test.ts",
+        "apps/web/src/lib/access/commercial-access.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/patient-booking-profile.ts",
+        "apps/web/src/lib/patients/booking-profile.ts"
+      ]
+    },
+    {
+      "status": "R097",
+      "paths": [
+        "apps/web/src/lib/server/agenda-navigation.test.ts",
+        "apps/web/src/lib/scheduling/agenda-navigation.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/agenda-navigation.ts",
+        "apps/web/src/lib/scheduling/agenda-navigation.ts"
+      ]
+    },
+    {
+      "status": "R096",
+      "paths": [
+        "apps/web/src/lib/server/price-contracts.test.ts",
+        "apps/web/src/lib/scheduling/price-contracts.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/price-contracts.ts",
+        "apps/web/src/lib/scheduling/price-contracts.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/account-assistance.test.ts",
+        "apps/web/src/lib/server/access/public/account-assistance.test.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/account-assistance.ts",
+        "apps/web/src/lib/server/access/public/account-assistance.ts"
+      ]
+    },
+    {
+      "status": "R094",
+      "paths": [
+        "apps/web/src/lib/server/business-email-association.test.ts",
+        "apps/web/src/lib/server/access/public/business-email-association.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/business-email-association.ts",
+        "apps/web/src/lib/server/access/public/business-email-association.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/business.test.ts",
+        "apps/web/src/lib/server/access/public/business.test.ts"
+      ]
+    },
+    {
+      "status": "R099",
+      "paths": [
+        "apps/web/src/lib/server/business.ts",
+        "apps/web/src/lib/server/access/public/business.ts"
+      ]
+    },
+    {
+      "status": "R094",
+      "paths": [
+        "apps/web/src/lib/server/odonto-context.test.ts",
+        "apps/web/src/lib/server/access/public/odonto-context.test.ts"
+      ]
+    },
+    {
+      "status": "R091",
+      "paths": [
+        "apps/web/src/lib/server/odonto-context.ts",
+        "apps/web/src/lib/server/access/public/odonto-context.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/lib/server/agenda-search.test.ts"
+      ]
+    },
+    {
+      "status": "D",
+      "paths": [
+        "apps/web/src/lib/server/agenda-search.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/lib/server/availability.audit.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/lib/server/booking-patient-fields.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/lib/server/clinical-upload-availability.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/lib/server/contracts.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/lib/server/follow-up-mutations.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/lib/server/follow-ups-concurrency.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/lib/server/google-calendar-sync.test.ts"
+      ]
+    },
+    {
+      "status": "D",
+      "paths": [
+        "apps/web/src/lib/server/integrated-availability.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/android-calendar-intent.test.ts",
+        "apps/web/src/lib/server/integrations/public/android-calendar-intent.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/android-calendar-intent.ts",
+        "apps/web/src/lib/server/integrations/public/android-calendar-intent.ts"
+      ]
+    },
+    {
+      "status": "R096",
+      "paths": [
+        "apps/web/src/lib/server/calendar-content.test.ts",
+        "apps/web/src/lib/server/integrations/public/calendar-content.test.ts"
+      ]
+    },
+    {
+      "status": "R091",
+      "paths": [
+        "apps/web/src/lib/server/calendar-content.ts",
+        "apps/web/src/lib/server/integrations/public/calendar-content.ts"
+      ]
+    },
+    {
+      "status": "R096",
+      "paths": [
+        "apps/web/src/lib/server/calendar-links.test.ts",
+        "apps/web/src/lib/server/integrations/public/calendar-links.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/calendar-links.ts",
+        "apps/web/src/lib/server/integrations/public/calendar-links.ts"
+      ]
+    },
+    {
+      "status": "R094",
+      "paths": [
+        "apps/web/src/lib/server/calendar-tracking.ts",
+        "apps/web/src/lib/server/integrations/public/calendar-tracking.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/google-calendar.test.ts",
+        "apps/web/src/lib/server/integrations/public/google-calendar.test.ts"
+      ]
+    },
+    {
+      "status": "R099",
+      "paths": [
+        "apps/web/src/lib/server/google-calendar.ts",
+        "apps/web/src/lib/server/integrations/public/google-calendar.ts"
+      ]
+    },
+    {
+      "status": "R097",
+      "paths": [
+        "apps/web/src/lib/server/google-reviews.test.ts",
+        "apps/web/src/lib/server/integrations/public/google-reviews.test.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/google-reviews.ts",
+        "apps/web/src/lib/server/integrations/public/google-reviews.ts"
+      ]
+    },
+    {
+      "status": "R099",
+      "paths": [
+        "apps/web/src/lib/server/ics.test.ts",
+        "apps/web/src/lib/server/integrations/public/ics.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/ics.ts",
+        "apps/web/src/lib/server/integrations/public/ics.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/internal-jobs.ts",
+        "apps/web/src/lib/server/integrations/public/internal-jobs.ts"
+      ]
+    },
+    {
+      "status": "R099",
+      "paths": [
+        "apps/web/src/lib/server/mercadopago.test.ts",
+        "apps/web/src/lib/server/integrations/public/mercadopago.test.ts"
+      ]
+    },
+    {
+      "status": "R099",
+      "paths": [
+        "apps/web/src/lib/server/mercadopago.ts",
+        "apps/web/src/lib/server/integrations/public/mercadopago.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/messaging.test.ts",
+        "apps/web/src/lib/server/integrations/public/messaging.test.ts"
+      ]
+    },
+    {
+      "status": "R099",
+      "paths": [
+        "apps/web/src/lib/server/messaging.ts",
+        "apps/web/src/lib/server/integrations/public/messaging.ts"
+      ]
+    },
+    {
+      "status": "R099",
+      "paths": [
+        "apps/web/src/lib/server/push.test.ts",
+        "apps/web/src/lib/server/integrations/public/push.test.ts"
+      ]
+    },
+    {
+      "status": "R099",
+      "paths": [
+        "apps/web/src/lib/server/push.ts",
+        "apps/web/src/lib/server/integrations/public/push.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/lib/server/messaging.site-url.test.ts"
+      ]
+    },
+    {
+      "status": "R083",
+      "paths": [
+        "apps/web/src/lib/server/booking-information.test.ts",
+        "apps/web/src/lib/server/patients/public/booking-information.test.ts"
+      ]
+    },
+    {
+      "status": "R097",
+      "paths": [
+        "apps/web/src/lib/server/booking-information.ts",
+        "apps/web/src/lib/server/patients/public/booking-information.ts"
+      ]
+    },
+    {
+      "status": "R090",
+      "paths": [
+        "apps/web/src/lib/server/clinical-entry-costs.test.ts",
+        "apps/web/src/lib/server/patients/public/clinical-entry-costs.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/clinical-entry-costs.ts",
+        "apps/web/src/lib/server/patients/public/clinical-entry-costs.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/clinical-files.test.ts",
+        "apps/web/src/lib/server/patients/public/clinical-files.test.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/clinical-files.ts",
+        "apps/web/src/lib/server/patients/public/clinical-files.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/follow-ups.test.ts",
+        "apps/web/src/lib/server/patients/public/follow-ups.test.ts"
+      ]
+    },
+    {
+      "status": "R099",
+      "paths": [
+        "apps/web/src/lib/server/follow-ups.ts",
+        "apps/web/src/lib/server/patients/public/follow-ups.ts"
+      ]
+    },
+    {
+      "status": "R090",
+      "paths": [
+        "apps/web/src/lib/server/patient-data-revision.test.ts",
+        "apps/web/src/lib/server/patients/public/patient-data-revision.test.ts"
+      ]
+    },
+    {
+      "status": "R097",
+      "paths": [
+        "apps/web/src/lib/server/patient-data-revision.ts",
+        "apps/web/src/lib/server/patients/public/patient-data-revision.ts"
+      ]
+    },
+    {
+      "status": "R095",
+      "paths": [
+        "apps/web/src/lib/server/patient-export-http.ts",
+        "apps/web/src/lib/server/patients/public/patient-export-http.ts"
+      ]
+    },
+    {
+      "status": "R097",
+      "paths": [
+        "apps/web/src/lib/server/patient-exports.test.ts",
+        "apps/web/src/lib/server/patients/public/patient-exports.test.ts"
+      ]
+    },
+    {
+      "status": "R099",
+      "paths": [
+        "apps/web/src/lib/server/patient-exports.ts",
+        "apps/web/src/lib/server/patients/public/patient-exports.ts"
+      ]
+    },
+    {
+      "status": "R097",
+      "paths": [
+        "apps/web/src/lib/server/patient-identity.test.ts",
+        "apps/web/src/lib/server/patients/public/patient-identity.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/patient-identity.ts",
+        "apps/web/src/lib/server/patients/public/patient-identity.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/patient-list-cursor.test.ts",
+        "apps/web/src/lib/server/patients/public/patient-list-cursor.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/patient-list-cursor.ts",
+        "apps/web/src/lib/server/patients/public/patient-list-cursor.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/patient-list.test.ts",
+        "apps/web/src/lib/server/patients/public/patient-list.test.ts"
+      ]
+    },
+    {
+      "status": "R096",
+      "paths": [
+        "apps/web/src/lib/server/patient-list.ts",
+        "apps/web/src/lib/server/patients/public/patient-list.ts"
+      ]
+    },
+    {
+      "status": "R097",
+      "paths": [
+        "apps/web/src/lib/server/patient-permissions.test.ts",
+        "apps/web/src/lib/server/patients/public/patient-permissions.test.ts"
+      ]
+    },
+    {
+      "status": "R097",
+      "paths": [
+        "apps/web/src/lib/server/patient-permissions.ts",
+        "apps/web/src/lib/server/patients/public/patient-permissions.ts"
+      ]
+    },
+    {
+      "status": "R095",
+      "paths": [
+        "apps/web/src/lib/server/professional-questions.test.ts",
+        "apps/web/src/lib/server/patients/public/professional-questions.test.ts"
+      ]
+    },
+    {
+      "status": "R093",
+      "paths": [
+        "apps/web/src/lib/server/professional-questions.ts",
+        "apps/web/src/lib/server/patients/public/professional-questions.ts"
+      ]
+    },
+    {
+      "status": "R092",
+      "paths": [
+        "apps/web/src/lib/server/audit.test.ts",
+        "apps/web/src/lib/server/platform/audit.test.ts"
+      ]
+    },
+    {
+      "status": "R093",
+      "paths": [
+        "apps/web/src/lib/server/audit.ts",
+        "apps/web/src/lib/server/platform/audit.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/demo-data.ts",
+        "apps/web/src/lib/server/platform/demo-data.ts"
+      ]
+    },
+    {
+      "status": "R097",
+      "paths": [
+        "apps/web/src/lib/server/demo-store.ts",
+        "apps/web/src/lib/server/platform/demo-store.ts"
+      ]
+    },
+    {
+      "status": "R094",
+      "paths": [
+        "apps/web/src/lib/server/hmac.test.ts",
+        "apps/web/src/lib/server/platform/hmac.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/hmac.ts",
+        "apps/web/src/lib/server/platform/hmac.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/rate-limits.test.ts",
+        "apps/web/src/lib/server/platform/rate-limits.test.ts"
+      ]
+    },
+    {
+      "status": "R099",
+      "paths": [
+        "apps/web/src/lib/server/rate-limits.ts",
+        "apps/web/src/lib/server/platform/rate-limits.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/supabase.ts",
+        "apps/web/src/lib/server/platform/supabase.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/lib/server/public-booking-navigation.test.ts"
+      ]
+    },
+    {
+      "status": "R089",
+      "paths": [
+        "apps/web/src/lib/server/appointment-token.ts",
+        "apps/web/src/lib/server/scheduling/public/appointment-token.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/appointments.test.ts",
+        "apps/web/src/lib/server/scheduling/public/appointments.test.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/appointments.ts",
+        "apps/web/src/lib/server/scheduling/public/appointments.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/availability-snapshot.test.ts",
+        "apps/web/src/lib/server/scheduling/public/availability-snapshot.test.ts"
+      ]
+    },
+    {
+      "status": "R097",
+      "paths": [
+        "apps/web/src/lib/server/availability-snapshot.ts",
+        "apps/web/src/lib/server/scheduling/public/availability-snapshot.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/availability-windows.test.ts",
+        "apps/web/src/lib/server/scheduling/public/availability-windows.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/availability-windows.ts",
+        "apps/web/src/lib/server/scheduling/public/availability-windows.ts"
+      ]
+    },
+    {
+      "status": "R099",
+      "paths": [
+        "apps/web/src/lib/server/availability.test.ts",
+        "apps/web/src/lib/server/scheduling/public/availability.test.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/availability.ts",
+        "apps/web/src/lib/server/scheduling/public/availability.ts"
+      ]
+    },
+    {
+      "status": "R093",
+      "paths": [
+        "apps/web/src/lib/server/price-policy-editor.ts",
+        "apps/web/src/lib/server/scheduling/public/price-policy-editor.ts"
+      ]
+    },
+    {
+      "status": "R099",
+      "paths": [
+        "apps/web/src/lib/server/public-appointments.test.ts",
+        "apps/web/src/lib/server/scheduling/public/public-appointments.test.ts"
+      ]
+    },
+    {
+      "status": "R096",
+      "paths": [
+        "apps/web/src/lib/server/public-appointments.ts",
+        "apps/web/src/lib/server/scheduling/public/public-appointments.ts"
+      ]
+    },
+    {
+      "status": "R097",
+      "paths": [
+        "apps/web/src/lib/server/public-booking-page.ts",
+        "apps/web/src/lib/server/scheduling/public/public-booking-page.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/public-booking.test.ts",
+        "apps/web/src/lib/server/scheduling/public/public-booking.test.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/public-booking.ts",
+        "apps/web/src/lib/server/scheduling/public/public-booking.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/receipt-pdf.test.ts",
+        "apps/web/src/lib/server/scheduling/public/receipt-pdf.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/receipt-pdf.ts",
+        "apps/web/src/lib/server/scheduling/public/receipt-pdf.ts"
+      ]
+    },
+    {
+      "status": "R099",
+      "paths": [
+        "apps/web/src/lib/server/reminders.test.ts",
+        "apps/web/src/lib/server/scheduling/public/reminders.test.ts"
+      ]
+    },
+    {
+      "status": "R097",
+      "paths": [
+        "apps/web/src/lib/server/reminders.ts",
+        "apps/web/src/lib/server/scheduling/public/reminders.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/booking-integration-flags.ts",
+        "apps/web/src/lib/server/sites/public/booking-integration-flags.ts"
+      ]
+    },
+    {
+      "status": "R092",
+      "paths": [
+        "apps/web/src/lib/server/booking-integration-request.test.ts",
+        "apps/web/src/lib/server/sites/public/booking-integration-request.test.ts"
+      ]
+    },
+    {
+      "status": "R094",
+      "paths": [
+        "apps/web/src/lib/server/booking-integration-request.ts",
+        "apps/web/src/lib/server/sites/public/booking-integration-request.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/booking-integrations.test.ts",
+        "apps/web/src/lib/server/sites/public/booking-integrations.test.ts"
+      ]
+    },
+    {
+      "status": "R099",
+      "paths": [
+        "apps/web/src/lib/server/booking-integrations.ts",
+        "apps/web/src/lib/server/sites/public/booking-integrations.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/booking-profile-config.ts",
+        "apps/web/src/lib/server/sites/public/booking-profile-config.ts"
+      ]
+    },
+    {
+      "status": "R092",
+      "paths": [
+        "apps/web/src/lib/server/booking-settings.test.ts",
+        "apps/web/src/lib/server/sites/public/booking-settings.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/booking-settings.ts",
+        "apps/web/src/lib/server/sites/public/booking-settings.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/public-image.test.ts",
+        "apps/web/src/lib/server/sites/public/public-image.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/public-image.ts",
+        "apps/web/src/lib/server/sites/public/public-image.ts"
+      ]
+    },
+    {
+      "status": "R096",
+      "paths": [
+        "apps/web/src/lib/server/public-practice-settings.test.ts",
+        "apps/web/src/lib/server/sites/public/public-practice-settings.test.ts"
+      ]
+    },
+    {
+      "status": "R097",
+      "paths": [
+        "apps/web/src/lib/server/public-practice-settings.ts",
+        "apps/web/src/lib/server/sites/public/public-practice-settings.ts"
+      ]
+    },
+    {
+      "status": "R097",
+      "paths": [
+        "apps/web/src/lib/server/availability-exceptions.test.ts",
+        "apps/web/src/lib/server/team/public/availability-exceptions.test.ts"
+      ]
+    },
+    {
+      "status": "R097",
+      "paths": [
+        "apps/web/src/lib/server/availability-exceptions.ts",
+        "apps/web/src/lib/server/team/public/availability-exceptions.ts"
+      ]
+    },
+    {
+      "status": "R094",
+      "paths": [
+        "apps/web/src/lib/server/availability-rules.test.ts",
+        "apps/web/src/lib/server/team/public/availability-rules.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/availability-rules.ts",
+        "apps/web/src/lib/server/team/public/availability-rules.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/default-services.ts",
+        "apps/web/src/lib/server/team/public/default-services.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/professional-services.ts",
+        "apps/web/src/lib/server/team/public/professional-services.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/professionals.ts",
+        "apps/web/src/lib/server/team/public/professionals.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/lib/server/webhook-signature.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/public-catalogue.ts",
+        "apps/web/src/lib/sites/catalogue.ts"
+      ]
+    },
+    {
+      "status": "R098",
+      "paths": [
+        "apps/web/src/lib/server/location.test.ts",
+        "apps/web/src/lib/sites/location.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/location.ts",
+        "apps/web/src/lib/sites/location.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/lib/types/database.typecheck.ts"
+      ]
+    },
+    {
+      "status": "R099",
+      "paths": [
+        "apps/web/src/lib/server/phone.test.ts",
+        "apps/web/src/lib/utils/phone.test.ts"
+      ]
+    },
+    {
+      "status": "R100",
+      "paths": [
+        "apps/web/src/lib/server/phone.ts",
+        "apps/web/src/lib/utils/phone.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/api/mercadopago/webhook/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/api/mercadopago/webhook/webhook.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/api/odonto/exportaciones/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/api/odonto/exportaciones/[exportId]/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/api/odonto/exportaciones/[exportId]/hojas/[dataset]/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/api/odonto/exportaciones/[exportId]/validaciones/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/api/public/contacto/[integrationKey]/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/api/public/reservas/[integrationKey]/catalogo/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/api/whatsapp/webhook/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/auth/callback/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/auth/callback/callback.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/auth/google/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/auth/google/google.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/embed/v1/[integrationKey]/+layout.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/embed/v1/[integrationKey]/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/embed/v1/[integrationKey]/turno/[token]/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/internal/jobs/generate-reminder-dispatches/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/internal/jobs/process-message-dispatches/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/internal/jobs/reconcile-mercadopago/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/internal/jobs/reconcile-mercadopago/reconcile.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/internal/jobs/send-push-reminders/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/internal/jobs/send-push-reminders/send-push-reminders.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/login/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/login/login.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/logout/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/logout/logout.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/oauth/google-calendar/callback/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/oauth/google-calendar/callback/callback.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/+layout.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/agenda/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/agenda/buscar/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/agenda/buscar/agenda-search.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/agenda/buscar/precarga/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/agenda/buscar/precarga/agenda-search-preload.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/agenda/referencias/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/agenda/semana/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/configuracion/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/configuracion/ayuda/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/configuracion/ayuda/ayuda.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/configuracion/consultorio-publico/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/configuracion/documentos/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/configuracion/negocio/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/configuracion/negocio/contacto/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/configuracion/resena-google/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/configuracion/resena-google/google-review-settings.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/configuracion/reserva-online/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/configuracion/reserva-online/webs/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/configuracion/suscripcion/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/configuracion/suscripcion/suscripcion.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/configuracion/usuarios/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/disponibilidad/slots/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/exportar-datos/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/exportar-datos/exportar-datos.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/maestro/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/maestro/almacenamiento/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/maestro/maestro-mp.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/mis-preguntas/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/mis-turnos/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/[id]/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/[id]/datos/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/[id]/historial/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/[id]/informacion-previa/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/[id]/patient-detail.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/[id]/radiografias/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/[id]/radiografias/[radiographId]/access-grants/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/[id]/radiografias/[radiographId]/complete/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/[id]/radiografias/[radiographId]/failed/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/[id]/radiografias/[radiographId]/trash/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/[id]/radiografias/clinical-files.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/[id]/radiografias/uploads/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/buscar/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/buscar/patient-search.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/lista/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/papelera/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/papelera/[radiographId]/restore/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/papelera/lista/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/patients-list.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pacientes/revision/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pago/procesando/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/pago/procesando/procesando.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/profesionales/[professionalId]/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/profesionales/[professionalId]/aranceles/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/profesionales/[professionalId]/dependencias/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/profesionales/[professionalId]/historial/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/profesionales/[professionalId]/preguntas/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/recordatorios/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/recordatorios/abrir/[appointmentId]/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/seguimientos/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/seguimientos/[id]/editar/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/seguimientos/[id]/gestionar/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/seguimientos/[id]/posponer/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/seguimientos/buscar/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/seguimientos/crear/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/seguimientos/follow-up-access.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/seguimientos/importantes/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/seguimientos/profesionales/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/turnos/[appointmentId]/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/turnos/[appointmentId]/reschedule.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/odonto/turnos/[appointmentId]/slots/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/r/[token]/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/r/[token]/review-redirect.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/reservar/[businessSlug]/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/reset/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/calendar-openings.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/calendario-descargar.ics/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/calendario-intent/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/calendario.ics/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/comprobante.pdf/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/documentos/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/documentos/[fileId]/complete/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/google-calendar/connect/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/google-calendar/connect/connect.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/informacion/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/ir/google/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/ir/maps/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/ir/outlook/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/push/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/push/push.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/push/receipt/+server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/push/receipt/receipt.server.test.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "apps/web/src/routes/turno/[token]/reprogramado/+page.server.ts"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "scripts/lib/architecture.test.mjs"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "scripts/lib/prepare-ci-snapshot.test.mjs"
+      ]
+    },
+    {
+      "status": "M",
+      "paths": [
+        "scripts/prepare-ci-snapshot.mjs"
+      ]
+    }
+  ]
+}

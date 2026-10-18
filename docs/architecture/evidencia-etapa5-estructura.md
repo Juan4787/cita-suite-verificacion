@@ -25,7 +25,7 @@
 
 Posible error observado estáticamente, todavía sin reproducción nueva: el cargador de ficha registra errores secundarios de perfil/historia/turnos/vínculo y continúa con valores vacíos. Debe contrastarse el contrato y reproducirse en la etapa antes de decidir recuperación por panel o rechazo completo; no se presenta aún como defecto publicado demostrado.
 
-El full de extracción39092194979 detectó40P01 durante inserciones concurrentes de profesionales y no aprobó. Se reabre esa garantía previa y se corrige su mecanismo antes de continuar la extracción funcional; el verde fast no la sustituye. La prueba CLI nueva reprodujo además un alias Vite no resoluble desde Node. La carrera controlada39093073514 reprodujo40P01 con FK reales y bloqueo observado; comparación positiva pendiente.
+El full de extracción39092194979 detectó40P01 durante inserciones concurrentes de profesionales y no aprobó. La carrera controlada39093073514 reprodujo40P01 con FK reales y bloqueo observado. La corrección compatible `FOR NO KEY UPDATE` aprobó full39093599146: dos commits, revisión+2 sin retry, once carreras y contador real de deadlocks=0. La CLI nativa también aprueba tras reproducir/corregir su alias Vite. Esto restituye la garantía de etapa4, sin cerrar la descomposición/UI/identidad pendiente de etapa5.
 
 La campaña conserva etapas6/capacidad/staging/release/producción/auditoría final; ninguna fila de esta etapa las declara satisfechas.
 

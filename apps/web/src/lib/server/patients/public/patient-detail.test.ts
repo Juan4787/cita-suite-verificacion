@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
 import type { CitaDatabase } from '$lib/types/database';
 import type { BusinessContext } from '$lib/access/contracts';
 import { getBusinessAccessState } from '$lib/access/commercial-access';
-import { readPatientDetail } from './patient-detail';
+import { readPatientDetail, PatientDetailReadError } from './patient-detail';
 
 const businessId = 'a6400000-0000-4000-8000-000000000001';
 const patientId = 'a6400000-0000-4000-8000-000000000002';
@@ -21,6 +21,32 @@ function context(): BusinessContext {
 }
 
 describe('authorized patient detail projection with typed SDK and simulated HTTP', () => {
+ it.each(['patient_clinical_profiles', 'clinical_entries', 'appointments', 'professional_patient_links', 'professional_users'])(
+  'rejects an unavailable %s read instead of presenting missing data as empty', async tableWithError => {
+   const selectedContext = context();
+   if (tableWithError.startsWith('professional_')) {
+    selectedContext.role = 'professional'; selectedContext.canManage = false;
+   }
+   const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+   const client = createClient<CitaDatabase>('https://supabase.example.test', 'synthetic-key', {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: async input => {
+     const url = new URL(input instanceof Request ? input.url : String(input));
+     const table = url.pathname.split('/').at(-1);
+     if (table === tableWithError) return Response.json({ code: 'SYNTHETIC_UNAVAILABLE', message: 'Synthetic outage' }, { status: 503 });
+     if (table === 'patients') return Response.json({ id: patientId, full_name: 'Synthetic patient' });
+     if (table === 'professional_users') return Response.json({ professional_id: userId, professionals: { name: 'Synthetic professional' } });
+     if (table === 'patient_clinical_profiles' || table === 'professional_patient_links') return Response.json(null);
+     if (table === 'clinical_entries' || table === 'appointments') return Response.json([]);
+     throw new Error('Unexpected patient projection request');
+    } }
+   });
+   try {
+    await expect(readPatientDetail({ patientId, supabase: client, admin: client, context: selectedContext, currentUserId: userId }))
+     .rejects.toBeInstanceOf(PatientDetailReadError);
+   } finally { log.mockRestore(); }
+  }
+ );
  it('returns an authoritative empty history and defers documents without requesting metadata, grants or originals', async () => {
   const requests: URL[] = [];
   const client = createClient<CitaDatabase>('https://supabase.example.test', 'synthetic-key', {
