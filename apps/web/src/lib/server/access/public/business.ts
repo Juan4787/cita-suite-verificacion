@@ -309,9 +309,10 @@ const loadMembershipsLegacy = async (
 		.in('business_id', businessIds);
 
 	if (subscriptionError) {
-		// Compatibility-first fallback: if the migration is not present yet, keep
-		// legacy access active instead of locking out existing consultorios.
 		logServerFailure('Error cargando suscripciones comerciales', subscriptionError);
+		// Compatibility is limited to an absent table during an older schema's
+		// transition. Technical/permission errors cannot manufacture active access.
+		if (!['42P01', 'PGRST205'].includes(subscriptionError.code)) throw subscriptionError;
 		return memberships.map((membership) => applySubscription(membership, null, { legacyFallback: true }));
 	}
 
@@ -330,17 +331,11 @@ const loadMembershipsLegacy = async (
 };
 
 const isMissingBusinessContextsRpcError = (error: unknown) => {
-	const message = errorMessage(error).toLowerCase();
 	const code =
 		typeof error === 'object' && error !== null && 'code' in error
 			? String((error as { code?: unknown }).code ?? '')
 			: '';
-	return (
-		code === '42883' ||
-		code === 'PGRST202' ||
-		message.includes('list_user_business_contexts') ||
-		message.includes('could not find the function')
-	);
+	return code === '42883' || code === 'PGRST202';
 };
 
 const loadMemberships = async (
