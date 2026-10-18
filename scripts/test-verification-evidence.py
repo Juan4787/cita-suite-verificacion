@@ -3,6 +3,7 @@ import base64
 import hashlib
 import io
 import json
+import random
 from pathlib import Path
 import shutil
 import subprocess
@@ -45,6 +46,19 @@ class EvidenceTests(unittest.TestCase):
         corrupted = packed.replace("CITA_EVIDENCE_CHUNK ", "CITA_EVIDENCE_CHUNK A", 1)
         self.assertNotEqual(self.collect(corrupted, "corrupt").returncode, 0)
         self.assertFalse((self.root / "corrupt").exists())
+
+    def test_large_bounded_binary_evidence_survives_round_trip(self):
+        (self.root / ".verification").mkdir()
+        # Deliberately incompressible synthetic bytes exercise the old 8 MiB
+        # failure without a browser, network or native image dependency.
+        data = random.Random(455).randbytes(9 * 1024 ** 2)
+        (self.root / ".verification/synthetic.png").write_bytes(data)
+        packed = subprocess.run(["python3", str(self.root / "scripts/package-verification-evidence.py")],
+                                capture_output=True, text=True, check=True).stdout
+        result = self.collect(packed)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.root / "result/.verification/synthetic.png").read_bytes(), data)
+        self.assertIn("CITA_EVIDENCE_BUDGET", packed)
 
     def test_traversal_is_rejected_before_any_file_is_extracted(self):
         data = io.BytesIO()

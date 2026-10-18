@@ -27,7 +27,7 @@ with zipfile.ZipFile(source) as logs:
         if digest and complete:
             encoded = "".join(re.findall(r"CITA_EVIDENCE_CHUNK ([A-Za-z0-9+/=]+)", text))
             data = base64.b64decode(encoded, validate=True)
-            if len(data) > 8 * 1024 ** 2 or hashlib.sha256(data).hexdigest() != digest[1]:
+            if len(data) > 16 * 1024 ** 2 or hashlib.sha256(data).hexdigest() != digest[1]:
                 raise RuntimeError("Workflow evidence checksum mismatch.")
             candidates.append((digest[1], data))
     unique = {digest: data for digest, data in candidates}

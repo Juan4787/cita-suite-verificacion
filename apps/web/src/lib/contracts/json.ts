@@ -1,7 +1,9 @@
 /** Runtime checks for JSON boundaries. Errors name a contract, never its data. */
 export class InvalidDataContractError extends Error {
-	constructor(readonly contract: string) {
+	readonly contract: string;
+	constructor(contract: string) {
 		super('No pudimos validar la respuesta del servicio. Volvé a intentar en unos momentos.');
+		this.contract = contract;
 		this.name = 'InvalidDataContractError';
 	}
 }

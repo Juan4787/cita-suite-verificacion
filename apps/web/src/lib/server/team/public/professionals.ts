@@ -46,3 +46,33 @@ export const findProfessionalByEmail = async (
 
 export const humanProfessionalEmailConflict = (conflict: ProfessionalEmailConflict) =>
 	`Ese correo ya está cargado en ${conflict.name}. Seleccionalo como profesional existente o usá otro email.`;
+
+export const getProfessionalForUser = async ({
+	admin,
+	businessId,
+	userId
+}: {
+	admin: CitaSupabaseClient;
+	businessId: string;
+	userId: string;
+}) => {
+	const { data, error } = await admin
+		.from('professional_users')
+		.select('professional_id, professionals(name)')
+		.eq('business_id', businessId)
+		.eq('user_id', userId)
+		.order('created_at', { ascending: true })
+		.limit(1)
+		.maybeSingle();
+
+	if (error) throw error;
+	const professional = data?.professionals;
+	const professionalId = data?.professional_id ? String(data.professional_id) : null;
+	if (!professionalId) return null;
+
+	return {
+		id: professionalId,
+		name: String(professional?.name ?? '').trim() || 'Profesional'
+	};
+};
+

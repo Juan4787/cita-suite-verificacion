@@ -1,6 +1,6 @@
+import { getProfessionalForUser as getCurrentProfessional } from '$lib/server/team/public/professionals';
+import { readPatientDetail, PatientDetailReadError } from '$lib/server/patients/public/patient-detail';
 import { isRecord } from '$lib/contracts/json';
-import { loadClinicalUploadAvailability, type ClinicalUploadAvailability } from '$lib/server/patients/public/clinical-files';
-import { readClinicalEntryAmount } from '$lib/server/patients/public/clinical-entry-costs';
 import { bookingInformationEnabled } from '$lib/server/patients/public/booking-information';
 import { env } from '$env/dynamic/private';
 import { resolveActiveBusiness } from '$lib/server/access/public/business';
@@ -22,20 +22,14 @@ import { parseMoneyInteger } from '$lib/utils/money-input';
 import { fail, redirect, error as kitError } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import type { ClinicalEntry } from '$lib/types';
-import {
-	businessTodayISO,
-	roleParticipatesInFollowUps,
-	roleSeesAllFollowUps
-} from '$lib/server/patients/public/follow-ups';
+import { businessTodayISO } from '$lib/server/patients/public/follow-ups';
 import { resolvePatientPermissions } from '$lib/server/patients/public/patient-permissions';
-import { ACTIVE_APPOINTMENT_STATUSES } from '$lib/utils/appointment-visibility';
 
 const getLatestEntryDate = (patientId: string, entries: { patient_id: string; created_at: string }[]) =>
 	entries
 		.filter((e) => e.patient_id === patientId)
 		.reduce<string | null>((latest, entry) => (entry.created_at > (latest ?? '') ? entry.created_at : latest), null);
 
-const ENTRIES_PAGE_SIZE = 30;
 const COMMERCIAL_RESTRICTED_MESSAGE =
 	'Tu acceso a Cita Suite venció. Activá tu suscripción para volver a usar la plataforma.';
 const PROFESSIONAL_DELETE_PATIENT_MESSAGE =
@@ -117,35 +111,6 @@ const resolveBusinessActionContext = async ({
 };
 
 type BusinessActionSession = NonNullable<Awaited<ReturnType<typeof resolveBusinessActionContext>>>;
-
-const getCurrentProfessional = async ({
-	admin,
-	businessId,
-	userId
-}: {
-	admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>;
-	businessId: string;
-	userId: string;
-}) => {
-	const { data, error } = await admin
-		.from('professional_users')
-		.select('professional_id, professionals(name)')
-		.eq('business_id', businessId)
-		.eq('user_id', userId)
-		.order('created_at', { ascending: true })
-		.limit(1)
-		.maybeSingle();
-
-	if (error) throw error;
-	const professional = data?.professionals;
-	const professionalId = data?.professional_id ? String(data.professional_id) : null;
-	if (!professionalId) return null;
-
-	return {
-		id: professionalId,
-		name: cleanText(professional?.name) ?? 'Profesional'
-	};
-};
 
 const ensureProfessionalCanAccessPatient = async ({
 	admin,
@@ -456,144 +421,17 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, dep
 		membershipCache: 'fresh'
 	});
 	if (!context) throw kitError(500, 'No se pudo resolver el negocio activo');
-	const permissions = resolvePatientPermissions(context);
-	const nowIso = new Date().toISOString();
 	const admin = await createSupabaseAdminClient('odonto', fetch);
-	const documentUploads: Promise<ClinicalUploadAvailability> = permissions.canUploadRadiographs
-		? loadClinicalUploadAvailability(admin, context.business.id) : Promise.resolve('not_permitted');
-	const currentProfessional =
-		context.role === 'professional'
-			? await getCurrentProfessional({
-					admin,
-					businessId: context.business.id,
-					userId: ownerId ?? ''
-				}).catch((err) => {
-					console.error('Error resolviendo profesional actual', err);
-					return null;
-				})
-			: null;
+ try {
+  return await readPatientDetail({ patientId: params.id, supabase, admin, context, currentUserId: ownerId });
+ } catch (cause) {
+  if (cause instanceof PatientDetailReadError) {
+   if (cause.kind === 'not_found') throw kitError(404, 'Paciente no encontrado');
+   throw kitError(500, 'No se pudo cargar el paciente');
+  }
+  throw cause;
+ }
 
-	const [
-		{ data: patient, error: patientError },
-		{ data: clinicalProfile, error: clinicalProfileError },
-		{ data: entries, error: entriesError },
-		{ data: appointments, error: appointmentsError },
-		{ data: professionalLink, error: professionalLinkError }
-	] = await Promise.all([
-		supabase
-			.from('patients')
-			.select(
-				'id, full_name, dni, phone, email, birth_date, address, insurance, insurance_plan, archived_at, created_at, updated_at'
-			)
-			.eq('id', params.id)
-			.eq('business_id', context.business.id)
-			.maybeSingle(),
-		permissions.canReadClinicalProfile
-			? supabase
-					.from('patient_clinical_profiles')
-					.select('allergies, medication, background, custom_fields, updated_at, updated_by')
-					.eq('patient_id', params.id)
-					.eq('business_id', context.business.id)
-					.maybeSingle()
-			: Promise.resolve({ data: null, error: null }),
-		permissions.canReadClinicalHistory
-			? supabase
-					.from('clinical_entries')
-					.select(
-						'id, created_at, entry_type, description, teeth, internal_note, created_by_user_id, locked_after, clinical_entry_costs(amount)'
-					)
-					.eq('patient_id', params.id)
-					.eq('business_id', context.business.id)
-					.is('archived_at', null)
-					.order('created_at', { ascending: false })
-					.order('id', { ascending: false })
-					.limit(ENTRIES_PAGE_SIZE + 1)
-			: Promise.resolve({ data: [], error: null }),
-		supabase
-			.from('appointments')
-			.select('id, starts_at, ends_at, status, source, service_name_snapshot, professional_name_snapshot')
-			.eq('patient_id', params.id)
-			.eq('business_id', context.business.id)
-			.in('status', [...ACTIVE_APPOINTMENT_STATUSES])
-			.gte('starts_at', nowIso)
-			.order('starts_at', { ascending: true })
-			.limit(12),
-		context.role === 'professional' && currentProfessional
-			? admin
-					.from('professional_patient_links')
-					.select('id, archived_at')
-					.eq('business_id', context.business.id)
-					.eq('patient_id', params.id)
-					.eq('professional_id', currentProfessional.id)
-					.eq('is_active', true)
-					.limit(1)
-					.maybeSingle()
-			: Promise.resolve({ data: null, error: null })
-	]);
-
-	if (patientError) {
-		console.error('Error cargando paciente', patientError);
-		throw kitError(500, 'No se pudo cargar el paciente');
-	}
-	if (!patient) {
-		throw kitError(404, 'Paciente no encontrado');
-	}
-
-	if (clinicalProfileError) {
-		console.error('Error cargando perfil clinico', clinicalProfileError);
-	}
-	if (entriesError) {
-		console.error('Error cargando entradas', entriesError);
-	}
-	if (appointmentsError) {
-		console.error('Error cargando turnos del paciente', appointmentsError);
-	}
-	if (professionalLinkError) {
-		console.error('Error cargando archivo personal del profesional', professionalLinkError);
-	}
-
-	const safeEntries = entries ?? [];
-	const entriesWithCosts = safeEntries.map((entry) => ({
-		...entry,
-		amount: permissions.canViewCosts
-			? readClinicalEntryAmount(entry.clinical_entry_costs)
-			: null,
-		clinical_entry_costs: undefined
-	}));
-	const hasMoreEntries = entriesWithCosts.length > ENTRIES_PAGE_SIZE;
-	const bookingProfile = parsePatientBookingProfile(clinicalProfile?.custom_fields);
-
-	return {
-		patient: {
-			...patient,
-			allergies: clinicalProfile?.allergies ?? null,
-			medication: clinicalProfile?.medication ?? null,
-			background: clinicalProfile?.background ?? null,
-			custom_fields: clinicalProfile?.custom_fields ?? null,
-			booking_extra_fields: bookingProfile.fields,
-			clinical_profile_updated_at: clinicalProfile?.updated_at ?? null,
-			clinical_profile_patient_reported: bookingInformationEnabled() && clinicalProfile?.updated_by === null && bookingProfile.reportedAtMs !== null && bookingProfile.reportedAtMs === Date.parse(clinicalProfile.updated_at),
-			professional_archived_at:
-				context.role === 'professional' ? (professionalLink?.archived_at ?? null) : null
-		},
-		businessTimeZone: context.business.timezone,businessIndustry:context.business.industry,
-		bookingInformationEnabled: bookingInformationEnabled(),
-		entries: hasMoreEntries ? entriesWithCosts.slice(0, ENTRIES_PAGE_SIZE) : entriesWithCosts,
-		appointments: appointments ?? [],
-		radiographs: [],
-		hasMoreEntries,
-		changeEvents: [],
-		changeEventsDeferred: true,
-		role: context.role,
-		currentUserId: ownerId,
-		permissions,
-		documentUploads: await documentUploads,
-		followUpParticipates: roleParticipatesInFollowUps(context.role),
-		followUpCanAssign: roleSeesAllFollowUps(context.role),
-		followUpTodayISO: businessTodayISO(context.business.timezone),
-		clinicalTodayISO: businessTodayISO(context.business.timezone),
-		demo: false
-	};
 };
 
 export const actions: Actions = {
@@ -1328,4 +1166,3 @@ export const actions: Actions = {
 		});
 	}
 };
-import { parsePatientBookingProfile } from '$lib/patients/booking-profile';

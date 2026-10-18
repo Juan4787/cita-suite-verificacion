@@ -2,6 +2,7 @@
 import base64
 import hashlib
 import io
+import json
 from pathlib import Path
 import re
 import tarfile
@@ -10,6 +11,7 @@ root = Path(__file__).resolve().parents[1]
 archive = io.BytesIO()
 total = 0
 count = 0
+entries = []
 with tarfile.open(fileobj=archive, mode="w:gz") as bundle:
     for directory in [root / ".verification", root / "apps/web/test-results"]:
         if not directory.exists():
@@ -24,6 +26,7 @@ with tarfile.open(fileobj=archive, mode="w:gz") as bundle:
                 text = re.sub(r"/turno/[a-f0-9]{32,128}", "/turno/[redacted]", text)
                 text = re.sub(r"([?&]token=)[^\s\"'<>]+", r"\1[redacted]", text)
                 data = text.encode()
+            entries.append({"path": str(path.relative_to(root)), "bytes": len(data)})
             total += len(data)
             count += 1
             if total > 32 * 1024 ** 2 or count > 2000:
@@ -35,7 +38,8 @@ with tarfile.open(fileobj=archive, mode="w:gz") as bundle:
 if count == 0:
     raise RuntimeError("No verification evidence was generated.")
 data = archive.getvalue()
-if len(data) > 8 * 1024 ** 2:
+print("CITA_EVIDENCE_BUDGET " + json.dumps({"rawBytes": total, "compressedBytes": len(data), "files": count, "largest": sorted(entries, key=lambda row: row["bytes"], reverse=True)[:12]}))
+if len(data) > 16 * 1024 ** 2:
     raise RuntimeError("Compressed evidence exceeded the workflow log budget.")
 print("CITA_EVIDENCE_SHA256 " + hashlib.sha256(data).hexdigest())
 encoded = base64.b64encode(data).decode("ascii")
