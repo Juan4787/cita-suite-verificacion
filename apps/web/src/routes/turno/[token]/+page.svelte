@@ -637,7 +637,8 @@
 		requestTest: boolean,
 		phase: TestPhase = 'initial'
 	) => {
-		if (!data.vapidPublicKey || syncing) return;
+		const vapidPublicKey = data.vapidPublicKey;
+		if (!vapidPublicKey || syncing) return;
 		// Defensa en profundidad: ningún caller puede registrar, suscribir ni pedir una
 		// prueba hasta que el navegador refleje el permiso como efectivamente concedido.
 		// No alcanza con confiar en el valor devuelto por requestPermission(): algunos
@@ -675,7 +676,7 @@
 					navigator.serviceWorker.ready,
 					waitForPushWorkerActivation(registration)
 				]);
-				const expectedKey = urlBase64ToUint8Array(data.vapidPublicKey);
+				const expectedKey = urlBase64ToUint8Array(vapidPublicKey);
 				let subscription = await registration.pushManager.getSubscription();
 				if (
 					subscription &&
@@ -698,7 +699,7 @@
 					await subscription.unsubscribe();
 					subscription = await registration.pushManager.subscribe({
 						userVisibleOnly: true,
-						applicationServerKey: urlBase64ToUint8Array(data.vapidPublicKey)
+						applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
 					});
 					result = await savePushSubscriptionForAppointment(
 						subscription,

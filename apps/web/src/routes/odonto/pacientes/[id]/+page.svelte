@@ -31,6 +31,11 @@
 			clinicalTodayISO: string;
 			businessTimeZone?: string;
 			bookingInformationEnabled?: boolean;
+			businessIndustry?: import('$lib/access/contracts').BusinessIndustry;
+			documentUploads: 'available' | 'paused' | 'unavailable' | 'not_permitted';
+			followUpParticipates: boolean;
+			followUpCanAssign: boolean;
+			followUpTodayISO: string;
 			hasMoreEntries?: boolean;
 			permissions: {
 				canReadClinicalHistory: boolean;
