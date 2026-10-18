@@ -130,10 +130,10 @@
 		demo: boolean;
 	};
 
-	let { data, form } = $props<{
+	let { data, form }: {
 		data: PageData;
 		form?: { success?: boolean; message?: string;exceptionConflict?:boolean };
-	}>();
+	} = $props();
 
 	const cloneDraft = (value: ProfessionalDraft): ProfessionalDraft => JSON.parse(JSON.stringify(value));
     const restrictionLabel=(ids:string[])=>ids.length?ids.map(id=>{const service=data.services.find((s:Service)=>s.id===id);return service?service.name+(service.is_active?'':' (no disponible)'):'Prestación no disponible';}).join(', '):'Franja cerrada';

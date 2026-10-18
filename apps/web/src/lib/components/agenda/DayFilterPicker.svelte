@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Selector de día para los filtros de agenda. Emite por un input hidden
 	// "YYYY-MM-DD" o "any" (cualquier día) dentro del form GET que lo contiene.
-	let { value, name = 'date' } = $props<{ value: string; name?: string }>();
+	let { value, name = 'date' }: { value: string; name?: string } = $props();
 
 	const pad = (n: number) => String(n).padStart(2, '0');
 	const dateKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;

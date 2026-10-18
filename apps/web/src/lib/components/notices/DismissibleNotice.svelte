@@ -11,14 +11,14 @@
 		message = '',
 		tone = 'neutral',
 		children
-	} = $props<{
+	}: {
 		storageKey: string;
 		eyebrow?: string;
 		title: string;
 		message?: string;
 		tone?: NoticeTone;
 		children?: Snippet;
-	}>();
+	} = $props();
 
 	let dismissed = $state(false);
 	let mounted = $state(false);

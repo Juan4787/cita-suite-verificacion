@@ -31,7 +31,7 @@
 		phone?: string;
 	};
 
-	let { data } = $props<{ data: PatientListData; form: FormResult }>();
+	let { data }: { data: PatientListData; form: FormResult } = $props();
 	const formState = $derived(($page.form as FormResult | null) ?? null);
 	const initialData = untrack(() => data);
 	let listData = $state<PatientListData>(initialData);

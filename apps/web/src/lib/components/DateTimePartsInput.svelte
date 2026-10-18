@@ -11,13 +11,13 @@
 		minYear = 2000,
 		maxYear = 2045,
 		showErrors = false
-	} = $props<{
+	}: {
 		name?: string;
 		initialValue?: string | null;
 		minYear?: number;
 		maxYear?: number;
 		showErrors?: boolean;
-	}>();
+	} = $props();
 
 	const now = new Date();
 

@@ -50,7 +50,7 @@
 		appointmentRequestId,
 		canOperate,
 		form
-	} = $props<{
+	}: {
 		services: Service[];
 		professionals: Professional[];
 		serviceProfessionalIds: Record<string, string[]>;
@@ -69,7 +69,7 @@
 			phoneWarning?: { kind: PhoneWarningKind };
 			values?: Record<string, unknown>;
 		};
-	}>();
+	} = $props();
 
 	const value = (key: string) => String(form?.values?.[key] ?? '');
 	const today = () => new Date().toISOString().slice(0, 10);

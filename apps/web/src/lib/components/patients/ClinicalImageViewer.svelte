@@ -25,7 +25,7 @@
 		error = '',
 		onclose,
 		onretry
-	} = $props<{
+	}: {
 		open?: boolean;
 		title?: string;
 		metadata?: string;
@@ -35,7 +35,7 @@
 		error?: string;
 		onclose: () => void;
 		onretry?: () => void;
-	}>();
+	} = $props();
 
 	let dialogElement = $state<HTMLElement | null>(null);
 	let stageElement = $state<HTMLElement | null>(null);

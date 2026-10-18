@@ -1,9 +1,9 @@
 <script lang="ts">
  import type { BookingProfessional as Professional, BookingSelection, BookingQuery } from '$lib/scheduling/booking-view';
- let { professionals, selection, queryFor, teamDraftIds = $bindable([]), activeStepCard = $bindable(null) } = $props<{
+ let { professionals, selection, queryFor, teamDraftIds = $bindable([]), activeStepCard = $bindable(null) }: {
   professionals: Professional[]; selection: BookingSelection; queryFor: (params: BookingQuery) => string;
   teamDraftIds: string[]; activeStepCard: HTMLElement | null;
- }>();
+ } = $props();
 	const initialsFor = (name: string) =>
 		name
 			.split(/\s+/)

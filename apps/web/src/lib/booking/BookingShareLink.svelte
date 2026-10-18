@@ -1,5 +1,5 @@
 <script lang="ts">
-  let { url } = $props<{ url: string }>();
+  let { url }: { url: string } = $props();
   let message = $state("");
   async function copy() {
     try {

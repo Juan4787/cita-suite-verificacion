@@ -1,11 +1,13 @@
 <script lang="ts">
+	import type { PageProps } from './$types';
+
   import { guardUnsavedChanges } from "$lib/ui/confirm-action";
   import { styledSelect } from "$lib/ui/styled-controls";
   import { enhance } from "$app/forms";
   import { untrack } from "svelte";
   import BackLink from "$lib/components/BackLink.svelte";
   import BookingShareLink from "$lib/booking/BookingShareLink.svelte";
-  let { data, form } = $props();
+  let { data, form }: PageProps = $props();
   let saving = $state("");
   let dirty = $state(false);
   let version = $state(untrack(() => data.business.updated_at ?? ""));

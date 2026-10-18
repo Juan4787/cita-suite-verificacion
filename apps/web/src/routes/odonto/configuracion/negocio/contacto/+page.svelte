@@ -1,9 +1,11 @@
 <script lang="ts">
+	import type { PageProps } from './$types';
+
   import { guardUnsavedChanges } from "$lib/ui/confirm-action";
   import { enhance } from "$app/forms";
   import BackLink from "$lib/components/BackLink.svelte";
   import { untrack } from "svelte";
-  let { data, form } = $props();
+  let { data, form }: PageProps = $props();
   let saving = $state(false);
   let dirty = $state(false);
   let version = $state(untrack(() => data.settings.updated_at));

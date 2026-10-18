@@ -18,7 +18,7 @@
 	import { formatMoneyInteger, moneyDigits } from '$lib/utils/money-input';
 	import type { SubmitFunction } from '@sveltejs/kit';
 
-	let { data, form } = $props<{
+	let { data, form }: {
 		data: {
 			patient: any;
 			entries: any[];
@@ -58,7 +58,7 @@
 			currentPatientUpdatedAt?: string;
 			currentClinicalProfileUpdatedAt?: string;
 		};
-	}>();
+	} = $props();
 
 	let showEntryModal = $state(false);
 	let showEditModal = $state(false);

@@ -1,7 +1,9 @@
 <script lang="ts">
+	import type { PageProps } from './$types';
+
 	import BackLink from '$lib/components/BackLink.svelte';
 
-	let { form } = $props();
+	let { form }: PageProps = $props();
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-[#0b1626] via-[#0f1f36] to-[#0a1222] flex items-center justify-center px-4 py-10">

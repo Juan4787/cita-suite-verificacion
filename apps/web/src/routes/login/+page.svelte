@@ -1,5 +1,7 @@
 <script lang="ts">
-	let { data, form } = $props();
+	import type { PageProps } from './$types';
+
+	let { data, form }: PageProps = $props();
 	type AuthMode = 'login' | 'register';
 	let showPassword = $state(false);
 	let showConfirmPassword = $state(false);

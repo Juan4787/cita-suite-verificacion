@@ -15,7 +15,7 @@
 		| 'professionals'
 		| 'services';
 
-	let { kind = 'patients' } = $props<{ kind?: SkeletonKind }>();
+	let { kind = 'patients' }: { kind?: SkeletonKind } = $props();
 
 	const rows2 = Array.from({ length: 2 }, (_, i) => i);
 	const rows3 = Array.from({ length: 3 }, (_, i) => i);

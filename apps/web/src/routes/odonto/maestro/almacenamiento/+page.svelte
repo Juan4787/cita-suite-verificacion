@@ -1,10 +1,12 @@
 <script lang="ts">
+	import type { PageProps } from './$types';
+
 	import { enhance } from '$app/forms';
 	import BackLink from '$lib/components/BackLink.svelte';
 	import { storageMegabytesInput } from '$lib/clinical-storage-units';
 	import { guardUnsavedChanges } from '$lib/ui/confirm-action';
 	import type { SubmitFunction } from '@sveltejs/kit';
-	let { data, form } = $props();
+	let { data, form }: PageProps = $props();
 	let pending = $state<string | null>(null);
 	type Draft = { megabytes: string; enabled: boolean; revision: number; originalAmount: string; originalEnabled: boolean };
 	let drafts = $state<Record<string, Draft>>({});

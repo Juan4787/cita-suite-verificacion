@@ -16,7 +16,7 @@
 		patients?: { id: string; full_name: string; phone_e164: string | null } | null;
 	};
 
-	let { data } = $props<{
+	let { data }: {
 		data: {
 			professionalLinks: ProfessionalLink[];
 			selectedProfessionalId: string;
@@ -24,7 +24,7 @@
 			upcomingAppointments: Appointment[];
 			demo: boolean;
 		};
-	}>();
+	} = $props();
 
 	const statusLabels: Record<string, string> = {
 		reserved: 'Reservado',

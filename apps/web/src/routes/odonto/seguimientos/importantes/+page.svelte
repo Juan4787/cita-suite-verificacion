@@ -16,9 +16,9 @@
 		updated_at: string;
 	};
 
-	let { data } = $props<{
+	let { data }: {
 		data: { executing: Item[]; canAssign: boolean; todayISO: string; demo: boolean };
-	}>();
+	} = $props();
 
 	let editingItem = $state<Item | null>(null);
 

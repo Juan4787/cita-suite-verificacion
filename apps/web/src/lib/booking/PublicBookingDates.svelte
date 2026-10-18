@@ -1,9 +1,9 @@
 <script lang="ts">
  import type { BookingDay, BookingDateWindow, BookingSelection, BookingQuery } from '$lib/scheduling/booking-view';
- let { days, dateWindow, selection, compact, queryFor, visibleDayCount = $bindable(6), activeStepCard = $bindable(null) } = $props<{
+ let { days, dateWindow, selection, compact, queryFor, visibleDayCount = $bindable(6), activeStepCard = $bindable(null) }: {
   days: BookingDay[]; dateWindow?: BookingDateWindow; selection: BookingSelection; compact: boolean;
   queryFor: (params: BookingQuery) => string; visibleDayCount: number; activeStepCard: HTMLElement | null;
- }>();
+ } = $props();
  const visibleDays = $derived(days.slice(0, visibleDayCount));
 	const dateWindowLabel = $derived.by(() => {
 		if (!dateWindow) return '';

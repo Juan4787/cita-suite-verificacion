@@ -3,11 +3,11 @@
 		href,
 		label,
 		class: className = ''
-	} = $props<{
+	}: {
 		href: string;
 		label: string;
 		class?: string;
-	}>();
+	} = $props();
 </script>
 
 <a

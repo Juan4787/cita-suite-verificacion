@@ -11,11 +11,11 @@
 		scope,
 		patientId = null,
 		patientName = ''
-	} = $props<{
+	}: {
 		scope: PatientExportScope;
 		patientId?: string | null;
 		patientName?: string;
-	}>();
+	} = $props();
 
 	type PanelState = 'idle' | 'running' | 'success' | 'cancelled' | 'error';
 

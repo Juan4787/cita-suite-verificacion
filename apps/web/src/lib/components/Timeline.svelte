@@ -7,7 +7,7 @@
 		badge?: string;
 	};
 
-	let { items = [] as Item[] } = $props();
+	let { items = [] as Item[] }: { items?: Item[] } = $props();
 </script>
 
 <ul class="space-y-4">

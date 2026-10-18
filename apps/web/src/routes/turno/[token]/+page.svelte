@@ -14,7 +14,7 @@
 		type NotificationGuide
 	} from '$lib/device';
 
-	let { data, form } = $props<{
+	let { data, form }: {
 		data: {
 			appointment: any;
 			message: string;
@@ -44,7 +44,7 @@
 			bookingInformationEnabled?: boolean;
 		};
 		form?: { success?: boolean; message?: string };
-	}>();
+	} = $props();
 
 	const appointment = $derived(data.appointment);
 	const isVirtual = $derived(appointment?.booking_context?.modality === 'video');

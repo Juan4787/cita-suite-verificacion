@@ -1,7 +1,9 @@
 <script lang="ts">
+	import type { PageProps } from './$types';
+
 	import BackLink from '$lib/components/BackLink.svelte';
 
-	let { data, form } = $props();
+	let { data, form }: PageProps = $props();
 
 	const assistance = $derived(data.assistance);
 	const context = $derived(data.context);

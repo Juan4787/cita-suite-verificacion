@@ -41,7 +41,7 @@
 		price_label: string;
 	};
 
-	let { data, form } = $props<{
+	let { data, form }: {
 		data: {
 			context: BusinessContext;
 			members: RoleAccess[];
@@ -52,7 +52,7 @@
 			demo: boolean;
 		};
 		form?: { success?: boolean; message?: string; openRole?: BusinessRole; values?: Record<string, FormDataEntryValue> };
-	}>();
+	} = $props();
 
 	const roleLabels: Record<BusinessRole, string> = {
 		owner: 'Dueño',

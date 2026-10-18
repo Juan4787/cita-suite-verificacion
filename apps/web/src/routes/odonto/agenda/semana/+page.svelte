@@ -9,14 +9,14 @@
 	};
 	type Professional = { id: string; name: string; is_active: boolean };
 
-	let { data } = $props<{
+	let { data }: {
 		data: {
 			selectedDate: string;
 			selectedProfessionalId: string;
 			days: DaySummary[];
 			professionals: Professional[];
 		};
-	}>();
+	} = $props();
 
 	const statusLabels: Record<string, string> = {
 		reserved: 'Reservados',

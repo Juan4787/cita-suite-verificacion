@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { formatDateTime } from '$lib/utils/format';
 
-	let { data } = $props<{
+	let { data }: {
 		data: {
 			appointment: any;
 			active: boolean;
 			demo: boolean;
 		};
-	}>();
+	} = $props();
 
 	const appointment = $derived(data.appointment);
 	const timezone = $derived(appointment?.business?.timezone ?? 'America/Argentina/Cordoba');

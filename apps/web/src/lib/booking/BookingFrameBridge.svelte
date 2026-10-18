@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { BOOKING_EMBED_PROTOCOL, BOOKING_EMBED_VERSION, isBookingHostMessage, type BookingHostMessage } from '@turnos-saas/shared/booking-integration';
-    let { context, requestId, completed = false } = $props<{ context: { parentOrigin: string; instanceId: string }; requestId?: string; completed?: boolean }>();
+    let { context, requestId, completed = false }: { context: { parentOrigin: string; instanceId: string }; requestId?: string; completed?: boolean } = $props();
     onMount(() => {
         if (window.parent === window) return;
 		document.documentElement.dataset.bookingEmbedded = 'true';

@@ -1,7 +1,9 @@
 <script lang="ts">
+	import type { PageProps } from './$types';
+
   import ProfessionalBookingFormEditor from "$lib/booking/ProfessionalBookingFormEditor.svelte";
   import BackLink from "$lib/components/BackLink.svelte";
-  let { data, form } = $props();
+  let { data, form }: PageProps = $props();
 </script>
 
 <svelte:head

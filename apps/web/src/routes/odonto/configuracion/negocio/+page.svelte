@@ -3,7 +3,7 @@
 	import BackLink from '$lib/components/BackLink.svelte';
 	import type { BusinessContext, BusinessIndustry } from '$lib/access/contracts';
 
-	let { data, form } = $props<{
+	let { data, form }: {
 		data: {
 			context: BusinessContext;
 			industries: readonly BusinessIndustry[];
@@ -17,7 +17,7 @@
 			demo: boolean;
 		};
 		form?: { success?: boolean; message?: string; values?: Record<string, unknown> };
-	}>();
+	} = $props();
 
 	const business = $derived(data.context.business);
 	const canManage = $derived(Boolean(data.context.canManage) && !data.demo);

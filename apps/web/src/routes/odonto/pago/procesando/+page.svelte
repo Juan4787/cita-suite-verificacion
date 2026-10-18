@@ -1,5 +1,7 @@
 <script lang="ts">
-	let { data } = $props();
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
 
 	const money = (value?: number | string | null) => {
 		if (value === null || value === undefined || value === '') return 'ARS 0';

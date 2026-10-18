@@ -1,9 +1,11 @@
 <script lang="ts">
+	import type { PageProps } from './$types';
+
 	import Modal from '$lib/components/Modal.svelte';
 	import { formatAccessRemaining, formatDateTime } from '$lib/utils/format';
 	import { formatMoneyInteger } from '$lib/utils/money-input';
 
-	let { data, form } = $props();
+	let { data, form }: PageProps = $props();
 
 	type BusinessCard = {
 		id: string;

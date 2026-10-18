@@ -1,9 +1,9 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import BackLink from "$lib/components/BackLink.svelte";
-  let { data } = $props<{
+  let { data }: {
     data: { demo: boolean; isMaster?: boolean; canExportPatientData?: boolean };
-  }>();
+  } = $props();
   const returnTarget = $derived.by(() => {
     const raw = $page.url.searchParams.get("return") ?? "";
     try {

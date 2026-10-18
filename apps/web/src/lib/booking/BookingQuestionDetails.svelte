@@ -1,10 +1,10 @@
 <script lang="ts">
   import { styledSelect } from "$lib/ui/styled-controls";
   import type { BookingIntakeField } from "@turnos-saas/shared/booking-integration";
-  let { field, onchange } = $props<{
+  let { field, onchange }: {
     field: BookingIntakeField;
     onchange: (changes: Partial<BookingIntakeField>) => void;
-  }>();
+  } = $props();
   function changeKind(kind: BookingIntakeField["kind"]) {
     onchange({
       kind,

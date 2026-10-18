@@ -49,7 +49,7 @@
 	};
 	type Stat = { status: string; count: number };
 
-	let { data, form } = $props<{
+	let { data, form }: {
 		data: {
 			context: { canOperate: boolean; business?: { id?: string } };
 			date: string;
@@ -79,7 +79,7 @@
 				phoneWarning?: { kind: 'missing' | 'invalid' };
 				values?: Record<string, unknown>;
 			};
-	}>();
+	} = $props();
 
 	const canOperate = $derived(data.context.canOperate && !data.demo);
 	let showCreate = $state(false);

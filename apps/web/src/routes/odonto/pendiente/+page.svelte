@@ -1,5 +1,7 @@
 <script lang="ts">
-	let { data } = $props();
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
 
 	const copy = $derived.by(() => {
 		if (data.reason === 'temporarily_unavailable') {

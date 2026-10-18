@@ -1,5 +1,7 @@
 <script lang="ts">
-  let { data } = $props();
+	import type { PageProps } from './$types';
+
+  let { data }: PageProps = $props();
 </script>
 
 <svelte:head><title>Mis preguntas · Cita Suite</title></svelte:head>

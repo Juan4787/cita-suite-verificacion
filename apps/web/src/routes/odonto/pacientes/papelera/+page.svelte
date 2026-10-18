@@ -20,7 +20,7 @@
 		thumbnail_url?: string | null;
 	};
 
-	let { data } = $props<{ data: { demo: boolean; canRestore: boolean } }>();
+	let { data }: { data: { demo: boolean; canRestore: boolean } } = $props();
 	let items = $state<TrashItem[]>([]);
 	let query = $state('');
 	let loading = $state(false);

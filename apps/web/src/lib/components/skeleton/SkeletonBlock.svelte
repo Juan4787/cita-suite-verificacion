@@ -1,11 +1,11 @@
 <script lang="ts">
 	type Rounded = 'sm' | 'md' | 'lg' | 'full';
 
-	let { class: className = '', rounded = 'md', animated = true } = $props<{
+	let { class: className = '', rounded = 'md', animated = true }: {
 		class?: string;
 		rounded?: Rounded;
 		animated?: boolean;
-	}>();
+	} = $props();
 
 	const roundedClass = $derived.by(() => {
 		switch (rounded) {

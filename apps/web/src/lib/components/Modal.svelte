@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
+
   import { createEventDispatcher } from "svelte";
 
   // dismissible: cierra al click afuera / Escape. closable: muestra la X (cierre explícito) sin click-afuera.
@@ -8,7 +10,7 @@
     children,
     dismissible = false,
     closable = false,
-  } = $props();
+  }: { open?: boolean; title?: string; children?: Snippet; dismissible?: boolean; closable?: boolean } = $props();
 
   const dispatch = createEventDispatcher<{ close: void }>();
   const close = () => dispatch("close");

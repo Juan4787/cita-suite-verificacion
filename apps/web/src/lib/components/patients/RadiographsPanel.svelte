@@ -43,7 +43,7 @@
 		canTrash = false,
 		todayISO,
 		demo = false
-	} = $props<{
+	}: {
 		patientId: string;
 		cacheScope: string;
 		initialItems?: RadiographItem[];
@@ -54,7 +54,7 @@
 		canTrash?: boolean;
 		todayISO: string;
 		demo?: boolean;
-	}>();
+	} = $props();
 
 	let items = $state<RadiographItem[]>([]);
 	let loaded = $state(false);

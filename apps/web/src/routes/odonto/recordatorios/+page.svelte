@@ -3,7 +3,7 @@
 	import { classifyUserAgent, refineDeviceClass, type DeviceClass } from '$lib/device';
 	import { onMount } from 'svelte';
 
-	let { data, form } = $props<{
+	let { data, form }: {
 		data: {
 			demo: boolean;
 			day: ReminderDay;
@@ -12,7 +12,7 @@
 			remindersUnavailable: boolean;
 		};
 		form?: { success?: boolean; message?: string };
-	}>();
+	} = $props();
 
 	const pendingUpdate = $derived(
 		data.candidates.filter((candidate: ReminderCandidate) => candidate.coverage === 'pendiente_actualizar')

@@ -1,7 +1,9 @@
 <script lang="ts">
+	import type { PageProps } from './$types';
+
   import BackLink from "$lib/components/BackLink.svelte";
   import PricePolicyEditor from "$lib/booking/PricePolicyEditor.svelte";
-  let { data, form } = $props();
+  let { data, form }: PageProps = $props();
 </script>
 
 <svelte:head><title>Aranceles · Cita Suite</title></svelte:head>

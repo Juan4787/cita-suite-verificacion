@@ -8,10 +8,10 @@
  import { formatQuotedPrice } from './pricing';
  import PublicBookingIntakeField from './PublicBookingIntakeField.svelte';
 
- let { data, form, confirmation, requiresRecovery, onUncertain, localDraft = $bindable({}), activeStepCard = $bindable(null) } = $props<{
+ let { data, form, confirmation, requiresRecovery, onUncertain, localDraft = $bindable({}), activeStepCard = $bindable(null) }: {
   data: BookingViewData; form?: BookingFormState | null; confirmation: BookingConfirmation;
   requiresRecovery: boolean; onUncertain: () => void; localDraft: Record<string, unknown>; activeStepCard: HTMLElement | null;
- }>();
+ } = $props();
  const { service: selectedService, slot: selectedSlot, selection, professionalLabel: professionalSelectionLabel,
   priceQuote: currentPriceQuote, timezone, modality } = $derived(confirmation);
  const selectedProfessional = $derived({ id: confirmation.professionalId });

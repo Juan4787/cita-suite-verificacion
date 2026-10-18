@@ -17,14 +17,14 @@
 		actionLabel: string;
 	};
 
-	let { data, form } = $props<{
+	let { data, form }: {
 		data: {
 			demo: boolean;
 			context: { canManage: boolean; business: { name: string } };
 			settings: SettingsValues;
 		};
 		form?: { success?: boolean; message?: string; values?: SettingsValues };
-	}>();
+	} = $props();
 
 	// svelte-ignore state_referenced_locally
 	const initial = form?.values ?? data.settings;

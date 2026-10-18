@@ -4,7 +4,7 @@
 	let {
 		value = $bindable<string>(''),
 		todayISO
-	} = $props<{ value?: string; todayISO: string }>();
+	}: { value?: string; todayISO: string } = $props();
 
 	const WEEKDAYS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
 

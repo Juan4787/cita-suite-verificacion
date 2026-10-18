@@ -18,7 +18,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@turnos-saas/shar
 		created_at: string;
 	};
 
-	let { data, form } = $props<{
+	let { data, form }: {
 		data: {
 			context: { canOperate: boolean; role: string };canEditInstructions?:boolean;
 			appointment: any;
@@ -43,7 +43,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@turnos-saas/shar
 			demo: boolean;
 		};
 		form?: { success?: boolean; message?: string };
-	}>();
+	} = $props();
 
 	let refinedActivationDevice = $state<DeviceClass | null>(null);
 	const activationDevice = $derived(refinedActivationDevice ?? data.activationDevice);

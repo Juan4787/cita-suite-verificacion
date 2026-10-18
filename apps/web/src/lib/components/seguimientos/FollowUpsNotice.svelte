@@ -12,11 +12,11 @@
 	};
 	type Notice = { count: number; single: Item | null; dismissalKey: string };
 
-	let { notice, todayISO, storageKeyPrefix } = $props<{
+	let { notice, todayISO, storageKeyPrefix }: {
 		notice: Notice;
 		todayISO: string;
 		storageKeyPrefix: string;
-	}>();
+	} = $props();
 
 	const singleLine = $derived(
 		notice.single

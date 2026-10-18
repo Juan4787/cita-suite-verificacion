@@ -25,7 +25,7 @@
 		existing = null,
 		onCancel,
 		onCreated
-	} = $props<{
+	}: {
 		patient?: PatientLite | null;
 		canAssign: boolean;
 		todayISO: string;
@@ -33,7 +33,7 @@
 		existing?: ExistingFollowUp | null;
 		onCancel: () => void;
 		onCreated: () => void;
-	}>();
+	} = $props();
 
 	const LEGACY_DRAFT_KEY = 'seguimiento-draft';
 	const FIXED_PATIENT_DRAFT_PREFIX = 'seguimiento-draft:patient:';

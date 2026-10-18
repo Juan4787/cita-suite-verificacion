@@ -14,9 +14,9 @@
 		updated_at: string;
 	};
 
-	let { data } = $props<{
+	let { data }: {
 		data: { programmed: Item[]; canAssign: boolean; todayISO: string; demo: boolean };
-	}>();
+	} = $props();
 
 	let showComposer = $state(false);
 	let editingItem = $state<Item | null>(null);

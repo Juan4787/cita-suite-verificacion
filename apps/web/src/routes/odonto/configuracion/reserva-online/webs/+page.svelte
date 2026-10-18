@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { PageProps } from './$types';
+
   import { guardUnsavedChanges } from "$lib/ui/confirm-action";
   import { styledSelect, styledTime } from "$lib/ui/styled-controls";
   import { enhance } from "$app/forms";
@@ -11,7 +13,7 @@
     BookingIntakeField,
     BookingModalityWindow,
   } from "@turnos-saas/shared/booking-integration";
-  let { data, form } = $props();
+  let { data, form }: PageProps = $props();
   const profile = $derived(
     data.profiles.find((item) => item.id === data.selectedId),
   );

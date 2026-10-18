@@ -12,7 +12,7 @@
 		updated_at: string;
 	};
 
-	let { item, todayISO } = $props<{ item: Item; todayISO: string }>();
+	let { item, todayISO }: { item: Item; todayISO: string } = $props();
 
 	let busy = $state(false);
 	let snoozeOpen = $state(false);

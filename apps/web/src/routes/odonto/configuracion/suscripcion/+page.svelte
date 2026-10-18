@@ -1,10 +1,12 @@
 <script lang="ts">
+	import type { PageProps } from './$types';
+
 	import BackLink from '$lib/components/BackLink.svelte';
 	import type { BusinessSubscriptionRow } from '$lib/access/commercial-access';
 	import { visibleCommercialAccessNote } from '$lib/utils/commercial-access-copy';
 	import { formatAccessRemaining } from '$lib/utils/format';
 
-	let { data, form } = $props();
+	let { data, form }: PageProps = $props();
 
 	const access = $derived(data.context.access);
 	const subscription = $derived((access.subscription ?? {}) as Partial<BusinessSubscriptionRow>);

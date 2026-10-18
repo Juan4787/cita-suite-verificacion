@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { LayoutProps } from './$types';
+
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { navigating } from '$app/stores';
@@ -10,7 +12,7 @@
 	import { formatAccessRemaining, formatDateTime } from '$lib/utils/format';
 	import { allowsRestrictedClinicalRead } from '$lib/utils/restricted-clinical-read';
 
-	let { data, children } = $props();
+	let { data, children }: LayoutProps = $props();
 	let mobileMenuOpen = $state(false);
 	let showReportHelp = $state(false);
 	let configMenuOpen = $state(false);

@@ -2,12 +2,12 @@
 	import BackLink from '$lib/components/BackLink.svelte';
 	import PatientExportPanel from '$lib/components/patient-export/PatientExportPanel.svelte';
 
-	let { data } = $props<{
+	let { data }: {
 		data: {
 			scope: 'patient' | 'all_patients';
 			patient: { id: string; name: string } | null;
 		};
-	}>();
+	} = $props();
 
 	const isPatientExport = $derived(data.scope === 'patient' && data.patient !== null);
 </script>

@@ -1,6 +1,8 @@
 <script lang="ts">
+	import type { PageProps } from './$types';
+
   import { formatDateTime } from '$lib/utils/format';
-  let { data } = $props();
+  let { data }: PageProps = $props();
 </script>
 <section class="space-y-6">
   <a class="ux-btn-secondary" href={`/odonto/pacientes/${data.patient.id}`}>Volver a la ficha</a>

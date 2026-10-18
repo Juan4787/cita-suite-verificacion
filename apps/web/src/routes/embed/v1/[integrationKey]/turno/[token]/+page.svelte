@@ -1,10 +1,12 @@
 <script lang="ts">
+	import type { PageProps } from './$types';
+
  import {formatQuotedPrice} from '$lib/booking/pricing';
     import BookingAppearance from '$lib/booking/BookingAppearance.svelte';
     import BookingFrameBridge from '$lib/booking/BookingFrameBridge.svelte';
     import { formatInTimeZone } from '$lib/utils/format';
     import { BOOKING_MODALITY_LABELS } from '@turnos-saas/shared/booking-integration';
-    let { data } = $props();
+    let { data }: PageProps = $props();
     const appointment = $derived(data.appointment);
 </script>
 

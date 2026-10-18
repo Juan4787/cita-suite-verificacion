@@ -3,7 +3,7 @@
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import { formatDateTime } from '$lib/utils/format';
 
-	let { data } = $props<{
+	let { data }: {
 		data: {
 			professional: { id: string; name: string } | null;
 			appointments: Array<{
@@ -25,7 +25,7 @@
 			loadError: string | null;
 			demo: boolean;
 		};
-	}>();
+	} = $props();
 
 	const statusLabels: Record<string, string> = {
 		reserved: 'Reservado',

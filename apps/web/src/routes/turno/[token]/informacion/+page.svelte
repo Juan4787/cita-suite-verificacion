@@ -1,8 +1,10 @@
 <script lang="ts">
+	import type { PageProps } from './$types';
+
   import PatientDocumentUpload from "$lib/booking/PatientDocumentUpload.svelte";
   import BookingAppearance from "$lib/booking/BookingAppearance.svelte";
   import { enhance } from "$app/forms";
-  let { data, form } = $props();
+  let { data, form }: PageProps = $props();
   let busy = $state(false);
   const initialAnswers = () =>
     Object.fromEntries(

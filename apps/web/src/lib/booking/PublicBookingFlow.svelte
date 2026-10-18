@@ -12,7 +12,7 @@
 	import { navigating, page } from '$app/state';
 
 
-	let { data, form } = $props<{ data: BookingViewData; form?: BookingFormState | null }>();
+	let { data, form }: { data: BookingViewData; form?: BookingFormState | null } = $props();
 
 	const business = $derived(data.state.business);
 	const timezone = $derived(business?.timezone ?? 'America/Argentina/Cordoba');
