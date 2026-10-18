@@ -27,7 +27,8 @@ const steps = [
 if (level !== 'fast') steps.push(
 	['native-office-export', 'node', ['scripts/run-campaign-unit-tests.mjs', 'office']],
 	['database-auth-storage-browser', 'node', ['scripts/run-campaign-integration.mjs']],
-	['demo-browser', 'node', ['scripts/run-campaign-demo.mjs']]
+	['demo-browser', 'node', ['scripts/run-campaign-demo.mjs']],
+	['natalia-performance', 'node', ['scripts/measure-natalia-baseline.mjs']]
 );
 if (level === 'release') steps.push(
 	['cloudflare-build', 'pnpm', ['--filter', 'web', 'build:cloudflare']],
