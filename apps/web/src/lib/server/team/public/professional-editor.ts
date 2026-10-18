@@ -1,3 +1,12 @@
+import type { BusinessContext } from '$lib/access/contracts';
+import { parsePriceAdjustments } from '$lib/scheduling/price-contracts';
+import { previewMonthlyPrices, formatQuotedPrice, monthForTimezone } from '$lib/booking/pricing';
+import { isDefaultServiceName } from './default-services';
+import {
+	professionalRuleScope,
+	professionalExceptionType,
+	type ProfessionalEditorData
+} from '$lib/team/professional-editor';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { readJson } from '$lib/contracts/json';
 import { parseAvailabilityExceptionInterval } from './availability-exceptions';
@@ -60,7 +69,7 @@ export type SaveResult<T = unknown> =
 	| { ok: true; data?: T }
 	| {
 			ok: false;
-			status: 400 | 403 | 404 | 409 | 500;
+			status: 400 | 403 | 404 | 409 | 500 | 503;
 			message: string;
 			exceptionConflict?: boolean;
 	  };
@@ -435,4 +444,157 @@ export async function saveProfessionalEditor(
 					: 'Revisá el perfil, las prestaciones y los horarios. No se guardó ningún cambio.'
 		};
 	return { ok: true, data: { message: `Guardado: ${savedSections.join(', ')}.` } };
+}
+
+export async function loadProfessionalEditor(
+	supabase: CitaSupabaseClient,
+	business: BusinessContext,
+	userId: string,
+	professionalId: string,
+	tab: string
+): Promise<SaveResult<ProfessionalEditorData>> {
+	const businessId = business.business.id;
+	const { data: revisionRow, error: revisionError } = await supabase
+		.from('businesses')
+		.select('booking_availability_revision')
+		.eq('id', businessId)
+		.single();
+	if (revisionError)
+		return { ok: false, status: 503, message: 'No pudimos cargar los horarios. Volvé a intentar.' };
+
+	const { data: professional, error: professionalError } = await supabase
+		.from('professionals')
+		.select('id, name, specialty, phone, email, is_active, is_public')
+		.eq('business_id', businessId)
+		.eq('id', professionalId)
+		.maybeSingle();
+	if (professionalError)
+		return {
+			ok: false,
+			status: 503,
+			message: 'No pudimos cargar el profesional. Volvé a intentar.'
+		};
+	if (!professional) return { ok: false, status: 404, message: 'Profesional no encontrado' };
+
+	const [
+		{ data: services, error: servicesError },
+		{ data: assignments, error: assignmentsError },
+		{ data: rules, error: rulesError },
+		{ data: exceptions, error: exceptionsError },
+		pendingAccountEmail
+	] = await Promise.all([
+		supabase
+			.from('services')
+			.select(
+				'id, name, description, duration_minutes, buffer_before_minutes, buffer_after_minutes, price_label, is_active, is_public, sort_order, updated_at, patient_instructions, public_reminder_description'
+			)
+			.eq('business_id', businessId)
+			.order('sort_order')
+			.order('name'),
+		supabase
+			.from('professional_services')
+			.select('service_id')
+			.eq('business_id', businessId)
+			.eq('professional_id', professionalId),
+		supabase
+			.from('availability_rules')
+			.select(
+				'id, weekday, start_time, end_time, slot_interval_minutes, break_minutes, is_active, created_at, service_scope, rule_services:availability_rule_services(service_id)'
+			)
+			.eq('business_id', businessId)
+			.eq('professional_id', professionalId)
+			.order('weekday')
+			.order('start_time'),
+		supabase
+			.from('availability_exceptions')
+			.select(
+				'id, professional_id, starts_at, ends_at, type, reason, exception_services:availability_exception_services(service_id)'
+			)
+			.eq('business_id', businessId)
+			.or(`professional_id.eq.${professionalId},professional_id.is.null`)
+			.order('starts_at', { ascending: false })
+			.limit(80),
+		getPendingProfessionalAccountEmail(supabase, businessId, professionalId)
+	]);
+	if (servicesError || assignmentsError || rulesError || exceptionsError)
+		return {
+			ok: false,
+			status: 503,
+			message: 'No pudimos cargar toda la configuración. Volvé a intentar.'
+		};
+	const { data: pricePolicies, error: priceError } = await supabase
+		.from('service_price_policies')
+		.select('*,service_price_monthly_adjustments(month,kind,percentage)')
+		.eq('business_id', businessId)
+		.or(`professional_id.eq.${professional.id},professional_id.is.null`);
+	if (priceError)
+		return {
+			ok: false,
+			status: 503,
+			message: 'No pudimos cargar los aranceles. Volvé a intentar.'
+		};
+	const currentMonth = monthForTimezone(new Date(), business.business.timezone);
+	const currentPriceLabels: Record<string, string> = {};
+	for (const service of services ?? []) {
+		const policy =
+			(pricePolicies ?? []).find(
+				(row) => row.service_id === service.id && row.professional_id === professional.id
+			) ??
+			(pricePolicies ?? []).find(
+				(row) => row.service_id === service.id && row.professional_id === null
+			);
+		if (policy) {
+			try {
+				const [quote] = previewMonthlyPrices(
+					String(policy.base_amount),
+					String(policy.monthly_percentage),
+					String(policy.rounding_unit),
+					policy.base_month.slice(0, 7),
+					policy.first_adjustment_month.slice(0, 7),
+					parsePriceAdjustments(policy.service_price_monthly_adjustments),
+					1,
+					currentMonth
+				);
+				currentPriceLabels[service.id] = formatQuotedPrice({
+					amount: quote.amount,
+					currency: policy.currency
+				});
+			} catch {
+				currentPriceLabels[service.id] = 'Revisar configuración de arancel';
+			}
+		}
+	}
+	const defaultServiceIds = (services ?? [])
+		.filter((service) => isDefaultServiceName(String(service.name ?? '')))
+		.map((service) => String(service.id));
+
+	return {
+		ok: true,
+		data: {
+			context: business,
+			availabilityRevision: Number(revisionRow.booking_availability_revision),
+			exceptionRequestId: crypto.randomUUID(),
+			professional,
+			services: services ?? [],
+			currentPriceLabels,
+			assignedServiceIds: (assignments ?? []).map((item) => String(item.service_id)),
+			defaultServiceIds,
+			rules: (rules ?? []).map((rule) => ({
+				...rule,
+				service_scope: professionalRuleScope(rule.service_scope)
+			})),
+			exceptions: (exceptions ?? []).map((item) => ({
+				...item,
+				type: professionalExceptionType(item.type)
+			})),
+			appointmentCount: null,
+			clinicalEntryCount: null,
+			followUpCount: null,
+			dependencyCountsDeferred: true,
+			tab: tab,
+			userId,
+			pendingAccountEmail,
+			demo: false
+		}
+	};
 }

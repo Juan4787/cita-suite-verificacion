@@ -295,3 +295,14 @@ export const hasProfessionalExceptionDraft = (exception: ProfessionalDraft['exce
 		: exception.periodMode === 'range'
 			? Boolean(exception.dateFrom.trim() || exception.dateTo.trim() || exception.reason.trim())
 			: Boolean(exception.date.trim() || exception.timeRange.trim() || exception.reason.trim());
+
+export function professionalRuleScope(value: unknown): 'all' | 'restricted' {
+	if (value === 'all' || value === 'restricted') return value;
+	throw new Error('Invalid professional rule scope');
+}
+export function professionalExceptionType(
+	value: unknown
+): 'blocked' | 'extra_available' | 'restricted' {
+	if (value === 'blocked' || value === 'extra_available' || value === 'restricted') return value;
+	throw new Error('Invalid professional exception type');
+}
