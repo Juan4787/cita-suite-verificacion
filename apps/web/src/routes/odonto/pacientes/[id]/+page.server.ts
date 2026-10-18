@@ -1,9 +1,9 @@
+import { setPatientArchived } from '$lib/server/patients/public/patient-archive';
 import {
 	updatePatientProfile,
 	parsePatientProfileUpdate,
 	type PatientProfileUpdate
 } from '$lib/server/patients/public/patient-profile';
-import { getProfessionalPatientLink as ensureProfessionalCanAccessPatient } from '$lib/server/patients/public/patient-links';
 import { logServerFailure } from '$lib/server/platform/logging';
 import {
 	createClinicalEntry,
@@ -15,7 +15,6 @@ import {
 	PatientOperationError,
 	type PatientFailureKind
 } from '$lib/server/patients/public/patient-operation-error';
-import { getProfessionalForUser as getCurrentProfessional } from '$lib/server/team/public/professionals';
 import {
 	readPatientDetail,
 	PatientDetailReadError
@@ -35,7 +34,7 @@ import {
 	type PatientUniqueField
 } from '$lib/server/patients/public/patient-identity';
 import { fail, redirect, error as kitError } from '@sveltejs/kit';
-import type { Actions, PageServerLoad } from './$types';
+import type { Actions, PageServerLoad, RequestEvent } from './$types';
 import { businessTodayISO } from '$lib/server/patients/public/follow-ups';
 import { resolvePatientPermissions } from '$lib/server/patients/public/patient-permissions';
 import { readPatientBookingAge } from '$lib/patients/booking-profile';
@@ -94,21 +93,6 @@ const duplicatePatientActionResult = (existing: { id: string; field: PatientUniq
 		existingId: existing.id
 	});
 
-const patientArchiveRpcError = (error: { message?: string; code?: string } | null | undefined) => {
-	const message = `${error?.message ?? ''} ${error?.code ?? ''}`;
-
-	if (message.includes('BUSINESS_ACCESS_RESTRICTED')) {
-		return { status: 403, message: COMMERCIAL_RESTRICTED_MESSAGE };
-	}
-	if (message.includes('PATIENT_ARCHIVE_DENIED')) {
-		return { status: 403, message: 'No tenés permiso para archivar este paciente.' };
-	}
-	if (message.includes('PATIENT_NOT_FOUND')) {
-		return { status: 404, message: 'Paciente no encontrado.' };
-	}
-	return { status: 500, message: 'No se pudo actualizar el estado de la ficha. Intentá de nuevo.' };
-};
-
 const isEnhancedActionRequest = (request: Request) =>
 	request.headers.get('x-sveltekit-action') === 'true';
 
@@ -137,6 +121,39 @@ const clinicalInputFromForm = (form: FormData, timeZone: string) =>
 		},
 		timeZone
 	);
+
+async function updatePatientArchive(
+	{ params, locals, fetch, cookies }: RequestEvent,
+	archived: boolean
+) {
+	if (!locals.auth) throw redirect(303, '/login');
+	if (env.DEMO_MODE === 'true') {
+		let found = false;
+		updateDemoDb((db) => {
+			const patient = db.patients.find((item) => item.id === params.id);
+			if (!patient) return;
+			const now = new Date().toISOString();
+			patient.archived_at = archived ? now : null;
+			patient.updated_at = now;
+			found = true;
+		});
+		if (!found) return fail(404, { message: 'Paciente no encontrado' });
+	} else {
+		const session = await resolveBusinessActionContext({ locals, fetch, cookies });
+		if (!session) return fail(401, { message: 'Sesión inválida. Volvé a iniciar sesión.' });
+		try {
+			await setPatientArchived({
+				supabase: session.supabase,
+				context: session.context,
+				patientId: params.id,
+				archived
+			});
+		} catch (cause) {
+			return patientActionFailure(cause);
+		}
+	}
+	throw redirect(303, archived ? '/odonto/pacientes?estado=archivados' : '/odonto/pacientes');
+}
 
 export const load: PageServerLoad = async ({ params, locals, fetch, cookies, depends }) => {
 	depends(`app:patient:${params.id}`);
@@ -343,189 +360,8 @@ export const actions: Actions = {
 		}
 		throw redirect(303, patientDetailUrl(params.id, 'datos'));
 	},
-	archive_patient: async ({ params, locals, fetch, cookies }) => {
-		if (!locals.auth) throw redirect(303, '/login');
-		if (env.DEMO_MODE === 'true') {
-			let archived = false;
-			updateDemoDb((db) => {
-				const patient = db.patients.find((p) => p.id === params.id);
-				if (!patient) return;
-				const now = new Date().toISOString();
-				patient.archived_at = now;
-				patient.updated_at = now;
-				archived = true;
-			});
-
-			if (!archived) {
-				return fail(404, { message: 'Paciente no encontrado' });
-			}
-
-			throw redirect(303, '/odonto/pacientes?estado=archivados');
-		}
-		const session = await resolveBusinessActionContext({ locals, fetch, cookies });
-		if (!session) {
-			return fail(401, { message: 'Sesión inválida. Volvé a iniciar sesión.' });
-		}
-		const permissions = resolvePatientPermissions(session.context);
-		if (!permissions.canArchivePatient) {
-			return fail(403, {
-				message: session.context.access.allowedCapabilities.canEditPatient
-					? 'Tu rol no permite archivar este paciente.'
-					: COMMERCIAL_RESTRICTED_MESSAGE
-			});
-		}
-		const { supabase, context, ownerId } = session;
-
-		if (context.role === 'professional') {
-			const admin = await createSupabaseAdminClient('odonto', fetch);
-			const professional = await getCurrentProfessional({
-				admin,
-				businessId: context.business.id,
-				userId: ownerId
-			});
-			if (!professional) {
-				return fail(403, {
-					message: 'Tu usuario no está vinculado a un profesional del consultorio.'
-				});
-			}
-			const link = await ensureProfessionalCanAccessPatient({
-				admin,
-				businessId: context.business.id,
-				patientId: params.id,
-				professionalId: professional.id
-			});
-			if (!link) {
-				return fail(403, { message: 'Este paciente no está asignado a tu perfil profesional.' });
-			}
-			const { data: updatedLink, error } = await admin
-				.from('professional_patient_links')
-				.update({
-					archived_at: new Date().toISOString(),
-					archived_by: ownerId,
-					updated_at: new Date().toISOString()
-				})
-				.eq('id', link.id)
-				.select('id')
-				.maybeSingle();
-
-			if (error) {
-				logServerFailure('Error archivando paciente para profesional', error);
-				return fail(500, { message: 'No se pudo archivar el paciente.' });
-			}
-			if (!updatedLink) {
-				return fail(409, {
-					message: 'El vínculo con el paciente cambió. Recargá la lista y volvé a intentar.'
-				});
-			}
-
-			throw redirect(303, '/odonto/pacientes?estado=archivados');
-		}
-
-		const { error } = await supabase.rpc('set_patient_archive_state_safely', {
-			p_business_id: context.business.id,
-			p_patient_id: params.id,
-			p_archived: true
-		});
-
-		if (error) {
-			logServerFailure('Error archivando paciente', error);
-			const mapped = patientArchiveRpcError(error);
-			return fail(mapped.status, { message: mapped.message });
-		}
-
-		throw redirect(303, '/odonto/pacientes?estado=archivados');
-	},
-	unarchive_patient: async ({ params, locals, fetch, cookies }) => {
-		if (!locals.auth) throw redirect(303, '/login');
-		if (env.DEMO_MODE === 'true') {
-			let unarchived = false;
-			updateDemoDb((db) => {
-				const patient = db.patients.find((p) => p.id === params.id);
-				if (!patient) return;
-				patient.archived_at = null;
-				patient.updated_at = new Date().toISOString();
-				unarchived = true;
-			});
-
-			if (!unarchived) {
-				return fail(404, { message: 'Paciente no encontrado' });
-			}
-
-			throw redirect(303, '/odonto/pacientes');
-		}
-		const session = await resolveBusinessActionContext({ locals, fetch, cookies });
-		if (!session) {
-			return fail(401, { message: 'Sesión inválida. Volvé a iniciar sesión.' });
-		}
-		const permissions = resolvePatientPermissions(session.context);
-		if (!permissions.canArchivePatient) {
-			return fail(403, {
-				message: session.context.access.allowedCapabilities.canEditPatient
-					? 'Tu rol no permite desarchivar este paciente.'
-					: COMMERCIAL_RESTRICTED_MESSAGE
-			});
-		}
-		const { supabase, context, ownerId } = session;
-
-		if (context.role === 'professional') {
-			const admin = await createSupabaseAdminClient('odonto', fetch);
-			const professional = await getCurrentProfessional({
-				admin,
-				businessId: context.business.id,
-				userId: ownerId
-			});
-			if (!professional) {
-				return fail(403, {
-					message: 'Tu usuario no está vinculado a un profesional del consultorio.'
-				});
-			}
-			const link = await ensureProfessionalCanAccessPatient({
-				admin,
-				businessId: context.business.id,
-				patientId: params.id,
-				professionalId: professional.id
-			});
-			if (!link) {
-				return fail(403, { message: 'Este paciente no está asignado a tu perfil profesional.' });
-			}
-			const { data: updatedLink, error } = await admin
-				.from('professional_patient_links')
-				.update({
-					archived_at: null,
-					archived_by: null,
-					updated_at: new Date().toISOString()
-				})
-				.eq('id', link.id)
-				.select('id')
-				.maybeSingle();
-
-			if (error) {
-				logServerFailure('Error desarchivando paciente para profesional', error);
-				return fail(500, { message: 'No se pudo desarchivar el paciente.' });
-			}
-			if (!updatedLink) {
-				return fail(409, {
-					message: 'El vínculo con el paciente cambió. Recargá la lista y volvé a intentar.'
-				});
-			}
-
-			throw redirect(303, '/odonto/pacientes');
-		}
-
-		const { error } = await supabase.rpc('set_patient_archive_state_safely', {
-			p_business_id: context.business.id,
-			p_patient_id: params.id,
-			p_archived: false
-		});
-
-		if (error) {
-			logServerFailure('Error desarchivando paciente', error);
-			const mapped = patientArchiveRpcError(error);
-			return fail(mapped.status, { message: mapped.message });
-		}
-
-		throw redirect(303, '/odonto/pacientes');
-	},
+	archive_patient: (event) => updatePatientArchive(event, true),
+	unarchive_patient: (event) => updatePatientArchive(event, false),
 	delete_patient: async ({ params, locals, fetch, cookies }) => {
 		if (!locals.auth) throw redirect(303, '/login');
 		if (env.DEMO_MODE === 'true') {
