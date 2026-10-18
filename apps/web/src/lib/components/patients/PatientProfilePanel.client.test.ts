@@ -4,6 +4,7 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import PatientProfilePanel from './PatientProfilePanel.svelte';
 import type { PatientPermissions } from '$lib/patients/contracts';
+const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
 
 const permissions: PatientPermissions = {
 	canReadClinicalHistory: true,
@@ -43,9 +44,42 @@ const props = () => ({
 afterEach(() => {
 	cleanup();
 	vi.unstubAllGlobals();
+	vi.restoreAllMocks();
+	if (originalClipboard) Object.defineProperty(navigator, 'clipboard', originalClipboard);
+	else Reflect.deleteProperty(navigator, 'clipboard');
 });
 
 describe('patient profile deferred changes', () => {
+	it('does not present hidden clinical information as unregistered to basic roles', () => {
+		render(PatientProfilePanel, {
+			...props(),
+			active: true,
+			deferred: false,
+			permissions: { ...permissions, canReadClinicalProfile: false, canEditClinicalProfile: false },
+			patient: { ...props().patient, allergies: 'PRIVATE_CLINICAL_SENTINEL' }
+		});
+		expect(screen.queryByText('Alertas médicas')).not.toBeInTheDocument();
+		expect(screen.queryByText('PRIVATE_CLINICAL_SENTINEL')).not.toBeInTheDocument();
+		expect(screen.getByText('Contacto')).toBeInTheDocument();
+	});
+	it('reports an unavailable clipboard and still leaves the contact visible', async () => {
+		Object.defineProperty(navigator, 'clipboard', {
+			configurable: true,
+			value: { writeText: vi.fn().mockRejectedValue(new Error('PRIVATE_SENTINEL')) }
+		});
+		render(PatientProfilePanel, {
+			...props(),
+			active: true,
+			deferred: false,
+			patient: { ...props().patient, phone: '123456789' }
+		});
+		await fireEvent.click(screen.getByRole('button', { name: 'Copiar teléfono' }));
+		expect(await screen.findByRole('status')).toHaveTextContent(
+			'Seleccionalo y copialo manualmente.'
+		);
+		expect(screen.getByRole('status')).not.toHaveTextContent('PRIVATE_SENTINEL');
+		expect(screen.getByText('123456789')).toBeInTheDocument();
+	});
 	it('loads changes only when opened and keeps the same result across tab navigation', async () => {
 		const fetcher = vi.fn().mockResolvedValue(Response.json({ change_events: [event] }));
 		vi.stubGlobal('fetch', fetcher);

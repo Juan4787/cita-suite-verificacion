@@ -101,10 +101,14 @@
 		if (active && !changeEventsLoaded && !loadingChangeEvents && !changeEventsLoadError)
 			void loadChangeEvents();
 	});
-	const copyToClipboard = (text?: string | null) => {
+	let copyMessage = $state('');
+	const copyToClipboard = async (text?: string | null) => {
 		if (!text) return;
-		if (navigator?.clipboard) {
-			navigator.clipboard.writeText(text).catch(() => {});
+		try {
+			await navigator.clipboard.writeText(text);
+			copyMessage = 'Dato copiado.';
+		} catch {
+			copyMessage = 'No pudimos copiar el dato. Seleccionalo y copialo manualmente.';
 		}
 	};
 
@@ -123,6 +127,10 @@
 		)
 	);
 </script>
+
+{#snippet copyIcon()}
+	<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" /><path stroke-linecap="round" stroke-linejoin="round" d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" /></svg>
+{/snippet}
 
 {#if active}
 		<div class="rounded-2xl border border-neutral-100 bg-white p-4 shadow-sm dark:border-[#1f3554] dark:bg-[#122641] sm:p-5">
@@ -159,10 +167,11 @@
 						</p>
 					</div>
 				</div>
+				{#if permissions.canReadClinicalProfile}
 				<div class="rounded-xl border border-neutral-100 bg-white/60 p-4 dark:border-[#1f3554] dark:bg-[#0f1f36]">
 					<div class="mb-3 flex items-center justify-between">
 						<p class="text-[13px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Alertas médicas</p>
-							{#if permissions.canEditPatient}
+							{#if permissions.canEditClinicalProfile}
 								<button disabled={!client.ready}
 									type="button"
 									class="rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-50 dark:hover:bg-[#122641]"
@@ -225,6 +234,8 @@
 					</div>
 				</div>
 
+				{/if}
+
 				<div class="rounded-xl border border-neutral-100 bg-white/60 p-4 dark:border-[#1f3554] dark:bg-[#0f1f36]">
 					<div class="mb-3 flex items-center justify-between">
 						<p class="text-[13px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Contacto</p>
@@ -250,9 +261,9 @@
 										type="button"
 										class="grid h-8 w-8 place-items-center rounded-full border border-neutral-200 text-xs text-neutral-600 dark:border-[#1f3554] dark:text-neutral-200"
 										onclick={() => copyToClipboard(patient.phone)}
-										title="Copiar"
+										aria-label="Copiar teléfono" title="Copiar teléfono"
 									>
-										⧉
+										{@render copyIcon()}
 									</button>
 								{/if}
 							</div>
@@ -268,9 +279,9 @@
 										type="button"
 										class="grid h-8 w-8 place-items-center rounded-full border border-neutral-200 text-xs text-neutral-600 dark:border-[#1f3554] dark:text-neutral-200"
 										onclick={() => copyToClipboard(patient.email)}
-										title="Copiar"
+										aria-label="Copiar correo electrónico" title="Copiar correo electrónico"
 									>
-										⧉
+										{@render copyIcon()}
 									</button>
 								{/if}
 							</div>
@@ -286,9 +297,9 @@
 										type="button"
 										class="grid h-8 w-8 place-items-center rounded-full border border-neutral-200 text-xs text-neutral-600 dark:border-[#1f3554] dark:text-neutral-200"
 										onclick={() => copyToClipboard(patient.address)}
-										title="Copiar"
+										aria-label="Copiar dirección" title="Copiar dirección"
 									>
-										⧉
+										{@render copyIcon()}
 									</button>
 								{/if}
 							</div>
@@ -331,6 +342,7 @@
 					</div>
 				</div>
 			</div>
+			{#if copyMessage}<p class="mt-3 text-sm text-neutral-600 dark:text-neutral-200" role="status">{copyMessage}</p>{/if}
 			{#if loadingChangeEvents}
 				<div class="mt-5 rounded-xl border border-neutral-100 bg-white/60 p-4 text-sm font-semibold text-neutral-500 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-neutral-300" aria-live="polite">
 					Cargando últimos cambios…
@@ -348,7 +360,7 @@
 							<div class="rounded-lg border border-neutral-100 bg-white/70 px-3 py-2 dark:border-[#1f3554] dark:bg-[#122641]">
 								<p class="text-sm font-semibold text-neutral-900 dark:text-white">{event.summary}</p>
 								<p class="mt-1 text-xs text-neutral-500 dark:text-neutral-300">
-									{formatDateTime(event.created_at)} · {event.changed_by_name}
+									{formatDateTime(event.created_at, businessTimeZone)} · {event.changed_by_name}
 								</p>
 							</div>
 						{/each}

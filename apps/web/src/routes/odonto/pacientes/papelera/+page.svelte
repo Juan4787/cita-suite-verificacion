@@ -101,12 +101,12 @@
 				method: 'POST'
 			});
 			const payload = await response.json().catch(() => ({}));
-			if (!response.ok) throw new Error(payload.message || 'No pudimos restaurar la imagen.');
+			if (!response.ok) throw new Error(payload.message || 'No pudimos restaurar el documento.');
 			items = items.filter((item) => item.id !== restoreTarget?.id);
 			message = 'Imagen restaurada en la ficha del paciente.';
 			restoreTarget = null;
 		} catch (error) {
-			errorMessage = error instanceof Error ? error.message : 'No pudimos restaurar la imagen.';
+			errorMessage = error instanceof Error ? error.message : 'No pudimos restaurar el documento.';
 		} finally {
 			restoreBusy = false;
 		}
@@ -117,11 +117,11 @@
 	<div class="ux-hero">
 		<BackLink href="/odonto/pacientes" label="Volver a pacientes" class="mb-5" />
 		<p class="ux-badge">Archivos clínicos</p>
-		<h1 class="ux-title mt-4">Papelera de imágenes</h1>
+		<h1 class="ux-title mt-4">Papelera de documentos</h1>
 		<p class="ux-subtitle">
 			{data.canRestore
-				? 'Restaurá imágenes que dejaron de mostrarse en la ficha. Desde acá no se borran archivos físicamente.'
-				: 'Consultá las imágenes que dejaron de mostrarse en la ficha. Desde acá no se borran archivos físicamente.'}
+				? 'Restaurá documentos que dejaron de mostrarse en la ficha. Desde acá no se borran archivos físicamente.'
+				: 'Consultá los documentos que dejaron de mostrarse en la ficha. Desde acá no se borran archivos físicamente.'}
 		</p>
 	</div>
 
@@ -139,7 +139,7 @@
 			<p class="ux-alert mt-5">La papelera no está disponible en el modo de demostración.</p>
 		{/if}
 		{#if !data.demo && !data.canRestore}
-			<p class="ux-alert mt-5">Podés consultar la papelera. Para restaurar imágenes, activá nuevamente la suscripción.</p>
+			<p class="ux-alert mt-5">Podés consultar la papelera. Para restaurar documentos, activá nuevamente la suscripción.</p>
 		{/if}
 		{#if errorMessage}
 			<p class="ux-alert mt-5" role="alert">{errorMessage}</p>
@@ -156,8 +156,8 @@
 			</div>
 		{:else if !data.demo && items.length === 0}
 			<div class="mt-6 rounded-2xl border border-dashed border-white/15 px-5 py-8 text-center">
-				<p class="font-semibold text-white">{query.trim() ? 'No encontramos imágenes con esa búsqueda' : 'La papelera está vacía'}</p>
-				<p class="mt-2 text-sm text-white/50">{query.trim() ? 'Probá con otro nombre de paciente o archivo.' : 'Las imágenes que muevas desde una ficha aparecerán acá.'}</p>
+				<p class="font-semibold text-white">{query.trim() ? 'No encontramos documentos con esa búsqueda' : 'La papelera está vacía'}</p>
+				<p class="mt-2 text-sm text-white/50">{query.trim() ? 'Probá con otro nombre de paciente o archivo.' : 'Los documentos que muevas desde una ficha aparecerán acá.'}</p>
 			</div>
 		{:else}
 			<div class="mt-6 grid gap-3">
@@ -194,12 +194,12 @@
 	</div>
 </section>
 
-<Modal open={Boolean(restoreTarget)} title="Restaurar imagen" dismissible={!restoreBusy} on:close={() => !restoreBusy && (restoreTarget = null)}>
+<Modal open={Boolean(restoreTarget)} title="Restaurar documento" dismissible={!restoreBusy} on:close={() => !restoreBusy && (restoreTarget = null)}>
 	<div class="space-y-4 text-sm text-neutral-800 dark:text-neutral-100">
-		<p>La imagen volverá a mostrarse en la ficha de <strong>{restoreTarget?.patient_name}</strong>.</p>
+		<p>El documento volverá a mostrarse en la ficha de <strong>{restoreTarget?.patient_name}</strong>.</p>
 		<div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
 			<button type="button" class="ux-btn-secondary" disabled={restoreBusy} onclick={() => (restoreTarget = null)}>Cancelar</button>
-			<button type="button" class="ux-btn-primary" disabled={restoreBusy} onclick={restore}>{restoreBusy ? 'Restaurando…' : 'Restaurar imagen'}</button>
+			<button type="button" class="ux-btn-primary" disabled={restoreBusy} onclick={restore}>{restoreBusy ? 'Restaurando…' : 'Restaurar documento'}</button>
 		</div>
 	</div>
 </Modal>

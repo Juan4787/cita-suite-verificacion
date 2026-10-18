@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import '@testing-library/jest-dom/vitest';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import PatientHistoryPanel from './PatientHistoryPanel.svelte';
 import type { PatientHistoryEntry } from '$lib/patients/contracts';
@@ -36,6 +37,38 @@ afterEach(() => {
 });
 
 describe('patient history interaction and request ownership', () => {
+	it('opens the complete description with Space and keeps editing separate from expansion', async () => {
+		const user = userEvent.setup();
+		const input = props([
+			{
+				...first,
+				title: 'Summary',
+				description: 'Complete synthetic description\nSecond line preserved'
+			}
+		]);
+		render(PatientHistoryPanel, input);
+		const toggle = screen.getByRole('button', { name: /^Detalles de Consulta/ });
+		expect(toggle).toHaveAttribute('aria-expanded', 'false');
+		toggle.focus();
+		await user.keyboard(' ');
+		expect(toggle).toHaveAttribute('aria-expanded', 'true');
+		const detail = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
+		expect(detail).toBeVisible();
+		expect(detail).toHaveTextContent('Complete synthetic description Second line preserved');
+		expect(detail).toHaveClass('whitespace-pre-wrap');
+		await user.click(screen.getByRole('button', { name: 'Editar' }));
+		expect(input.onEdit).toHaveBeenCalledExactlyOnceWith(input.entries[0]);
+		expect(toggle).toHaveAttribute('aria-expanded', 'true');
+	});
+	it('shows a filtered empty state and restores history when clearing filters', async () => {
+		render(PatientHistoryPanel, props());
+		await fireEvent.input(screen.getByRole('searchbox'), { target: { value: 'No matches' } });
+		expect(screen.getByRole('status')).toHaveTextContent('No hay consultas que coincidan');
+		expect(screen.queryByText(/Sin consultas registradas/)).not.toBeInTheDocument();
+		await fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+		expect(screen.getByText(first.description)).toBeInTheDocument();
+		expect(screen.getByRole('searchbox')).toHaveValue('');
+	});
 	it('keeps existing history on an invalid success and allows a verified retry', async () => {
 		const fetcher = vi
 			.fn()

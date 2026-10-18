@@ -119,13 +119,17 @@
 	const entryMatches = (entry: PatientHistoryEntry) => {
 		if (filterType !== 'Todos' && entry.entry_type !== filterType) return false;
 		if (timelineSearch.trim()) {
-			const q = timelineSearch.toLowerCase();
+			const q = timelineSearch.trim().toLowerCase();
 			const dateText = formatDate(entry.created_at, businessTimeZone);
 			const haystack =
 				`${entry.entry_type} ${entry.description ?? ''} ${entry.internal_note ?? ''} ${entry.teeth ?? ''} ${dateText} ${entry.created_at}`.toLowerCase();
 			if (!haystack.includes(q)) return false;
 		}
 		return true;
+	};
+	const filteredEntries = $derived(entries.filter(entryMatches));
+	const toggleEntry = (entryId: string) => {
+		expandedId = expandedId === entryId ? null : entryId;
 	};
 
 	const canEditEntry = (entry: PatientHistoryEntry) => {
@@ -190,89 +194,57 @@
 						<span class="hidden md:inline">Sin consultas registradas. Cargá la primera desde “Registrar consulta”.</span>
 					</p>
 				{:else}
-					<div class="relative pl-8">
-						<span class="absolute left-2 top-0 h-full w-px bg-neutral-200 dark:bg-[#1f3554]/60"></span>
-						<div class="space-y-3">
-							{#each entries as entry (entry.id ?? entry.created_at)}
-								{#if entryMatches(entry)}
-									{#key entry.id ?? entry.created_at}
-										<div
-											role="button"
-											tabindex="0"
-											onclick={() => (expandedId = expandedId === (entry.id ?? entry.created_at) ? null : entry.id ?? entry.created_at)}
-											onkeydown={(e) => e.key === 'Enter' && (expandedId = expandedId === (entry.id ?? entry.created_at) ? null : entry.id ?? entry.created_at)}
-											class="group relative overflow-hidden rounded-xl border border-neutral-100 bg-white px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] dark:border-[#1f3554] dark:bg-[#0f1f36]"
-										>
-											<span class="absolute left-[-14px] top-5 h-3 w-3 rounded-full border-2 border-white bg-[#7c3aed] shadow dark:border-[#0f1f36]"></span>
-											<div class="flex flex-wrap items-start gap-3">
-												<div class="flex min-w-0 flex-1 items-center gap-3">
-													<span class="rounded-full bg-[#7c3aed]/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#5b21b6] dark:bg-[#7c3aed]/20 dark:text-[#d9c5ff]">
-														{entry.entry_type}
-													</span>
-													<p class="text-[16px] font-semibold text-neutral-900 dark:text-white line-clamp-1">
-														{mainTitle(entry)}
-													</p>
-												</div>
-												<div class="flex w-full items-center justify-end gap-2 sm:w-auto sm:shrink-0 sm:justify-start">
-													{#if entry.amount != null}
-														<span class="text-[15px] font-semibold text-neutral-800 whitespace-nowrap dark:text-neutral-100">
-															{formatCurrency(entry.amount)}
-														</span>
-													{/if}
-													{#if canEditEntry(entry)}
-														<button disabled={!client.ready}
-															type="button"
-															class="inline-flex items-center gap-1 rounded-full border border-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-100 dark:hover:bg-[#122641]"
-															onclick={(event) => {
-																event.stopPropagation();
-																onEdit(entry);
-															}}
-														>
-															<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-																<path stroke-linecap="round" stroke-linejoin="round" d="M12 20h9" />
-																<path stroke-linecap="round" stroke-linejoin="round" d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-															</svg>
-															Editar
-														</button>
-													{/if}
-												</div>
-											</div>
-											{#if entry.description && !isDuplicateDescription(entry)}
-												<p class="mt-1 text-[13px] font-medium text-neutral-700 opacity-85 line-clamp-1 dark:text-neutral-200">
-													{entry.description}
-												</p>
-											{/if}
-											<div class="mt-3 flex flex-wrap items-center gap-2 text-xs text-neutral-500 dark:text-neutral-300">
-												<span>{formatDate(entry.created_at, businessTimeZone)}</span>
-												<span>·</span>
-												<span>{fmtTime(entry.created_at)}</span>
-												{#if entry.teeth}
-													<span class="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-600 dark:bg-white/10 dark:text-neutral-200">
-														Zona {entry.teeth}
-													</span>
+					{#if filteredEntries.length === 0}
+						<div class="rounded-xl border border-dashed border-neutral-200 p-4 text-sm text-neutral-600 dark:border-[#1f3554] dark:text-neutral-200" role="status">
+							<p>No hay consultas que coincidan con estos filtros en el historial cargado.</p>
+							<button type="button" class="mt-3 font-semibold underline" disabled={!client.ready} onclick={() => { timelineSearch = ''; filterType = 'Todos'; }}>Limpiar filtros</button>
+						</div>
+					{:else}
+						<div class="relative pl-8">
+							<span class="absolute left-2 top-0 h-full w-px bg-neutral-200 dark:bg-[#1f3554]/60" aria-hidden="true"></span>
+							<div class="space-y-3">
+								{#each filteredEntries as entry (entry.id)}
+									{@const expanded = expandedId === entry.id}
+									<article class="relative rounded-xl border border-neutral-100 bg-white p-4 shadow-sm dark:border-[#1f3554] dark:bg-[#0f1f36]">
+										<span class="absolute left-[-14px] top-5 h-3 w-3 rounded-full border-2 border-white bg-[#7c3aed] shadow dark:border-[#0f1f36]" aria-hidden="true"></span>
+										<div class="flex flex-wrap items-start gap-3">
+											<button type="button" disabled={!client.ready} aria-expanded={expanded}
+												aria-controls={`clinical-entry-${patientId}-${entry.id}`} aria-label={`Detalles de ${entry.entry_type} del ${formatDate(entry.created_at, businessTimeZone)}`}
+												onclick={() => toggleEntry(entry.id)}
+												class="min-w-0 flex-1 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0f1f36]">
+												<span class="flex min-w-0 flex-wrap items-center gap-3">
+													<span class="rounded-full bg-[#7c3aed]/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#5b21b6] dark:bg-[#7c3aed]/20 dark:text-[#d9c5ff]">{entry.entry_type}</span>
+													<span class="min-w-0 break-words text-[16px] font-semibold text-neutral-900 line-clamp-1 dark:text-white">{mainTitle(entry)}</span>
+												</span>
+												{#if entry.description && !isDuplicateDescription(entry)}<span class="mt-1 block text-[13px] font-medium text-neutral-700 line-clamp-1 dark:text-neutral-200">{entry.description}</span>{/if}
+												<span class="mt-3 flex flex-wrap items-center gap-2 text-xs text-neutral-500 dark:text-neutral-300">
+													<span>{formatDate(entry.created_at, businessTimeZone)}</span><span aria-hidden="true">·</span><span>{fmtTime(entry.created_at)}</span>
+													{#if entry.teeth}<span class="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-600 dark:bg-white/10 dark:text-neutral-200">Zona {entry.teeth}</span>{/if}
+												</span>
+												{#if hasDistinctNote(entry)}<span class="mt-2 block text-xs text-neutral-500 line-clamp-1 dark:text-neutral-300">Nota: {entry.internal_note}</span>{/if}
+												<span class="mt-2 block text-xs font-semibold text-primary-700 dark:text-primary-300">{expanded ? 'Ocultar detalle' : 'Ver detalle'}</span>
+											</button>
+											<div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
+												{#if entry.amount != null}<span class="whitespace-nowrap text-[15px] font-semibold text-neutral-800 dark:text-neutral-100">{formatCurrency(entry.amount)}</span>{/if}
+												{#if canEditEntry(entry)}
+													<button type="button" disabled={!client.ready} class="inline-flex items-center gap-1 rounded-full border border-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-100 dark:hover:bg-[#122641]" onclick={() => onEdit(entry)}>
+														<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>Editar
+													</button>
 												{/if}
 											</div>
-											{#if hasDistinctNote(entry)}
-												<p class="mt-2 text-xs text-neutral-500 dark:text-neutral-300 line-clamp-1">
-													Nota: {entry.internal_note}
-												</p>
-											{/if}
-											{#if expandedId === (entry.id ?? entry.created_at)}
-												<div class="mt-3 space-y-2 text-sm text-neutral-800 dark:text-neutral-100">
-													{#if entry.amount != null}
-														<p><span class="font-semibold">Importe:</span> {formatCurrency(entry.amount)}</p>
-													{/if}
-													{#if entry.internal_note}
-														<p><span class="font-semibold">Nota completa:</span> {entry.internal_note}</p>
-													{/if}
-												</div>
-											{/if}
 										</div>
-									{/key}
-								{/if}
-							{/each}
+										{#if expanded}
+										<div id={`clinical-entry-${patientId}-${entry.id}`} class="mt-3 space-y-2 whitespace-pre-wrap break-words text-sm text-neutral-800 [overflow-wrap:anywhere] dark:text-neutral-100">
+											{#if entry.description}<p><span class="font-semibold">Descripción:</span> {entry.description}</p>{/if}
+											{#if entry.amount != null}<p><span class="font-semibold">Importe:</span> {formatCurrency(entry.amount)}</p>{/if}
+											{#if entry.internal_note}<p><span class="font-semibold">Nota completa:</span> {entry.internal_note}</p>{/if}
+										</div>
+										{/if}
+									</article>
+								{/each}
+							</div>
 						</div>
-					</div>
+					{/if}
 					{#if hasMoreEntries}
 						<div class="mt-4 flex justify-center">
 							<button
