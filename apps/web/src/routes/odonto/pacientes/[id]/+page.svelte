@@ -2,12 +2,10 @@
 	import type {
 		PatientDetailViewData,
 		PatientFormState,
-		PatientHistoryEntry,
-		PatientChangeEvent
+		PatientHistoryEntry
 	} from '$lib/patients/contracts';
 	import {
 		comparePatientHistoryEntries,
-		readPatientChangeEvents,
 		readSavedPatientEntry
 	} from '$lib/patients/history-contract';
 	import { enhance } from '$app/forms';
@@ -20,6 +18,7 @@
 	import DatePartsInput from '$lib/components/DatePartsInput.svelte';
 	import RadiographsPanel from '$lib/components/patients/RadiographsPanel.svelte';
 	import PatientHistoryPanel from '$lib/components/patients/PatientHistoryPanel.svelte';
+	import PatientProfilePanel from '$lib/components/patients/PatientProfilePanel.svelte';
 	import { markPatientRevisionUnverified } from '$lib/client/patient-list-cache';
 	import {
 		activatePatientRadiographCache,
@@ -50,11 +49,7 @@
 		reschedule_requested: 'Quiere reprogramar'
 	};
 	let entries = $state<PatientHistoryEntry[]>(untrack(() => data.entries));
-	let changeEvents = $state<PatientChangeEvent[]>([]);
 	let hasMoreEntries = $state(untrack(() => Boolean(data.hasMoreEntries)));
-	let changeEventsLoaded = $state(false);
-	let loadingChangeEvents = $state(false);
-	let changeEventsLoadError = $state('');
 	const requestedTab = $derived.by(() => $page.url.searchParams.get('tab'));
 	const requestedDelete = $derived.by(() => $page.url.searchParams.has('eliminar'));
 	const permissions = $derived(
@@ -118,18 +113,8 @@
 	});
 	$effect(() => {
 		entries = data.entries ?? [];
-		changeEvents = data.changeEvents ?? [];
 		hasMoreEntries = Boolean(data.hasMoreEntries);
-		changeEventsLoaded = !data.changeEventsDeferred;
-		changeEventsLoadError = '';
 	});
-	const copyToClipboard = (text?: string | null) => {
-		if (!text) return;
-		if (navigator?.clipboard) {
-			navigator.clipboard.writeText(text).catch(() => {});
-		}
-	};
-
 	const lastVisit = $derived(entries?.[0]?.created_at ?? null);
 	const chips = $derived(
 		[
@@ -157,26 +142,6 @@
 		].filter((c): c is { label: string; value: string; intent: 'neutral' | 'alert' } => Boolean(c))
 	);
 
-	const loadChangeEvents = async () => {
-		if (data.demo || changeEventsLoaded || loadingChangeEvents) return;
-		const patientId = data.patient.id;
-		loadingChangeEvents = true;
-		changeEventsLoadError = '';
-		try {
-			const response = await fetch(`/odonto/pacientes/${patientId}/datos`);
-			if (!response.ok) throw new Error('Patient changes unavailable');
-			const incoming = readPatientChangeEvents(await response.json());
-			if (data.patient.id !== patientId) return;
-			changeEvents = incoming;
-			changeEventsLoaded = true;
-		} catch (error) {
-			if (data.patient.id === patientId)
-				changeEventsLoadError = 'No pudimos cargar los últimos cambios. Volvé a intentar.';
-		} finally {
-			loadingChangeEvents = false;
-		}
-	};
-
 	const selectTab = (nextTab: 'historial' | 'datos' | 'radiografias') => {
 		if (nextTab === 'historial' && !permissions.canReadClinicalHistory) return;
 		tab = nextTab;
@@ -187,12 +152,7 @@
 		if (nextUrl !== `${$page.url.pathname}${$page.url.search}${$page.url.hash}`) {
 			replaceState(nextUrl, $page.state);
 		}
-		if (nextTab === 'datos') void loadChangeEvents();
 	};
-
-	$effect(() => {
-		if (tab === 'datos') void loadChangeEvents();
-	});
 
 	let showEntryErrors = $state(false);
 	let showEditErrors = $state(false);
@@ -229,21 +189,6 @@
 	const isArchived = $derived(
 		Boolean(isProfessional ? data.patient.professional_archived_at : data.patient.archived_at)
 	);
-	const hasPatientData = $derived(
-		Boolean(
-			data.patient.dni ||
-			data.patient.phone ||
-			data.patient.email ||
-			data.patient.address ||
-			data.patient.birth_date ||
-			data.patient.insurance ||
-			data.patient.insurance_plan ||
-			data.patient.allergies ||
-			data.patient.medication ||
-			data.patient.background
-		)
-	);
-
 	const formatAmountInput = (value: string) => {
 		const digits = moneyDigits(value);
 		const formatted = formatMoneyInteger(digits);
@@ -578,245 +523,13 @@
 		isProfessional={isProfessional}
 		onEdit={openEditEntry}
 	/>
-	{#if tab === 'datos'}
-		<div class="rounded-2xl border border-neutral-100 bg-white p-4 shadow-sm dark:border-[#1f3554] dark:bg-[#122641] sm:p-5">
-			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Datos del paciente</h2>
-				{#if permissions.canEditPatient}
-					<button
-						type="button"
-						class="w-full rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow-sm transition hover:-translate-y-0.5 hover:shadow-card dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white sm:w-auto"
-						onclick={openEditPatient}
-					>
-						{hasPatientData ? 'Editar datos del paciente' : 'Agregar datos del paciente'}
-					</button>
-				{/if}
-			</div>
-			<div class="mt-4 space-y-4">
-				<div class="rounded-xl border border-neutral-100 bg-white/60 p-4 dark:border-[#1f3554] dark:bg-[#0f1f36]">
-					<div class="mb-3 flex items-center justify-between">
-						<p class="text-[13px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Identidad</p>
-						{#if permissions.canEditPatient}
-							<button
-								type="button"
-								class="rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-50 dark:hover:bg-[#122641]"
-								onclick={openEditPatient}
-							>
-								Editar
-							</button>
-						{/if}
-					</div>
-					<div class="space-y-1">
-						<p class="text-xs font-semibold text-neutral-500 dark:text-neutral-300">Nombre</p>
-						<p class="break-words text-[17px] font-semibold text-neutral-900 dark:text-white">
-							{data.patient.full_name}
-						</p>
-					</div>
-				</div>
-				<div class="rounded-xl border border-neutral-100 bg-white/60 p-4 dark:border-[#1f3554] dark:bg-[#0f1f36]">
-					<div class="mb-3 flex items-center justify-between">
-						<p class="text-[13px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Alertas médicas</p>
-							{#if permissions.canEditPatient}
-								<button
-									type="button"
-									class="rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-50 dark:hover:bg-[#122641]"
-									onclick={openEditPatient}
-								>
-									Editar
-								</button>
-							{/if}
-					</div>
-					{#if data.patient.clinical_profile_patient_reported}<p class="mb-3 text-xs text-neutral-600 dark:text-neutral-300">Última actualización informada por el paciente desde su reserva. Revisá el historial de información previa para consultar los cambios.</p>{/if}
-                    {#if permissions.canReadClinicalProfile && data.patient.booking_age}<p class="mb-3 text-sm">Edad declarada: {data.patient.booking_age.years} años (al {data.patient.booking_age.as_of}).</p>{/if}
-                    {#if permissions.canReadClinicalProfile && data.patient.booking_extra_fields?.length}<dl class="mb-4 space-y-2">{#each data.patient.booking_extra_fields as field}<div><dt class="text-xs text-neutral-600 dark:text-neutral-300">{field.label}</dt><dd class="text-sm whitespace-pre-wrap break-words">{typeof field.value === 'boolean' ? field.value ? 'Sí' : 'No' : String(field.value)}</dd></div>{/each}</dl>{/if}
-                    <div class="space-y-3">
-                        <div class="flex min-w-0 items-start justify-between gap-3 rounded-lg bg-amber-100/30 px-3 py-2 dark:bg-amber-500/10">
-							<div class="flex items-center gap-2 text-xs font-semibold text-amber-700 dark:text-amber-200">
-								<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M4.93 19h14.14a1 1 0 0 0 .9-1.45L12.9 4.55a1 1 0 0 0-1.8 0L4.03 17.55A1 1 0 0 0 4.93 19Z" />
-								</svg>
-								Alergias
-							</div>
-							<p
-								class={`min-w-0 flex-1 break-words text-right text-[15px] font-semibold ${
-									data.patient.allergies ? 'text-amber-900 dark:text-amber-100' : 'text-amber-700/70 dark:text-amber-200/70'
-								}`}
-							>
-								{data.patient.allergies ?? 'Sin registrar'}
-							</p>
-						</div>
-						<div class="flex min-w-0 items-start justify-between gap-3">
-							<div class="flex items-center gap-2 text-xs font-semibold text-neutral-500 dark:text-neutral-300">
-								<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75 17.25 17.25M9 5.25 5.25 9 9 12.75 12.75 9 9 5.25Z" />
-									<path stroke-linecap="round" stroke-linejoin="round" d="M15 11.25 11.25 15 15 18.75 18.75 15 15 11.25Z" />
-								</svg>
-								Medicación
-							</div>
-							<p
-								class={`min-w-0 flex-1 break-words text-left text-[15px] font-semibold ${
-									data.patient.medication ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'
-								}`}
-							>
-								{data.patient.medication ?? 'Sin registrar'}
-							</p>
-						</div>
-						<div class="flex min-w-0 items-start justify-between gap-3">
-							<div class="flex items-center gap-2 text-xs font-semibold text-neutral-500 dark:text-neutral-300">
-								<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 4.5h10.5a1.5 1.5 0 0 1 1.5 1.5v12.75l-4.5-2.25L9.75 18.75 5.25 21V6A1.5 1.5 0 0 1 6.75 4.5Z" />
-								</svg>
-								Antecedentes
-							</div>
-							<p
-								class={`min-w-0 flex-1 break-words text-left text-[15px] font-semibold whitespace-pre-wrap ${
-									data.patient.background ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'
-								}`}
-							>
-								{data.patient.background ?? 'Sin registrar'}
-							</p>
-						</div>
-					</div>
-				</div>
-
-				<div class="rounded-xl border border-neutral-100 bg-white/60 p-4 dark:border-[#1f3554] dark:bg-[#0f1f36]">
-					<div class="mb-3 flex items-center justify-between">
-						<p class="text-[13px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Contacto</p>
-							{#if permissions.canEditPatient}
-								<button
-									type="button"
-									class="rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-50 dark:hover:bg-[#122641]"
-									onclick={openEditPatient}
-								>
-									Editar
-								</button>
-							{/if}
-					</div>
-					<div class="grid gap-3 md:grid-cols-2">
-						<div class="space-y-1">
-							<p class="text-xs font-semibold text-neutral-500 dark:text-neutral-300">Teléfono</p>
-							<div class="flex items-center gap-2">
-								<p class={`min-w-0 flex-1 break-words text-[15px] font-semibold ${data.patient.phone ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
-									{data.patient.phone ?? 'Sin registrar'}
-								</p>
-								{#if data.patient.phone}
-									<button
-										type="button"
-										class="grid h-8 w-8 place-items-center rounded-full border border-neutral-200 text-xs text-neutral-600 dark:border-[#1f3554] dark:text-neutral-200"
-										onclick={() => copyToClipboard(data.patient.phone)}
-										title="Copiar"
-									>
-										⧉
-									</button>
-								{/if}
-							</div>
-						</div>
-						<div class="space-y-1">
-							<p class="text-xs font-semibold text-neutral-500 dark:text-neutral-300">Correo electrónico</p>
-							<div class="flex items-center gap-2">
-								<p class={`min-w-0 flex-1 break-all text-[15px] font-semibold ${data.patient.email ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
-									{data.patient.email ?? 'Sin registrar'}
-								</p>
-								{#if data.patient.email}
-									<button
-										type="button"
-										class="grid h-8 w-8 place-items-center rounded-full border border-neutral-200 text-xs text-neutral-600 dark:border-[#1f3554] dark:text-neutral-200"
-										onclick={() => copyToClipboard(data.patient.email)}
-										title="Copiar"
-									>
-										⧉
-									</button>
-								{/if}
-							</div>
-						</div>
-						<div class="space-y-1 md:col-span-2">
-							<p class="text-xs font-semibold text-neutral-500 dark:text-neutral-300">Dirección</p>
-							<div class="flex items-center gap-2">
-								<p class={`min-w-0 flex-1 break-words text-[15px] font-semibold ${data.patient.address ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
-									{data.patient.address ?? 'Sin registrar'}
-								</p>
-								{#if data.patient.address}
-									<button
-										type="button"
-										class="grid h-8 w-8 place-items-center rounded-full border border-neutral-200 text-xs text-neutral-600 dark:border-[#1f3554] dark:text-neutral-200"
-										onclick={() => copyToClipboard(data.patient.address)}
-										title="Copiar"
-									>
-										⧉
-									</button>
-								{/if}
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<div class="rounded-xl border border-neutral-100 bg-white/60 p-4 dark:border-[#1f3554] dark:bg-[#0f1f36]">
-					<div class="mb-3 flex items-center justify-between">
-						<p class="text-[13px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Administrativo</p>
-							{#if permissions.canEditPatient}
-								<button
-									type="button"
-									class="rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-50 dark:hover:bg-[#122641]"
-									onclick={openEditPatient}
-								>
-									Editar
-								</button>
-							{/if}
-					</div>
-					<div class="grid gap-3 md:grid-cols-2">
-						<div class="space-y-1">
-							<p class="text-xs font-semibold text-neutral-500 dark:text-neutral-300">Obra social</p>
-							<p class={`text-[15px] font-semibold ${data.patient.insurance ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
-								{data.patient.insurance ?? 'Sin registrar'}
-							</p>
-						</div>
-						<div class="space-y-1">
-							<p class="text-xs font-semibold text-neutral-500 dark:text-neutral-300">Plan de la obra social</p>
-							<p class={`text-[15px] font-semibold ${data.patient.insurance_plan ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
-								{data.patient.insurance_plan ?? 'Sin registrar'}
-							</p>
-						</div>
-						<div class="space-y-1">
-							<p class="text-xs font-semibold text-neutral-500 dark:text-neutral-300">Nacimiento</p>
-							<p class={`text-[15px] font-semibold ${data.patient.birth_date ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
-								{data.patient.birth_date ? formatDate(data.patient.birth_date, data.businessTimeZone) : 'Sin registrar'}
-							</p>
-						</div>
-					</div>
-				</div>
-			</div>
-			{#if loadingChangeEvents}
-				<div class="mt-5 rounded-xl border border-neutral-100 bg-white/60 p-4 text-sm font-semibold text-neutral-500 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-neutral-300" aria-live="polite">
-					Cargando últimos cambios…
-				</div>
-			{:else if changeEventsLoadError}
-				<div class="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-400/40 dark:bg-red-500/10 dark:text-red-100">
-					<p>{changeEventsLoadError}</p>
-					<button type="button" class="mt-3 font-semibold underline" onclick={loadChangeEvents}>Reintentar</button>
-				</div>
-			{:else if changeEvents.length > 0}
-				<div class="mt-5 rounded-xl border border-neutral-100 bg-white/60 p-4 dark:border-[#1f3554] dark:bg-[#0f1f36]">
-					<p class="text-[13px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Últimos cambios</p>
-					<div class="mt-3 space-y-3">
-						{#each changeEvents.slice(0, 5) as event}
-							<div class="rounded-lg border border-neutral-100 bg-white/70 px-3 py-2 dark:border-[#1f3554] dark:bg-[#122641]">
-								<p class="text-sm font-semibold text-neutral-900 dark:text-white">{event.summary}</p>
-								<p class="mt-1 text-xs text-neutral-500 dark:text-neutral-300">
-									{formatDateTime(event.created_at)} · {event.changed_by_name}
-								</p>
-							</div>
-						{/each}
-					</div>
-				</div>
-			{/if}
-			<details class="mt-4 text-[11px] text-[#65738d] dark:text-[#7b8aa5]">
-				<summary class="cursor-pointer text-neutral-600 dark:text-neutral-200">Ver detalles</summary>
-				<p class="mt-1">
-					Creado: {formatDate(data.patient.created_at, data.businessTimeZone)} • Última actualización: {formatDateTime(data.patient.updated_at, data.businessTimeZone)}
-				</p>
-			</details>
-		</div>
-	{:else if tab === 'radiografias'}
+	<PatientProfilePanel
+        active={tab === 'datos'} patient={data.patient} {permissions}
+        scope={`${data.currentUserId ?? 'session'}:${data.role ?? ''}:${permissions.canReadClinicalProfile}:${permissions.canEditPatient}`}
+        initialChangeEvents={data.changeEvents} deferred={Boolean(data.changeEventsDeferred)}
+        demo={Boolean(data.demo)} businessTimeZone={data.businessTimeZone} onEdit={openEditPatient}
+    />
+	{#if tab === 'radiografias'}
 		<RadiographsPanel
 			patientId={data.patient.id}
 			cacheScope={radiographCacheScope}
