@@ -3,13 +3,13 @@ const areas = ['access', 'team', 'scheduling', 'patients', 'integrations', 'site
 module.exports = {
 	forbidden: [
 		{
-			name: 'no-circular-runtime-dependencies', severity: 'error',
-			from: {}, to: { circular: true, dependencyTypesNot: ['type-only'] }
+			name: 'no-circular-dependencies', severity: 'error',
+			from: {}, to: { circular: true }
 		},
 		{
 			name: 'browser-cannot-import-server', severity: 'error',
 			from: { path: '(?:/lib/client/|\\.svelte$|/\\+(?:page|layout)\\.ts$)' },
-			to: { path: '(?:/lib/server/|\\.server\\.[jt]s$)', dependencyTypesNot: ['type-only'] }
+			to: { path: '(?:/lib/server/|\\.server\\.[jt]s$)' }
 		},
 		...areas.map(area => ({
 			name: `public-interface-of-${area}`, severity: 'error',

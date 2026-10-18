@@ -95,7 +95,7 @@ const REQUIRED_FILES = [
 	'apps/web/src/routes/odonto/recordatorios/+page.svelte',
 	'apps/web/src/lib/server/public-booking.ts',
 	'apps/web/src/lib/server/public-appointments.ts',
-	'apps/web/src/lib/server/commercial-access.ts',
+	'apps/web/src/lib/access/commercial-access.ts',
 	'apps/web/src/lib/server/messaging.ts',
 	'apps/web/src/lib/server/internal-jobs.ts'
 ];

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { styledSelect } from "$lib/ui/styled-controls";
 	import BackLink from '$lib/components/BackLink.svelte';
-	import type { BusinessContext, BusinessIndustry } from '$lib/server/business';
+	import type { BusinessContext, BusinessIndustry } from '$lib/access/contracts';
 
 	let { data, form } = $props<{
 		data: {

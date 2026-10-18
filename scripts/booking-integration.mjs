@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { createClient } from '@supabase/supabase-js';
 import { normalizeBookingOrigin, parseBookingIntakeFields, parseBookingModalityWindows, BOOKING_MODALITIES, BOOKING_THEMES } from '../packages/shared/src/booking-integration.ts';
-import { getBusinessAccessState } from '../apps/web/src/lib/server/commercial-access.ts';
+import { getBusinessAccessState } from '../apps/web/src/lib/access/commercial-access.ts';
 // Node >=22.23. Default operation is read-only. Credentials never enter the
 // config JSON or output. Creation and activation are separate explicit commands.
 const root = fileURLToPath(new URL('../', import.meta.url));

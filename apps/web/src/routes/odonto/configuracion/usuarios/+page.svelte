@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { BusinessContext, BusinessRole } from '$lib/server/business';
+	import type { BusinessContext, BusinessRole } from '$lib/access/contracts';
 	import {
 		canConfigureAttendingProfile,
 		shouldConfigureProfessionalProfile

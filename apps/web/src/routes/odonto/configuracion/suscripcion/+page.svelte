@@ -1,6 +1,6 @@
 <script lang="ts">
 	import BackLink from '$lib/components/BackLink.svelte';
-	import type { BusinessSubscriptionRow } from '$lib/server/commercial-access';
+	import type { BusinessSubscriptionRow } from '$lib/access/commercial-access';
 	import { visibleCommercialAccessNote } from '$lib/utils/commercial-access-copy';
 	import { formatAccessRemaining } from '$lib/utils/format';
 

@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import type { CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
 import { readJson, readRecord, readArray, isRecord, readChoice, readText, readNullableText, readBoolean, readFiniteNumber } from '$lib/contracts/json';
 import { writeAuditLog } from './audit';
-import { getBusinessAccessState, type BusinessSubscriptionRow } from './commercial-access';
+import { getBusinessAccessState, type BusinessSubscriptionRow } from '$lib/access/commercial-access';
 import { hmacSha256HexMatches } from './hmac';
 import { normalizeArgentineWhatsAppPhone, normalizePhoneE164 } from './phone';
 

@@ -1,6 +1,6 @@
 # Disponibilidad y aranceles
 
-Autoridad: [plan íntegro, etapa 4](../plans/refactorizacion-cita-suite.md). El [registro](../plans/registro-refactorizacion-cita-suite.md) distingue cada fuente y resultado. **La etapa sigue abierta:** contratos, consumidores, ciclo de cotización y regresión integral comprobados en el full `39073720665` sobre `ee1db49`. La inspección propia de doce capturas produjo un lote de correcciones de navegación móvil, recuperación semanal y feedback de porcentaje, todavía pendiente de verificar y revisar independientemente. No se aplicaron migraciones remotas.
+Autoridad: [plan íntegro, etapa 4](../plans/refactorizacion-cita-suite.md). El [registro](../plans/registro-refactorizacion-cita-suite.md) distingue cada fuente y resultado. **Etapa 4 cerrada en entorno descartable:** contratos, consumidores, cotización y lote visual comprobados en full `39090572628` sobre `c0129e4`, con revisión independiente ship y documentación contrastada. No se aplicaron migraciones remotas.
 
 ## Propiedad y límites
 
@@ -43,13 +43,13 @@ El calculador de servidor y el snapshot interno usan catálogo/ventanas y retira
 
 El adaptador histórico queda sólo como reexportación del parser compartido. Ningún consumidor activo llama a los snapshots SQL históricos ni usa una alternativa de tablas. Las funciones SQL anteriores permanecen para transición compatible; no deben confundirse con una recuperación activa.
 
-Las confirmaciones por fecha, recuperación sin duplicación, cuestionarios y ambos temas aprobaron en full 39070230569. Full 39073720665 comprobó además quince días bloqueados y navegación real en ambos temas/anchos, frontera HTTP interna, inicialización honesta y ciclo real de cotización. La revisión visual del lote correctivo posterior sigue pendiente.
+Las confirmaciones por fecha, recuperación sin duplicación, cuestionarios y ambos temas aprobaron en full 39070230569. Full 39073720665 comprobó además quince días bloqueados y navegación real en ambos temas/anchos, frontera HTTP interna, inicialización honesta y ciclo real de cotización. La revisión visual del lote aprobó con alcance acotado, según revisión-ui-agenda-aranceles.md.
 
 ## Frontera HTTP y vida de cada petición
 
 El resuelto de integración comparte únicamente configuración y contexto de marco entre layout y página. Un cliente Supabase captura su `event.fetch` de origen: compartirlo permitía que una página consultara mediante el fetch de un layout ya terminado. Cada consumidor de datos crea ahora su cliente con el fetch de su propio load. La coalescencia del control de acceso/configuración sigue limitada a la petición; no se agrega una caché de permisos. Full 39070230569 dejó de emitir ese aviso específico. Persisten avisos genéricos de fetch durante SSR (tres en 39073720665), con diagnóstico separado pendiente para etapa 5.
 
-En revisión posterior, el asistente manual deja de solicitar 28 fechas para mostrar siete. `availability/http.ts` valida slots y snapshots internos usando los mismos validadores de configuración/ocupación; no sintetiza revisiones ni permisos para hacerlos aprobar. Una respuesta incompleta no se convierte en una agenda vacía; referencias se actualizan juntas sólo tras validarlas. El cálculo local no usa un snapshot vencido. Fast 39071516947 comprobó dieciocho casos de frontera HTTP y un caso de componente rechazando respuesta parcial. El full 39073720665 confirmó el rechazo y la recuperación real mediante la proyección individual legítima (arrays de equipo opcionales). El reintento explícito sobre la misma semana pertenece al lote visual posterior aún no verificado.
+En revisión posterior, el asistente manual deja de solicitar 28 fechas para mostrar siete. `availability/http.ts` valida slots y snapshots internos usando los mismos validadores de configuración/ocupación; no sintetiza revisiones ni permisos para hacerlos aprobar. Una respuesta incompleta no se convierte en una agenda vacía; referencias se actualizan juntas sólo tras validarlas. El cálculo local no usa un snapshot vencido. Fast 39071516947 comprobó dieciocho casos de frontera HTTP y un caso de componente rechazando respuesta parcial. El full 39073720665 confirmó el rechazo y la recuperación real mediante la proyección individual legítima (arrays de equipo opcionales). El reintento explícito de la misma semana aprobó en full 39090572628, con fecha/rango exactos y slots reales.
 
 ## Aranceles exactos
 
@@ -74,6 +74,7 @@ Los desplazamientos válidos son de 0 a 600, inclusive. Una previsualización de
 | CI `39071528383` | SQL con 14 controles de cambios reales entre cotización/confirmación y replay; atomicidad, aceptación del nuevo importe y fotografía histórica preservada. Incluye todas las suites y diez carreras. |
 | CI `39072048885` | Fast del resultado actual de aplicación: 1.147 servidor, 123 cliente; últimos tres casos comprueban preview UI al mes 600, rechazo del 601 y error humano de configuración completa. Capturas/E2E ampliados posteriores aún requieren full. |
 | CI `39073720665` | Full consolidado sobre `ee1db49`: 50 guardas, 1.148 servidor, 123 cliente, una reapertura nativa; SQL completo, diez carreras, tipos reproducibles, 29 navegador, Natalia y demo2 sin omisiones/reintentos. Incluye recuperación individual real y cuatro combinaciones públicas de tema/ancho. |
+| CI `39090572628` | Full del lote visual sobre `c0129e4`: 1.148 servidor/123 cliente/29 navegador y restantes suites sin omisiones. Reintento real de misma semana, FormData certificado, geometría de enlaces móviles, expansión antes de siguiente ventana y feedback accesible sin guardar. |
 | CI `39051023222` | Fast aprobado sobre `982ef9a`: once controles de fechas/JSON y cuatro del coordinador. Sus respuestas HTTP son simuladas; no se presentan como PostgreSQL ni como navegador desplegado. |
 
-Las verificaciones alojadas, capacidad, UI completa, reserva desde Natalia/enlace directo y auditoría transversal tienen sus puertas posteriores. El estado provisional de este documento no reduce ninguna condición del plan.
+Las verificaciones alojadas, capacidad, UI completa, reserva desde Natalia/enlace directo y auditoría transversal tienen sus puertas posteriores. Este cierre descartable no reduce ninguna condición de las etapas posteriores.

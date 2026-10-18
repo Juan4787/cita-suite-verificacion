@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getBusinessAccessState } from './commercial-access';
+import { getBusinessAccessState } from '$lib/access/commercial-access';
 
 const now = new Date('2026-05-28T12:00:00.000Z');
 const isoFromNow = (hours: number) => new Date(now.getTime() + hours * 60 * 60 * 1000).toISOString();

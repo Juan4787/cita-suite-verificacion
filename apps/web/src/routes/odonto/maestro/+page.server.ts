@@ -1,7 +1,7 @@
 import {
 	COMMERCIAL_STATUSES,
 	getBusinessAccessState
-} from '$lib/server/commercial-access';
+} from '$lib/access/commercial-access';
 import {
 	cancelPreapproval,
 	pickRelevantMpSubscription,

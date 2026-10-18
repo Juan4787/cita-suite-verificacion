@@ -51,5 +51,22 @@ test('runtime dependency cycles are rejected', () => {
 		'b.ts': "import {a} from './a'; export function b(){return a();}"
 	});
 	assert.notEqual(result.status, 0);
-	assert.match(result.stdout + result.stderr, /no-circular-runtime-dependencies/);
+	assert.match(result.stdout + result.stderr, /no-circular-dependencies/);
+});
+
+test('type-only dependency cycles are rejected', () => {
+ const result = check({
+  'a.ts': "import type {B} from './b'; export interface A { b: B }",
+  'b.ts': "import type {A} from './a'; export interface B { a: A }"
+ });
+ assert.notEqual(result.status, 0);
+ assert.match(result.stdout + result.stderr, /no-circular-dependencies/);
+});
+test('browser code cannot depend on server implementation types', () => {
+ const result = check({
+  'server/access/internal.ts': 'export interface Permission { allowed: boolean }',
+  'client/unsafe.ts': "import type {Permission} from '../server/access/internal'; export type State=Permission;"
+ });
+ assert.notEqual(result.status, 0);
+ assert.match(result.stdout + result.stderr, /browser-cannot-import-server/);
 });

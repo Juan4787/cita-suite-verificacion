@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ReminderCandidate, ReminderDay } from '$lib/server/reminders';
+	import type { ReminderCandidate, ReminderDay } from '$lib/scheduling/contracts';
 	import { classifyUserAgent, refineDeviceClass, type DeviceClass } from '$lib/device';
 	import { onMount } from 'svelte';
 

@@ -22,7 +22,7 @@ import {
 import {
 	getBusinessAccessState,
 	type BusinessSubscriptionRow
-} from './commercial-access';
+} from '$lib/access/commercial-access';
 import { isLikelyPhoneE164, normalizePhoneE164 } from './phone';
 import { sanitizePublicImageUrl } from './public-image';
 import type { IntegratedBookingInput } from './booking-integrations';
