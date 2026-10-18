@@ -76,8 +76,29 @@ test('clinical creation persists the Argentina wall clock and displays the same 
 	const f = await fixture();
 	try {
 		await loginWithSharedSession(page, await credentials());
-		await page.goto(`/odonto/pacientes/${f.patientId}`);
-		await page.getByRole('button', { name: '+ Registrar consulta', exact: true }).click();
+		// A visible SSR button is not proof that its JS handler is attached. Hold
+		// scripts on a fresh document and require the UI's actual disabled state.
+		await page.goto('about:blank');
+		let releaseScripts!: () => void;
+		const scripts = new Promise<void>((resolve) => {
+			releaseScripts = resolve;
+		});
+		const holdScripts = async (route: import('@playwright/test').Route) => {
+			if (route.request().resourceType() === 'script') await scripts;
+			await route.continue();
+		};
+		await page.route('**/*', holdScripts);
+		const open = page.getByRole('button', { name: '+ Registrar consulta', exact: true });
+		try {
+			await page.goto(`/odonto/pacientes/${f.patientId}`, { waitUntil: 'commit' });
+			await expect(page.getByRole('heading', { name: f.fullName, exact: true })).toBeVisible();
+			await expect(open).toBeDisabled();
+		} finally {
+			releaseScripts();
+			await page.unrouteAll({ behavior: 'wait' });
+		}
+		await expect(open).toBeEnabled();
+		await open.click();
 		const dialog = page.getByRole('dialog', { name: `Registrar consulta - ${f.fullName}` });
 		await dialog.getByLabel('Tipo de consulta').selectOption('Consulta');
 		await setLocalDate(dialog, '09:30');

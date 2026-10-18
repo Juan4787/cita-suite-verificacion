@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { createClientReadiness } from '$lib/client/readiness.svelte';
+	const client = createClientReadiness();
 	import { onDestroy } from 'svelte';
 	import type { PatientHistoryEntry } from '$lib/patients/contracts';
 	import { readPatientHistoryPage } from '$lib/patients/history-contract';
@@ -148,7 +150,7 @@
 							<path stroke-linecap="round" stroke-linejoin="round" d="M3 5h18M6 12h12M10 19h4" />
 						</svg>
 					</span>
-					<select
+					<select disabled={!client.ready}
 						bind:value={filterType}
 						aria-label="Tipo de consulta"
 						class="w-full rounded-full border border-neutral-200 bg-white py-2 pl-9 pr-3 text-sm dark:border-[#1f3554] dark:bg-[#0f1f36]"
@@ -167,7 +169,7 @@
 						</svg>
 					</span>
 					<input
-						type="search"
+						type="search" disabled={!client.ready}
 						aria-label="Buscar en el historial"
 						placeholder="Buscar (palabra, fecha)"
 						class="w-full rounded-full border border-neutral-200 bg-white py-2 pl-9 pr-3 text-sm text-neutral-700 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-neutral-50"
@@ -178,7 +180,7 @@
 				{#if historyLoadError}
 					<div class="mt-4 flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-400/40 dark:bg-red-500/10 dark:text-red-100" role="alert">
 						<p>{historyLoadError}</p>
-						<button type="button" class="font-semibold underline" onclick={() => (historyLoadError = '')}>Cerrar</button>
+						<button disabled={!client.ready} type="button" class="font-semibold underline" onclick={() => (historyLoadError = '')}>Cerrar</button>
 					</div>
 				{/if}
 				<div class="mt-4">
@@ -218,7 +220,7 @@
 														</span>
 													{/if}
 													{#if canEditEntry(entry)}
-														<button
+														<button disabled={!client.ready}
 															type="button"
 															class="inline-flex items-center gap-1 rounded-full border border-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-100 dark:hover:bg-[#122641]"
 															onclick={(event) => {
@@ -277,7 +279,7 @@
 								type="button"
 								class="rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:-translate-y-0.5 hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-200 dark:hover:bg-[#122641] disabled:cursor-not-allowed disabled:opacity-60"
 								onclick={loadMoreEntries}
-								disabled={loadingMoreEntries}
+								disabled={!client.ready || loadingMoreEntries}
 							>
 								{loadingMoreEntries ? 'Cargando...' : 'Cargar más historial'}
 							</button>

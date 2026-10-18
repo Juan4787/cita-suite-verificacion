@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { createClientReadiness } from '$lib/client/readiness.svelte';
+	const client = createClientReadiness();
 	import type {
 		PatientDetailViewData,
 		PatientFormState,
@@ -8,33 +10,27 @@
 		comparePatientHistoryEntries,
 		readSavedPatientEntry
 	} from '$lib/patients/history-contract';
-	import { enhance } from '$app/forms';
 	import { page } from '$app/stores';
 	import { invalidate, replaceState } from '$app/navigation';
 	import { onDestroy, untrack } from 'svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import FollowUpComposer from '$lib/components/seguimientos/FollowUpComposer.svelte';
-	import DateTimePartsInput from '$lib/components/DateTimePartsInput.svelte';
-	import DatePartsInput from '$lib/components/DatePartsInput.svelte';
 	import RadiographsPanel from '$lib/components/patients/RadiographsPanel.svelte';
 	import PatientHistoryPanel from '$lib/components/patients/PatientHistoryPanel.svelte';
 	import PatientProfilePanel from '$lib/components/patients/PatientProfilePanel.svelte';
+	import ClinicalEntryDialog from '$lib/components/patients/ClinicalEntryDialog.svelte';
+	import PatientProfileDialog from '$lib/components/patients/PatientProfileDialog.svelte';
 	import { markPatientRevisionUnverified } from '$lib/client/patient-list-cache';
 	import {
 		activatePatientRadiographCache,
 		schedulePatientRadiographPreload
 	} from '$lib/client/patient-radiographs-cache';
-	import { CLINICAL_ENTRY_TYPES } from '$lib/constants';
 	import { formatDate, formatDateTime } from '$lib/utils/format';
-	import { formatMoneyInteger, moneyDigits } from '$lib/utils/money-input';
-	import type { SubmitFunction } from '@sveltejs/kit';
-	import { clinicalAmountForEdit, clinicalAmountFromDisplay } from '$lib/patients/clinical-amount';
 
 	let { data, form }: { data: PatientDetailViewData; form?: PatientFormState | null } = $props();
 
 	let showEntryModal = $state(false);
 	let showEditModal = $state(false);
-	let editPatientDismissed = $state(false);
 	let showArchiveConfirm = $state(false);
 	let showDeleteConfirm = $state($page.url.searchParams.has('eliminar'));
 	let showMobileActions = $state(false);
@@ -42,7 +38,6 @@
 	let tab = $state<'historial' | 'datos' | 'radiografias'>(
 		untrack(() => (data.permissions.canReadClinicalHistory ? 'historial' : 'datos'))
 	);
-	const currentYear = new Date().getFullYear();
 	const appointmentStatusLabels: Record<string, string> = {
 		reserved: 'Reservado',
 		confirmed: 'Confirmado',
@@ -53,24 +48,7 @@
 	let hasMoreEntries = $state(untrack(() => Boolean(data.hasMoreEntries)));
 	const requestedTab = $derived.by(() => $page.url.searchParams.get('tab'));
 	const requestedDelete = $derived.by(() => $page.url.searchParams.has('eliminar'));
-	const permissions = $derived(
-		data.permissions ?? {
-			canReadClinicalHistory: false,
-			canReadClinicalProfile: true,
-			canEditClinicalProfile: true,
-			canViewCosts: true,
-			canEditPatient: true,
-			canArchivePatient: true,
-			canCreateClinicalEntry: true,
-			canEditClinicalEntry: true,
-			canCreateAppointment: true,
-			canViewRadiographs: true,
-			canUploadRadiographs: true,
-			canViewRadiographTrash: true,
-			canTrashRadiographs: true,
-			canExportPatientData: false
-		}
-	);
+	const permissions = $derived(data.permissions);
 	const isProfessional = $derived(data.role === 'professional');
 	const radiographCacheScope = $derived(
 		`${data.currentUserId ?? 'session'}:${data.patient.id}:${data.demo ? 'demo' : 'live'}:${permissions.canViewRadiographs ? 'view' : 'hidden'}`
@@ -155,47 +133,17 @@
 		}
 	};
 
-	let showEntryErrors = $state(false);
-	let showEditErrors = $state(false);
-	let showEditEntryErrors = $state(false);
 	let showEditEntryModal = $state(false);
 	let editingEntry: PatientHistoryEntry | null = $state(null);
-	let editEntryType = $state('');
-	let editEntryDescription = $state('');
-	let editEntryTeeth = $state('');
-	let editEntryNote = $state('');
-	let editEntryCreatedAt = $state('');
-	let amountDisplay = $state('');
-	let amountRaw = $state('');
-	let editAmountDisplay = $state('');
-	let editAmountRaw = $state('');
-	let savingEntry = $state(false);
-	let savingPatient = $state(false);
-	let patientUpdateError = $state('');
 	let archiveForm: HTMLFormElement | null = $state(null);
 	let unarchiveForm: HTMLFormElement | null = $state(null);
 
 	const openEditPatient = () => {
-		editPatientDismissed = false;
-		patientUpdateError = '';
-		showEditErrors = false;
 		showEditModal = true;
-	};
-
-	const closeEditPatient = () => {
-		editPatientDismissed = true;
-		patientUpdateError = '';
-		showEditModal = false;
 	};
 	const isArchived = $derived(
 		Boolean(isProfessional ? data.patient.professional_archived_at : data.patient.archived_at)
 	);
-	const formatAmountInput = (value: string) => {
-		const digits = moneyDigits(value);
-		const formatted = formatMoneyInteger(digits);
-		return { digits, formatted };
-	};
-
 	const mergeSavedClinicalEntry = (value: unknown): boolean => {
 		let savedEntry;
 		try {
@@ -213,145 +161,20 @@
 		return true;
 	};
 
-	const enhanceEntry: SubmitFunction = ({ cancel, formElement }) => {
-		showEntryErrors = true;
-		const hidden = formElement.querySelector<HTMLInputElement>('input[name="created_at"]');
-		if (!hidden || !hidden.value || hidden.value === '__invalid__') {
-			cancel();
-			return;
-		}
-		savingEntry = true;
-		return async ({ update, result }) => {
-			try {
-				if (result.type === 'success') {
-					const savedEntry = result.data?.savedEntry;
-					if (!mergeSavedClinicalEntry(savedEntry)) {
-						markPatientRevisionUnverified();
-						showEntryModal = false;
-						await update();
-						return;
-					}
-					markPatientRevisionUnverified();
-					showEntryModal = false;
-					showEntryErrors = false;
-					await update({ invalidateAll: false });
-					return;
-				}
-				if (result.type === 'redirect') {
-					markPatientRevisionUnverified();
-					showEntryModal = false;
-				}
-				await update();
-			} finally {
-				savingEntry = false;
-			}
-		};
+	const acceptCreatedEntry = (value: unknown) => {
+		markPatientRevisionUnverified();
+		return mergeSavedClinicalEntry(value);
 	};
-
-	const handleAmountChange = (event: Event, type: 'new' | 'edit') => {
-		const target = event.currentTarget;
-		if (!(target instanceof HTMLInputElement)) return;
-		if (type === 'edit') {
-			const state = clinicalAmountFromDisplay(target.value);
-			target.setCustomValidity(
-				state.valid ? '' : 'Revisá el importe. Usá una coma para los decimales.'
-			);
-			target.value = state.display;
-			editAmountDisplay = state.display;
-			editAmountRaw = state.raw;
-			return;
-		}
-		const { digits, formatted } = formatAmountInput(target.value);
-		target.value = formatted;
-		amountDisplay = formatted;
-		amountRaw = digits;
-	};
-
-	const handleEditSubmit = (event: SubmitEvent) => {
-		showEditErrors = true;
-		const formEl = event.currentTarget as HTMLFormElement;
-		const birthHidden = formEl.querySelector<HTMLInputElement>('input[name="birth_date"]');
-		if (birthHidden && birthHidden.value === '__invalid__') {
-			event.preventDefault();
-		}
-	};
-
-	const enhancePatientUpdate: SubmitFunction = ({ cancel, formElement }) => {
-		showEditErrors = true;
-		patientUpdateError = '';
-		editPatientDismissed = false;
-		const birthHidden = formElement.querySelector<HTMLInputElement>('input[name="birth_date"]');
-		if (birthHidden && birthHidden.value === '__invalid__') {
-			cancel();
-			return;
-		}
-		if (savingPatient) {
-			cancel();
-			return;
-		}
-		savingPatient = true;
-		return async ({ result, update }) => {
-			try {
-				if (result.type === 'error') {
-					patientUpdateError =
-						'No pudimos guardar los cambios. Revisá tu conexión y volvé a intentar; tus datos siguen en el formulario.';
-					return;
-				}
-				if (result.type === 'redirect' || result.type === 'success') {
-					markPatientRevisionUnverified();
-					showEditModal = false;
-					showEditErrors = false;
-					patientUpdateError = '';
-					await update();
-					return;
-				}
-				await update({ reset: false });
-			} finally {
-				savingPatient = false;
-			}
-		};
-	};
-
-	const handleEditEntrySubmit = (event: SubmitEvent) => {
-		showEditEntryErrors = true;
-		const formEl = event.currentTarget as HTMLFormElement;
-		const hidden = formEl.querySelector<HTMLInputElement>('input[name="created_at"]');
-		if (!hidden || !hidden.value || hidden.value === '__invalid__') {
-			event.preventDefault();
-		}
-	};
-
 	const openEditEntry = (entry: PatientHistoryEntry) => {
 		editingEntry = entry;
-		editEntryType = entry.entry_type ?? '';
-		editEntryDescription = entry.description ?? '';
-		editEntryTeeth = entry.teeth ?? '';
-		const initialAmount = clinicalAmountForEdit(entry.amount);
-		editAmountDisplay = initialAmount.display;
-		editAmountRaw = initialAmount.raw;
-		editEntryNote = entry.internal_note ?? '';
-		editEntryCreatedAt = entry.created_at ?? '';
-		showEditEntryErrors = false;
 		showEditEntryModal = true;
 	};
-
 	const openNewEntryModal = () => {
-		amountDisplay = '';
-		amountRaw = '';
-		showEntryErrors = false;
 		showEntryModal = true;
 	};
-
 	const handleFollowUpCreated = async () => {
 		showFollowUpModal = false;
 		await invalidate('app:follow-ups');
-	};
-
-	const preventEnterSubmit = (event: KeyboardEvent) => {
-		if (event.key !== 'Enter') return;
-		const target = event.target as HTMLElement | null;
-		if (target instanceof HTMLTextAreaElement) return;
-		event.preventDefault();
 	};
 </script>
 
@@ -364,7 +187,7 @@
 						{data.patient.full_name}
 					</h1>
 				</div>
-				<button
+				<button disabled={!client.ready}
 					type="button"
 					class="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 text-neutral-700 transition hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-100 dark:hover:bg-[#122641] md:hidden"
 					onclick={() => (showMobileActions = true)}
@@ -380,7 +203,7 @@
 			<div class="hidden md:grid md:grid-cols-2 md:gap-2 md:justify-items-start lg:flex lg:flex-wrap lg:items-center lg:gap-3">
 				{#if permissions.canArchivePatient}
 					<form method="post" action="?/archive_patient" class="contents" bind:this={archiveForm}>
-						<button
+						<button disabled={!client.ready}
 							type="submit"
 							class="ux-btn-secondary md:justify-self-start"
 							onclick={(event: MouseEvent) => {
@@ -394,7 +217,7 @@
 				{/if}
 				<form method="post" action="?/unarchive_patient" class="hidden" bind:this={unarchiveForm}></form>
 				{#if isProfessional}
-					<button
+					<button disabled={!client.ready}
 						type="button"
 						class="ux-btn-danger md:col-span-2 md:justify-self-start lg:col-span-1"
 						onclick={() => (showDeleteConfirm = true)}
@@ -403,7 +226,7 @@
 					</button>
 				{/if}
 				{#if permissions.canCreateClinicalEntry}
-					<button
+					<button disabled={!client.ready}
 						class="ux-btn-primary md:col-span-2 md:justify-self-start lg:col-span-1"
 						type="button"
 						onclick={openNewEntryModal}
@@ -420,7 +243,7 @@
 					</a>
 				{/if}
 				{#if data.followUpParticipates}
-					<button
+					<button disabled={!client.ready}
 						class="ux-btn-secondary md:col-span-2 md:justify-self-start lg:col-span-1"
 						type="button"
 						onclick={() => (showFollowUpModal = true)}
@@ -449,7 +272,7 @@
 				Atrás
 			</a>
 			{#if permissions.canReadClinicalHistory}
-			<button
+			<button disabled={!client.ready}
 				class={`w-full rounded-full px-2 py-2 text-center text-xs font-semibold transition sm:px-4 sm:text-sm md:w-auto ${
 					tab === 'historial'
 						? 'bg-[#7c3aed] text-white shadow-sm'
@@ -460,7 +283,7 @@
 				Historial
 			</button>
 			{/if}
-			<button
+			<button disabled={!client.ready}
 				class={`w-full rounded-full px-2 py-2 text-center text-xs font-semibold transition sm:px-4 sm:text-sm md:w-auto ${
 					tab === 'datos'
 						? 'bg-[#7c3aed] text-white shadow-sm'
@@ -470,7 +293,7 @@
 			>
 				Datos
 			</button>
-			<button
+			<button disabled={!client.ready}
 				class={`w-full rounded-full px-2 py-2 text-center text-xs font-semibold transition sm:px-4 sm:text-sm md:w-auto ${
 					tab === 'radiografias'
 						? 'bg-[#7c3aed] text-white shadow-sm'
@@ -568,7 +391,7 @@
 </div>
 <!-- FAB móvil para nueva entrada -->
 {#if tab === 'historial' && permissions.canCreateClinicalEntry}
-	<button
+	<button disabled={!client.ready}
 		class="fixed bottom-20 right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[#7c3aed] text-2xl font-bold text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] md:hidden"
 		onclick={openNewEntryModal}
 		aria-label="Registrar consulta"
@@ -580,7 +403,7 @@
 <Modal open={showMobileActions} title="Acciones del paciente" on:close={() => (showMobileActions = false)}>
 	<div class="space-y-3">
 		{#if permissions.canArchivePatient}
-			<button
+			<button disabled={!client.ready}
 				type="button"
 				class="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-100 dark:hover:bg-[#122641]"
 				onclick={() => {
@@ -592,7 +415,7 @@
 			</button>
 		{/if}
 		{#if permissions.canCreateClinicalEntry}
-			<button
+			<button disabled={!client.ready}
 				type="button"
 				class="w-full rounded-xl bg-[#7c3aed] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#6d28d9]"
 				onclick={() => {
@@ -613,7 +436,7 @@
 			</a>
 		{/if}
 		{#if data.followUpParticipates}
-			<button
+			<button disabled={!client.ready}
 				type="button"
 				class="block w-full rounded-xl border border-[#7c3aed]/40 px-4 py-3 text-center text-sm font-semibold text-[#7c3aed] transition hover:bg-[#7c3aed]/10 dark:text-[#c4b5fd]"
 				onclick={() => {
@@ -625,7 +448,7 @@
 			</button>
 		{/if}
 		{#if isProfessional}
-			<button
+			<button disabled={!client.ready}
 				type="button"
 				class="w-full rounded-xl border border-red-300/70 px-4 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 dark:border-red-400/40 dark:text-red-200 dark:hover:bg-red-500/10"
 				onclick={() => {
@@ -636,7 +459,7 @@
 				Eliminar paciente
 			</button>
 		{/if}
-		<button
+		<button disabled={!client.ready}
 			type="button"
 			class="w-full rounded-xl px-4 py-3 text-sm font-semibold text-neutral-600 transition hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-[#122641]"
 			onclick={() => (showMobileActions = false)}
@@ -656,106 +479,16 @@
 	/>
 </Modal>
 
-<Modal open={showEntryModal} title={`Registrar consulta - ${data.patient.full_name}`} on:close={() => (showEntryModal = false)}>
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-	<form
-		method="post"
-		action="?/add_entry"
-		use:enhance={enhanceEntry}
-		class="space-y-4"
-		onkeydown={preventEnterSubmit}
-	>
-		<input type="hidden" name="amount_format" value="canonical" />
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
-			<div class="space-y-2">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="entry_type">Tipo de consulta</label>
-				<select
-					id="entry_type"
-					name="entry_type"
-					required
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-				>
-					<option value="">Seleccionar</option>
-					{#each CLINICAL_ENTRY_TYPES as type}
-						<option value={type}>{type}</option>
-					{/each}
-				</select>
-			</div>
-			<div class="space-y-2">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="created_at-year">Fecha y hora</label>
-				<DateTimePartsInput name="created_at" readOnly={isProfessional} timeZone={data.businessTimeZone} minYear={2000} maxYear={2045} showErrors={showEntryErrors} />
-				{#if isProfessional}<p class="text-xs text-neutral-600 dark:text-neutral-300">La fecha y hora se registrarán al guardar.</p>{/if}
-			</div>
-		</div>
-		<div class="space-y-2">
-			<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="description">Descripción</label>
-			<textarea
-				id="description"
-				name="description"
-				required
-				rows="4"
-				class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-				placeholder="Motivo de consulta, hallazgos, indicaciones..."
-			></textarea>
-		</div>
-		<div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-			<div class="space-y-2">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="teeth">{data.businessIndustry && data.businessIndustry!=='odontology'?'Zona / referencia (opcional)':'Dientes / zona (opcional)'}</label>
-				<input
-					id="teeth"
-					name="teeth"
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-					placeholder="Ej: 11-12"
-				/>
-			</div>
-			{#if permissions.canViewCosts}
-				<div class="space-y-2">
-					<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="amount">Importe (opcional)</label>
-					<input type="hidden" name="amount" value={amountRaw} />
-					<input
-						id="amount"
-						name="amount_display"
-						type="text"
-						inputmode="numeric"
-						class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-						placeholder="Ej: 18.000"
-						value={amountDisplay}
-						oninput={(event) => handleAmountChange(event, 'new')}
-					/>
-				</div>
-			{/if}
-			<div class="space-y-2">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="internal_note">Nota interna (opcional)</label>
-				<input
-					id="internal_note"
-					name="internal_note"
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-					placeholder="Ej: recordar control"
-				/>
-			</div>
-		</div>
-		{#if form?.message}
-			<p class="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{form.message}</p>
-		{/if}
-		<div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
-			<button
-				type="button"
-				disabled={savingEntry}
-				onclick={() => (showEntryModal = false)}
-				class="w-full rounded-xl px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-white dark:hover:bg-[#1b2d4b] sm:w-auto"
-			>
-				Cancelar
-			</button>
-			<button
-				type="submit"
-				disabled={savingEntry}
-				class="w-full rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 sm:w-auto"
-			>
-				{savingEntry ? 'Guardando…' : 'Guardar'}
-			</button>
-		</div>
-	</form>
-</Modal>
+<ClinicalEntryDialog bind:open={showEntryModal} patient={data.patient}
+    scope={`${data.currentUserId ?? 'session'}:${data.role ?? ''}:${permissions.canCreateClinicalEntry}:${permissions.canViewCosts}`}
+    canViewCosts={permissions.canViewCosts} {isProfessional} timeZone={data.businessTimeZone}
+    industry={data.businessIndustry} errorMessage={form?.message}
+    onCreated={acceptCreatedEntry} onCommitted={markPatientRevisionUnverified} />
+<ClinicalEntryDialog bind:open={showEditEntryModal} patient={data.patient} entry={editingEntry}
+    scope={`${data.currentUserId ?? 'session'}:${data.role ?? ''}:${permissions.canEditClinicalEntry}:${permissions.canViewCosts}`}
+    canViewCosts={permissions.canViewCosts} {isProfessional} timeZone={data.businessTimeZone}
+    industry={data.businessIndustry} errorMessage={form?.message}
+    onCreated={acceptCreatedEntry} onCommitted={markPatientRevisionUnverified} />
 
 <Modal open={showArchiveConfirm} title={isArchived ? 'Desarchivar paciente' : 'Archivar paciente'} on:close={() => (showArchiveConfirm = false)} dismissible>
 	<div class="space-y-4 text-sm text-neutral-800 dark:text-neutral-100">
@@ -765,14 +498,14 @@
 			<p>{isProfessional ? 'El paciente se ocultará de tu lista activa. Podrás recuperarlo desde Archivados.' : 'El paciente se moverá a “Archivados”. Podrás recuperarlo más adelante.'}</p>
 		{/if}
 		<div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
-			<button
+			<button disabled={!client.ready}
 				type="button"
 				class="w-full rounded-xl px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:text-white dark:hover:bg-[#1b2d4b] sm:w-auto"
 				onclick={() => (showArchiveConfirm = false)}
 			>
 				Cancelar
 			</button>
-				<button
+				<button disabled={!client.ready}
 					type="button"
 					class="w-full rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 sm:w-auto"
 					onclick={() => {
@@ -802,7 +535,7 @@
 			</p>
 		{/if}
 		<div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
-			<button
+			<button disabled={!client.ready}
 				type="button"
 				class="w-full rounded-xl px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:text-white dark:hover:bg-[#1b2d4b] sm:w-auto"
 				onclick={() => {
@@ -812,7 +545,7 @@
 				Entendido
 			</button>
 			{#if !isProfessional && permissions.canArchivePatient && !isArchived}
-				<button
+				<button disabled={!client.ready}
 					type="button"
 					class="w-full rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 sm:w-auto"
 					onclick={() => {
@@ -827,284 +560,8 @@
 	</div>
 </Modal>
 
-<Modal open={showEditEntryModal} title="Editar entrada" on:close={() => (showEditEntryModal = false)}>
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-	<form method="post" action="?/update_entry" class="space-y-4" onkeydown={preventEnterSubmit} onsubmit={handleEditEntrySubmit}>
-		<input type="hidden" name="amount_format" value="canonical" />
-		<input type="hidden" name="entry_id" value={editingEntry?.id ?? ''} />
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
-			<div class="space-y-2">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="edit_entry_type">Tipo de consulta</label>
-				<select
-					id="edit_entry_type"
-					name="entry_type"
-					required
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-					bind:value={editEntryType}
-				>
-					<option value="">Seleccionar</option>
-					{#each CLINICAL_ENTRY_TYPES as type}
-						<option value={type}>{type}</option>
-					{/each}
-				</select>
-			</div>
-			<div class="space-y-2">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="created_at-year">Fecha y hora</label>
-				<DateTimePartsInput name="created_at" readOnly={isProfessional} timeZone={data.businessTimeZone} minYear={2000} maxYear={2045} initialValue={editEntryCreatedAt} showErrors={showEditEntryErrors} />
-				{#if isProfessional}<p class="text-xs text-neutral-600 dark:text-neutral-300">La fecha y hora de registro se conservan.</p>{/if}
-			</div>
-		</div>
-		<div class="space-y-2">
-			<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="edit_description">Descripción</label>
-			<textarea
-				id="edit_description"
-				name="description"
-				required
-				rows="4"
-				class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-				bind:value={editEntryDescription}
-				placeholder="Motivo de consulta, hallazgos, indicaciones..."
-			></textarea>
-		</div>
-		<div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-			<div class="space-y-2">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="edit_teeth">{data.businessIndustry && data.businessIndustry!=='odontology'?'Zona / referencia (opcional)':'Dientes / zona (opcional)'}</label>
-				<input
-					id="edit_teeth"
-					name="teeth"
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-					bind:value={editEntryTeeth}
-					placeholder="Ej: 11-12"
-				/>
-			</div>
-			{#if permissions.canViewCosts}
-				<div class="space-y-2">
-					<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="edit_amount">Importe (opcional)</label>
-					<input type="hidden" name="amount" value={editAmountRaw} />
-					<input
-						id="edit_amount"
-						name="amount_display"
-						type="text"
-						inputmode="decimal"
-						class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-						value={editAmountDisplay}
-						oninput={(event) => handleAmountChange(event, 'edit')}
-						placeholder="Ej: 18.000"
-					/>
-				</div>
-			{/if}
-			<div class="space-y-2">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="edit_internal_note">Nota interna (opcional)</label>
-				<input
-					id="edit_internal_note"
-					name="internal_note"
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-					bind:value={editEntryNote}
-					placeholder="Ej: recordar control"
-				/>
-			</div>
-		</div>
-		{#if form?.message}
-			<p class="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{form.message}</p>
-		{/if}
-		<div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
-			<button
-				type="button"
-				onclick={() => (showEditEntryModal = false)}
-				class="w-full rounded-xl px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:text-white dark:hover:bg-[#1b2d4b] sm:w-auto"
-			>
-				Cancelar
-			</button>
-			<button
-				type="submit"
-				class="w-full rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 sm:w-auto"
-			>
-				Guardar cambios
-			</button>
-		</div>
-	</form>
-</Modal>
 
-<Modal open={showEditModal} title="Editar datos" on:close={closeEditPatient}>
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-	<form
-		method="post"
-		action="?/update_patient"
-		class="space-y-3"
-		onkeydown={preventEnterSubmit}
-		onsubmit={handleEditSubmit}
-		use:enhance={enhancePatientUpdate}
-		aria-busy={savingPatient}
-	>
-		<input
-			type="hidden"
-			name="expected_patient_updated_at"
-			value={form?.currentPatientUpdatedAt ?? data.patient.updated_at ?? ''}
-		/>
-		<input
-			type="hidden"
-			name="expected_clinical_profile_updated_at"
-			value={form?.currentClinicalProfileUpdatedAt ?? data.patient.clinical_profile_updated_at ?? ''}
-		/>
-		<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-			<div class="space-y-1">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="full_name">Nombre del paciente *</label>
-				<input
-					id="full_name"
-					name="full_name"
-					required
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-					value={data.patient.full_name ?? ''}
-				/>
-			</div>
-			<div class="space-y-1">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="email">Correo electrónico (opcional)</label>
-				<input
-					id="email"
-					name="email"
-					type="email"
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-					value={data.patient.email ?? ''}
-				/>
-			</div>
-		</div>
-		<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-			<div class="space-y-1">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="phone">Teléfono (opcional)</label>
-				<input
-					id="phone"
-					name="phone"
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-					value={data.patient.phone ?? ''}
-				/>
-			</div>
-			<div class="space-y-1">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="dni">DNI (opcional)</label>
-				<input
-					id="dni"
-					name="dni"
-					inputmode="numeric"
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-					value={data.patient.dni ?? ''}
-				/>
-			</div>
-		</div>
-		<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-			<div class="space-y-1">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="birth_date-year">Fecha de nacimiento (opcional)</label>
-				<DatePartsInput
-					name="birth_date"
-					initialValue={data.patient.birth_date ?? null}
-					minYear={1900}
-					maxYear={currentYear}
-					showErrors={showEditErrors}
-				/>
-			</div>
-			<div class="space-y-1">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="address">Dirección (opcional)</label>
-				<input
-					id="address"
-					name="address"
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-					value={data.patient.address ?? ''}
-				/>
-			</div>
-		</div>
-		<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-			<div class="space-y-3">
-				<div class="space-y-1">
-					<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="insurance">Obra social (opcional)</label>
-					<input
-						id="insurance"
-						name="insurance"
-						class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-						value={data.patient.insurance ?? ''}
-					/>
-				</div>
-				<div class="space-y-1">
-					<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="insurance_plan">
-						Plan de la obra social (opcional)
-					</label>
-					<input
-						id="insurance_plan"
-						name="insurance_plan"
-						class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-						value={data.patient.insurance_plan ?? ''}
-					/>
-				</div>
-			</div>
-			{#if permissions.canEditClinicalProfile}
-				<div class="space-y-1">
-					<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="allergies">Alergias (opcional)</label>
-					<input
-						id="allergies"
-						name="allergies"
-						class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-						value={data.patient.allergies ?? ''}
-					/>
-				</div>
-			{/if}
-		</div>
-		{#if permissions.canEditClinicalProfile}
-			<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-				<div class="space-y-1">
-					<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="medication">Medicación (opcional)</label>
-					<textarea
-						id="medication"
-						name="medication"
-						rows="2"
-						class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-					>{data.patient.medication ?? ''}</textarea>
-				</div>
-				<div class="space-y-1">
-					<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="background">Antecedentes (opcional)</label>
-					<textarea
-						id="background"
-						name="background"
-						rows="2"
-						class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
-					>{data.patient.background ?? ''}</textarea>
-				</div>
-			</div>
-		{/if}
-		{#if form?.message && !editPatientDismissed}
-			<div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-400/50 dark:bg-red-500/15 dark:text-red-100">
-				<p>{form.message}</p>
-				{#if form.duplicate && form.existingId}
-					<a
-						class="mt-3 inline-flex rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-amber-400"
-						href={`/odonto/pacientes/${form.existingId}`}
-						data-sveltekit-preload-data="tap"
-					>
-						Abrir paciente existente
-					</a>
-				{/if}
-			</div>
-		{/if}
-		{#if patientUpdateError}
-			<div
-				class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-400/50 dark:bg-red-500/15 dark:text-red-100"
-				role="alert"
-			>
-				{patientUpdateError}
-			</div>
-		{/if}
-		<p class="text-xs text-neutral-500 dark:text-neutral-300">Todos los datos son opcionales.</p>
-		<div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
-			<button
-				type="button"
-				class="w-full rounded-xl px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:text-white dark:hover:bg-[#1b2d4b] sm:w-auto"
-				onclick={closeEditPatient}
-			>
-				Cancelar
-			</button>
-			<button
-				type="submit"
-				disabled={savingPatient}
-				class="w-full rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 sm:w-auto"
-			>
-				{savingPatient ? 'Guardando…' : 'Guardar cambios'}
-			</button>
-		</div>
-	</form>
-</Modal>
+
+<PatientProfileDialog bind:open={showEditModal} patient={data.patient} {permissions} {form}
+    scope={`${data.currentUserId ?? 'session'}:${data.role ?? ''}:${permissions.canEditPatient}:${permissions.canEditClinicalProfile}:${permissions.canReadClinicalProfile}`}
+    onCommitted={markPatientRevisionUnverified} />

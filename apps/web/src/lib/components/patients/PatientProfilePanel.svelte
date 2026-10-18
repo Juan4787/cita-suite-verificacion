@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { createClientReadiness } from '$lib/client/readiness.svelte';
+	const client = createClientReadiness();
 	import { onDestroy, untrack } from 'svelte';
 	import type {
 		PatientDetailViewData,
@@ -127,7 +129,7 @@
 			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Datos del paciente</h2>
 				{#if permissions.canEditPatient}
-					<button
+					<button disabled={!client.ready}
 						type="button"
 						class="w-full rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow-sm transition hover:-translate-y-0.5 hover:shadow-card dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white sm:w-auto"
 						onclick={onEdit}
@@ -141,7 +143,7 @@
 					<div class="mb-3 flex items-center justify-between">
 						<p class="text-[13px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Identidad</p>
 						{#if permissions.canEditPatient}
-							<button
+							<button disabled={!client.ready}
 								type="button"
 								class="rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-50 dark:hover:bg-[#122641]"
 								onclick={onEdit}
@@ -161,7 +163,7 @@
 					<div class="mb-3 flex items-center justify-between">
 						<p class="text-[13px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Alertas médicas</p>
 							{#if permissions.canEditPatient}
-								<button
+								<button disabled={!client.ready}
 									type="button"
 									class="rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-50 dark:hover:bg-[#122641]"
 									onclick={onEdit}
@@ -227,7 +229,7 @@
 					<div class="mb-3 flex items-center justify-between">
 						<p class="text-[13px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Contacto</p>
 							{#if permissions.canEditPatient}
-								<button
+								<button disabled={!client.ready}
 									type="button"
 									class="rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-50 dark:hover:bg-[#122641]"
 									onclick={onEdit}
@@ -244,7 +246,7 @@
 									{patient.phone ?? 'Sin registrar'}
 								</p>
 								{#if patient.phone}
-									<button
+									<button disabled={!client.ready}
 										type="button"
 										class="grid h-8 w-8 place-items-center rounded-full border border-neutral-200 text-xs text-neutral-600 dark:border-[#1f3554] dark:text-neutral-200"
 										onclick={() => copyToClipboard(patient.phone)}
@@ -262,7 +264,7 @@
 									{patient.email ?? 'Sin registrar'}
 								</p>
 								{#if patient.email}
-									<button
+									<button disabled={!client.ready}
 										type="button"
 										class="grid h-8 w-8 place-items-center rounded-full border border-neutral-200 text-xs text-neutral-600 dark:border-[#1f3554] dark:text-neutral-200"
 										onclick={() => copyToClipboard(patient.email)}
@@ -280,7 +282,7 @@
 									{patient.address ?? 'Sin registrar'}
 								</p>
 								{#if patient.address}
-									<button
+									<button disabled={!client.ready}
 										type="button"
 										class="grid h-8 w-8 place-items-center rounded-full border border-neutral-200 text-xs text-neutral-600 dark:border-[#1f3554] dark:text-neutral-200"
 										onclick={() => copyToClipboard(patient.address)}
@@ -298,7 +300,7 @@
 					<div class="mb-3 flex items-center justify-between">
 						<p class="text-[13px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Administrativo</p>
 							{#if permissions.canEditPatient}
-								<button
+								<button disabled={!client.ready}
 									type="button"
 									class="rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-50 dark:hover:bg-[#122641]"
 									onclick={onEdit}
@@ -336,7 +338,7 @@
 			{:else if changeEventsLoadError}
 				<div class="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-400/40 dark:bg-red-500/10 dark:text-red-100">
 					<p>{changeEventsLoadError}</p>
-					<button type="button" class="mt-3 font-semibold underline" onclick={loadChangeEvents}>Reintentar</button>
+					<button disabled={!client.ready} type="button" class="mt-3 font-semibold underline" onclick={loadChangeEvents}>Reintentar</button>
 				</div>
 			{:else if changeEvents.length > 0}
 				<div class="mt-5 rounded-xl border border-neutral-100 bg-white/60 p-4 dark:border-[#1f3554] dark:bg-[#0f1f36]">

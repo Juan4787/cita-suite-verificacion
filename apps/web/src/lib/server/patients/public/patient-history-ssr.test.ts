@@ -45,5 +45,6 @@ describe('patient history initial server render', () => {
 		expect(body).toContain('Synthetic SSR patient');
 		expect(body).toContain('Synthetic persisted consultation');
 		expect(body).not.toContain('Sin consultas registradas');
+		expect(body).toMatch(/<button[^>]*\bdisabled\b[^>]*>\+ Registrar consulta<\/button>/);
 	});
 });
