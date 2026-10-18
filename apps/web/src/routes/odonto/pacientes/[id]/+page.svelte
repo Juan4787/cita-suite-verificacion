@@ -136,7 +136,7 @@
 		entry.internal_note.trim() &&
 		entry.internal_note.trim().toLowerCase() !== (entry.description ?? '').trim().toLowerCase();
 
-	const copyToClipboard = (text?: string) => {
+	const copyToClipboard = (text?: string | null) => {
 		if (!text) return;
 		if (navigator?.clipboard) {
 			navigator.clipboard.writeText(text).catch(() => {});

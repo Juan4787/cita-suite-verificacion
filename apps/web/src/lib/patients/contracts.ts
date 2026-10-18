@@ -60,6 +60,7 @@ export type PatientDetailViewData = {
 		custom_fields?: unknown;
 		professional_archived_at?: string | null;
 		clinical_profile_patient_reported?: boolean;
+		clinical_profile_updated_at?: string | null;
 		booking_age?: { years: number; as_of: string } | null;
 		booking_extra_fields?: { label: string; value: string | boolean }[];
 	};

@@ -4,7 +4,7 @@ export type PatientRadiographItem = {
  source?:'professional'|'patient'; appointment_id?:string|null;
 	id: string;
 	patient_id?: string;
-	status?: 'uploading' | 'ready' | 'failed' | 'trashed' | string;
+	status?: 'uploading' | 'ready' | 'failed' | 'trashed' | string | null;
 	original_filename?: string | null;
 	mime_type?: string | null;
 	bytes?: number | null;
