@@ -1,4 +1,4 @@
-project_id = "turnos-saas"
+project_id = "cita-suite"
 
 [api]
 enabled = true

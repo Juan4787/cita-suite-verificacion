@@ -117,3 +117,17 @@ describe('professional editing draft isolation and historical recovery', () => {
 		expect(() => sanitizeProfessionalDraft(null, fallback)).not.toThrow();
 	});
 });
+
+describe('professional dependency confirmation contract', () => {
+ it('accepts explicit zero counts, never missing, fractional or negative counts', async () => {
+  const { parseProfessionalDependencyCounts } = await import('./professional-editor');
+  expect(parseProfessionalDependencyCounts({appointment_count:0,clinical_entry_count:0,follow_up_count:0})).toEqual({appointment_count:0,clinical_entry_count:0,follow_up_count:0});
+  for(const item of [{},{appointment_count:'0',clinical_entry_count:0,follow_up_count:0},{appointment_count:0,clinical_entry_count:-1,follow_up_count:0},{appointment_count:0,clinical_entry_count:0,follow_up_count:0.5},null]) expect(parseProfessionalDependencyCounts(item)).toBeNull();
+ });
+ it('rejects unknown restriction enums instead of enabling every service',async()=>{
+  const { professionalRuleScope,professionalExceptionType }=await import('./professional-editor');
+  expect(professionalRuleScope('restricted')).toBe('restricted');
+  expect(professionalExceptionType('restricted')).toBe('restricted');
+  expect(()=>professionalRuleScope('unknown')).toThrow();expect(()=>professionalExceptionType('unknown')).toThrow();
+ });
+});

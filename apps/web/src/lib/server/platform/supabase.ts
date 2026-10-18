@@ -25,7 +25,7 @@ const normalizeEnv = (value?: string | null) => {
 const WebSocketTransport = WebSocket as unknown as typeof globalThis.WebSocket;
 
 const moduleEmails: Record<Module, string | undefined> = {
-	odonto: normalizeEnv(env.SABRINA_EMAIL),
+	odonto: normalizeEnv(env.CITA_SUITE_OWNER_EMAIL) ?? normalizeEnv(env.SABRINA_EMAIL),
 	// administrativo: env.ADMIN_EMAIL
 	administrativo: undefined
 };
