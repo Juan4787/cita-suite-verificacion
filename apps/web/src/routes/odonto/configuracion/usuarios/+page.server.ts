@@ -1,3 +1,5 @@
+import type { BusinessRoleAccess } from '$lib/access/team-contracts';
+import { listBusinessRoleAccess as listRoleAccess } from '$lib/server/access/public/team-access';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import {
 	scheduleBlocksFromForm,
@@ -55,19 +57,6 @@ import { error as kitError, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import type { CitaSupabaseClient } from '$lib/types/database';
 
-type RoleAccessStatus = 'active' | 'pending';
-
-type BusinessRoleAccess = {
-	id: string;
-	business_id: string;
-	user_id: string | null;
-	email: string;
-	role: BusinessRole;
-	status: RoleAccessStatus;
-	professional_id: string | null;
-	created_at: string;
-};
-
 type ServiceOption = {
 	id: string;
 	name: string;
@@ -108,37 +97,6 @@ const normalizeEmail = (value: FormDataEntryValue | null) =>
 	String(value ?? '')
 		.trim()
 		.toLowerCase();
-
-const normalizeAccess = (value: unknown): BusinessRoleAccess | null => {
-	const row = readRecord(value, 'businessRoleAccess');
-	const role = String(row?.role ?? '');
-	const status = String(row?.status ?? '');
-	if (!row?.id || !row?.business_id || !row?.email || !isBusinessRole(role)) return null;
-	if (status !== 'active' && status !== 'pending') return null;
-	return {
-		id: String(row.id),
-		business_id: String(row.business_id),
-		user_id: row.user_id ? String(row.user_id) : null,
-		email: String(row.email),
-		role,
-		status,
-		professional_id: row.professional_id ? String(row.professional_id) : null,
-		created_at: String(row.created_at ?? '')
-	};
-};
-
-const listRoleAccess = async (
-	supabase: CitaSupabaseClient,
-	businessId: string
-): Promise<BusinessRoleAccess[]> => {
-	const { data, error } = await supabase.rpc('list_business_role_access', {
-		target_business_id: businessId
-	});
-	if (error) throw error;
-	return readArray(data, 'businessRoleAccessList')
-		.map(normalizeAccess)
-		.filter((item): item is BusinessRoleAccess => Boolean(item));
-};
 
 const listServices = async (
 	supabase: CitaSupabaseClient,

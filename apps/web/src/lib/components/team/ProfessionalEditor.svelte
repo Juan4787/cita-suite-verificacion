@@ -72,7 +72,7 @@
 		return validateScheduleBlocks(schedule.blocks).ok;
 	};
 
-	const canOperate = $derived(data.context.canManage && !data.demo);
+	const canOperate = $derived(data.context.canManage && !data.demo && draftReady);
 	const canManage = $derived(data.context.canManage && !data.demo);
 	const accountLinkPending = $derived(Boolean(data.pendingAccountEmail));
 	const defaultServiceIdSet = $derived(new Set(data.defaultServiceIds ?? []));
@@ -389,7 +389,7 @@
 	});
 </script>
 
-<section class="ux-page" data-editor-ready={draftReady}>
+<section class="ux-page" data-editor-ready={draftReady} aria-busy={!draftReady}>
 		<div class="ux-hero">
 			<BackLink href="/odonto/configuracion/usuarios" label="Volver" class="mb-5" />
 			<div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -466,7 +466,7 @@
 					class={`ux-profile-tab ${activeTab === tab.id ? 'ux-profile-tab-active' : ''} ${
 						tabStates[tab.id].missing ? 'ux-profile-tab-required' : tabStates[tab.id].dirty ? 'ux-profile-tab-unsaved' : ''
 					}`}
-					onclick={() => (activeTab = tab.id)}
+					disabled={!draftReady} onclick={() => (activeTab = tab.id)}
 					>
 						<span class="inline-flex items-center justify-center gap-2">
 							{tab.label}
@@ -489,7 +489,7 @@
 	{/if}
 
 	<ProfessionalServicesPanel active={activeTab === 'servicios'} services={data.services} professional={data.professional}
-		currentPriceLabels={data.currentPriceLabels} defaultServiceIds={data.defaultServiceIds} {canManage}
+		currentPriceLabels={data.currentPriceLabels} defaultServiceIds={data.defaultServiceIds} canManage={canManage && draftReady}
 		bind:selectedIds={draft.serviceIds} bind:baselineIds={baseline.serviceIds} bind:saving
 		dependencyKey={professionalDependencyKey} scope={`${businessId}:${userId}:${professionalId}:${canManage}`} onToggleService={toggleService} availabilityRevision={data.availabilityRevision ?? 0} />
 

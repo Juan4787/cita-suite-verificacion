@@ -891,7 +891,20 @@ test.describe('isolated booking integration', () => {
 			const page = await context.newPage();
 			page.on('pageerror', (e) => errors.push(e.message));
 			const editorURL = fixture.appOrigin + '/odonto/profesionales/' + professionalId;
-			await page.goto(editorURL + '?tab=servicios');
+			let releaseEditorScripts!: () => void;
+   const editorScriptsReady = new Promise<void>(resolve => { releaseEditorScripts = resolve; });
+   const holdEditorScripts = async (route: import('@playwright/test').Route) => {
+    if (route.request().resourceType() === 'script') await editorScriptsReady;
+    await route.continue();
+   };
+   await page.route('**/*',holdEditorScripts);
+   try {
+    await page.goto(editorURL+'?tab=servicios',{waitUntil:'commit'});
+    await expect(page.getByRole('button',{name:/^Servicios y aranceles/})).toBeDisabled();
+    await expect(page.getByRole('button',{name:'Crear servicio nuevo',exact:true})).toBeDisabled();
+   } finally { releaseEditorScripts(); }
+   await expect(page.getByRole('button',{name:/^Servicios y aranceles/})).toBeEnabled();
+   await page.unroute('**/*',holdEditorScripts);
 			await expect(page.locator('[data-editor-ready="true"]')).toBeVisible();
 			await page.getByRole('button', { name: 'Crear servicio nuevo', exact: true }).click();
 			const creation = page.locator('form[action="?/create_service"]');

@@ -3,6 +3,8 @@
 	import { invalidate } from '$app/navigation';
 	import { onDestroy } from 'svelte';
 	import Modal from '$lib/components/Modal.svelte';
+	import { createClientReadiness } from '$lib/client/readiness.svelte';
+	const client = createClientReadiness();
 	import { parseProfessionalDependencyCounts } from '$lib/team/professional-editor';
 	import type { ProfessionalEditorData } from '$lib/team/professional-editor';
 	let {
@@ -127,7 +129,7 @@
 							</button>
 						</form>
 					{/if}
-					<button type="button" class="ux-btn-danger" onclick={openDeleteConfirm}>Eliminar</button>
+					<button type="button" class="ux-btn-danger" disabled={!client.ready} onclick={openDeleteConfirm}>Eliminar</button>
 				</div>
 			</div>
 

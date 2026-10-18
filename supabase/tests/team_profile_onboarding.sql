@@ -27,7 +27,7 @@ select extensions.is((select count(*) from public.professionals where id=(select
 select extensions.is((select is_public from public.professionals where id=(select profile from team_onboarding_fixture)),false,'invited professional stays hidden');
 select extensions.is((select count(*) from public.professional_services where professional_id=(select profile from team_onboarding_fixture)),3::bigint,'two defaults and one additional service are assigned');
 select extensions.is((select count(*) from public.availability_rules where professional_id=(select profile from team_onboarding_fixture)),1::bigint,'weekly schedule is persisted');
-select extensions.is((select count(*) from public.business_user_invites where email=(select pending_email from team_onboarding_fixture) and status='pending' and professional_id=(select profile from team_onboarding_fixture)),1::bigint,'invitation carries the configured professional');
+select extensions.is((select count(*) from team_onboarding_fixture f cross join lateral public.list_business_role_access(f.business_id) access where access.email=f.pending_email and access.status='pending' and access.professional_id=f.profile),1::bigint,'invitation carries the configured professional');
 select extensions.throws_ok($test$select public.create_team_member_profile(business_id,pg_temp.team_profile_configuration(failed_profile,failure_email)||jsonb_build_object('serviceIds',jsonb_build_array(gen_random_uuid()))) from team_onboarding_fixture$test$,'P0001','INVALID_SERVICE_ASSIGNMENT','a foreign or missing service aborts the whole configuration');
 select extensions.is((select count(*) from public.professionals where id=(select failed_profile from team_onboarding_fixture)),0::bigint,'failed service validation leaves no profile');
 select extensions.throws_ok($test$select public.create_team_member_profile(business_id,pg_temp.team_profile_configuration(failed_profile,failure_email)||jsonb_build_object('newServices',jsonb_build_array(jsonb_build_object('name','Synthetic invalid duration','duration_minutes',30.5)))) from team_onboarding_fixture$test$,'P0001','NEW_SERVICE_DURATION_INVALID','fractional service duration is rejected before successful onboarding');
@@ -44,8 +44,8 @@ select extensions.throws_ok($test$select public.create_team_member_profile(busin
 select extensions.is((select count(*) from public.professionals where id=(select failed_profile from team_onboarding_fixture)),0::bigint,'final failure leaves no profile');
 select extensions.is((select count(*) from public.availability_rules where professional_id=(select failed_profile from team_onboarding_fixture)),0::bigint,'final failure leaves no weekly rules');
 select extensions.is((select count(*) from public.services where business_id=(select business_id from team_onboarding_fixture)),3::bigint,'final failure leaves no new service');
-select extensions.is((select count(*) from public.allowed_emails where email=(select failure_email from team_onboarding_fixture)),0::bigint,'final failure does not leave an allowed account');
 reset role;
+select extensions.is((select count(*) from public.allowed_emails where email=(select failure_email from team_onboarding_fixture)),0::bigint,'privileged readback confirms no allowed account survives the final failure');
 drop trigger cita_onboarding_invite_failure on public.business_user_invites;
 drop function private.cita_onboarding_invite_failure();
 set local role authenticated;

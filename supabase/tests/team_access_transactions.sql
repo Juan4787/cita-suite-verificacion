@@ -26,7 +26,7 @@ select extensions.is((select professional_id from public.professional_users wher
 select extensions.throws_ok($test$select public.upsert_business_role_access(business_id,target||'@example.test','reception',profile) from team_access_fixture$test$,'P0001','PROFESSIONAL_ROLE_NOT_SUPPORTED','reception cannot be assigned a professional profile');
 select extensions.is((select role from public.business_users where user_id=(select target from team_access_fixture)),'admin','invalid profile request preserves the prior role');
 select extensions.lives_ok($test$select public.upsert_business_role_access(business_id,pending_email,'admin',pending_profile) from team_access_fixture$test$,'owner may invite an admin with an attending profile');
-select extensions.is((select count(*) from public.business_user_invites where email=(select pending_email from team_access_fixture) and role='admin' and professional_id=(select pending_profile from team_access_fixture)),1::bigint,'pending admin association is persisted');
+select extensions.is((select count(*) from team_access_fixture f cross join lateral public.list_business_role_access(f.business_id) access where access.email=f.pending_email and access.status='pending' and access.role='admin' and access.professional_id=f.pending_profile),1::bigint,'pending admin association is persisted');
 select extensions.is((select is_public from public.professionals where id=(select pending_profile from team_access_fixture)),false,'pending admin profile stays hidden');
 select set_config('request.jwt.claim.sub',(select reception::text from team_access_fixture),true);
 select extensions.throws_ok($test$select public.upsert_business_role_access(business_id,pending_email,'professional',pending_profile) from team_access_fixture$test$,'P0001','BUSINESS_MANAGE_DENIED','reception cannot use the canonical role mutation');
@@ -40,5 +40,6 @@ select extensions.throws_ok($test$select public.upsert_business_role_access(busi
 select extensions.is((select role from public.business_users where user_id=(select target from team_access_fixture)),'admin','failed assignment preserves the previous access role');
 select extensions.is((select professional_id from public.professional_users where user_id=(select target from team_access_fixture)),(select profile from team_access_fixture),'failed assignment restores the prior professional link');
 reset role;
+select extensions.is((select count(*) from public.business_user_invites where email=(select pending_email from team_access_fixture) and status='pending' and professional_id=(select pending_profile from team_access_fixture)),1::bigint,'privileged readback independently confirms the persisted invitation');
 select * from extensions.finish();
 rollback;

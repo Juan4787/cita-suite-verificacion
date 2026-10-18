@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { BusinessRoleAccess as RoleAccess } from '$lib/access/team-contracts';
 	import type { BusinessContext, BusinessRole } from '$lib/access/contracts';
 	import {
 		canConfigureAttendingProfile,
@@ -17,16 +18,6 @@
 	import { invalidate } from '$app/navigation';
 	import type { SubmitFunction } from '@sveltejs/kit';
 
-	type RoleAccess = {
-		id: string;
-		business_id: string;
-		user_id: string | null;
-		email: string;
-		role: BusinessRole;
-		status: 'active' | 'pending';
-		professional_id: string | null;
-		created_at: string;
-	};
 
 	type Service = {
 		id: string;
