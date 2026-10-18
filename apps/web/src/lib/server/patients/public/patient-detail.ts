@@ -12,19 +12,32 @@ import { logServerFailure } from '$lib/server/platform/logging';
 
 const ENTRIES_PAGE_SIZE = 30;
 export class PatientDetailReadError extends Error {
- readonly kind: 'not_found' | 'unavailable';
- constructor(kind: 'not_found' | 'unavailable') { super('Patient detail read failed'); this.kind = kind; }
+	readonly kind: 'not_found' | 'unavailable';
+	constructor(kind: 'not_found' | 'unavailable') {
+		super('Patient detail read failed');
+		this.kind = kind;
+	}
 }
 
 /** Authorized patient projection; HTTP params/cookies and status translation belong to the route. */
-export async function readPatientDetail({ patientId, supabase, admin, context, currentUserId }: {
- patientId: string; supabase: CitaSupabaseClient; admin: CitaSupabaseClient;
- context: BusinessContext; currentUserId: string | null;
+export async function readPatientDetail({
+	patientId,
+	supabase,
+	admin,
+	context,
+	currentUserId
+}: {
+	patientId: string;
+	supabase: CitaSupabaseClient;
+	admin: CitaSupabaseClient;
+	context: BusinessContext;
+	currentUserId: string | null;
 }) {
 	const permissions = resolvePatientPermissions(context);
 	const nowIso = new Date().toISOString();
 	const documentUploads: Promise<ClinicalUploadAvailability> = permissions.canUploadRadiographs
-		? loadClinicalUploadAvailability(admin, context.business.id) : Promise.resolve('not_permitted');
+		? loadClinicalUploadAvailability(admin, context.business.id)
+		: Promise.resolve('not_permitted');
 	const currentProfessional =
 		context.role === 'professional'
 			? await getCurrentProfessional({
@@ -75,7 +88,9 @@ export async function readPatientDetail({ patientId, supabase, admin, context, c
 			: Promise.resolve({ data: [], error: null }),
 		supabase
 			.from('appointments')
-			.select('id, starts_at, ends_at, status, source, service_name_snapshot, professional_name_snapshot')
+			.select(
+				'id, starts_at, ends_at, status, source, service_name_snapshot, professional_name_snapshot'
+			)
 			.eq('patient_id', patientId)
 			.eq('business_id', context.business.id)
 			.in('status', [...ACTIVE_APPOINTMENT_STATUSES])
@@ -117,9 +132,7 @@ export async function readPatientDetail({ patientId, supabase, admin, context, c
 	const safeEntries = entries ?? [];
 	const entriesWithCosts = safeEntries.map((entry) => ({
 		...entry,
-		amount: permissions.canViewCosts
-			? readClinicalEntryAmount(entry.clinical_entry_costs)
-			: null,
+		amount: permissions.canViewCosts ? readClinicalEntryAmount(entry.clinical_entry_costs) : null,
 		clinical_entry_costs: undefined
 	}));
 	const hasMoreEntries = entriesWithCosts.length > ENTRIES_PAGE_SIZE;
@@ -134,11 +147,16 @@ export async function readPatientDetail({ patientId, supabase, admin, context, c
 			custom_fields: clinicalProfile?.custom_fields ?? null,
 			booking_extra_fields: bookingProfile.fields,
 			clinical_profile_updated_at: clinicalProfile?.updated_at ?? null,
-			clinical_profile_patient_reported: bookingInformationEnabled() && clinicalProfile?.updated_by === null && bookingProfile.reportedAtMs !== null && bookingProfile.reportedAtMs === Date.parse(clinicalProfile.updated_at),
+			clinical_profile_patient_reported:
+				bookingInformationEnabled() &&
+				clinicalProfile?.updated_by === null &&
+				bookingProfile.reportedAtMs !== null &&
+				bookingProfile.reportedAtMs === Date.parse(clinicalProfile.updated_at),
 			professional_archived_at:
 				context.role === 'professional' ? (professionalLink?.archived_at ?? null) : null
 		},
-		businessTimeZone: context.business.timezone,businessIndustry:context.business.industry,
+		businessTimeZone: context.business.timezone,
+		businessIndustry: context.business.industry,
 		bookingInformationEnabled: bookingInformationEnabled(),
 		entries: hasMoreEntries ? entriesWithCosts.slice(0, ENTRIES_PAGE_SIZE) : entriesWithCosts,
 		appointments: appointments ?? [],

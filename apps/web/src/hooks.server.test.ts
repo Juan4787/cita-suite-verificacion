@@ -27,7 +27,7 @@ vi.mock('$lib/server/platform/supabase', async (importOriginal) => ({
 	isMasterEmail: mocks.isMasterEmail
 }));
 
-const { handle } = await import('./hooks.server');
+const { handle, handleError } = await import('./hooks.server');
 
 const makeEvent = () => {
 	const cookieValues: Record<string, string> = {
@@ -37,6 +37,8 @@ const makeEvent = () => {
 	};
 	return {
 		url: new URL('https://app.test/odonto'),
+		request: new Request('https://app.test/odonto', { headers: { accept: 'application/json' } }),
+		isDataRequest: false,
 		locals: {},
 		fetch: vi.fn(async () => new Response('{}')),
 		cookies: {
@@ -121,6 +123,45 @@ describe('hooks auth validation', () => {
 
 		expect((response as Response).status).toBe(503);
 		expect(event.cookies.delete).not.toHaveBeenCalled();
+	});
+
+	it('renders document recovery without authenticating the route, clearing cookies or weakening CSP', async () => {
+		const event = makeEvent();
+		event.request = new Request(event.url, { headers: { accept: 'text/html' } });
+		const resolve = vi.fn();
+		mocks.createSupabaseServerClient.mockResolvedValue({ auth: {
+			getUser: vi.fn(async () => ({ data: { user: null }, error: Object.assign(new Error('private provider data'), { status: 503 }) }))
+		} });
+		const response = await handle({ event, resolve } as never);
+		expect(response.status).toBe(503);
+		expect(response.headers.get('content-type')).toContain('text/html');
+		expect(response.headers.get('cache-control')).toBe('no-store');
+		expect(response.headers.get('retry-after')).toBe('10');
+		expect(response.headers.get('content-security-policy')).toMatch(/style-src 'sha256-[A-Za-z0-9+/=]+'/);
+		expect(response.headers.get('content-security-policy')).not.toContain('unsafe-inline');
+		const html = await response.text();
+		expect(html).toContain('<a href="">Volver a intentar</a>');
+		expect(html).not.toMatch(/private provider data|<script|https?:\/\//);
+		expect(resolve).not.toHaveBeenCalled();
+		expect(event.cookies.delete).not.toHaveBeenCalled();
+		expect(event.locals).toMatchObject({ verifiedUser: null });
+	});
+
+	it('does not turn a data request into a styled document or expose unexpected provider errors', async () => {
+		const event = makeEvent(); event.isDataRequest = true;
+		event.request = new Request(event.url, { headers: { accept: 'text/html' } });
+		mocks.createSupabaseServerClient.mockResolvedValue({ auth: {
+			getUser: vi.fn(async () => ({ data: { user: null }, error: { status: 503 } }))
+		} });
+		const response = await handle({ event, resolve: vi.fn() } as never);
+		expect(response.status).toBe(503);
+		expect(response.headers.get('content-type')).toContain('text/plain');
+		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+		try {
+			const result = await handleError({ error: { code: '53300', message: 'private clinical data', details: 'signed-token' } } as never);
+			expect(result).toEqual({ message: 'No pudimos completar la acción. Volvé a intentar en unos momentos.' });
+			expect(log.mock.calls).toEqual([['request.unexpected_failure', { sqlState: '53300' }]]);
+		} finally { log.mockRestore(); }
 	});
 
 	it('vuelve a validar Auth en cada request para respetar la revocación inmediata', async () => {

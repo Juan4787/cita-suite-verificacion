@@ -1,3 +1,4 @@
+import { authUnavailableResponse } from '$lib/server/access/public/auth-unavailable';
 import { dev } from '$app/environment';
 import {
 	createSupabaseServerClient,
@@ -50,24 +51,6 @@ const isTransientAuthError = (error: unknown): boolean => {
 	return /retryable|fetch failed|network|timed? ?out|econn|enotfound|socket|temporar/.test(descriptor);
 };
 
-const authUnavailableResponse = () =>
-	new Response(
-		'No pudimos validar tu sesión porque el servicio de acceso está momentáneamente no disponible. Tus datos no se modificaron. Esperá unos segundos y volvé a intentar.',
-		{
-			status: 503,
-			headers: {
-				'content-type': 'text/plain; charset=utf-8',
-				'cache-control': 'no-store',
-				'retry-after': '10',
-				'strict-transport-security': 'max-age=31536000',
-				'content-security-policy': "default-src 'none'; frame-ancestors 'none'",
-				'x-content-type-options': 'nosniff',
-				'x-frame-options': 'DENY',
-				'referrer-policy': 'no-referrer',
-				'permissions-policy': 'camera=(), microphone=(), geolocation=()'
-			}
-		}
-	);
 
 export const handle: Handle = async ({ event, resolve }) => {
 	// Assigned only after this request's Auth response is verified. A decoded
@@ -179,7 +162,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 				event.locals.verifiedUser = { id: data.user.id, email: data.user.email ?? null };
 			}
 		} catch (err) {
-			if (isTransientAuthError(err)) return authUnavailableResponse();
+			if (isTransientAuthError(err)) return authUnavailableResponse(!event.isDataRequest && event.request.headers.get('accept')?.includes('text/html') === true);
 			clearAuthCookies();
 			throw redirect(303, '/login');
 		}
