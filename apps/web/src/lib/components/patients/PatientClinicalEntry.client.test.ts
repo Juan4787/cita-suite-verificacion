@@ -63,5 +63,13 @@ describe('actual patient clinical editor submission', () => {
 		const form = dialog.querySelector('form');
 		if (!form) throw new Error('Clinical editing form missing');
 		expect(new FormData(form).get('amount')).toBe('125.5');
+		expect(new FormData(form).get('amount_format')).toBe('canonical');
+		const amount = dialog.querySelector<HTMLInputElement>('#edit_amount');
+		if (!amount) throw new Error('Clinical amount field missing');
+		expect(amount.value).toBe('125,5');
+		await fireEvent.input(amount, { target: { value: '125,75' } });
+		expect(new FormData(form).get('amount')).toBe('125.75');
+		await fireEvent.input(amount, { target: { value: '1..2' } });
+		expect(amount.validity.customError).toBe(true);
 	});
 });

@@ -26,11 +26,21 @@
 
 	const calendarParts = (date: Date, zone?: string) => {
 		const parts = new Intl.DateTimeFormat('en-CA', {
-			...(zone ? { timeZone: zone } : {}), year: 'numeric', month: '2-digit', day: '2-digit',
-			hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+			...(zone ? { timeZone: zone } : {}),
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+			hour: '2-digit',
+			minute: '2-digit',
+			hourCycle: 'h23'
 		}).formatToParts(date);
-		const part = (type: string) => parts.find(item => item.type === type)?.value ?? '';
-		return { year: part('year'), month: part('month'), day: part('day'), time: `${part('hour')}:${part('minute')}` };
+		const part = (type: string) => parts.find((item) => item.type === type)?.value ?? '';
+		return {
+			year: part('year'),
+			month: part('month'),
+			day: part('day'),
+			time: `${part('hour')}:${part('minute')}`
+		};
 	};
 	const initialParts = untrack(() => {
 		const date = initialValue ? new Date(initialValue) : new Date();

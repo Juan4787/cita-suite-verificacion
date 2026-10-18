@@ -28,6 +28,7 @@
 	import { formatDate, formatDateTime } from '$lib/utils/format';
 	import { formatMoneyInteger, moneyDigits } from '$lib/utils/money-input';
 	import type { SubmitFunction } from '@sveltejs/kit';
+	import { clinicalAmountForEdit, clinicalAmountFromDisplay } from '$lib/patients/clinical-amount';
 
 	let { data, form }: { data: PatientDetailViewData; form?: PatientFormState | null } = $props();
 
@@ -248,16 +249,22 @@
 	};
 
 	const handleAmountChange = (event: Event, type: 'new' | 'edit') => {
-		const target = event.currentTarget as HTMLInputElement;
+		const target = event.currentTarget;
+		if (!(target instanceof HTMLInputElement)) return;
+		if (type === 'edit') {
+			const state = clinicalAmountFromDisplay(target.value);
+			target.setCustomValidity(
+				state.valid ? '' : 'Revisá el importe. Usá una coma para los decimales.'
+			);
+			target.value = state.display;
+			editAmountDisplay = state.display;
+			editAmountRaw = state.raw;
+			return;
+		}
 		const { digits, formatted } = formatAmountInput(target.value);
 		target.value = formatted;
-		if (type === 'new') {
-			amountDisplay = formatted;
-			amountRaw = digits;
-		} else {
-			editAmountDisplay = formatted;
-			editAmountRaw = digits;
-		}
+		amountDisplay = formatted;
+		amountRaw = digits;
 	};
 
 	const handleEditSubmit = (event: SubmitEvent) => {
@@ -319,10 +326,9 @@
 		editEntryType = entry.entry_type ?? '';
 		editEntryDescription = entry.description ?? '';
 		editEntryTeeth = entry.teeth ?? '';
-		const initialAmount = entry.amount != null ? String(entry.amount) : '';
-		const { digits, formatted } = formatAmountInput(initialAmount);
-		editAmountDisplay = formatted;
-		editAmountRaw = digits;
+		const initialAmount = clinicalAmountForEdit(entry.amount);
+		editAmountDisplay = initialAmount.display;
+		editAmountRaw = initialAmount.raw;
 		editEntryNote = entry.internal_note ?? '';
 		editEntryCreatedAt = entry.created_at ?? '';
 		showEditEntryErrors = false;
@@ -659,6 +665,7 @@
 		class="space-y-4"
 		onkeydown={preventEnterSubmit}
 	>
+		<input type="hidden" name="amount_format" value="canonical" />
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
 			<div class="space-y-2">
 				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="entry_type">Tipo de consulta</label>
@@ -823,6 +830,7 @@
 <Modal open={showEditEntryModal} title="Editar entrada" on:close={() => (showEditEntryModal = false)}>
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<form method="post" action="?/update_entry" class="space-y-4" onkeydown={preventEnterSubmit} onsubmit={handleEditEntrySubmit}>
+		<input type="hidden" name="amount_format" value="canonical" />
 		<input type="hidden" name="entry_id" value={editingEntry?.id ?? ''} />
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
 			<div class="space-y-2">
@@ -877,7 +885,7 @@
 						id="edit_amount"
 						name="amount_display"
 						type="text"
-						inputmode="numeric"
+						inputmode="decimal"
 						class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
 						value={editAmountDisplay}
 						oninput={(event) => handleAmountChange(event, 'edit')}

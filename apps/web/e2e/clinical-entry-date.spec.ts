@@ -128,6 +128,12 @@ test('clinical editing persists the selected local date and keeps provenance and
 			.select('id')
 			.single();
 		if (error || !inserted) throw new Error('Could not prepare synthetic clinical entry.');
+		const { error: costError } = await f.admin.from('clinical_entry_costs').insert({
+			business_id: f.businessId,
+			clinical_entry_id: inserted.id,
+			amount: 125.5
+		});
+		if (costError) throw new Error('Could not prepare synthetic historical cost.');
 		await loginWithSharedSession(page, await credentials());
 		await page.goto(`/odonto/pacientes/${f.patientId}`);
 		await page.getByRole('button', { name: 'Editar', exact: true }).click();
@@ -147,6 +153,14 @@ test('clinical editing persists the selected local date and keeps provenance and
 			'2026-01-15T12:45:00.000Z'
 		);
 		expect(edited?.created_by_user_id).toBe(f.ownerId);
+		const { data: cost, error: costReadError } = await f.admin
+			.from('clinical_entry_costs')
+			.select('amount')
+			.eq('business_id', f.businessId)
+			.eq('clinical_entry_id', inserted.id)
+			.single();
+		expect(costReadError).toBeNull();
+		expect(cost?.amount).toBe(125.5);
 		expect(edited?.locked_after && new Date(edited.locked_after).toISOString()).toBe(
 			new Date(deadline).toISOString()
 		);

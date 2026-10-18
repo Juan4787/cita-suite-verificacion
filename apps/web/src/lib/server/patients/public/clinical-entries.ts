@@ -2,7 +2,7 @@ import { InvalidDataContractError } from '$lib/contracts/json';
 import { readSavedPatientEntry, type SavedPatientEntry } from '$lib/patients/history-contract';
 import type { BusinessContext } from '$lib/access/contracts';
 import type { CitaSupabaseClient } from '$lib/types/database';
-import { parseMoneyInteger } from '$lib/utils/money-input';
+import { readClinicalAmount } from '$lib/patients/clinical-amount';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { resolvePatientPermissions } from './patient-permissions';
 import { zonedDateTimeToUtc } from '$lib/availability/calculate';
@@ -26,6 +26,7 @@ export function parseClinicalEntryInput(
 		createdAt: string;
 		teeth: string;
 		amount: string;
+		amountFormat?: string;
 		internalNote: string;
 	},
 	timeZone = 'UTC'
@@ -59,6 +60,9 @@ export function parseClinicalEntryInput(
 	const description = raw.description.trim();
 	if (!entryType || !description)
 		throw new PatientOperationError('invalid', 'Tipo y descripción son obligatorios');
+	const amount = readClinicalAmount(raw.amount, raw.amountFormat === 'canonical');
+	if (!amount.valid || (raw.amountFormat && raw.amountFormat !== 'canonical'))
+		throw new PatientOperationError('invalid', 'Revisá el importe de la consulta.');
 	const instant = zonedDateTimeToUtc(createdAtRaw.slice(0, 10), createdAtRaw.slice(11), timeZone);
 	const parts = new Intl.DateTimeFormat('en-CA', {
 		timeZone,
@@ -85,7 +89,7 @@ export function parseClinicalEntryInput(
 		description,
 		created_at: instant.toISOString(),
 		teeth: raw.teeth.trim() || null,
-		amount: parseMoneyInteger(raw.amount.trim()),
+		amount: amount.value,
 		internal_note: raw.internalNote.trim() || null
 	};
 }

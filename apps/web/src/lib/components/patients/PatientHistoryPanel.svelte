@@ -3,6 +3,7 @@
 	import type { PatientHistoryEntry } from '$lib/patients/contracts';
 	import { readPatientHistoryPage } from '$lib/patients/history-contract';
 	import { formatDate } from '$lib/utils/format';
+	import { clinicalAmountForEdit } from '$lib/patients/clinical-amount';
 	let {
 		active,
 		patientId,
@@ -134,17 +135,8 @@
 		return Boolean(ownsEntry && isUnlocked);
 	};
 
-	const formatCurrency = (value?: number | string | null) => {
-		if (value == null || value === '') return '';
-		const normalized = typeof value === 'string' ? value.replace(/\./g, '').replace(',', '.') : value;
-		const numeric = Number(normalized);
-		if (!Number.isFinite(numeric)) return '';
-		const formatted = new Intl.NumberFormat('es-AR', {
-			minimumFractionDigits: 0,
-			maximumFractionDigits: 0
-		}).format(numeric);
-		return `$ ${formatted}`;
-	};
+	const formatCurrency = (value?: number | null) =>
+		value == null ? '' : `$ ${clinicalAmountForEdit(value).display}`;
 </script>
 
 {#if active}
@@ -220,7 +212,7 @@
 													</p>
 												</div>
 												<div class="flex w-full items-center justify-end gap-2 sm:w-auto sm:shrink-0 sm:justify-start">
-													{#if entry.amount}
+													{#if entry.amount != null}
 														<span class="text-[15px] font-semibold text-neutral-800 whitespace-nowrap dark:text-neutral-100">
 															{formatCurrency(entry.amount)}
 														</span>
@@ -265,7 +257,7 @@
 											{/if}
 											{#if expandedId === (entry.id ?? entry.created_at)}
 												<div class="mt-3 space-y-2 text-sm text-neutral-800 dark:text-neutral-100">
-													{#if entry.amount}
+													{#if entry.amount != null}
 														<p><span class="font-semibold">Importe:</span> {formatCurrency(entry.amount)}</p>
 													{/if}
 													{#if entry.internal_note}

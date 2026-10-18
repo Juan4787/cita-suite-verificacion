@@ -132,6 +132,7 @@ const clinicalInputFromForm = (form: FormData, timeZone: string) =>
 			createdAt: String(form.get('created_at') ?? ''),
 			teeth: String(form.get('teeth') ?? ''),
 			amount: String(form.get('amount') ?? ''),
+			amountFormat: String(form.get('amount_format') ?? ''),
 			internalNote: String(form.get('internal_note') ?? '')
 		},
 		timeZone
