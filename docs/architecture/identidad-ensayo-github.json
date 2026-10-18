@@ -1,0 +1,35 @@
+{
+  "id": 1424726782,
+  "node_id": "R_kgDOVOua_g",
+  "full_name": "Juan4787/cita-suite-identidad-ensayo-20261018-191622",
+  "default_branch": "main",
+  "private": false,
+  "originalName": "cita-suite-identidad-ensayo-20261018-191622",
+  "renamedName": "cita-suite-identidad-ensayo-20261018-191622-renombrado",
+  "phase": "completed-and-archived",
+  "sourceSha": "cd029011d31b9862fc0625997dfda4e13dbc4d5e",
+  "baselineRun": {
+    "id": 39158055345,
+    "head_sha": "cd029011d31b9862fc0625997dfda4e13dbc4d5e",
+    "conclusion": "success",
+    "html_url": "https://github.com/Juan4787/cita-suite-identidad-ensayo-20261018-191622/actions/runs/39158055345",
+    "logSha256": "d4788fbee500ffab6aefcac49292c74fef678c242d3c8f194d1b29d223e7c9d0"
+  },
+  "renamedRun": {
+    "id": 39158165489,
+    "head_sha": "cd029011d31b9862fc0625997dfda4e13dbc4d5e",
+    "conclusion": "success",
+    "html_url": "https://github.com/Juan4787/cita-suite-identidad-ensayo-20261018-191622-renombrado/actions/runs/39158165489",
+    "logSha256": "0f06c5c009cbc118fdb3049c0c409f16bb3a4f191548b7ee535251f923d05d05"
+  },
+  "rollbackRun": {
+    "id": 39158297300,
+    "head_sha": "cd029011d31b9862fc0625997dfda4e13dbc4d5e",
+    "conclusion": "success",
+    "html_url": "https://github.com/Juan4787/cita-suite-identidad-ensayo-20261018-191622/actions/runs/39158297300",
+    "logSha256": "31bd8b44896b1b4ddc4d3dde653ddff449be61da980ddecd663891b9a1189b29"
+  },
+  "actionsEnabled": false,
+  "mainRepositoryChanged": false,
+  "deploymentProvidersConnected": false
+}

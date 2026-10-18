@@ -1,4 +1,12 @@
 import {
+	deleteProfessional,
+	setProfessionalArchived
+} from '$lib/server/team/public/professional-lifecycle';
+import {
+	createProfessionalService,
+	updateProfessionalService
+} from '$lib/server/team/public/service-editor';
+import {
 	loadProfessionalEditor,
 	parsePositiveInt,
 	MIN_SERVICE_DURATION_MINUTES,
@@ -19,9 +27,6 @@ import { env } from '$env/dynamic/private';
 import { demoBusinessContext } from '$lib/server/access/public/business';
 import { writeAuditLog } from '$lib/server/platform/audit';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
-import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
-import { professionalHasFollowUps } from '$lib/server/patients/public/follow-ups';
-import { idsFromForm } from '$lib/server/team/public/professional-services';
 import {
 	ensureDefaultServices,
 	isDefaultServiceName
@@ -31,7 +36,6 @@ import {
 	humanProfessionalEmailConflict,
 	normalizeProfessionalEmail
 } from '$lib/server/team/public/professionals';
-import { formatPriceLabel } from '$lib/utils/money-input';
 import { error as kitError, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -146,57 +150,29 @@ export const actions: Actions = {
 		if (!business.canManage)
 			return fail(403, { message: 'No tenés permisos para crear servicios.' });
 
-		const form = await request.formData();
-		const name = String(form.get('name') ?? '').trim();
-		const duration = parsePositiveInt(form.get('duration_minutes'), 30);
-		const priceLabel = formatPriceLabel(String(form.get('price_label') ?? ''));
-		if (!name) return fail(400, { message: 'El nombre del servicio es obligatorio.' });
-		if (duration < MIN_SERVICE_DURATION_MINUTES || duration > MAX_SERVICE_DURATION_MINUTES) {
-			return fail(400, { message: 'La duración debe estar entre 5 y 480 minutos.' });
+		let form: FormData;
+		try {
+			form = await readBoundedBookingForm(request);
+		} catch {
+			return fail(400, { message: 'Revisá los datos del servicio antes de guardar.' });
 		}
-
-		const serviceId = crypto.randomUUID();
-		const { error } = await supabase.from('services').insert({
-			id: serviceId,
-			business_id: business.business.id,
-			name,
-			duration_minutes: duration,
-			price_label: priceLabel || null,
-			description: null,
-			buffer_before_minutes: 0,
-			buffer_after_minutes: 0,
-			is_public: true,
-			is_active: true
-		});
-
-		if (error) {
-			logServerFailure('Error creando servicio desde profesional', error);
-			return fail(500, { message: 'No se pudo crear el servicio.' });
-		}
-
-		const { error: assignmentError } = await supabase.from('professional_services').upsert(
-			{
-				business_id: business.business.id,
-				professional_id: params.professionalId,
-				service_id: serviceId
-			},
-			{ onConflict: 'business_id,professional_id,service_id' }
+		const result = await createProfessionalService(
+			supabase,
+			business.business.id,
+			params.professionalId,
+			form
 		);
-		if (assignmentError) {
-			logServerFailure('Error asignando servicio creado', assignmentError);
-			return fail(500, { message: 'El servicio se creó, pero no se pudo asignar al profesional.' });
-		}
-
-		await writeAuditLog(supabase, {
-			businessId: business.business.id,
-			userId,
-			action: 'service.created_from_professional',
-			entityType: 'service',
-			entityId: serviceId,
-			metadata: { professional_id: params.professionalId, name, duration_minutes: duration }
-		});
-
-		return { success: true, message: 'Servicio creado y asignado.', serviceId };
+		if (!result.ok) return failSave(result);
+		if (!result.data)
+			return fail(503, {
+				message:
+					'No pudimos confirmar la creación. Revisá los servicios antes de volver a intentarlo.'
+			});
+		return {
+			success: true,
+			message: 'Servicio creado y asignado.',
+			serviceId: result.data.serviceId
+		};
 	},
 
 	update_service: async ({ request, locals, fetch, cookies }) => {
@@ -212,93 +188,9 @@ export const actions: Actions = {
 		} catch {
 			return fail(400, { message: 'Revisá los datos del servicio antes de guardar.' });
 		}
-		const serviceId = String(form.get('service_id') ?? '').trim();
-		if (!serviceId)
-			return fail(400, {
-				message: 'No pudimos identificar el servicio. Cerrá el editor y volvé a abrirlo.'
-			});
-
-		const { data: currentService, error: serviceError } = await supabase
-			.from('services')
-			.select('id, name, updated_at')
-			.eq('business_id', business.business.id)
-			.eq('id', serviceId)
-			.maybeSingle();
-		if (serviceError || !currentService) {
-			logServerFailure('Error buscando servicio para editar', serviceError);
-			return fail(404, {
-				message: 'Ese servicio ya no está disponible. Cerrá el editor y recargá la página.'
-			});
-		}
-
-		const expectedVersion = String(form.get('service_updated_at') ?? currentService.updated_at);
-		if (expectedVersion !== currentService.updated_at)
-			return fail(409, {
-				message: 'El servicio cambió. Cerrá el editor y recargá antes de guardar.'
-			});
-		const instructions = String(form.get('patient_instructions') ?? '').trim();
-		const reminderDescription = String(form.get('public_reminder_description') ?? '').trim();
-		if (instructions.length > 2000 || reminderDescription.length > 180)
-			return fail(400, {
-				message: 'Acortá las indicaciones o el texto del aviso antes de guardar.'
-			});
-		const isDefault = isDefaultServiceName(String(currentService.name ?? ''));
-		const name = isDefault ? String(currentService.name) : String(form.get('name') ?? '').trim();
-		const duration = parsePositiveInt(form.get('duration_minutes'));
-		const bufferBefore = parsePositiveInt(form.get('buffer_before_minutes'));
-		const bufferAfter = parsePositiveInt(form.get('buffer_after_minutes'));
-		const priceLabel = formatPriceLabel(String(form.get('price_label') ?? ''));
-		if (!name) return fail(400, { message: 'El nombre del servicio es obligatorio.' });
-		if (duration < MIN_SERVICE_DURATION_MINUTES || duration > MAX_SERVICE_DURATION_MINUTES) {
-			return fail(400, { message: 'La duración debe estar entre 5 y 480 minutos.' });
-		}
-		if (bufferBefore < 0 || bufferBefore > 480 || bufferAfter < 0 || bufferAfter > 480) {
-			return fail(400, { message: 'Los márgenes deben estar entre 0 y 480 minutos.' });
-		}
-
-		const { data: updatedService, error } = await supabase
-			.from('services')
-			.update({
-				name,
-				description: String(form.get('description') ?? '').trim() || null,
-				...(form.has('patient_instructions') ? { patient_instructions: instructions || null } : {}),
-				...(form.has('public_reminder_description')
-					? { public_reminder_description: reminderDescription || null }
-					: {}),
-				duration_minutes: duration,
-				buffer_before_minutes: bufferBefore,
-				buffer_after_minutes: bufferAfter,
-				price_label: priceLabel || null,
-				is_public: isDefault || form.get('is_public') === 'true',
-				is_active: isDefault || form.get('is_active') === 'true',
-				updated_at: new Date().toISOString()
-			})
-			.eq('business_id', business.business.id)
-			.eq('id', serviceId)
-			.eq('updated_at', expectedVersion)
-			.select('id')
-			.maybeSingle();
-		if (!error && !updatedService)
-			return fail(409, {
-				message: 'El servicio cambió. Cerrá el editor y recargá antes de guardar.'
-			});
-		if (error || !updatedService) {
-			logServerFailure('Error actualizando servicio', error);
-			return fail(500, {
-				message: 'No pudimos guardar el servicio. Revisá los datos e intentá nuevamente.'
-			});
-		}
-
-		await writeAuditLog(supabase, {
-			businessId: business.business.id,
-			userId,
-			action: 'service.updated_from_professional',
-			entityType: 'service',
-			entityId: serviceId,
-			metadata: { name, duration_minutes: duration }
-		});
-
-		return { success: true, message: 'Servicio guardado.' };
+		const result = await updateProfessionalService(supabase, business.business.id, userId, form);
+		if (!result.ok) return failSave(result);
+		return { success: true, message: result.data?.message ?? 'Servicio guardado.' };
 	},
 
 	save_weekly_rules: async ({ request, params, locals, fetch, cookies }) => {
@@ -464,29 +356,14 @@ export const actions: Actions = {
 				message: 'Solo el dueño o un administrador puede archivar profesionales.'
 			});
 		}
-
-		const { data: updatedProfessional, error } = await supabase
-			.from('professionals')
-			.update({ is_active: false, is_public: false, updated_at: new Date().toISOString() })
-			.eq('business_id', business.business.id)
-			.eq('id', params.professionalId)
-			.select('id')
-			.maybeSingle();
-		if (error) {
-			logServerFailure('Error archivando profesional', error);
-			return fail(500, { message: 'No se pudo archivar el profesional.' });
-		}
-		if (!updatedProfessional) {
-			return fail(404, { message: 'El profesional ya no está disponible. Recargá la página.' });
-		}
-
-		await writeAuditLog(supabase, {
-			businessId: business.business.id,
+		const result = await setProfessionalArchived(
+			supabase,
+			business.business.id,
 			userId,
-			action: 'professional.archived',
-			entityType: 'professional',
-			entityId: params.professionalId
-		});
+			params.professionalId,
+			true
+		);
+		if (!result.ok) return failSave(result);
 
 		redirectToProfessional(params.professionalId, 'perfil');
 	},
@@ -500,38 +377,14 @@ export const actions: Actions = {
 				message: 'Solo el dueño o un administrador puede restaurar profesionales.'
 			});
 		}
-		const pendingAccountEmail = await getPendingProfessionalAccountEmail(
+		const result = await setProfessionalArchived(
 			supabase,
 			business.business.id,
-			params.professionalId
-		);
-
-		const { data: updatedProfessional, error } = await supabase
-			.from('professionals')
-			.update({
-				is_active: true,
-				is_public: !pendingAccountEmail,
-				updated_at: new Date().toISOString()
-			})
-			.eq('business_id', business.business.id)
-			.eq('id', params.professionalId)
-			.select('id')
-			.maybeSingle();
-		if (error) {
-			logServerFailure('Error restaurando profesional', error);
-			return fail(500, { message: 'No se pudo restaurar el profesional.' });
-		}
-		if (!updatedProfessional) {
-			return fail(404, { message: 'El profesional ya no está disponible. Recargá la página.' });
-		}
-
-		await writeAuditLog(supabase, {
-			businessId: business.business.id,
 			userId,
-			action: 'professional.restored',
-			entityType: 'professional',
-			entityId: params.professionalId
-		});
+			params.professionalId,
+			false
+		);
+		if (!result.ok) return failSave(result);
 
 		redirectToProfessional(params.professionalId, 'perfil');
 	},
@@ -539,119 +392,15 @@ export const actions: Actions = {
 	delete_professional: async ({ params, locals, fetch, cookies }) => {
 		if (!locals.auth) throw redirect(303, '/login');
 		if (env.DEMO_MODE === 'true') return fail(400, { message: 'No disponible en modo demo.' });
-		const { business, userId } = await getOdontoContext({ locals, fetch, cookies });
+		const { supabase, business } = await getOdontoContext({ locals, fetch, cookies });
 		if (!business.canManage) {
 			return fail(403, {
 				message: 'Solo el dueño o un administrador puede eliminar profesionales.'
 			});
 		}
 
-		const admin = await createSupabaseAdminClient('odonto', fetch);
-		const businessId = business.business.id;
-		const profId = params.professionalId;
-
-		// No se puede eliminar un profesional con HISTORIAL (turnos o consultas clínicas):
-		// son registros de la agenda y de los pacientes que hay que conservar. Se archiva.
-		const [apptResult, entryResult, followUpCount] = await Promise.all([
-			admin
-				.from('appointment_professionals')
-				.select('id', { count: 'exact', head: true })
-				.eq('business_id', businessId)
-				.eq('professional_id', profId),
-			admin
-				.from('clinical_entries')
-				.select('id', { count: 'exact', head: true })
-				.eq('business_id', businessId)
-				.eq('created_by_professional_id', profId),
-			professionalHasFollowUps(admin, businessId, profId)
-		]);
-		const apptCount = apptResult.count ?? 0;
-		const entryCount = entryResult.count ?? 0;
-		if (apptCount > 0 || entryCount > 0 || followUpCount > 0) {
-			const parts: string[] = [];
-			if (apptCount > 0) parts.push(`${apptCount} turno${apptCount === 1 ? '' : 's'}`);
-			if (entryCount > 0)
-				parts.push(
-					`${entryCount} consulta${entryCount === 1 ? '' : 's'} clínica${entryCount === 1 ? '' : 's'}`
-				);
-			if (followUpCount > 0)
-				parts.push(`${followUpCount} seguimiento${followUpCount === 1 ? '' : 's'}`);
-			return fail(400, {
-				message: `No se puede eliminar a este profesional: tiene ${parts.join(' y ')} en su historial. Archivalo para conservar esos registros.`
-			});
-		}
-
-		// Limpiar los dependientes que NO son historial (se pueden borrar): invitaciones,
-		// vínculo de usuario, servicios, vínculos con pacientes, reglas y excepciones.
-		// Chequeamos cada paso: si algo falla, mostramos el motivo real, no un genérico.
-		const steps = [
-			await admin
-				.from('patient_profile_change_events')
-				.update({ changed_by_professional_id: null })
-				.eq('business_id', businessId)
-				.eq('changed_by_professional_id', profId),
-			await admin
-				.from('business_user_invites')
-				.delete()
-				.eq('business_id', businessId)
-				.eq('professional_id', profId),
-			await admin
-				.from('professional_users')
-				.delete()
-				.eq('business_id', businessId)
-				.eq('professional_id', profId),
-			await admin
-				.from('professional_services')
-				.delete()
-				.eq('business_id', businessId)
-				.eq('professional_id', profId),
-			await admin
-				.from('professional_patient_links')
-				.delete()
-				.eq('business_id', businessId)
-				.eq('professional_id', profId),
-			await admin
-				.from('availability_rules')
-				.delete()
-				.eq('business_id', businessId)
-				.eq('professional_id', profId),
-			await admin
-				.from('availability_exceptions')
-				.delete()
-				.eq('business_id', businessId)
-				.eq('professional_id', profId)
-		];
-		const prepError = steps.find((step) => step.error)?.error;
-		if (prepError) {
-			logServerFailure('Error preparando el borrado del profesional', prepError);
-			return fail(400, {
-				message:
-					'No se pudo eliminar el profesional en este momento. Reintentá en unos segundos o archivalo para conservar sus registros.'
-			});
-		}
-
-		const { error } = await admin
-			.from('professionals')
-			.delete()
-			.eq('business_id', businessId)
-			.eq('id', profId);
-		if (error) {
-			logServerFailure('Error eliminando profesional', error);
-			// 23503 = FK: aún tiene registros asociados → guiar a archivar (nunca exponer el código al usuario).
-			const message =
-				error.code === '23503'
-					? 'No se puede eliminar a este profesional porque tiene registros asociados. Archivalo para conservarlos.'
-					: 'No se pudo eliminar el profesional en este momento. Reintentá en unos segundos o archivalo para conservar sus registros.';
-			return fail(400, { message });
-		}
-
-		await writeAuditLog(admin, {
-			businessId: business.business.id,
-			userId,
-			action: 'professional.deleted',
-			entityType: 'professional',
-			entityId: params.professionalId
-		});
+		const result = await deleteProfessional(supabase, business.business.id, params.professionalId);
+		if (!result.ok) return failSave(result);
 
 		throw redirect(303, '/odonto/configuracion/usuarios');
 	}

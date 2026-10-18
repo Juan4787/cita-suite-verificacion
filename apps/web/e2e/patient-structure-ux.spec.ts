@@ -220,11 +220,19 @@ test('patient structure preserves role scope, keyboard access and long content a
 					await page.setViewportSize({ width, height: 900 });
 					await page.evaluate((theme) => localStorage.setItem('theme', theme), theme);
 					await page.goto(`/odonto/pacientes/${patient.id}`);
-					await expect(page.getByRole('main').getByRole('heading', { name, exact: true })).toBeVisible();
+					await expect(
+						page.getByRole('main').getByRole('heading', { name, exact: true })
+					).toBeVisible();
 					await expect
 						.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark')))
 						.toBe(theme === 'dark');
 					const checks = ['identity', 'theme', 'geometry'];
+					// All fifty combinations are asserted; captures retain owner at every width/theme
+					// plus each other role on mobile/light and desktop/dark within the evidence budget.
+					const capture =
+						role === 'owner' ||
+						(width === 390 && theme === 'light') ||
+						(width === 1280 && theme === 'dark');
 					await geometry();
 					if (role !== 'reception') {
 						const toggle = page.getByRole('button', { name: /^Detalles de Consulta/ });
@@ -245,12 +253,13 @@ test('patient structure preserves role scope, keyboard access and long content a
 							page.getByText('Descripción clínica sintética', { exact: false })
 						).toHaveCount(0);
 					}
-					await page.screenshot({
-						path: testInfo.outputPath(`${role}-${width}-${theme}-history.jpg`),
-						type: 'jpeg',
-						quality: 65,
-						animations: 'disabled'
-					});
+					if (capture)
+						await page.screenshot({
+							path: testInfo.outputPath(`${role}-${width}-${theme}-history.jpg`),
+							type: 'jpeg',
+							quality: 65,
+							animations: 'disabled'
+						});
 					if (role === 'owner' && width === 390 && theme === 'light') {
 						const pattern = `**/odonto/pacientes/${patient.id}/datos`;
 						let release!: () => void;
@@ -310,12 +319,13 @@ test('patient structure preserves role scope, keyboard access and long content a
 						await expect(page.getByText('ALERTA_CLINICA_SINTETICA', { exact: true })).toBeVisible();
 					await geometry();
 					checks.push('profile-role-scope');
-					await page.screenshot({
-						path: testInfo.outputPath(`${role}-${width}-${theme}-profile.jpg`),
-						type: 'jpeg',
-						quality: 65,
-						animations: 'disabled'
-					});
+					if (capture)
+						await page.screenshot({
+							path: testInfo.outputPath(`${role}-${width}-${theme}-profile.jpg`),
+							type: 'jpeg',
+							quality: 65,
+							animations: 'disabled'
+						});
 					const edit = page.getByRole('button', { name: 'Editar datos del paciente', exact: true });
 					if (role === 'readonly') await expect(edit).toHaveCount(0);
 					else {
@@ -329,12 +339,13 @@ test('patient structure preserves role scope, keyboard access and long content a
 							await expect(dialog.locator('[name="allergies"]')).toHaveCount(0);
 						else await expect(dialog.locator('[name="allergies"]')).toBeVisible();
 						await geometry();
-						await page.screenshot({
-							path: testInfo.outputPath(`${role}-${width}-${theme}-edit.jpg`),
-							type: 'jpeg',
-							quality: 65,
-							animations: 'disabled'
-						});
+						if (capture)
+							await page.screenshot({
+								path: testInfo.outputPath(`${role}-${width}-${theme}-edit.jpg`),
+								type: 'jpeg',
+								quality: 65,
+								animations: 'disabled'
+							});
 						await dialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
 						await expect(dialog).not.toBeVisible();
 						await expect(edit).toBeFocused();

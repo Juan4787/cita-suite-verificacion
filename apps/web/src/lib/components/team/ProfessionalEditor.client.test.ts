@@ -5,34 +5,80 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SubmitFunction } from '@sveltejs/kit';
 import ProfessionalEditor from './ProfessionalEditor.svelte';
 import { professionalEditorData } from '$lib/team/__fixtures__/editor';
-const mocks=vi.hoisted(()=>({ handlers:new Map<HTMLFormElement,SubmitFunction>(),invalidate:vi.fn() }));
-vi.mock('$app/forms',()=>({enhance:(node:HTMLFormElement,handler:SubmitFunction)=>{mocks.handlers.set(node,handler);return {destroy(){mocks.handlers.delete(node);}};}}));
-vi.mock('$app/navigation',()=>({beforeNavigate:vi.fn(),goto:vi.fn(),invalidate:mocks.invalidate}));
-beforeEach(()=>{mocks.handlers.clear();mocks.invalidate.mockReset().mockResolvedValue(undefined);localStorage.clear();});
+const mocks = vi.hoisted(() => ({
+	handlers: new Map<HTMLFormElement, SubmitFunction>(),
+	invalidate: vi.fn()
+}));
+vi.mock('$app/forms', () => ({
+	enhance: (node: HTMLFormElement, handler: SubmitFunction) => {
+		mocks.handlers.set(node, handler);
+		return {
+			destroy() {
+				mocks.handlers.delete(node);
+			}
+		};
+	}
+}));
+vi.mock('$app/navigation', () => ({
+	beforeNavigate: vi.fn(),
+	goto: vi.fn(),
+	invalidate: mocks.invalidate
+}));
+beforeEach(() => {
+	mocks.handlers.clear();
+	mocks.invalidate.mockReset().mockResolvedValue(undefined);
+	localStorage.clear();
+});
 afterEach(cleanup);
-describe('professional editor cross-task coordination',()=>{
- it('does not mark edits made during a submitted profile save as persisted',async()=>{
-  render(ProfessionalEditor,{data:professionalEditorData()});
-  const field=screen.getByRole('textbox',{name:'Nombre',exact:true});
-  await fireEvent.input(field,{target:{value:'Primera edición'}});
-  const form=document.querySelector<HTMLFormElement>('form[action="?/update_profile"]');const handler=form&&mocks.handlers.get(form);if(!form||!handler)throw new Error('Missing profile form');
-  const input={formElement:form,action:new URL('https://app.test/professional?/update_profile'),formData:new FormData(form),controller:new AbortController(),submitter:null,cancel:vi.fn()};
-  const complete=await handler(input);if(!complete)throw new Error('Unexpected cancellation');
-  await fireEvent.input(field,{target:{value:'Segunda edición durante la espera'}});
-  const duplicate={...input,cancel:vi.fn()};await handler(duplicate);expect(duplicate.cancel).toHaveBeenCalledOnce();
-  await complete({...input,result:{type:'success',status:200,data:{success:true}},update:vi.fn().mockResolvedValue(undefined)});
-  expect(field).toHaveValue('Segunda edición durante la espera');
-  expect(screen.getByRole('button',{name:'Guardar sólo perfil'})).toBeEnabled();
-  expect(screen.getAllByText('Cambios sin guardar').length).toBeGreaterThan(0);
- });
- it('deselecting a service preserves a closed restricted schedule in the shared atomic payload',async()=>{
-  render(ProfessionalEditor,{data:professionalEditorData()});
-  await fireEvent.click(screen.getByRole('button',{name:'Servicios y aranceles'}));
-  const checkbox=document.querySelector<HTMLInputElement>('input[name="service_id"][value="service-one"]');if(!checkbox)throw new Error('Missing assigned service');
-  await fireEvent.click(checkbox);
-  const payload=document.querySelector<HTMLInputElement>('form[action="?/save_all"] input[name="schedule_blocks"]');
-  expect(payload).not.toBeNull();expect(JSON.parse(payload!.value)).toMatchObject([{serviceScope:'restricted',allowedServiceIds:[]}]);
-  await fireEvent.click(screen.getByRole('button',{name:/^Horarios/}));
-  expect(screen.getByText('La franja está cerrada hasta que elijas una prestación.')).toBeVisible();
- });
+describe('professional editor cross-task coordination', () => {
+	it('does not mark edits made during a submitted profile save as persisted', async () => {
+		render(ProfessionalEditor, { data: professionalEditorData() });
+		const field = screen.getByRole('textbox', { name: 'Nombre', exact: true });
+		await fireEvent.input(field, { target: { value: 'Primera edición' } });
+		const form = document.querySelector<HTMLFormElement>('form[action="?/update_profile"]');
+		const handler = form && mocks.handlers.get(form);
+		if (!form || !handler) throw new Error('Missing profile form');
+		const input = {
+			formElement: form,
+			action: new URL('https://app.test/professional?/update_profile'),
+			formData: new FormData(form),
+			controller: new AbortController(),
+			submitter: null,
+			cancel: vi.fn()
+		};
+		const complete = await handler(input);
+		if (!complete) throw new Error('Unexpected cancellation');
+		await fireEvent.input(field, { target: { value: 'Segunda edición durante la espera' } });
+		const duplicate = { ...input, cancel: vi.fn() };
+		await handler(duplicate);
+		expect(duplicate.cancel).toHaveBeenCalledOnce();
+		await complete({
+			...input,
+			result: { type: 'success', status: 200, data: { success: true } },
+			update: vi.fn().mockResolvedValue(undefined)
+		});
+		expect(field).toHaveValue('Segunda edición durante la espera');
+		expect(screen.getByRole('button', { name: 'Guardar sólo perfil' })).toBeEnabled();
+		expect(screen.getAllByText('Cambios sin guardar').length).toBeGreaterThan(0);
+	});
+	it('deselecting a service preserves a closed restricted schedule in the shared atomic payload', async () => {
+		render(ProfessionalEditor, { data: professionalEditorData() });
+		await fireEvent.click(screen.getByRole('button', { name: 'Servicios y aranceles' }));
+		const checkbox = document.querySelector<HTMLInputElement>(
+			'input[name="service_id"][value="service-one"]'
+		);
+		if (!checkbox) throw new Error('Missing assigned service');
+		await fireEvent.click(checkbox);
+		const payload = document.querySelector<HTMLInputElement>(
+			'form[action="?/save_all"] input[name="schedule_blocks"]'
+		);
+		expect(payload).not.toBeNull();
+		expect(JSON.parse(payload!.value)).toMatchObject([
+			{ serviceScope: 'restricted', allowedServiceIds: [] }
+		]);
+		await fireEvent.click(screen.getByRole('button', { name: /^Horarios/ }));
+		expect(
+			screen.getByText('La franja está cerrada hasta que elijas una prestación.')
+		).toBeVisible();
+	});
 });

@@ -1,42 +1,58 @@
 # Unificación de identidad de Cita Suite
 
-Fuente normativa: ampliación del 16 de octubre en `docs/plans/refactorizacion-cita-suite.md`. Estado: inventario inicial y preparación; **ningún recurso externo renombrado**. No sustituye el inventario final ni sus criterios de cierre.
+La ampliación literal del [plan aprobado](../plans/refactorizacion-cita-suite.md) gobierna este cambio. La identidad de producto es **Cita Suite**, el slug es `cita-suite`; Natalia y cada consultorio conservan su propia identidad. Este documento diferencia preparación, ensayo y aplicación. **No se ha renombrado ningún recurso de producción ni publicado esta rama.** La autorización de producción del17 de octubre conserva las puertas de respaldo, staging y release.
 
-Plan Workers confirmado por el usuario el 16 de octubre: **Free**. La lectura de facturación por API no estuvo autorizada (403); la fuente del dato comercial es el usuario. La etapa 6 debe medir este perfil, incluidos CPU, subpeticiones y capacidad de cron, sin asumir Paid ni contratarlo.
+## Inventario y aplicación
 
-| Recurso | Estado observado | Objetivo | Dependencias y condición de aplicación |
+| Recurso propio | Identificador estable y estado observado | Objetivo / preparación | Aplicación y comprobación |
 |---|---|---|---|
-| Producto | Cita Suite | Cita Suite | Preservar marcas de consultorios y Natalia. Revisar manifest, títulos, correo/push y documentación. |
-| Directorio local | `/home/usuario/CascadeProjects/Base de Datos Sabrina` | `/home/usuario/CascadeProjects/Cita Suite` | Traslado coordinado al finalizar procesos/sesión; inventariar referencias absolutas y editor. No mover durante la campaña activa. |
-| GitHub principal | `Juan4787/dashboard`, remoto SSH `github-secundaria:Juan4787/dashboard.git` | `Juan4787/cita-suite` | Historial y permisos conservados; verificar disponibilidad, reglas, integraciones y CI antes de aplicar. No se sube la rama al original mientras no se verifique el despliegue automático. |
-| GitHub de verificación | `Juan4787/cita-suite-verificacion` | Conservado: función explícita | Workflow manual y sin despliegue, permisos propios `contents: read`; comprobar tras cambios. |
-| Supabase alojado vinculado | Adjunto: `Odontologia`, ref `yjzferwuzbtgpmdnzlcb`, organización `mstbrfonbbsbgracxfge` | Nombre visible Cita Suite | Verificar por API antes de actuar; conservar ref/API/Auth/Storage/datos. El timeout SQL es un problema independiente. Cambios externos sujetos a la puerta de publicación. |
-| Supabase local CLI | `project_id = "turnos-saas"` en `supabase/config.toml` | `cita-suite` | El identificador local puede cambiar nombres/volúmenes de contenedores. Inventariar instancias existentes antes de cambiarlo; no confundir con project ref alojado. |
-| Paquete raíz | `turnos-saas` | `cita-suite` | Scripts, lockfile y descriptores de evidencia. |
-| Shared | `@turnos-saas/shared` | `@cita-suite/shared` | Imports, exports, filtros pnpm, dependencias workspace y lockfile deben cambiar juntos. |
-| Aplicación principal | Paquete `web`, Worker `app`, URL `https://app.cita-suite.workers.dev` | Identidad Cita Suite; slugs específicos por entorno | El nombre Worker determina dirección y bindings: preservar enlaces anteriores y push/OAuth; no renombrar sólo la configuración. Resolver primero cuenta correcta. |
-| Web de Natalia | Paquete `natalia`, destino comunicado `natalia-frutos.vercel.app` | Conservado: marca de Natalia | Revisar vínculo de repositorio/proyecto Vercel e integración pública al renombrar GitHub; no cambiar su marca. |
-| Rutas/variables heredadas | `/odonto`, `ODONTO_SUPABASE_*`, `SABRINA_EMAIL` | Clasificación individual pendiente | Rutas públicas y nombres de secretos tienen consumidores externos. Preparar transición compatible cuando proceda; nunca reemplazo global ni lectura de sus valores. |
+| Producto, manifest y PWA | Cita Suite; rutas públicas actuales | Conservar Cita Suite y marcas de consultorios. | Sin reemplazos globales de nombres de personas. Comparación de UI, contratos y artefactos requerida. |
+| GitHub principal | ID1115936156, node_id `R_kgDOQoPVnA`, `Juan4787/dashboard`, público, rama main | `Juan4787/cita-suite`; consulta de18-oct: nombre candidato404, permisos admin/push/maintain. | Preparado; **sin renombrar**. No push a main ni a una rama del principal mientras su integración de builds pueda desplegar automáticamente. |
+| GitHub de verificación | `Juan4787/cita-suite-verificacion` | Nombre correcto por función; mismo branch de campaña. | Activo exclusivamente para snapshots y verificación manual sin despliegue. Workflow propio `contents: read`. |
+| Ensayo de identidad | Repositorio1424726782 independiente, sin datos ni hosting | Renombrar, comprobar y revertir. | Ensayo completo; [recibo con tres ejecuciones y hashes](identidad-ensayo-github.json). Restaurado al nombre inicial, archivado y Actions deshabilitado. No simula ni certifica el vínculo Cloudflare/Vercel del principal. |
+| Supabase producción | Ref `yjzferwuzbtgpmdnzlcb`, org `mstbrfonbbsbgracxfge`, sa-east-1, nombre **Odontologia** | Nombre visible **Cita Suite**; mismos ref, región, API/Auth/Storage y datos. | Lectura CLI18-oct19:25:48UTC: ACTIVE_HEALTHY. Cambio preparado para release; **no aplicado**. No confundir con otros proyectos de la cuenta. |
+| Supabase staging | Ref `ikaudqoilclfnztkxubz`, org `waoipxhhnbpnpjhbdssn`, us-west-2, nombre **Staging 455** | Nombre visible **Cita Suite Staging**. | Developer aceptado; inspección anterior confirmó vacío. Lectura CLI18-oct19:25:48UTC: ACTIVE_HEALTHY. No migrado/renombrado por esta etapa. |
+| Supabase local CLI | `supabase/config.toml`: project_id **cita-suite** | Identidad coherente sin confundir project_id local con project ref alojado. | Configuración de código actualizada. Instancias anteriores `turnos-saas` detenidas y sus volúmenes conservados; no se arrancó/recreó/eliminó una base local para verificar. Los contenedores de otro producto no se tocan. CI usa recursos propios por corrida. |
+| Paquete raíz | Manifest `cita-suite` | Nombre local de workspace. | Cambiado en código; no publica un paquete npm. |
+| Paquete compartido | `@cita-suite/shared`, antes `@turnos-saas/shared` | Imports, manifest, dependencia workspace, filtro pnpm y lockfile cambian juntos. | Resolución limpia, tipos y unidades comprobaron el cambio en fast39157623607. Los cambios posteriores tienen verificaciones propias; no reutilizar ese verde para toda la etapa. |
+| Cloudflare aplicación | Cuenta `52b358653379c162b5a07b10ae5e84b3`, Worker técnico `app`, `https://app.cita-suite.workers.dev` | Producto Cita Suite, origen público estable. | Cuenta y Worker comprobados por lectura en la campaña. `app` es identificador técnico del endpoint actual; cambiarlo invalidaría contratos de origen/enlaces/push. Se conserva, no se confunde con una marca de producto antigua. Programador separado `cita-suite-scheduler`: trabajo de etapa6. |
+| Plan Cloudflare | **Free**, confirmado expresamente por el usuario | Mantener Free. | Facturación API403 no se disfraza como lectura de plan. No contratación ni suposición de CPU/presupuesto Paid. |
+| Vercel Natalia | `natalia-frutos.vercel.app`, marca Natalia Frutos, paquete natalia | Conservar dominio, marca y contrato de reserva nativa. | CLI64.0.2/Node22.23.2 autenticada como juan-altamira el16-oct. Permiso de proyecto y vínculo al GitHub renombrado se vuelven a comprobar en release. Sin despliegue en esta etapa. |
+| Directorio local | `/home/usuario/CascadeProjects/Base de Datos Sabrina` | `/home/usuario/CascadeProjects/Cita Suite` | **Preparado para traslado final**, no mover con esta sesión/procesos activos. Actualizar editor, tareas, cwd, scripts activos y continuidad de forma conjunta. Conservar rutas históricas de evidencia. |
+| Restricción opcional de dueño | Nuevo `CITA_SUITE_OWNER_EMAIL`; alias `SABRINA_EMAIL` | Nombre de configuración independiente de una persona. | Nuevo nombre tiene precedencia; alias mantiene compatibilidad. Ejemplo sin dirección real. No se modificaron secretos alojados ni restricciones existentes. |
+| Variables de conexión | `ODONTO_SUPABASE_*`; rutas `/odonto` | Identificadores compatibles, no nombres visibles del producto. | Se conservan por contrato con entornos/scripts/credenciales. No reemplazar por búsqueda global ni activar administrativo. |
 
-## Evidencia y límites
+## Evidencia del ensayo de GitHub
 
-- Lectura actual de `gh api user`: `Juan4787`. `gh repo view` identifica `Juan4787/dashboard`. Actions habilitado; permisos predeterminados `write`, aprobación de PR deshabilitada. El workflow propio limita explícitamente su token a lectura; no se alteraron permisos globales.
-- `apps/web/wrangler.jsonc` configura cuenta `52b358653379c162b5a07b10ae5e84b3`; el adjunto muestra sesión en `fc592fdc570803acbf4b523d106e446e`. No se cambió cuenta, destino ni despliegue.
-- Configuraciones locales inspeccionadas sin abrir archivos de credenciales. Nombres de Supabase provienen del adjunto; no se presenta esa transcripción como lectura actual de la API.
-- Búsqueda inicial acotada de nombres: `rg -n 'turnos-saas|dashboard|Sabrina|sabrina|Odontologia|Base de Datos Sabrina' .github scripts README.md apps/web/package.json tsconfig.base.json .env.example`. La búsqueda final ampliará código/configuración y clasificará referencias históricas sin leer secretos ni adjuntos privados.
+El repositorio sintético se creó exclusivamente para esta prueba, sin copiar código de aplicación, claves, pacientes ni conexiones de proveedores. El SHA `cd029011d31b9862fc0625997dfda4e13dbc4d5e` y los permisos/default_branch/ID/node_id permanecieron iguales. `git ls-remote` leyó las referencias por la URL anterior y la nueva, también después de revertir. Tres workflows manuales aprobaron:39158055345,39158165489,39158297300. Los logs conservados tienen SHA-256 en el recibo. La última operación restauró el nombre, deshabilitó Actions y archivó el recurso como evidencia.
 
-## Pendientes de cierre
+La [documentación oficial de GitHub](https://docs.github.com/en/repositories/creating-and-managing-repositories/renaming-a-repository) distingue redirecciones Git de referencias a Actions publicadas: no corresponde asumir que cualquier consumidor seguirá funcionando por redirección. Las referencias se deben actualizar y comprobar explícitamente. Este ensayo acredita la mecánica Git/identidad/Actions del recurso descartable; los proveedores de producción se prueban contra su integración real en staging/release.
 
-Inventario completo por proveedor, disponibilidad de nombres, referencias activas/históricas, ensayos de cambio y reversión, compatibilidad de direcciones/callbacks/orígenes, versión exacta de artefactos y autorización de entrega cuando afecte producción. Este documento no declara cumplida la unificación.
+## Secuencia preparada para la transición del principal
 
+1. Leer plan/registro y recibos, confirmar identidad1115936156, propietario, permisos, nombre libre y rama/revisión esperada. Guardar inventario nuevo con fecha. El404 previo no reserva el nombre.
+2. Inspeccionar branches protegidas, rulesets, Actions, webhooks clásicos y aplicaciones instaladas. Lectura18-oct: rulesets[] y webhooks clásicos[]; **no demuestra ausencia de GitHub Apps**. Hay evidencia previa de builds Cloudflare automáticos; no empujar al principal para averiguarlo.
+3. Acreditar destinos Cloudflare/Vercel y su vínculo exacto con el ID del repositorio. Detener/desconectar los disparadores automáticos que pudieran publicar durante la transición, registrar estado y responsables. No tocar otros productos de las cuentas.
+4. Ensayar respaldo/recuperación y completar staging/release de toda la campaña. Preparar manifiesto exacto de código, migraciones, nombres, dependencias y reversión. No confundir autorización de producción con cumplimiento de estas puertas.
+5. Renombrar **sólo**1115936156 a cita-suite; comprobar mismoID/node_id/historia/ramas/issues/PR/reglas/permisos. Actualizar remoto principal a `github-secundaria:Juan4787/cita-suite.git`; conservar remoto de verificación.
+6. Actualizar referencias operativas `Juan4787/dashboard` y enlaces de proveedor/OAuth/build que dependan del nombre. Los documentos históricos se preservan fechados. Comprobar Git nativo, workflow manual en SHA exacto y configuraciones de ambiente/secretos por **nombres**, sin imprimir valores.
+7. Cambiar únicamente nombres visibles de los dos proyectos Supabase correctos. Comprobar ref/org/región/endpoints/buckets/políticas/migraciones antes/después. **No rotar claves ni migrar datos para cambiar una etiqueta**. Timeouts SQL se diagnostican aparte.
+8. Publicar de acuerdo con el procedimiento de campaña: programador anterior detenido, aplicaciones/migraciones compatibles, programador nuevo y prueba servida por destino. Probar reserva desde Natalia/enlace anterior/gestión, retorno validado, notificaciones del mismo origen, OAuth, archivos y tareas.
+9. Rehabilitar únicamente los disparadores revisados; verificar que no se dupliquen despliegues ni trabajos. Trasladar directorio local cuando se pueda cambiar cwd sin invalidar procesos/sesión, actualizar las referencias activas y continuar desde el plan original.
 
-## Staging Supabase identificado por el usuario
+## Reversión compatible
 
-El 16 de octubre el usuario informó el proyecto **Staging 455** (`ikaudqoilclfnztkxubz`, `https://ikaudqoilclfnztkxubz.supabase.co`), creado en la cuenta disponible de su hermano para pruebas. Destino objetivo: **Cita Suite Staging**, conservando ref/URLs. No renombrado ni migrado todavía. Producción conserva `yjzferwuzbtgpmdnzlcb`; ningún comando de staging puede inferir su destino de la vinculación CLI de producción. Acceso/contenido/plan se verificarán antes de escribir.
+Detener primero los disparadores afectados. Restaurar nombre GitHub anterior sobre el **mismo ID**, remotos y referencias de proveedores en conjunto; workflow manual sobre SHA comprobado y Git nativo por ambas direcciones. Restaurar nombres visibles Supabase sobre los mismos refs, si fuera necesario. Conservar endpoints/datos y migraciones compatibles; nunca restaurar destructivamente una base completa para corregir identidad. El movimiento local se revierte con procesos detenidos y referencias activas actualizadas. No recrear un repositorio/proyecto distinto con el nombre viejo ni apropiarse de recursos ajenos.
 
+## Búsqueda reproducible y excepciones
 
-## Accesos comprobados durante la preparación
+Buscar sólo archivos de código/configuración/documentación operativa, excluyendo `.env*` reales, credenciales, node_modules, `.verification`, output, builds, adjuntos, capturas, archivo inactivo y migraciones históricas. `@turnos-saas/shared` y el nombre raíz anterior deben tener cero consumidores activos; las referencias históricas explican el cambio. Clasificar cada coincidencia restante:
 
-Cloudflare coincide actualmente con `52b358653379c162b5a07b10ae5e84b3`; se comprobó por lectura el Worker `app` y su versión en tráfico. GitHub permite el CI auxiliar aislado. El staging Supabase `Staging 455` es accesible como Developer y la inspección SQL remota confirmó que está vacío antes de migraciones.
+- `dashboard` como nombre del principal: dato operativo actual hasta transición; no sustituirlo antes de cambiar el recurso real.
+- Odontologia/Staging455 y refs: inventario de nombres observados, no nombres ya aplicados.
+- Base de Datos Sabrina: cwd actual y evidencia histórica; se traslada al final de la campaña.
+- `/odonto`, `ODONTO_SUPABASE_*`, Worker app: compatibilidad técnica justificada; producto y entorno están identificados por Cita Suite.
+- `SABRINA_EMAIL`: alias compatible, sin nuevas dependencias; retirar sólo cuando todos los entornos y consumidores adopten el nombre nuevo y se compruebe la transición.
+- Personas, otras marcas, rutas de otros productos y migraciones/evidencias originales: no renombrar.
 
-Vercel CLI `64.0.2` / Node `22.23.2`: `whoami` aprobó el 16 de octubre como `juan-altamira`, recibo `.verification/vercel-current-identity.log`. Esto comprueba autenticación, no permisos de cada proyecto ni un despliegue. No se cambió ningún proyecto, vínculo ni dominio. Los destinos/artefactos se comprobarán de nuevo en su etapa de staging/release.
+Los recibos locales sin credenciales están en `.verification/identity-*`; el registro de campaña identifica revisiones, pruebas y límites. **Identidad preparada y ensayada no significa que producción ya esté unificada.**

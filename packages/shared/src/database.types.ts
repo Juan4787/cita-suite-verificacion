@@ -4218,6 +4218,17 @@ export type Database = {
         }
         Returns: string
       }
+      create_professional_service_safely: {
+        Args: {
+          p_business_id: string
+          p_duration_minutes: number
+          p_name: string
+          p_price_label: string
+          p_professional_id: string
+          p_service_id: string
+        }
+        Returns: string
+      }
       create_public_booking_with_information: {
         Args: { p_input: Json; p_replay_only?: boolean }
         Returns: {
@@ -4236,6 +4247,10 @@ export type Database = {
       current_user_professional_id: {
         Args: { target_business_id: string }
         Returns: string
+      }
+      delete_professional_safely: {
+        Args: { p_business_id: string; p_professional_id: string }
+        Returns: undefined
       }
       delete_professional_schedule_rule: {
         Args: {
@@ -4337,6 +4352,14 @@ export type Database = {
       get_patient_drive_folder_safely: {
         Args: { p_business_id: string; p_patient_id: string }
         Returns: string
+      }
+      get_professional_dependency_counts: {
+        Args: { p_business_id: string; p_professional_id: string }
+        Returns: {
+          appointment_count: number
+          clinical_entry_count: number
+          follow_up_count: number
+        }[]
       }
       get_public_booking_active_future_count_for_request: {
         Args: {
