@@ -576,7 +576,7 @@ test.describe('Archivos clínicos privados', () => {
 		await expect(page.getByText('Imagen movida a la papelera. Podés restaurarla cuando la necesites.')).toBeVisible();
 
 		await page.goto('/odonto/pacientes/papelera');
-		await expect(page.getByRole('heading', { name: 'Papelera de imágenes' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Papelera de documentos' })).toBeVisible();
 		await expect(page.getByText(fixture.patientName)).toBeVisible();
 		await expect(page.getByText(filename)).toBeVisible();
 
@@ -606,7 +606,7 @@ test.describe('Archivos clínicos privados', () => {
 		await expect(page.getByText(filename)).toBeVisible();
 		await expect(
 			page.getByText(
-				'Podés consultar la papelera. Para restaurar imágenes, activá nuevamente la suscripción.'
+				'Podés consultar la papelera. Para restaurar documentos, activá nuevamente la suscripción.'
 			)
 		).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Restaurar' })).toHaveCount(0);
@@ -645,7 +645,7 @@ test.describe('Archivos clínicos privados', () => {
 		);
 		await page.reload();
 		await page.getByRole('button', { name: 'Restaurar' }).click();
-		await page.getByRole('button', { name: 'Restaurar imagen' }).click();
+		await page.getByRole('button', { name: 'Restaurar documento' }).click();
 		await expect(page.getByText('Imagen restaurada en la ficha del paciente.')).toBeVisible();
 
 		await page.goto(`/odonto/pacientes/${fixture.patientId}?tab=radiografias`);
