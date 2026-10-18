@@ -7,7 +7,7 @@
 	import { onMount } from 'svelte';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import { isUpcomingActiveAppointment } from '$lib/utils/appointment-visibility';
-import { BOOKING_MODALITY_LABELS, type BookingModality } from '@turnos-saas/shared/booking-integration';
+import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/shared/booking-integration';
 
 	type Slot = { date: string; time: string; starts_at: string; professional_name: string };
 	type AuditLog = {

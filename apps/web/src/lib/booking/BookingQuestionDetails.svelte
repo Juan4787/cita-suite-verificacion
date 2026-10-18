@@ -1,6 +1,6 @@
 <script lang="ts">
   import { styledSelect } from "$lib/ui/styled-controls";
-  import type { BookingIntakeField } from "@turnos-saas/shared/booking-integration";
+  import type { BookingIntakeField } from "@cita-suite/shared/booking-integration";
   let { field, onchange }: {
     field: BookingIntakeField;
     onchange: (changes: Partial<BookingIntakeField>) => void;

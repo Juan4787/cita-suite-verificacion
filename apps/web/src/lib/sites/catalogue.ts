@@ -1,4 +1,4 @@
-import { BOOKING_MODALITIES } from '@turnos-saas/shared/booking-integration';
+import { BOOKING_MODALITIES } from '@cita-suite/shared/booking-integration';
 import { InvalidDataContractError, readArray, readFiniteNumber, readNullableText, readRecord, readText } from '$lib/contracts/json';
 
 export function parsePublicContact(value: unknown) {

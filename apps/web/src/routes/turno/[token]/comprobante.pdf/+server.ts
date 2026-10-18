@@ -6,7 +6,7 @@ import { error } from '@sveltejs/kit';
 import { loadAppointmentForToken } from '$lib/server/scheduling/public/appointment-token';
 import { buildAppointmentReceiptPdf, type ReceiptField } from '$lib/server/scheduling/public/receipt-pdf';
 import { formatDateTime } from '$lib/utils/format';
-import { BOOKING_MODALITY_LABELS } from '@turnos-saas/shared/booking-integration';
+import { BOOKING_MODALITY_LABELS } from '@cita-suite/shared/booking-integration';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params, fetch }) => {

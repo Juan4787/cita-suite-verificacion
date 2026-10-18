@@ -22,7 +22,7 @@ import { readChoice } from '$lib/contracts/json';
 
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { bookingContextsAvailable } from '$lib/server/sites/public/booking-integration-flags';
-import { BOOKING_MODALITIES, type BookingModality } from '@turnos-saas/shared/booking-integration';
+import { BOOKING_MODALITIES, type BookingModality } from '@cita-suite/shared/booking-integration';
 import { ACTIVE_APPOINTMENT_STATUSES } from '$lib/utils/appointment-visibility';
 import { formatInTimeZone } from '$lib/utils/format';
 import { publicAppointmentUrl } from '$lib/server/integrations/public/messaging';

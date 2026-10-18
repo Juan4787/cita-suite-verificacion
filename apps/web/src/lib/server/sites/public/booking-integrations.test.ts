@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { normalizeBookingOrigin, parseBookingIntakeFields, parseBookingModalityWindows, validateBookingIntakeAnswers, isBookingHostMessage } from '@turnos-saas/shared/booking-integration';
+import { normalizeBookingOrigin, parseBookingIntakeFields, parseBookingModalityWindows, validateBookingIntakeAnswers, isBookingHostMessage } from '@cita-suite/shared/booking-integration';
 import { parseBookingIntegration, assertIntegrationSelection, bookingPresentation, intakeAnswersFromForm, integratedBookingErrorMessage } from '$lib/server/sites/public/booking-integrations';
 import { readBoundedBookingForm } from '$lib/server/platform/form-data';
 import { createManualAppointment } from '$lib/server/scheduling/public/appointments';

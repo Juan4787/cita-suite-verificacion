@@ -1,7 +1,7 @@
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { error, isHttpError, type RequestEvent } from '@sveltejs/kit';
-import { BOOKING_INTEGRATION_KEY_PATTERN, normalizeBookingOrigin } from '@turnos-saas/shared/booking-integration';
+import { BOOKING_INTEGRATION_KEY_PATTERN, normalizeBookingOrigin } from '@cita-suite/shared/booking-integration';
 import { loadBookingIntegration, type BookingIntegration } from '$lib/server/sites/public/booking-integrations';
 import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import { hashRateLimitSubject } from '$lib/server/platform/rate-limits';

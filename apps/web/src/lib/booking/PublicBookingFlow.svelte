@@ -7,7 +7,7 @@
  import { formatQuotedPrice } from './pricing';
 	import BookingAppearance from '$lib/booking/BookingAppearance.svelte';
 	import BookingFrameBridge from '$lib/booking/BookingFrameBridge.svelte';
-	import { BOOKING_MODALITY_LABELS, type BookingModality } from '@turnos-saas/shared/booking-integration';
+	import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/shared/booking-integration';
 	import { afterNavigate } from '$app/navigation';
 	import { navigating, page } from '$app/state';
 

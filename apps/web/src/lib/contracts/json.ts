@@ -64,4 +64,4 @@ export function readJson(value: unknown, contract: string, depth = 0): Json {
 	}
 	return Object.fromEntries(entries);
 }
-import type { Json } from '@turnos-saas/shared';
+import type { Json } from '@cita-suite/shared';

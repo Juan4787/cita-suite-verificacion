@@ -12,7 +12,7 @@
   import type {
     BookingIntakeField,
     BookingModalityWindow,
-  } from "@turnos-saas/shared/booking-integration";
+  } from "@cita-suite/shared/booking-integration";
   let { data, form }: PageProps = $props();
   const profile = $derived(
     data.profiles.find((item) => item.id === data.selectedId),

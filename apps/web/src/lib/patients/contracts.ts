@@ -1,4 +1,4 @@
-import type { Database, Json } from '@turnos-saas/shared';
+import type { Database, Json } from '@cita-suite/shared';
 import type { BusinessIndustry, BusinessRole } from '$lib/access/contracts';
 import type { Patient, PatientRadiograph } from '$lib/types';
 

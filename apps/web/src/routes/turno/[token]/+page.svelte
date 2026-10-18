@@ -2,7 +2,7 @@
  import {formatQuotedPrice} from '$lib/booking/pricing';
 	import { enhance } from '$app/forms';
 	import BookingAppearance from '$lib/booking/BookingAppearance.svelte';
-	import { BOOKING_MODALITY_LABELS, type BookingModality } from '@turnos-saas/shared/booking-integration';
+	import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/shared/booking-integration';
 	import { onMount } from 'svelte';
 	import { formatDateTime, formatInTimeZone } from '$lib/utils/format';
 	import { isActiveAppointmentStatus } from '$lib/utils/appointment-visibility';

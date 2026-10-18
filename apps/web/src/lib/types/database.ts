@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@turnos-saas/shared';
+import type { Database } from '@cita-suite/shared';
 
 type NullableSqlArguments<Args> = [Args] extends [never] ? never : {
 	[Key in keyof Args]: Args[Key] | null

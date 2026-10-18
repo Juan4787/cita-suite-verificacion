@@ -1,4 +1,4 @@
-import type { BookingModality, BookingModalityWindow } from '@turnos-saas/shared/booking-integration';
+import type { BookingModality, BookingModalityWindow } from '@cita-suite/shared/booking-integration';
 
 export type AvailabilityBusiness = {
 	timezone: string;

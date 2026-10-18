@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseBookingIntakeFields, parsePublicPatientFields, validateBookingIntakeAnswers } from '@turnos-saas/shared/booking-integration';
+import { parseBookingIntakeFields, parsePublicPatientFields, validateBookingIntakeAnswers } from '@cita-suite/shared/booking-integration';
 import { intakeAnswersFromForm } from '$lib/server/sites/public/booking-integrations';
 const field = {id:'profile_insurance', label:'Obra social', kind:'text', required:true, maxLength:120, patientField:'insurance'};
 describe('professional patient declarations', () => {

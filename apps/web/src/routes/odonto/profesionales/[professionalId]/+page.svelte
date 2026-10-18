@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { styledDate, styledSelect } from "$lib/ui/styled-controls";
+	import ProfessionalServicesPanel from '$lib/components/team/ProfessionalServicesPanel.svelte';
+	import { styledDate, styledSelect } from '$lib/ui/styled-controls';
 	import { beforeNavigate, goto, invalidate } from '$app/navigation';
 	import { enhance } from '$app/forms';
 	import BackLink from '$lib/components/BackLink.svelte';
 	import { clearTtlDraft, loadTtlDraft, saveTtlDraft } from '$lib/client/ttl-draft';
 	import { formatDate, formatDateTime, formatInTimeZone } from '$lib/utils/format';
-	import { formatPriceLabel } from '$lib/utils/money-input';
 	import {
 		normalizeTimeRangesForCommit,
 		normalizeTimeRangesInput,
@@ -20,7 +20,17 @@
 		type ScheduleBlockDraft
 	} from '$lib/utils/schedule-blocks';
 	import type { SubmitFunction } from '@sveltejs/kit';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
+	import { isRecord } from '$lib/contracts/json';
+	import {
+		cloneProfessionalDraft as cloneDraft,
+		acceptProfessionalDraftSave,
+		emptyProfessionalException as emptyExceptionDraft,
+		sanitizeProfessionalDraft as sanitizeDraft,
+		type ProfessionalDraft,
+		type ProfessionalEditorService as Service,
+		type ProfessionalEditorSaving
+	} from '$lib/team/professional-editor';
 	import Modal from '$lib/components/Modal.svelte';
 
 	const weekdays = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -31,23 +41,9 @@
 	] as const;
 
 	type TabId = (typeof tabs)[number]['id'];
-	type Service = {
-		id: string;
-		name: string;
-		description: string | null;
-		duration_minutes: number;
-		buffer_before_minutes: number;
-		buffer_after_minutes: number;
-		price_label: string | null;
-		updated_at: string;
-		patient_instructions: string | null;
-		public_reminder_description: string | null;
-		is_active: boolean;
-		is_public: boolean;
-		sort_order: number;
-	};
 	type Rule = {
-        service_scope?:'all'|'restricted';rule_services?:Array<{service_id:string}>;
+		service_scope?: 'all' | 'restricted';
+		rule_services?: Array<{ service_id: string }>;
 		id: string;
 		weekday: number;
 		start_time: string;
@@ -58,36 +54,13 @@
 		created_at: string | null;
 	};
 	type Exception = {
-        exception_services?:Array<{service_id:string}>;
+		exception_services?: Array<{ service_id: string }>;
 		id: string;
 		professional_id: string | null;
 		starts_at: string;
 		ends_at: string;
 		type: 'blocked' | 'extra_available' | 'restricted';
 		reason: string | null;
-	};
-	type ProfessionalDraft = {
-		name: string;
-		specialty: string;
-		phone: string;
-		email: string;
-		isAvailable: boolean;
-		serviceIds: string[];
-		schedule: {
-			blocks: ScheduleBlockDraft[];
-		};
-		exception: {
-			appliesTo: 'professional' | 'business';
-			type: 'blocked' | 'extra_available' | 'restricted';
-			periodMode: 'single' | 'range' | 'multiple';
-            allowedServiceIds:string[];requestId:string;
-            dates:string[];
-			date: string;
-			dateFrom: string;
-			dateTo: string;
-			timeRange: string;
-			reason: string;
-		};
 	};
 	type DirtyFields = {
 		name: boolean;
@@ -114,8 +87,10 @@
 			is_active: boolean;
 			is_public: boolean;
 		} | null;
-		services: Service[];currentPriceLabels?:Record<string,string>;
-        availabilityRevision?:number;exceptionRequestId?:string;
+		services: Service[];
+		currentPriceLabels?: Record<string, string>;
+		availabilityRevision?: number;
+		exceptionRequestId?: string;
 		assignedServiceIds: string[];
 		defaultServiceIds: string[];
 		rules: Rule[];
@@ -130,29 +105,31 @@
 		demo: boolean;
 	};
 
-	let { data, form }: {
+	let {
+		data,
+		form
+	}: {
 		data: PageData;
-		form?: { success?: boolean; message?: string;exceptionConflict?:boolean };
+		form?: { success?: boolean; message?: string; exceptionConflict?: boolean };
 	} = $props();
 
-	const cloneDraft = (value: ProfessionalDraft): ProfessionalDraft => JSON.parse(JSON.stringify(value));
-    const restrictionLabel=(ids:string[])=>ids.length?ids.map(id=>{const service=data.services.find((s:Service)=>s.id===id);return service?service.name+(service.is_active?'':' (no disponible)'):'Prestación no disponible';}).join(', '):'Franja cerrada';
+	const restrictionLabel = (ids: string[]) =>
+		ids.length
+			? ids
+					.map((id) => {
+						const service = data.services.find((s: Service) => s.id === id);
+						return service
+							? service.name + (service.is_active ? '' : ' (no disponible)')
+							: 'Prestación no disponible';
+					})
+					.join(', ')
+			: 'Franja cerrada';
 	const normalizedText = (value: string) => value.trim();
 	const uniqueSortedNumbers = (items: number[]) => [...new Set(items)].sort((a, b) => a - b);
-	const uniqueSortedStrings = (items: string[]) => [...new Set(items)].sort((a, b) => a.localeCompare(b));
+	const uniqueSortedStrings = (items: string[]) =>
+		[...new Set(items)].sort((a, b) => a.localeCompare(b));
 	const sameStringList = (left: string[], right: string[]) =>
 		uniqueSortedStrings(left).join('|') === uniqueSortedStrings(right).join('|');
-
-	const emptyExceptionDraft = (): ProfessionalDraft['exception'] => ({
-		appliesTo: 'professional',
-		type: 'blocked',
-		periodMode: 'single',dates:[],allowedServiceIds:[],requestId:crypto.randomUUID(),
-		date: '',
-		dateFrom: '',
-		dateTo: '',
-		timeRange: '',
-		reason: ''
-	});
 
 	const scheduleFromRules = (rules: Rule[]): ProfessionalDraft['schedule'] => ({
 		blocks: scheduleBlocksFromRules(rules, 'saved-block')
@@ -165,72 +142,8 @@
 		email: source.professional?.email ?? '',
 		isAvailable: Boolean(source.professional?.is_active && source.professional?.is_public),
 		serviceIds: [...(source.assignedServiceIds ?? [])],
-		schedule: scheduleFromRules(source.rules as Rule[]),
+		schedule: scheduleFromRules(source.rules),
 		exception: emptyExceptionDraft()
-	});
-
-	const sanitizeSchedule = (
-		value: Partial<ProfessionalDraft> | null,
-		fallback: ProfessionalDraft
-	): ProfessionalDraft['schedule'] => {
-		if (Array.isArray(value?.schedule?.blocks)) {
-			const blocks = value.schedule.blocks.map((block, index) => ({
-				serviceScope:block?.serviceScope==='restricted'?'restricted' as const:'all' as const,allowedServiceIds:Array.isArray(block?.allowedServiceIds)?block.allowedServiceIds.map(String):[],
-                id: typeof block?.id === 'string' ? block.id : `restored-block-${index + 1}`,
-				weekdays: Array.isArray(block?.weekdays)
-					? block.weekdays.map(Number).filter((item) => Number.isInteger(item) && item >= 0 && item <= 6)
-					: [],
-				timeRanges: typeof block?.timeRanges === 'string' ? block.timeRanges : '',
-				slotInterval: typeof block?.slotInterval === 'string' ? block.slotInterval : '15',
-				gridInterval:
-					typeof block?.gridInterval === 'string' ? block.gridInterval : '15'
-			}));
-			return { blocks: blocks.length > 0 ? blocks : cloneDraft(fallback).schedule.blocks };
-		}
-		const legacySchedule = value?.schedule as any;
-		if (legacySchedule && Array.isArray(legacySchedule.weekdays)) {
-			return {
-				blocks: [
-					{
-						id: 'restored-block-1',
-						weekdays: legacySchedule.weekdays
-							.map(Number)
-							.filter((item: number) => Number.isInteger(item) && item >= 0 && item <= 6),
-						timeRanges: typeof legacySchedule.timeRanges === 'string' ? legacySchedule.timeRanges : '',
-						slotInterval:
-							typeof legacySchedule.breakMinutes === 'string'
-								? legacySchedule.breakMinutes
-								: '15',
-						gridInterval:
-							typeof legacySchedule.slotInterval === 'string'
-								? legacySchedule.slotInterval
-								: '15'
-					}
-				]
-			};
-		}
-		return cloneDraft(fallback).schedule;
-	};
-
-	const sanitizeDraft = (value: Partial<ProfessionalDraft> | null, fallback: ProfessionalDraft): ProfessionalDraft => ({
-		name: typeof value?.name === 'string' ? value.name : fallback.name,
-		specialty: typeof value?.specialty === 'string' ? value.specialty : fallback.specialty,
-		phone: typeof value?.phone === 'string' ? value.phone : fallback.phone,
-		email: typeof value?.email === 'string' ? value.email : fallback.email,
-		isAvailable: typeof value?.isAvailable === 'boolean' ? value.isAvailable : fallback.isAvailable,
-		serviceIds: Array.isArray(value?.serviceIds) ? value.serviceIds.map(String) : fallback.serviceIds,
-		schedule: sanitizeSchedule(value, fallback),
-		exception: {
-			appliesTo: value?.exception?.appliesTo === 'business' ? 'business' : 'professional',
-			type: value?.exception?.type === 'extra_available' ? 'extra_available' : value?.exception?.type==='restricted'?'restricted':'blocked',
-			periodMode: value?.exception?.periodMode === 'range' ? 'range' : value?.exception?.periodMode==='multiple'?'multiple':'single',
-            dates:Array.isArray(value?.exception?.dates)?value.exception.dates.map(String):[],allowedServiceIds:Array.isArray(value?.exception?.allowedServiceIds)?value.exception.allowedServiceIds.map(String):[],requestId:typeof value?.exception?.requestId==='string'&&/^[0-9a-f-]{36}$/i.test(value.exception.requestId)?value.exception.requestId:crypto.randomUUID(),
-			date: typeof value?.exception?.date === 'string' ? value.exception.date : fallback.exception.date,
-			dateFrom: typeof value?.exception?.dateFrom === 'string' ? value.exception.dateFrom : fallback.exception.dateFrom,
-			dateTo: typeof value?.exception?.dateTo === 'string' ? value.exception.dateTo : fallback.exception.dateTo,
-			timeRange: typeof value?.exception?.timeRange === 'string' ? value.exception.timeRange : fallback.exception.timeRange,
-			reason: typeof value?.exception?.reason === 'string' ? value.exception.reason : fallback.exception.reason
-		}
 	});
 
 	const hasValidSchedule = (schedule: ProfessionalDraft['schedule']) => {
@@ -238,9 +151,11 @@
 	};
 
 	const hasExceptionDraft = (exception: ProfessionalDraft['exception']) =>
-		exception.periodMode === 'multiple' ? Boolean(exception.dates?.length||exception.date.trim()||exception.reason.trim()) : exception.periodMode === 'range'
-			? Boolean(exception.dateFrom.trim() || exception.dateTo.trim() || exception.reason.trim())
-			: Boolean(exception.date.trim() || exception.timeRange.trim() || exception.reason.trim());
+		exception.periodMode === 'multiple'
+			? Boolean(exception.dates?.length || exception.date.trim() || exception.reason.trim())
+			: exception.periodMode === 'range'
+				? Boolean(exception.dateFrom.trim() || exception.dateTo.trim() || exception.reason.trim())
+				: Boolean(exception.date.trim() || exception.timeRange.trim() || exception.reason.trim());
 
 	const canOperate = $derived(data.context.canManage && !data.demo);
 	const canManage = $derived(data.context.canManage && !data.demo);
@@ -259,17 +174,21 @@
 	let dependencyCountsError = $state('');
 	const canDelete = $derived(
 		dependencyCountsLoaded &&
-		appointmentCount === 0 &&
-		clinicalEntryCount === 0 &&
-		followUpCount === 0
+			appointmentCount === 0 &&
+			clinicalEntryCount === 0 &&
+			followUpCount === 0
 	);
 	let showDeleteConfirm = $state(false);
 	const businessId = $derived(data.context.business?.id ?? 'sin-consultorio');
-	const businessTimeZone = $derived(data.context.business?.timezone ?? 'America/Argentina/Buenos_Aires');
+	const businessTimeZone = $derived(
+		data.context.business?.timezone ?? 'America/Argentina/Buenos_Aires'
+	);
 	const userId = $derived(data.userId ?? 'sin-usuario');
 	const professionalId = $derived(data.professional?.id ?? 'nuevo');
 	const professionalDependencyKey = $derived(`app:professional:${professionalId}`);
-	const draftStorageKey = $derived(`cita-suite:draft:professional-profile:${businessId}:${userId}:${professionalId}`);
+	const draftStorageKey = $derived(
+		`cita-suite:draft:professional-profile:${businessId}:${userId}:${professionalId}`
+	);
 
 	// svelte-ignore state_referenced_locally
 	let baseline = $state<ProfessionalDraft>(buildServerDraft(data));
@@ -278,11 +197,10 @@
 	let draftReady = $state(false);
 	let draftRestored = $state(false);
 	// svelte-ignore state_referenced_locally
-	let activeTab = $state<TabId>(tabs.some((tab) => tab.id === data.tab) ? (data.tab as TabId) : 'perfil');
-	let showNewService = $state(false);
-	let editingServiceId = $state<string | null>(null);
-	let serviceEditError = $state('');
-	let saving = $state<'profile' | 'services' | 'schedule' | 'exception' | 'all' | 'service-create' | 'service-update' | null>(null);
+	let activeTab = $state<TabId>(
+		tabs.some((tab) => tab.id === data.tab) ? (data.tab as TabId) : 'perfil'
+	);
+	let saving = $state<ProfessionalEditorSaving>(null);
 	let archiveSubmitting = $state(false);
 	let restoreSubmitting = $state(false);
 	let deleteSubmitting = $state(false);
@@ -295,9 +213,7 @@
 		dependencyCountsLoading = true;
 		dependencyCountsError = '';
 		try {
-			const response = await fetch(
-				`/odonto/profesionales/${professional.id}/dependencias`
-			);
+			const response = await fetch(`/odonto/profesionales/${professional.id}/dependencias`);
 			const payload = await response.json().catch(() => ({}));
 			if (!response.ok) {
 				throw new Error(payload?.message ?? 'No se pudo comprobar el historial del profesional.');
@@ -308,9 +224,7 @@
 			dependencyCountsLoaded = true;
 		} catch (error) {
 			dependencyCountsError =
-				error instanceof Error
-					? error.message
-					: 'No se pudo comprobar el historial del profesional.';
+				error instanceof Error ? error.message : 'No se pudo comprobar el historial del profesional.';
 		} finally {
 			dependencyCountsLoading = false;
 		}
@@ -320,8 +234,11 @@
 		showDeleteConfirm = true;
 		void loadDependencyCounts();
 	};
-	let acknowledgedAppointments=$state(false);
-    $effect(()=>{JSON.stringify(draft.exception);acknowledgedAppointments=false;});
+	let acknowledgedAppointments = $state(false);
+	$effect(() => {
+		JSON.stringify(draft.exception);
+		acknowledgedAppointments = false;
+	});
 
 	let saveAllForm = $state<HTMLFormElement | null>(null);
 	let scheduleError = $state('');
@@ -329,9 +246,6 @@
 	let scheduleBlockSeq = 100;
 	let allowNavigation = false;
 
-	$effect(() => {
-		if (data.services.length === 0) showNewService = true;
-	});
 
 	$effect(() => {
 		if (draft.exception.type === 'extra_available' && draft.exception.periodMode === 'range') {
@@ -339,17 +253,23 @@
 		}
 	});
 
-	const calculateDirtyFields = (current: ProfessionalDraft, saved: ProfessionalDraft): DirtyFields => {
+	const calculateDirtyFields = (
+		current: ProfessionalDraft,
+		saved: ProfessionalDraft
+	): DirtyFields => {
 		const editableCurrentServices = current.serviceIds.filter((id) => !defaultServiceIdSet.has(id));
 		const editableSavedServices = saved.serviceIds.filter((id) => !defaultServiceIdSet.has(id));
 		return {
 			name: normalizedText(current.name) !== normalizedText(saved.name),
 			specialty: normalizedText(current.specialty) !== normalizedText(saved.specialty),
 			phone: normalizedText(current.phone) !== normalizedText(saved.phone),
-			email: normalizedText(current.email).toLowerCase() !== normalizedText(saved.email).toLowerCase(),
+			email:
+				normalizedText(current.email).toLowerCase() !== normalizedText(saved.email).toLowerCase(),
 			profilePublic: current.isAvailable !== saved.isAvailable,
 			services: !sameStringList(editableCurrentServices, editableSavedServices),
-			schedule: canonicalScheduleBlocks(current.schedule.blocks) !== canonicalScheduleBlocks(saved.schedule.blocks),
+			schedule:
+				canonicalScheduleBlocks(current.schedule.blocks) !==
+				canonicalScheduleBlocks(saved.schedule.blocks),
 			exception: hasExceptionDraft(current.exception)
 		};
 	};
@@ -378,13 +298,25 @@
 	const visibleSubtitle = $derived.by(() => draft.specialty.trim() || 'Definí qué atiende y cuándo.');
 	const missingSummary = $derived.by(() => missingItems.join(', '));
 	const isVisibleInBooking = $derived.by(() => draft.isAvailable && !hasMissingMinimum);
-	const bookingStatusLabel = $derived.by(() => (isVisibleInBooking ? 'Visible en reservas' : 'No visible en reservas'));
+	const bookingStatusLabel = $derived.by(() =>
+		isVisibleInBooking ? 'Visible en reservas' : 'No visible en reservas'
+	);
 	const bookingStatusClass = $derived.by(() =>
-		isVisibleInBooking ? 'ux-badge ux-badge-success' : hasMissingMinimum ? 'ux-badge ux-badge-danger' : 'ux-badge'
+		isVisibleInBooking
+			? 'ux-badge ux-badge-success'
+			: hasMissingMinimum
+				? 'ux-badge ux-badge-danger'
+				: 'ux-badge'
 	);
 	const showSaveAllAction = $derived.by(() => hasUnsavedChanges);
 	const shouldSaveProfile = $derived.by(() =>
-		Boolean(dirtyFields.name || dirtyFields.specialty || dirtyFields.phone || dirtyFields.email || dirtyFields.profilePublic)
+		Boolean(
+			dirtyFields.name ||
+			dirtyFields.specialty ||
+			dirtyFields.phone ||
+			dirtyFields.email ||
+			dirtyFields.profilePublic
+		)
 	);
 	const tabStates = $derived.by(
 		() =>
@@ -397,27 +329,20 @@
 				}
 			}) satisfies Record<TabId, { dirty: boolean; missing: boolean }>
 	);
-	const serviceDelta = $derived.by(() => {
-		const current = new Set(draft.serviceIds.filter((id) => !defaultServiceIdSet.has(id)));
-		const saved = new Set(baseline.serviceIds.filter((id) => !defaultServiceIdSet.has(id)));
-		const added = [...current].filter((id) => !saved.has(id));
-		const removed = [...saved].filter((id) => !current.has(id));
-		return { added, removed, count: added.length + removed.length };
-	});
-	const serviceChangeSummary = $derived.by(() =>
-		serviceDelta.count === 1 ? '1 cambio sin guardar' : `${serviceDelta.count} cambios sin guardar`
-	);
 	const guardTitle = $derived.by(() => {
 		if (hasUnsavedChanges && hasMissingMinimum) return 'Tenés cambios sin guardar y datos pendientes';
 		if (hasUnsavedChanges) return 'Tenés cambios sin guardar';
 		return 'Faltan datos para recibir turnos';
 	});
 	const scheduleBlocksJson = $derived(serializeScheduleBlocks(draft.schedule.blocks));
-	const scheduleHasAnyDay = $derived(draft.schedule.blocks.some((block) => block.weekdays.length > 0));
+	const scheduleHasAnyDay = $derived(
+		draft.schedule.blocks.some((block) => block.weekdays.length > 0)
+	);
 	const scheduleCanSave = $derived(validateScheduleBlocks(draft.schedule.blocks).ok);
 	const exceptionErrorFor = (exception: ProfessionalDraft['exception']) => {
 		if (!hasExceptionDraft(exception)) return '';
-        if(exception.periodMode==='multiple')return exception.dates?.length?'':'Agregá al menos una fecha.';
+		if (exception.periodMode === 'multiple')
+			return exception.dates?.length ? '' : 'Agregá al menos una fecha.';
 		if (exception.periodMode === 'range') {
 			if (!exception.dateFrom.trim() || !exception.dateTo.trim()) {
 				return 'Completá las fechas Desde y Hasta.';
@@ -444,7 +369,9 @@
 
 	const canonicalTimeRanges = (value: string) => {
 		const parsed = parseTimeRanges(value);
-		return parsed ? parsed.map((range) => `${range.start}-${range.end}`).join(',') : normalizedText(value);
+		return parsed
+			? parsed.map((range) => `${range.start}-${range.end}`).join(',')
+			: normalizedText(value);
 	};
 
 	const scheduleBlockDaysDirty = (block: ScheduleBlockDraft) => {
@@ -489,7 +416,9 @@
 		const hasProblem =
 			block.weekdays.length === 0 ||
 			!parseTimeRanges(block.timeRanges) ||
-			Boolean(scheduleBlockIntervalStatus(block) && scheduleBlockIntervalStatus(block) !== 'Sin guardar');
+			Boolean(
+				scheduleBlockIntervalStatus(block) && scheduleBlockIntervalStatus(block) !== 'Sin guardar'
+			);
 		if (hasProblem) return 'border-red-400/35';
 		if (
 			scheduleBlockDaysDirty(block) ||
@@ -503,7 +432,16 @@
 	};
 
 	const toggleService = (serviceId: string) => {
-        if(draft.serviceIds.includes(serviceId)){draft.schedule.blocks=draft.schedule.blocks.map(block=>({...block,allowedServiceIds:(block.allowedServiceIds??[]).filter(id=>id!==serviceId)}));if(draft.exception.appliesTo==='professional')draft.exception.allowedServiceIds=draft.exception.allowedServiceIds.filter(id=>id!==serviceId);}
+		if (draft.serviceIds.includes(serviceId)) {
+			draft.schedule.blocks = draft.schedule.blocks.map((block) => ({
+				...block,
+				allowedServiceIds: (block.allowedServiceIds ?? []).filter((id) => id !== serviceId)
+			}));
+			if (draft.exception.appliesTo === 'professional')
+				draft.exception.allowedServiceIds = draft.exception.allowedServiceIds.filter(
+					(id) => id !== serviceId
+				);
+		}
 		draft.serviceIds = draft.serviceIds.includes(serviceId)
 			? draft.serviceIds.filter((id) => id !== serviceId)
 			: [...draft.serviceIds, serviceId];
@@ -576,7 +514,7 @@
 	);
 
 	const exceptionTarget = (item: Exception) =>
-		item.professional_id ? professional?.name ?? 'Profesional' : 'Todo el consultorio';
+		item.professional_id ? (professional?.name ?? 'Profesional') : 'Todo el consultorio';
 	const exceptionPeriodLabel = (item: Exception) => {
 		const starts = formatInTimeZone(item.starts_at, businessTimeZone);
 		const ends = formatInTimeZone(item.ends_at, businessTimeZone);
@@ -591,27 +529,6 @@
 				: `Del ${startLabel} al ${endLabel} · Días completos`;
 		}
 		return `${formatDateTime(item.starts_at, businessTimeZone)} - ${formatDateTime(item.ends_at, businessTimeZone)}`;
-	};
-
-	const durationLabel = (minutes: number) => `${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`;
-	const editingService = $derived(
-		data.services.find((service: Service) => service.id === editingServiceId) ?? null
-	);
-	const editingDefaultService = $derived(
-		Boolean(editingService && defaultServiceIdSet.has(editingService.id))
-	);
-	const openServiceEditor = (serviceId: string) => {
-		editingServiceId = serviceId;
-		serviceEditError = '';
-	};
-	const closeServiceEditor = () => {
-		if (saving === 'service-update') return;
-		editingServiceId = null;
-		serviceEditError = '';
-	};
-	const handlePriceInput = (event: Event) => {
-		const input = event.currentTarget as HTMLInputElement;
-		input.value = formatPriceLabel(input.value);
 	};
 
 	const commitScheduleBlockTimeRanges = (blockId: string | undefined) => {
@@ -671,90 +588,43 @@
 	const fieldStateClass = (dirty: boolean, missing = false) =>
 		missing ? 'ux-state-required' : dirty ? 'ux-state-unsaved' : '';
 	const sectionStateClass = fieldStateClass;
-	const serviceRowStateClass = (serviceId: string) => {
-		if (serviceDelta.added.includes(serviceId)) return 'ux-choice-pending';
-		if (serviceDelta.removed.includes(serviceId)) return 'ux-choice-removed';
-		return '';
-	};
 	const resetExceptionDraft = () => {
 		draft.exception = emptyExceptionDraft();
 	};
-	const markSaved = (section: 'profile' | 'services' | 'schedule' | 'exception' | 'all') => {
-		if (section === 'all') {
-			baseline = cloneDraft(draft);
-			resetExceptionDraft();
-			baseline.exception = emptyExceptionDraft();
-			clearTtlDraft(draftStorageKey);
-			draftRestored = false;
-			return;
-		}
-		if (section === 'profile') {
-			baseline.name = draft.name;
-			baseline.specialty = draft.specialty;
-			baseline.phone = draft.phone;
-			baseline.email = draft.email;
-			baseline.isAvailable = draft.isAvailable;
-		}
-		if (section === 'services') baseline.serviceIds = [...draft.serviceIds];
-		if (section === 'schedule') baseline.schedule = cloneDraft(draft).schedule;
-		if (section === 'exception') resetExceptionDraft();
+	const markSaved = (section: 'profile' | 'services' | 'schedule' | 'exception' | 'all', submitted: ProfessionalDraft) => {
+		const accepted = acceptProfessionalDraftSave(draft, baseline, submitted, section);
+		baseline = accepted.baseline; draft = accepted.draft;
 		if (!Object.values(calculateDirtyFields(draft, baseline)).some(Boolean)) {
-			clearTtlDraft(draftStorageKey);
-			draftRestored = false;
+			clearTtlDraft(draftStorageKey); draftRestored = false;
 		}
 	};
+	let destroyed = false;
+	onDestroy(() => { destroyed = true; });
+	const editorScope = () => `${businessId}:${userId}:${professionalId}:${canManage}`;
+	const messageFromResult = (result: unknown, fallback: string) =>
+		isRecord(result) && isRecord(result.data) && typeof result.data.message === 'string'
+			? result.data.message
+			: fallback;
 
-	const messageFromResult = (result: any, fallback: string) =>
-		typeof result?.data?.message === 'string' ? result.data.message : fallback;
-
-	const sectionEnhance = (section: 'profile' | 'services' | 'schedule' | 'exception'): SubmitFunction => () => {
-		saving = section;
-		return async ({ result, update }) => {
-			saving = null;
-			if (result.type === 'success') {
-				markSaved(section);
-				await update({ reset: false, invalidateAll: false });
-				await invalidate(professionalDependencyKey);
-				return;
-			}
-			await update({ reset: false });
+	const sectionEnhance =
+		(section: 'profile' | 'services' | 'schedule' | 'exception'): SubmitFunction =>
+		({ cancel }) => {
+			if (saving) { cancel(); return; }
+			const submitted = cloneDraft(draft), requestedScope = editorScope();
+			saving = section;
+			return async ({ result, update }) => {
+				if (destroyed || requestedScope !== editorScope()) return;
+				try {
+					if (result.type === 'success') {
+						markSaved(section, submitted);
+						await update({ reset: false, invalidateAll: false });
+						await invalidate(professionalDependencyKey);
+						return;
+					}
+					await update({ reset: false });
+				} finally { if (!destroyed && requestedScope === editorScope()) saving = null; }
+			};
 		};
-	};
-
-	const createServiceEnhance: SubmitFunction = () => {
-		saving = 'service-create';
-		return async ({ result, update }) => {
-			saving = null;
-			if (result.type === 'success') {
-				const serviceId = typeof (result.data as any)?.serviceId === 'string' ? (result.data as any).serviceId : '';
-				if (serviceId) {
-					if (!draft.serviceIds.includes(serviceId)) draft.serviceIds = [...draft.serviceIds, serviceId];
-					if (!baseline.serviceIds.includes(serviceId)) baseline.serviceIds = [...baseline.serviceIds, serviceId];
-				}
-				showNewService = false;
-				await update({ reset: true, invalidateAll: false });
-				await invalidate(professionalDependencyKey);
-				return;
-			}
-			await update({ reset: false });
-		};
-	};
-
-	const updateServiceEnhance: SubmitFunction = () => {
-		saving = 'service-update';
-		serviceEditError = '';
-		return async ({ result, update }) => {
-			saving = null;
-			if (result.type === 'success') {
-				editingServiceId = null;
-				await update({ reset: true, invalidateAll: false });
-				await invalidate(professionalDependencyKey);
-				return;
-			}
-			serviceEditError = messageFromResult(result, 'No pudimos guardar el servicio. Revisá los datos e intentá nuevamente.');
-			await update({ reset: false, invalidateAll: false });
-		};
-	};
 
 	const refreshEnhance: SubmitFunction = () => {
 		return async ({ update }) => {
@@ -788,13 +658,16 @@
 		continuePendingNavigation();
 	};
 
-	const saveAllEnhance: SubmitFunction = () => {
+	const saveAllEnhance: SubmitFunction = ({cancel}) => {
+		if (saving) { cancel(); return; }
+		const submitted = cloneDraft(draft), requestedScope = editorScope();
 		saving = 'all';
 		guardError = '';
 		return async ({ result, update }) => {
+			if (destroyed || requestedScope !== editorScope()) return;
 			saving = null;
 			if (result.type === 'success') {
-				markSaved('all');
+				markSaved('all', submitted);
 				await update({ reset: false, invalidateAll: false });
 				await invalidate(professionalDependencyKey);
 				continuePendingNavigation();
@@ -845,7 +718,7 @@
 	});
 
 	onMount(() => {
-		const savedDraft = loadTtlDraft<Partial<ProfessionalDraft>>(draftStorageKey);
+		const savedDraft = loadTtlDraft<unknown>(draftStorageKey);
 		if (savedDraft) {
 			const restored = sanitizeDraft(savedDraft, baseline);
 			if (Object.values(calculateDirtyFields(restored, baseline)).some(Boolean)) {
@@ -883,7 +756,7 @@
 				<div class="flex flex-wrap items-center gap-2">
 					<span class={bookingStatusClass}>{bookingStatusLabel}</span>
 					{#if hasUnsavedChanges}
-						<button type="button" disabled={!canOperate || saving === 'all'} class="ux-btn-primary" onclick={requestSaveAll}>
+						<button type="button" disabled={!canOperate || saving !== null} class="ux-btn-primary" onclick={requestSaveAll}>
 							{saving === 'all' ? 'Guardando...' : 'Guardar todo'}
 						</button>
 					{/if}
@@ -1141,168 +1014,10 @@
 		{/if}
 	{/if}
 
-	{#if activeTab === 'servicios'}
-        <a class="ux-btn-secondary mb-5 inline-flex" href={`/odonto/profesionales/${data.professional?.id}/aranceles`}>Configurar aranceles y ajustes mensuales</a>
-		<div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
-			<form method="POST" action="?/save_services" class={`ux-card ${sectionStateClass(dirtyFields.services)}`} use:enhance={sectionEnhance('services')}>
-				<div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-					<div>
-						<h2 class="ux-section-title">Servicios que ofrece</h2>
-						<p class="mt-1 text-sm text-white/55">Estos servicios estarán disponibles para reservar con este profesional.</p>
-						{#if dirtyFields.services}
-							<p class="ux-section-meta ux-section-meta-warning">{serviceChangeSummary}</p>
-						{/if}
-					</div>
-					<button type="submit" disabled={!canOperate || saving === 'services' || !dirtyFields.services} class="ux-btn-secondary">
-						{saving === 'services' ? 'Guardando...' : 'Guardar sólo servicios'}
-					</button>
-				</div>
-
-				<div class="mt-5 grid gap-3">
-					{#each data.services as service}
-						{@const isDefault = defaultServiceIdSet.has(service.id)}
-						<div class={`ux-choice flex items-center gap-3 p-4 ${isDefault || draft.serviceIds.includes(service.id) ? 'ux-choice-active' : ''} ${serviceRowStateClass(service.id)}`}>
-							<label class="flex min-w-0 flex-1 cursor-pointer items-center gap-4">
-								<input
-									type="checkbox"
-									name="service_id"
-									value={service.id}
-									checked={isDefault || draft.serviceIds.includes(service.id)}
-									disabled={!canOperate || isDefault}
-									class="accent-[#7c3aed]"
-									onchange={() => !isDefault && toggleService(service.id)}
-								/>
-								<span class="min-w-0 flex-1">
-									<span class="block font-black text-white">{service.name}</span>
-									<span class="mt-1 block text-sm text-white/55">
-										{durationLabel(service.duration_minutes)}{data.currentPriceLabels?.[service.id] ? ` · ${data.currentPriceLabels[service.id]} este mes` : service.price_label ? ` · ${service.price_label}` : ''}
-									</span>
-								</span>
-							</label>
-							<button
-								type="button"
-								disabled={!canManage}
-								class="ux-btn-secondary shrink-0 px-3 py-2 text-sm"
-								onclick={() => openServiceEditor(service.id)}
-							>
-								Editar
-							</button>
-						</div>
-					{/each}
-					{#if data.services.length === 0}
-						<p class="ux-empty">Todavía no hay servicios cargados.</p>
-					{/if}
-				</div>
-			</form>
-
-			<div class="ux-soft-card p-5">
-				<div class="flex items-start justify-between gap-4">
-					<div>
-						<h2 class="ux-section-title">¿No encontrás el servicio?</h2>
-						<p class="mt-1 text-sm text-white/55">Crealo una vez y queda asignado a {professional?.name ?? 'este profesional'}.</p>
-					</div>
-					<button type="button" class="ux-btn-secondary" onclick={() => (showNewService = !showNewService)}>
-						{showNewService ? 'Cerrar' : 'Crear servicio nuevo'}
-					</button>
-				</div>
-				{#if showNewService}
-					<form method="POST" action="?/create_service" class="mt-5 grid gap-4" use:enhance={createServiceEnhance}>
-						<label>
-							<span class="ux-label">Nombre</span>
-							<input name="name" required disabled={!canOperate} class="ux-input" />
-						</label>
-						<label>
-							<span class="ux-label">Duración en minutos</span>
-							<input name="duration_minutes" type="number" min="5" max="480" step="5" value="30" disabled={!canOperate} class="ux-input" />
-						</label>
-						<label>
-							<span class="ux-label">Arancel a mostrar (opcional)</span>
-							<input name="price_label" type="text" inputmode="numeric" disabled={!canOperate} placeholder="$ 35.000" class="ux-input" oninput={handlePriceInput} />
-							<p class="mt-2 text-sm text-white/70">Se usa cuando no configuraste ajustes mensuales.</p>
-						</label>
-						<button class="ux-btn-primary" disabled={!canOperate || saving === 'service-create'}>
-							{saving === 'service-create' ? 'Creando...' : 'Crear y asignar'}
-						</button>
-					</form>
-				{/if}
-			</div>
-		</div>
-
-		<Modal open={Boolean(editingService)} title="Editar servicio" on:close={closeServiceEditor}>
-			{#if editingService}
-				<form method="POST" action="?/update_service" class="grid gap-4" use:enhance={updateServiceEnhance}>
-					<input type="hidden" name="service_id" value={editingService.id} />
-					<input type="hidden" name="service_updated_at" value={editingService.updated_at} />
-					<p class="text-sm text-white/60">
-						Los cambios se aplican a los turnos nuevos. Los turnos ya reservados conservan el servicio y la duración originales.
-					</p>
-					<label>
-						<span class="ux-label">Nombre</span>
-						<input
-							name="name"
-							required
-							value={editingService.name}
-							disabled={!canManage || editingDefaultService}
-							class="ux-input"
-						/>
-						{#if editingDefaultService}
-							<span class="mt-1 block text-xs text-white/45">Este nombre identifica un servicio base del consultorio.</span>
-						{/if}
-					</label>
-					<div class="grid gap-4 sm:grid-cols-2">
-						<label>
-							<span class="ux-label">Duración en minutos</span>
-							<input name="duration_minutes" type="number" min="5" max="480" step="5" required value={editingService.duration_minutes} disabled={!canManage} class="ux-input" />
-						</label>
-						<label>
-							<span class="ux-label">Arancel a mostrar (opcional)</span>
-							<input name="price_label" type="text" inputmode="numeric" value={editingService.price_label ?? ''} disabled={!canManage} placeholder="$ 35.000" class="ux-input" oninput={handlePriceInput} />
-							<p class="mt-2 text-sm text-white/70">Se usa cuando no configuraste ajustes mensuales.</p>
-						</label>
-					</div>
-					<label>
-						<span class="ux-label">Descripción (opcional)</span>
-						<textarea name="description" rows="3" disabled={!canManage} class="ux-textarea">{editingService.description ?? ''}</textarea>
-					</label>
-					<div class="grid gap-4 sm:grid-cols-2">
-						<label>
-							<span class="ux-label">Margen antes (minutos)</span>
-							<input name="buffer_before_minutes" type="number" min="0" max="480" step="5" required value={editingService.buffer_before_minutes} disabled={!canManage} class="ux-input" />
-						</label>
-						<label>
-							<span class="ux-label">Margen después (minutos)</span>
-							<input name="buffer_after_minutes" type="number" min="0" max="480" step="5" required value={editingService.buffer_after_minutes} disabled={!canManage} class="ux-input" />
-						</label>
-					</div>
-					<fieldset class="space-y-4 border-t border-white/10 pt-4"><legend class="ux-section-title">Información para el paciente</legend><label class="block"><span class="ux-label">Indicaciones para la consulta <span class="text-white/65">(opcional)</span></span><textarea class="ux-textarea mt-2" name="patient_instructions" rows="2" maxlength="2000" disabled={!canManage}>{editingService.patient_instructions??''}</textarea></label><label class="block"><span class="ux-label">Texto del aviso del turno <span class="text-white/65">(opcional)</span></span><textarea class="ux-textarea mt-2" name="public_reminder_description" rows="2" maxlength="180" disabled={!canManage}>{editingService.public_reminder_description??''}</textarea><span class="mt-1 block text-sm text-white/75">Puede verse con el teléfono bloqueado. Evitá datos clínicos.</span></label></fieldset>
-					{#if editingDefaultService}
-						<input type="hidden" name="is_active" value="true" />
-						<input type="hidden" name="is_public" value="true" />
-					{:else}
-						<div class="grid gap-3 sm:grid-cols-2">
-							<label class="ux-choice flex items-center gap-3 px-4 py-3">
-								<input type="checkbox" name="is_active" value="true" checked={editingService.is_active} disabled={!canManage} class="accent-[#7c3aed]" />
-								<span class="font-bold text-white">Servicio activo</span>
-							</label>
-							<label class="ux-choice flex items-center gap-3 px-4 py-3">
-								<input type="checkbox" name="is_public" value="true" checked={editingService.is_public} disabled={!canManage} class="accent-[#7c3aed]" />
-								<span class="font-bold text-white">Visible al reservar</span>
-							</label>
-						</div>
-					{/if}
-					{#if serviceEditError}
-						<p class="ux-alert">{serviceEditError}</p>
-					{/if}
-					<div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-						<button type="button" class="ux-btn-secondary" disabled={saving === 'service-update'} onclick={closeServiceEditor}>Cancelar</button>
-						<button type="submit" class="ux-btn-primary" disabled={!canManage || saving === 'service-update'}>
-							{saving === 'service-update' ? 'Guardando...' : 'Guardar cambios'}
-						</button>
-					</div>
-				</form>
-			{/if}
-		</Modal>
-	{/if}
+	<ProfessionalServicesPanel active={activeTab === 'servicios'} services={data.services} professional={data.professional}
+		currentPriceLabels={data.currentPriceLabels} defaultServiceIds={data.defaultServiceIds} {canManage}
+		bind:selectedIds={draft.serviceIds} bind:baselineIds={baseline.serviceIds} bind:saving
+		dependencyKey={professionalDependencyKey} scope={`${businessId}:${userId}:${professionalId}:${canManage}`} onToggleService={toggleService} />
 
 	{#if activeTab === 'horarios'}
 		<div class="grid gap-5 xl:grid-cols-[1fr_0.78fr]">
@@ -1654,7 +1369,7 @@
 							Salir sin guardar
 						</button>
 						<button type="button" class="ux-btn-secondary" onclick={stayEditing}>Seguir editando</button>
-						<button type="button" disabled={!canOperate || saving === 'all'} class="ux-btn-primary" onclick={requestSaveAll}>
+						<button type="button" disabled={!canOperate || saving !== null} class="ux-btn-primary" onclick={requestSaveAll}>
 							{saving === 'all' ? 'Guardando...' : 'Guardar todo'}
 						</button>
 					{:else}

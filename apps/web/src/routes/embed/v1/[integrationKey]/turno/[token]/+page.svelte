@@ -5,7 +5,7 @@
     import BookingAppearance from '$lib/booking/BookingAppearance.svelte';
     import BookingFrameBridge from '$lib/booking/BookingFrameBridge.svelte';
     import { formatInTimeZone } from '$lib/utils/format';
-    import { BOOKING_MODALITY_LABELS } from '@turnos-saas/shared/booking-integration';
+    import { BOOKING_MODALITY_LABELS } from '@cita-suite/shared/booking-integration';
     let { data }: PageProps = $props();
     const appointment = $derived(data.appointment);
 </script>

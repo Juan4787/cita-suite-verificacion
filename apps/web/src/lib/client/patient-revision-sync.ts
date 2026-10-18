@@ -6,7 +6,7 @@ import {
 	verifyPatientRevision
 } from '$lib/client/patient-list-cache';
 import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@turnos-saas/shared';
+import type { Database } from '@cita-suite/shared';
 import { get } from 'svelte/store';
 
 const SAFETY_CHECK_MS = 30_000;

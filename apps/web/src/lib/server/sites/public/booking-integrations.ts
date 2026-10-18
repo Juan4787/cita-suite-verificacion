@@ -5,7 +5,7 @@ import {
 	BOOKING_INTEGRATION_KEY_PATTERN, BOOKING_MODALITIES, BOOKING_THEMES,
 	normalizeBookingOrigin, parseBookingIntakeFields, parsePublicPatientFields, parseBookingModalityWindows, validateBookingIntakeAnswers,
 	type BookingIntakeAnswers, type BookingModality, type BookingModalityWindow, type BookingPresentation
-} from '@turnos-saas/shared/booking-integration';
+} from '@cita-suite/shared/booking-integration';
 
 export type BookingIntegration = BookingPresentation & {
 	id: string;

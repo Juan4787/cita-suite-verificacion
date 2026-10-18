@@ -1,4 +1,4 @@
-import { normalizeBookingOrigin } from "@turnos-saas/shared/booking-integration";
+import { normalizeBookingOrigin } from "@cita-suite/shared/booking-integration";
 
 export type BookingInstallMode = "link" | "inline";
 

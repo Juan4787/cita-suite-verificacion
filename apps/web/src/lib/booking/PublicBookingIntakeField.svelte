@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { BookingIntakeField } from "@turnos-saas/shared/booking-integration";
+  import type { BookingIntakeField } from "@cita-suite/shared/booking-integration";
   import { styledSelect } from "$lib/ui/styled-controls";
   import BookingBirthDateInput from "./BookingBirthDateInput.svelte";
   let {

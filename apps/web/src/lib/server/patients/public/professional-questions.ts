@@ -3,7 +3,7 @@ import type { RequestEvent } from "@sveltejs/kit";
 import { getOdontoContext } from "$lib/server/access/public/odonto-context";
 import { bookingInformationEnabled } from "$lib/server/patients/public/booking-information";
 import { readBoundedBookingForm } from "$lib/server/platform/form-data";
-import { parseBookingIntakeFields } from "@turnos-saas/shared/booking-integration";
+import { parseBookingIntakeFields } from "@cita-suite/shared/booking-integration";
 
 export async function professionalQuestionContext(event: RequestEvent) {
   const context = await getOdontoContext(event);

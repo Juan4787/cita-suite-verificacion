@@ -25,7 +25,7 @@ import { fail, redirect, isRedirect } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { BookingIntegration } from '$lib/server/sites/public/booking-integrations';
 import { assertIntegrationSelection, bookingPresentation, intakeAnswersFromForm, integratedBookingErrorMessage } from '$lib/server/sites/public/booking-integrations';
-import { BOOKING_REQUEST_ID_PATTERN } from '@turnos-saas/shared/booking-integration';
+import { BOOKING_REQUEST_ID_PATTERN } from '@cita-suite/shared/booking-integration';
 import type { CitaSupabaseClient } from '$lib/types/database';
 
 const valuesFromForm = (form: FormData) => Object.fromEntries(form.entries());

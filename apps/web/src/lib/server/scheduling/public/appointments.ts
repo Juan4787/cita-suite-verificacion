@@ -246,7 +246,7 @@ export type AppointmentPatientSelection =
 			email?: string | null;
 		};
 
-export type BookingPatientInformationInput = { schemaHash: string; answers: import('@turnos-saas/shared/booking-integration').BookingIntakeAnswers; priceQuoteHash?: string };
+export type BookingPatientInformationInput = { schemaHash: string; answers: import('@cita-suite/shared/booking-integration').BookingIntakeAnswers; priceQuoteHash?: string };
 
 export type AtomicAppointmentInput = {
 	businessId: string;

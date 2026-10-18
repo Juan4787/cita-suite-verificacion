@@ -27,7 +27,7 @@ import {
 import { isLikelyPhoneE164, normalizePhoneE164 } from '$lib/utils/phone';
 import { sanitizePublicImageUrl } from '$lib/server/sites/public/public-image';
 import type { IntegratedBookingInput } from '$lib/server/sites/public/booking-integrations';
-import type { BookingModality, BookingModalityWindow } from '@turnos-saas/shared/booking-integration';
+import type { BookingModality, BookingModalityWindow } from '@cita-suite/shared/booking-integration';
 import { loadAvailabilityCatalog, loadAvailabilityWindowRows } from '$lib/server/scheduling/public/availability-windows';
 import type { AvailabilityCatalog } from '$lib/availability/contracts';
 import type { IntegratedAvailabilityRows } from '$lib/availability/rows';

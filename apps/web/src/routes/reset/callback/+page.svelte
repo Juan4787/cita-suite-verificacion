@@ -2,7 +2,7 @@
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-	import type { Database } from '@turnos-saas/shared';
+	import type { Database } from '@cita-suite/shared';
 	import { env } from '$env/dynamic/public';
 	import BackLink from '$lib/components/BackLink.svelte';
 

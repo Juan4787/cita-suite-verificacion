@@ -1,5 +1,5 @@
 import type { CitaSupabaseClient } from '$lib/types/database';
-import type { BookingModality, BookingModalityWindow } from '@turnos-saas/shared/booking-integration';
+import type { BookingModality, BookingModalityWindow } from '@cita-suite/shared/booking-integration';
 import type { AvailabilityScope } from '$lib/availability/contracts';
 import { isAvailabilityDate } from '$lib/availability/windows';
 import { InvalidDataContractError } from '$lib/contracts/json';

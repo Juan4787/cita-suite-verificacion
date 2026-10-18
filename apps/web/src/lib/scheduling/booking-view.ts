@@ -2,7 +2,7 @@ import type {
 	BookingIntakeField,
 	BookingModality,
 	BookingPresentation
-} from '@turnos-saas/shared/booking-integration';
+} from '@cita-suite/shared/booking-integration';
 import type { AvailabilitySlot } from '$lib/availability/calculate';
 import type { PriceQuote } from '$lib/booking/pricing';
 

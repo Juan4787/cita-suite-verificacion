@@ -1,7 +1,7 @@
 <script lang="ts">
  import { enhance } from '$app/forms';
  import type { SubmitFunction } from '@sveltejs/kit';
- import { BOOKING_MODALITY_LABELS, type BookingModality, type BookingIntakeField } from '@turnos-saas/shared/booking-integration';
+ import { BOOKING_MODALITY_LABELS, type BookingModality, type BookingIntakeField } from '@cita-suite/shared/booking-integration';
  import { isRecord } from '$lib/contracts/json';
  import type { BookingViewData, BookingFormState, BookingConfirmation } from '$lib/scheduling/booking-view';
  import { normalizePatientFullName, patientFullNameErrorMessage, PATIENT_FULL_NAME_INVALID_ERROR_MESSAGE } from '$lib/utils/patient-name';

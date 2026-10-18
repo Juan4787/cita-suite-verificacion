@@ -1,7 +1,7 @@
 import { env } from '$env/dynamic/private';
 import { error, type RequestEvent } from '@sveltejs/kit';
 import type { CitaSupabaseClient } from '$lib/types/database';
-import { parsePublicPatientFields, validateBookingIntakeAnswers } from '@turnos-saas/shared/booking-integration';
+import { parsePublicPatientFields, validateBookingIntakeAnswers } from '@cita-suite/shared/booking-integration';
 import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import { hashRateLimitSubject } from '$lib/server/platform/rate-limits';
 import { readBoolean, readRecord, readText, isRecord } from '$lib/contracts/json';
@@ -10,7 +10,7 @@ export const bookingInformationEnabled = () => env.BOOKING_INFORMATION_ENABLED =
 export const privateInformationHeaders = { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', 'x-content-type-options': 'nosniff' };
 export type PublicInformation = {
  documents_enabled?:boolean;
-  theme: import('@turnos-saas/shared/booking-integration').BookingTheme;
+  theme: import('@cita-suite/shared/booking-integration').BookingTheme;
   schema: ReturnType<typeof parsePublicPatientFields>;
   schema_hash: string; answers: Record<string, string | boolean>; comment: string; version: string;
 };

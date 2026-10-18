@@ -15,7 +15,7 @@ if (!['fast', 'full', 'release'].includes(level) || process.argv.length !== 3)
 const steps = [
 	['approved-plan', 'node', ['scripts/check-refactoring-plan.mjs']],
 	['inventory', 'node', ['scripts/inventory-campaign.mjs']],
-	['shared-types', 'pnpm', ['--filter', '@turnos-saas/shared', 'check']],
+	['shared-types', 'pnpm', ['--filter', '@cita-suite/shared', 'check']],
 	['web-types', 'pnpm', ['--filter', 'web', 'check']],
 	['natalia-types', 'pnpm', ['--filter', 'natalia', 'check']],
 	['verification-runner-tests', 'node', ['scripts/run-campaign-node-tests.mjs']],

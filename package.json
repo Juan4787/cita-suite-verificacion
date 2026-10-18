@@ -1,5 +1,5 @@
 {
-	"name": "turnos-saas",
+	"name": "cita-suite",
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
@@ -11,7 +11,7 @@
 		"build:cloudflare": "pnpm --filter web build:cloudflare",
 		"deploy:cloudflare": "pnpm --filter web deploy:cloudflare",
 		"deploy:cloudflare:preview": "pnpm --filter web deploy:cloudflare:preview",
-		"check": "pnpm --filter @turnos-saas/shared check && pnpm --filter web check && pnpm --filter natalia check",
+		"check": "pnpm --filter @cita-suite/shared check && pnpm --filter web check && pnpm --filter natalia check",
 		"verify:fast": "node scripts/verify-campaign.mjs fast",
 		"check:architecture": "depcruise --config .dependency-cruiser.cjs --output-type err apps/web/src packages/shared/src",
 		"verify:full": "node scripts/verify-campaign.mjs full",

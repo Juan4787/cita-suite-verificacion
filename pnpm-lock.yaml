@@ -64,7 +64,7 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.87.1
         version: 2.105.4
-      '@turnos-saas/shared':
+      '@cita-suite/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       pdf-lib:

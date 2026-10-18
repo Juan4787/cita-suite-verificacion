@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import { resolvePatientPermissions } from '$lib/server/patients/public/patient-permissions';
 import { bookingInformationEnabled, privateInformationHeaders } from '$lib/server/patients/public/booking-information';
-import { parsePublicPatientFields } from '@turnos-saas/shared/booking-integration';
+import { parsePublicPatientFields } from '@cita-suite/shared/booking-integration';
 import { isRecord, readRecord } from '$lib/contracts/json';
 import type { PageServerLoad } from './$types';
 

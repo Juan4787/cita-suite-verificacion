@@ -28,11 +28,12 @@ test('patient structure preserves role scope, keyboard access and long content a
 	});
 	const suffix = randomUUID(),
 		slug = `e2e-patient-ux-${suffix}`;
+	const ownerEmail = `patient-ux-owner-${suffix}@example.test`;
 	const email = `patient-ux-${suffix}@example.test`,
 		password = 'CitaPatientMatrixLocal!2026';
 	const name = `Paciente sintético de auditoría ${'NombreExtenso'.repeat(8)}`;
 	const description = `Descripción clínica sintética\n${'Contenido largo de auditoría. '.repeat(70)}\n${'ReferenciaExtensa'.repeat(20)}`;
-	let actorId: string | undefined, businessId: string | undefined;
+	let actorId: string | undefined, ownerId: string | undefined, businessId: string | undefined;
 	const errors: string[] = [],
 		coverage: { role: string; width: number; theme: string; checks: string[] }[] = [];
 	page.on('pageerror', (error) => errors.push(error.message));
@@ -45,7 +46,11 @@ test('patient structure preserves role scope, keyboard access and long content a
 		return data;
 	}
 	async function write(operation: PromiseLike<{ error: unknown }>) {
-		if ((await operation).error) throw new Error('Owned patient UX fixture write failed.');
+		const { error } = await operation;
+		if (error) {
+			const code = typeof error === 'object' && 'code' in error ? String(error.code) : 'unknown';
+			throw new Error(`Owned patient UX fixture write failed (${code}).`);
+		}
 	}
 	async function geometry() {
 		expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -65,20 +70,24 @@ test('patient structure preserves role scope, keyboard access and long content a
 		expect(await page.locator('vite-error-overlay').count()).toBe(0);
 	}
 	try {
-		const parentOwner = await must(
-			admin
-				.from('business_users')
-				.select('user_id')
-				.eq('business_id', parentBusiness)
-				.eq('role', 'owner')
-				.eq('status', 'active')
-				.single()
-		);
+		const owner = await admin.auth.admin.createUser({
+			email: ownerEmail,
+			password,
+			email_confirm: true
+		});
+		if (owner.error || !owner.data.user)
+			throw new Error('Could not prepare owned UX clinic owner.');
+		ownerId = owner.data.user.id;
 		const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
 		if (created.error || !created.data.user)
 			throw new Error('Could not prepare synthetic UX Auth actor.');
 		actorId = created.data.user.id;
-		await write(admin.from('allowed_emails').insert({ email, enabled: true }));
+		await write(
+			admin.from('allowed_emails').insert([
+				{ email, enabled: true },
+				{ email: ownerEmail, enabled: true }
+			])
+		);
 		const business = await must(
 			admin
 				.from('businesses')
@@ -110,7 +119,7 @@ test('patient structure preserves role scope, keyboard access and long content a
 			admin.from('business_users').insert([
 				{
 					business_id: businessId,
-					user_id: parentOwner.user_id,
+					user_id: ownerId,
 					role: 'owner',
 					status: 'active',
 					accepted_at: new Date().toISOString()
@@ -350,7 +359,9 @@ test('patient structure preserves role scope, keyboard access and long content a
 			);
 			expect(removed).toHaveLength(1);
 		}
-		await write(admin.from('allowed_emails').delete().eq('email', email));
+		await write(admin.from('allowed_emails').delete().in('email', [email, ownerEmail]));
+		if (ownerId && (await admin.auth.admin.deleteUser(ownerId)).error)
+			throw new Error('Owned patient UX owner cleanup failed.');
 		if (actorId && (await admin.auth.admin.deleteUser(actorId)).error)
 			throw new Error('Owned patient UX actor cleanup failed.');
 	}
