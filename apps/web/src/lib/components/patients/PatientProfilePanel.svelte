@@ -35,15 +35,19 @@
 	let request: AbortController | null = null;
 	let generation = 0;
 	let destroyed = false;
+	let previousSeedKey: string | null = null;
+	let previousSeedEvents: PatientChangeEvent[] | undefined;
 	$effect(() => {
-		void patient.id;
-		void patient.updated_at;
-		void patient.clinical_profile_updated_at;
-		void scope;
+		const seedKey = `${patient.id}:${patient.updated_at ?? ''}:${patient.clinical_profile_updated_at ?? ''}:${scope}:${deferred}:${demo}`;
+		const seedEvents = initialChangeEvents;
+		// Prop reevaluation on tab navigation is not a new server projection.
+		if (seedKey === previousSeedKey && seedEvents === previousSeedEvents) return;
+		previousSeedKey = seedKey;
+		previousSeedEvents = seedEvents;
 		generation += 1;
 		request?.abort();
 		request = null;
-		changeEvents = initialChangeEvents ?? [];
+		changeEvents = seedEvents ?? [];
 		changeEventsLoaded = !deferred || demo;
 		loadingChangeEvents = false;
 		changeEventsLoadError = '';

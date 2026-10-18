@@ -2,7 +2,7 @@
 
 La fuente de verdad es el [plan aprobado íntegro](../plans/refactorizacion-cita-suite.md). Este documento inicial no lo reemplaza. El avance y las evidencias se mantienen exclusivamente en el [registro separado](../plans/registro-refactorizacion-cita-suite.md).
 
-Estado: en ejecución local. No publicada. Autorización: campaña íntegra, sin producción, datos reales ni contrataciones. Rama: `refactor/maintainability-20261015`.
+Estado vigente: campaña en ejecución en rama `refactor/maintainability-20261015`, con verificaciones pesadas descartables en GitHub Actions. Todavía no publicada. El 17 de octubre el usuario amplió expresamente la autorización a publicación, pruebas masivas y auditoría en producción; consultar la ampliación literal del [plan](../plans/refactorizacion-cita-suite.md). Siguen vigentes los pasos previos de ensayo aislado, respaldo/recuperación, staging y release, la preservación de datos reales, Workers Free, ninguna contratación y la restricción de RAM. Los registros de inicio siguientes conservan su carácter histórico.
 
 ## Base y preservación
 
@@ -17,14 +17,14 @@ HEAD de entrada: `c4a2417`; el árbol contiene reversiones de la ejecución ante
 5. Seis áreas: acceso/comercial, equipo, agenda/reservas, pacientes/clínica, integraciones/tareas y sitios/presentación. Interfaces públicas cruzadas permitidas, detalles privados y ciclos prohibidos. Sin capas vacías.
 6. Interfaz y recorridos conservados; Natalia usa navegación nativa a Cita Suite. No tocar cursos/noticias ni activar WhatsApp.
 7. Programador Cloudflare con tareas independientes, presupuestos completos y recuperación persistente. Push/calendario cada cinco minutos; inicio ordinario dentro de diez minutos.
-8. Carga sintética de 5 y 25 consultorios: 30.000/150.000 pacientes y 60.000/300.000 turnos. Entorno pesado externo; nunca producción ni computadora local.
+8. Carga sintética de 5 y 25 consultorios: 30.000/150.000 pacientes y 60.000/300.000 turnos. Entorno pesado externo; computadora local excluida. La ampliación posterior permite producción con datos sintéticos identificables y límites de interrupción, después de los ensayos y puertas previas del plan.
 9. Auditoría transversal, documentación, artefactos, reversión y limitaciones comprobadas. Ningún cierre parcial equivale a campaña terminada.
 
 ## Evidencia y límites
 
 `verify:fast`, `verify:full` y `verify:release` registran resultados en `.verification/`. Las suites corren secuencialmente, con un trabajador. Una dependencia o suite ausente hace fallar el nivel correspondiente; no cuenta como omitida satisfactoriamente.
 
-Antes de actuar en remoto: resolver la discrepancia de cuenta Cloudflare, comprobar el destino y verificar permisos de Actions. No cambiar el destino para eludir autenticación. Un contenedor local no acredita capacidad del servicio alojado.
+Los accesos Cloudflare/Actions y el staging Supabase quedaron resueltos después del inventario inicial; las cuentas/refs y las lecturas que lo comprueban están en el registro. Antes de cada intervención se vuelve a comprobar el destino y la revisión esperados. No cambiar el destino para eludir autenticación. El contenedor de CI no acredita capacidad del servicio alojado.
 
 ## Registro de avance
 

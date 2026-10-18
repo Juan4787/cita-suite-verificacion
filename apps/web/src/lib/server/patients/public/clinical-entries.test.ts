@@ -49,6 +49,19 @@ function clientFor(response: () => Response) {
 }
 
 describe('clinical operations through typed SDK with simulated HTTP', () => {
+	it('sends the accepted clinical date when editing instead of silently ignoring the field', async () => {
+		const { supabase, requests } = clientFor(() => new Response(null, { status: 204 }));
+		const value = input();
+		await updateClinicalEntry({
+			supabase,
+			context: patientContext(),
+			patientId,
+			entryId: userId,
+			input: value
+		});
+		expect(requests).toHaveLength(1);
+		expect(requests[0].body).toMatchObject({ p_created_at: value.created_at });
+	});
 	it('creates through the atomic RPC and returns the saved patient entry', async () => {
 		const { supabase, requests } = clientFor(() => Response.json(saved()));
 		const value = input();
