@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { readChoice, isRecord } from '$lib/contracts/json';
 import { InvalidDataContractError } from '$lib/contracts/json';
 // Recordatorios Web Push para navegadores compatibles (este flujo nunca se ofrece en iOS).
@@ -447,7 +448,7 @@ export const sendTrackedPush = async (
 					};
 				}
 			} catch (lookupError) {
-				console.error('Error reconciliando entrega de reseña', lookupError);
+				logServerFailure('Error reconciliando entrega de reseña', lookupError);
 			}
 			return {
 				ok: false,
@@ -485,10 +486,10 @@ export const sendTrackedPush = async (
 					};
 				}
 			} catch (lookupError) {
-				console.error('Error recuperando prueba push idempotente', lookupError);
+				logServerFailure('Error recuperando prueba push idempotente', lookupError);
 			}
 		}
-		console.error('Error creando seguimiento de push', trackingError);
+		logServerFailure('Error creando seguimiento de push', trackingError);
 		if (input.requireTracking) {
 			return { ok: false, deliveryId: null, error: trackingError };
 		}
@@ -524,7 +525,7 @@ export const sendTrackedPush = async (
 					updated_at: acceptedAt
 				})
 				.eq('id', deliveryId);
-			if (error) console.error('Error registrando aceptación del push', error);
+			if (error) logServerFailure('Error registrando aceptación del push', error);
 		}
 		return { ok: true, deliveryId, pushServiceStatus };
 	} catch (error) {
@@ -540,7 +541,7 @@ export const sendTrackedPush = async (
 					updated_at: failedAt
 				})
 				.eq('id', deliveryId);
-			if (trackingError) console.error('Error registrando fallo del push', trackingError);
+			if (trackingError) logServerFailure('Error registrando fallo del push', trackingError);
 		}
 		return { ok: false, deliveryId, error };
 	}
@@ -583,7 +584,7 @@ export const sendTestPushNotification = async (
 		}
 	} catch (trackingError) {
 		// Una falla de observabilidad no bloquea la prueba ni los recordatorios reales.
-		console.error('Error consultando prueba push reciente', trackingError);
+		logServerFailure('Error consultando prueba push reciente', trackingError);
 	}
 	const result = await sendTrackedPush(supabase, {
 		businessId: input.appointment.business.id,
@@ -730,14 +731,14 @@ export const sendReschedulePushNotice = async (
 			sent += 1;
 		} catch (sendError) {
 			failed += 1;
-			console.error('Error enviando push de reprogramación', sendError);
+			logServerFailure('Error enviando push de reprogramación', sendError);
 			try {
 				if (isGoneError(sendError)) {
 					await markEndpointGone(supabase, String(device.endpoint), now);
 					deadEndpoints += 1;
 				}
 			} catch (cleanupError) {
-				console.error('Error registrando endpoint muerto tras reprogramación', cleanupError);
+				logServerFailure('Error registrando endpoint muerto tras reprogramación', cleanupError);
 			}
 		}
 	}
@@ -829,7 +830,7 @@ export const sendDuePushReminders = async (
 		.delete()
 		.lt('created_at', retentionCutoff);
 	if (telemetryCleanupError) {
-		console.error('Error limpiando seguimiento histórico de push', telemetryCleanupError);
+		logServerFailure('Error limpiando seguimiento histórico de push', telemetryCleanupError);
 	}
 
 	let deadEndpoints = 0;
@@ -926,7 +927,7 @@ export const sendDuePushReminders = async (
 			sent += 1;
 		} catch (sendError) {
 			failed += 1;
-			console.error('Error enviando push de recordatorio', sendError);
+			logServerFailure('Error enviando push de recordatorio', sendError);
 			try {
 				if (isGoneError(sendError)) {
 					await markEndpointGone(supabase, claimed.endpoint, now);
@@ -945,7 +946,7 @@ export const sendDuePushReminders = async (
 					);
 				}
 			} catch (cleanupError) {
-				console.error('Error liberando claim de push', cleanupError);
+				logServerFailure('Error liberando claim de push', cleanupError);
 			}
 		}
 	}

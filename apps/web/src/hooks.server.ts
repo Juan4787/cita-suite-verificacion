@@ -11,6 +11,15 @@ import {
 import { ACTIVE_BUSINESS_COOKIE } from '$lib/server/access/public/business';
 import { redirect, type Handle } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { logServerFailure } from '$lib/server/platform/logging';
+import type { HandleServerError } from '@sveltejs/kit';
+
+// Unhandled provider errors may carry SQL details or signed URLs. The framework
+// must use the same bounded diagnostic boundary as explicitly handled failures.
+export const handleError: HandleServerError = ({ error }) => {
+	logServerFailure('request.unexpected_failure', error);
+	return { message: 'No pudimos completar la acción. Volvé a intentar en unos momentos.' };
+};
 
 const moduleHome = (module: Module) => getModuleEntryRoute(module);
 const toHost = (value?: string | null) => {

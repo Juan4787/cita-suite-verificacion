@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { isRedirect, json } from '@sveltejs/kit';
 import {
 	PatientExportError,
@@ -28,7 +29,7 @@ export const patientExportFailure = (error: unknown) => {
 	}
 
 	if (!(error instanceof PatientExportError) && !isRedirect(error)) {
-		console.error('Error inesperado en API de exportación de pacientes', {
+		logServerFailure('Error inesperado en API de exportación de pacientes', {
 			name:
 				typeof error === 'object' && error !== null && 'name' in error
 					? String(error.name)

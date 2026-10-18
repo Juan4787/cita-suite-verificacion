@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import {
 	CLINICAL_FILE_ORIGINAL_URL_TTL_SECONDS,
 	clinicalFileCacheHeaders,
@@ -54,7 +55,7 @@ export const POST: RequestHandler = async (event) => {
 			bytes: row.bytes
 		});
 	} catch (error) {
-		console.error('Error concediendo acceso a imagen clínica', error);
+		logServerFailure('Error concediendo acceso a imagen clínica', error);
 		const safe = clinicalFileError(error, 'No pudimos abrir la imagen. Probá de nuevo.');
 		const headers = safe.retryAfterSeconds ? { 'retry-after': String(safe.retryAfterSeconds) } : undefined;
 		return json(clinicalFileErrorBody(safe), { status: safe.status, headers });

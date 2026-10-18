@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import crypto from 'node:crypto';
 import { isValidGoogleReviewUrl } from '$lib/google-reviews';
 import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
@@ -40,7 +41,7 @@ export const GET: RequestHandler = async ({ params, fetch }) => {
 			headers: { ...responseHeaders, location: reviewUrl }
 		});
 	} catch (error) {
-		console.error('Error abriendo enlace de reseña', {
+		logServerFailure('Error abriendo enlace de reseña', {
 			code: error instanceof Error ? error.message.slice(0, 120) : 'unknown'
 		});
 		return unavailable();

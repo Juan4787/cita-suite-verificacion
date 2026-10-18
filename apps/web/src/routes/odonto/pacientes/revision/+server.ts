@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import type { BusinessRole } from '$lib/server/access/public/business';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
@@ -79,7 +80,7 @@ export const GET: RequestHandler = async ({ locals, fetch, cookies, setHeaders, 
 			return json({ message: 'No tenés acceso a ese consultorio.' }, { status: 403 });
 		}
 		if (!isMissingCompactRevisionRpc(error)) {
-			console.error('Error verificando revisión compacta de pacientes', error);
+			logServerFailure('Error verificando revisión compacta de pacientes', error);
 			return json({ message: 'No se pudo verificar la lista de pacientes.' }, { status: 500 });
 		}
 		// Compatibilidad durante un despliegue escalonado: conserva la ruta previa.
@@ -99,7 +100,7 @@ export const GET: RequestHandler = async ({ locals, fetch, cookies, setHeaders, 
 			const admin = await createSupabaseAdminClient('odonto', fetch);
 			revision = await getPatientDataRevision(admin, businessId);
 		} catch (fallbackError) {
-			console.error('Error verificando revisión compatible de pacientes', fallbackError);
+			logServerFailure('Error verificando revisión compatible de pacientes', fallbackError);
 			return json({ message: 'No se pudo verificar la lista de pacientes.' }, { status: 500 });
 		}
 	}

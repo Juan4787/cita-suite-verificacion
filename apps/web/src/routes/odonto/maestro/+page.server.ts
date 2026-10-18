@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import {
 	COMMERCIAL_STATUSES,
 	getBusinessAccessState
@@ -107,7 +108,7 @@ const listAuthEmailsById = async (admin: Awaited<ReturnType<typeof createSupabas
 	while (true) {
 		const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
 		if (error) {
-			console.error('Error listando usuarios Auth para panel maestro', error);
+			logServerFailure('Error listando usuarios Auth para panel maestro', error);
 			break;
 		}
 		const users = data?.users ?? [];
@@ -224,21 +225,21 @@ const buildMasterData = async (
 	if (businessesRes.error) throw businessesRes.error;
 	if (subscriptionsRes.error) {
 		// Compatibility: before migration, keep page readable.
-		console.error('Error cargando business_subscriptions', subscriptionsRes.error);
+		logServerFailure('Error cargando business_subscriptions', subscriptionsRes.error);
 	}
 	if (membershipsRes.error) throw membershipsRes.error;
 	if (grantsRes.error) {
-		console.error('Error cargando access_grants', grantsRes.error);
+		logServerFailure('Error cargando access_grants', grantsRes.error);
 	}
 	// Compatibilidad: si las tablas MP no existen todavía, el panel sigue legible.
 	if (mpSubsRes.error) {
-		console.error('Error cargando mp_subscriptions', mpSubsRes.error);
+		logServerFailure('Error cargando mp_subscriptions', mpSubsRes.error);
 	}
 	if (mpAttentionRes.error) {
-		console.error('Error cargando eventos MP con atención', mpAttentionRes.error);
+		logServerFailure('Error cargando eventos MP con atención', mpAttentionRes.error);
 	}
 	if (assistanceRes.error) {
-		console.error('Error cargando ayuda para configurar', assistanceRes.error);
+		logServerFailure('Error cargando ayuda para configurar', assistanceRes.error);
 	}
 
 	const subscriptionsByBusinessId = new Map(
@@ -355,7 +356,7 @@ export const load: PageServerLoad = async ({ locals, fetch }) => {
 			loadError: null
 		};
 	} catch (error) {
-		console.error('Error cargando panel maestro', error);
+		logServerFailure('Error cargando panel maestro', error);
 		return {
 			emails: [],
 			businesses: [],
@@ -392,7 +393,7 @@ export const actions: Actions = {
 			.eq('business_id', businessId)
 			.maybeSingle();
 		if (error) {
-			console.error('Error validando ayuda para configurar desde panel maestro', error);
+			logServerFailure('Error validando ayuda para configurar desde panel maestro', error);
 			return fail(500, { message: 'No pudimos validar la ayuda.' });
 		}
 		if (
@@ -409,7 +410,7 @@ export const actions: Actions = {
 			target_business_id: businessId
 		});
 		if (canUseError) {
-			console.error('Error validando estado del consultorio para ayuda', canUseError);
+			logServerFailure('Error validando estado del consultorio para ayuda', canUseError);
 			return fail(500, { message: 'No pudimos validar el estado del consultorio.' });
 		}
 		if (canUseRows !== true) {
@@ -451,7 +452,7 @@ export const actions: Actions = {
 		try {
 			ownerUserId = await findAuthUserIdByEmail(admin, ownerEmail);
 		} catch (error) {
-			console.error('Error buscando usuario owner', error);
+			logServerFailure('Error buscando usuario owner', error);
 			return fail(500, { message: 'No pudimos validar el usuario owner.' });
 		}
 
@@ -463,7 +464,7 @@ export const actions: Actions = {
 				.eq('status', 'active')
 				.limit(1);
 			if (existingMembershipsError) {
-				console.error('Error validando membresías existentes del owner', existingMembershipsError);
+				logServerFailure('Error validando membresías existentes del owner', existingMembershipsError);
 				return fail(500, { message: 'No pudimos validar si el owner ya tiene consultorio.' });
 			}
 			if ((existingMemberships ?? []).length > 0) {
@@ -480,7 +481,7 @@ export const actions: Actions = {
 			.eq('status', 'pending')
 			.limit(1);
 		if (existingInvitesError) {
-			console.error('Error validando invitaciones existentes del owner', existingInvitesError);
+			logServerFailure('Error validando invitaciones existentes del owner', existingInvitesError);
 			return fail(500, { message: 'No pudimos validar si el owner ya tiene invitación pendiente.' });
 		}
 		if ((existingInvites ?? []).length > 0) {
@@ -495,7 +496,7 @@ export const actions: Actions = {
 			.eq('email', ownerEmail)
 			.maybeSingle();
 		if (existingEmailError) {
-			console.error('Error validando email owner', existingEmailError);
+			logServerFailure('Error validando email owner', existingEmailError);
 			return fail(500, { message: 'No pudimos validar el email owner.' });
 		}
 
@@ -520,7 +521,7 @@ export const actions: Actions = {
 					created_by: master.userId
 				});
 		if (emailWrite.error) {
-			console.error('Error habilitando email owner', emailWrite.error);
+			logServerFailure('Error habilitando email owner', emailWrite.error);
 			return fail(500, { message: 'No pudimos habilitar el email owner.' });
 		}
 
@@ -537,7 +538,7 @@ export const actions: Actions = {
 			.single();
 
 		if (businessError || !business?.id) {
-			console.error('Error creando consultorio', businessError);
+			logServerFailure('Error creando consultorio', businessError);
 			return fail(500, { message: 'No pudimos crear el consultorio.' });
 		}
 
@@ -553,7 +554,7 @@ export const actions: Actions = {
 			});
 
 			if (membershipError) {
-				console.error('Error vinculando owner al consultorio', membershipError);
+				logServerFailure('Error vinculando owner al consultorio', membershipError);
 				await admin.from('businesses').delete().eq('id', business.id);
 				return fail(businessEmailAssociationErrorStatus(membershipError), {
 					message: businessEmailAssociationErrorMessage(
@@ -572,7 +573,7 @@ export const actions: Actions = {
 			});
 
 			if (inviteError) {
-				console.error('Error creando invitación owner del consultorio', inviteError);
+				logServerFailure('Error creando invitación owner del consultorio', inviteError);
 				await admin.from('businesses').delete().eq('id', business.id);
 				return fail(businessEmailAssociationErrorStatus(inviteError), {
 					message: businessEmailAssociationErrorMessage(
@@ -598,7 +599,7 @@ export const actions: Actions = {
 			p_idempotency_key: randomUUID()
 		});
 		if (grantError) {
-			console.error('Error asignando acceso inicial al consultorio', grantError);
+			logServerFailure('Error asignando acceso inicial al consultorio', grantError);
 			await admin.from('businesses').delete().eq('id', business.id);
 			return fail(500, { message: 'No pudimos asignar el acceso inicial del consultorio.' });
 		}
@@ -637,7 +638,7 @@ export const actions: Actions = {
 			.maybeSingle();
 
 		if (existingError) {
-			console.error('Error buscando email habilitado', existingError);
+			logServerFailure('Error buscando email habilitado', existingError);
 			return fail(500, { message: 'No pudimos validar el correo electrónico.', email });
 		}
 
@@ -665,7 +666,7 @@ export const actions: Actions = {
 				});
 
 		if (error) {
-			console.error('Error guardando email habilitado', error);
+			logServerFailure('Error guardando email habilitado', error);
 			return fail(500, { message: 'No pudimos guardar el correo electrónico.', email });
 		}
 
@@ -694,7 +695,7 @@ export const actions: Actions = {
 			.eq('id', id)
 			.maybeSingle();
 		if (existingError) {
-			console.error('Error validando email para cambio de estado', existingError);
+			logServerFailure('Error validando email para cambio de estado', existingError);
 			return fail(500, { message: 'No pudimos validar el correo electrónico.' });
 		}
 		if (!existingEmail) return fail(404, { message: 'Correo electrónico no encontrado.' });
@@ -713,7 +714,7 @@ export const actions: Actions = {
 			.eq('id', id);
 
 		if (error) {
-			console.error('Error actualizando email', error);
+			logServerFailure('Error actualizando email', error);
 			return fail(500, { message: 'No pudimos actualizar el correo electrónico.' });
 		}
 
@@ -767,7 +768,7 @@ export const actions: Actions = {
 		});
 
 		if (error) {
-			console.error('Error ajustando acceso comercial', error);
+			logServerFailure('Error ajustando acceso comercial', error);
 			const raw = error.message?.toLowerCase() ?? '';
 			if (raw.includes('permanent')) {
 				return fail(400, { message: 'La operación no es válida para una cuenta permanente.' });
@@ -813,7 +814,7 @@ export const actions: Actions = {
 			.select('user_id')
 			.eq('business_id', businessId);
 		if (membersError) {
-			console.error('Error cargando usuarios para cerrar sesiones', membersError);
+			logServerFailure('Error cargando usuarios para cerrar sesiones', membersError);
 			return fail(500, { message: 'No pudimos cargar los usuarios del consultorio.' });
 		}
 
@@ -822,7 +823,7 @@ export const actions: Actions = {
 			if (!member.user_id) continue;
 			const { error } = await admin.auth.admin.signOut(member.user_id);
 			if (error) {
-				console.error('Error cerrando sesión de usuario', member.user_id, error);
+				logServerFailure('Error cerrando sesión de usuario', error);
 				continue;
 			}
 			revoked += 1;
@@ -859,7 +860,7 @@ export const actions: Actions = {
 			.eq('business_id', businessId)
 			.maybeSingle();
 		if (ownedError) {
-			console.error('Error verificando suscripción MP a cancelar', ownedError);
+			logServerFailure('Error verificando suscripción MP a cancelar', ownedError);
 			return fail(500, { message: 'No se pudo verificar la suscripción.' });
 		}
 		if (!owned) {
@@ -871,18 +872,18 @@ export const actions: Actions = {
 		try {
 			await settleApprovedChargesForPreapproval(admin, fetch, businessId, preapprovalId);
 		} catch (error) {
-			console.error('No se pudo asentar el cobro final antes de cancelar (maestro)', error);
+			logServerFailure('No se pudo asentar el cobro final antes de cancelar (maestro)', error);
 		}
 
 		let cancelled;
 		try {
 			cancelled = await cancelPreapproval(fetch, preapprovalId);
 		} catch (error) {
-			console.error('Error cancelando suscripción MP desde maestro', error);
+			logServerFailure('Error cancelando suscripción MP desde maestro', error);
 			return fail(502, { message: 'Mercado Pago no respondió. Probá de nuevo en unos minutos.' });
 		}
 		if (!cancelled.ok) {
-			console.error('MP rechazó la cancelación desde maestro', cancelled.status, cancelled.data);
+			logServerFailure('MP rechazó la cancelación desde maestro', { status: cancelled.status });
 			return fail(502, { message: 'Mercado Pago no aceptó la cancelación.' });
 		}
 
@@ -895,7 +896,7 @@ export const actions: Actions = {
 			})
 			.eq('preapproval_id', preapprovalId);
 		if (updateError) {
-			console.error('No se pudo sincronizar la suscripción cancelada', updateError);
+			logServerFailure('No se pudo sincronizar la suscripción cancelada', updateError);
 		}
 
 		return {
@@ -912,7 +913,7 @@ export const actions: Actions = {
 		try {
 			summary = await reconcileMercadoPago(admin, fetch, { limit: 20 });
 		} catch (error) {
-			console.error('Error corriendo conciliación manual', error);
+			logServerFailure('Error corriendo conciliación manual', error);
 			return fail(500, { message: 'La conciliación falló. Revisá los logs.' });
 		}
 

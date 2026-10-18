@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { getAvailabilitySlots, groupSlotsByDate } from '$lib/server/scheduling/public/availability';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
@@ -78,7 +79,7 @@ export const GET: RequestHandler = async ({ url, locals, fetch, cookies }) => {
 		});
 		return json({ slots, days: groupSlotsByDate(slots) });
 	} catch (error) {
-		console.error('Error calculando slots', error);
+		logServerFailure('Error calculando slots', error);
 		return json(
 			{
 				message:

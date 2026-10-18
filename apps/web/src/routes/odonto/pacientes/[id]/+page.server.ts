@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { createClinicalEntry, updateClinicalEntry, parseClinicalEntryInput, type SavedClinicalEntry } from '$lib/server/patients/public/clinical-entries';
 import { PatientOperationError, type PatientFailureKind } from '$lib/server/patients/public/patient-operation-error';
 import { getProfessionalForUser as getCurrentProfessional } from '$lib/server/team/public/professionals';
@@ -199,7 +200,7 @@ const mapDuplicatePatientError = async ({
 			});
 			if (duplicate) return duplicatePatientActionResult(duplicate);
 		} catch (lookupError) {
-			console.error('Error recuperando ficha en conflicto al editar paciente', lookupError);
+			logServerFailure('Error recuperando ficha en conflicto al editar paciente', lookupError);
 		}
 	}
 
@@ -557,7 +558,7 @@ export const actions: Actions = {
 			});
 			if (duplicate) return duplicatePatientActionResult(duplicate);
 		} catch (duplicateError) {
-			console.error('Error verificando duplicados al editar paciente', duplicateError);
+			logServerFailure('Error verificando duplicados al editar paciente', duplicateError);
 			return fail(500, {
 				message:
 					'No pudimos comprobar si el DNI ya está asociado a otra ficha. Intentá de nuevo antes de guardar.'
@@ -583,7 +584,7 @@ export const actions: Actions = {
 			]);
 
 		if (currentPatientError) {
-			console.error('Error cargando paciente antes de editar', currentPatientError);
+			logServerFailure('Error cargando paciente antes de editar', currentPatientError);
 			return fail(500, { message: 'No se pudo cargar la ficha antes de guardar.' });
 		}
 		if (!currentPatient) {
@@ -600,7 +601,7 @@ export const actions: Actions = {
 			});
 		}
 		if (currentProfileError) {
-			console.error('Error cargando perfil clínico antes de editar', currentProfileError);
+			logServerFailure('Error cargando perfil clínico antes de editar', currentProfileError);
 			if (permissions.canEditClinicalProfile) {
 				return fail(500, {
 					message: 'No se pudo cargar la información clínica antes de guardar. Intentá de nuevo.'
@@ -647,7 +648,7 @@ export const actions: Actions = {
 		);
 
 		if (error) {
-			console.error('Error actualizando ficha y perfil clínico del paciente', error);
+			logServerFailure('Error actualizando ficha y perfil clínico del paciente', error);
 			const mapped = patientUpdateRpcError(
 				error,
 				currentPatient.updated_at,
@@ -691,7 +692,7 @@ export const actions: Actions = {
 				summary
 			});
 			if (changeLogError) {
-				console.error('Error registrando cambios visibles del paciente', changeLogError);
+				logServerFailure('Error registrando cambios visibles del paciente', changeLogError);
 			}
 		}
 
@@ -761,7 +762,7 @@ export const actions: Actions = {
 				.maybeSingle();
 
 			if (error) {
-				console.error('Error archivando paciente para profesional', error);
+				logServerFailure('Error archivando paciente para profesional', error);
 				return fail(500, { message: 'No se pudo archivar el paciente.' });
 			}
 			if (!updatedLink) {
@@ -778,7 +779,7 @@ export const actions: Actions = {
 		});
 
 		if (error) {
-			console.error('Error archivando paciente', error);
+			logServerFailure('Error archivando paciente', error);
 			const mapped = patientArchiveRpcError(error);
 			return fail(mapped.status, { message: mapped.message });
 		}
@@ -848,7 +849,7 @@ export const actions: Actions = {
 				.maybeSingle();
 
 			if (error) {
-				console.error('Error desarchivando paciente para profesional', error);
+				logServerFailure('Error desarchivando paciente para profesional', error);
 				return fail(500, { message: 'No se pudo desarchivar el paciente.' });
 			}
 			if (!updatedLink) {
@@ -865,7 +866,7 @@ export const actions: Actions = {
 		});
 
 		if (error) {
-			console.error('Error desarchivando paciente', error);
+			logServerFailure('Error desarchivando paciente', error);
 			const mapped = patientArchiveRpcError(error);
 			return fail(mapped.status, { message: mapped.message });
 		}

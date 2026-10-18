@@ -1,3 +1,4 @@
+import { logServerWarning } from '$lib/server/platform/logging';
 import { readRecord } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
@@ -257,12 +258,12 @@ export const getAuthUserId = async (
 	try {
 		const { data, error } = await supabase.auth.getUser();
 		if (error) {
-			console.warn('No se pudo obtener usuario desde Supabase auth', error);
+			logServerWarning('No se pudo obtener usuario desde Supabase auth', error);
 			return null;
 		}
 		return data?.user?.id ?? null;
 	} catch (err) {
-		console.warn('Error obteniendo usuario desde Supabase auth', err);
+		logServerWarning('Error obteniendo usuario desde Supabase auth', err);
 		return null;
 	}
 };

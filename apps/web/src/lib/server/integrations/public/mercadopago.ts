@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { hmacSha256HexMatches } from '$lib/server/platform/hmac';
@@ -975,7 +976,7 @@ export const logMpWebhookEventOnce = async (
 		.limit(1)
 		.maybeSingle();
 	if (error) {
-		console.error('No se pudo verificar eventos previos de Mercado Pago', error);
+		logServerFailure('No se pudo verificar eventos previos de Mercado Pago', error);
 		// Ante la duda se loguea igual: mejor una alerta repetida que ninguna.
 	}
 	if (existing) return false;

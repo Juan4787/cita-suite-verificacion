@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { readRecord } from '$lib/contracts/json';
 import { MASTER_EMAIL } from '$lib/server/platform/supabase';
 import type { BusinessRole } from '$lib/server/access/public/business';
@@ -182,12 +183,12 @@ export const loadLatestAccountAssistanceGrant = async (
 			.limit(1)
 			.maybeSingle();
 		if (error) {
-			if (!isMissingSchemaError(error)) console.error('Error cargando ayuda para configurar', error);
+			if (!isMissingSchemaError(error)) logServerFailure('Error cargando ayuda para configurar', error);
 			return null;
 		}
 		return normalizeRow(data);
 	} catch (error) {
-		if (!isMissingSchemaError(error)) console.error('Error cargando ayuda para configurar', error);
+		if (!isMissingSchemaError(error)) logServerFailure('Error cargando ayuda para configurar', error);
 		return null;
 	}
 };
@@ -235,7 +236,7 @@ export const loadActiveMasterAccountAssistanceRequests = async ({
 		.gt('expires_at', now.toISOString())
 		.order('expires_at', { ascending: true });
 	if (error) {
-		if (!isMissingSchemaError(error)) console.error('Error cargando solicitudes de ayuda activas', error);
+		if (!isMissingSchemaError(error)) logServerFailure('Error cargando solicitudes de ayuda activas', error);
 		return [];
 	}
 

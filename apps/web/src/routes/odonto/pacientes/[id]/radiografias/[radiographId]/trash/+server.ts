@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import {
 	clinicalFileCacheHeaders,
 	clinicalFileErrorBody,
@@ -24,7 +25,7 @@ export const POST: RequestHandler = async (event) => {
 		if (error) throw error;
 		return json({ id: event.params.radiographId, trashed: true });
 	} catch (error) {
-		console.error('Error moviendo imagen clínica a la papelera', error);
+		logServerFailure('Error moviendo imagen clínica a la papelera', error);
 		const safe = clinicalFileError(error, 'No pudimos mover la imagen a la papelera.');
 		const headers = safe.retryAfterSeconds ? { 'retry-after': String(safe.retryAfterSeconds) } : undefined;
 		return json(clinicalFileErrorBody(safe), { status: safe.status, headers });

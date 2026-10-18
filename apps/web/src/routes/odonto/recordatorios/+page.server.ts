@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { error as kitError, fail, redirect } from '@sveltejs/kit';
 import {
@@ -98,7 +99,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 		} catch (reminderError) {
 			// Sin poder comprobar la cobertura de notificaciones y calendarios, no
 			// mostramos turnos: es preferible a abrir un WhatsApp duplicado.
-			console.error('Error cargando cobertura de recordatorios', reminderError);
+			logServerFailure('Error cargando cobertura de recordatorios', reminderError);
 			remindersUnavailable = true;
 		}
 	}
@@ -137,7 +138,7 @@ export const actions: Actions = {
 			.eq('id', appointmentId)
 			.eq('business_id', context.business.id);
 		if (error) {
-			console.error('Error marcando recordatorio como enviado', error);
+			logServerFailure('Error marcando recordatorio como enviado', error);
 			return fail(500, { message: 'No se pudo marcar el recordatorio.' });
 		}
 

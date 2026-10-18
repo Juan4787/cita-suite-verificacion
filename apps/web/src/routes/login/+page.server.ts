@@ -1,3 +1,4 @@
+import { logServerFailure, logServerWarning } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import {
 	createSupabaseServerClient,
@@ -109,7 +110,7 @@ export const actions: Actions = {
 			if (error instanceof RateLimitExceededError) {
 				return loginFail(error.status, error.userMessage, email);
 			}
-			console.error('Fallo inesperado aplicando el control de intentos de ingreso', error);
+			logServerFailure('Fallo inesperado aplicando el control de intentos de ingreso', error);
 			return loginFail(503, LOGIN_UNAVAILABLE_MESSAGE, email);
 		}
 
@@ -118,7 +119,7 @@ export const actions: Actions = {
 			const supabase = await createSupabaseServerClient('odonto', null, fetch);
 			authResult = await supabase.auth.signInWithPassword({ email, password });
 		} catch (error) {
-			console.error('No se pudo conectar con Supabase Auth durante el ingreso', error);
+			logServerFailure('No se pudo conectar con Supabase Auth durante el ingreso', error);
 			return loginFail(503, LOGIN_UNAVAILABLE_MESSAGE, email);
 		}
 		const { data, error } = authResult;
@@ -128,14 +129,14 @@ export const actions: Actions = {
 			const status = authErrorStatus(error);
 			const msg = error?.message?.toLowerCase() ?? '';
 			if (error?.code === 'email_provider_disabled' || msg.includes('email logins are disabled')) {
-				console.error('El proveedor de ingreso por email no está disponible', { code, status });
+				logServerFailure('El proveedor de ingreso por email no está disponible', { code, status });
 				return loginFail(503, LOGIN_UNAVAILABLE_MESSAGE, email);
 			}
 			if (msg.includes('email not confirmed')) {
 				return loginFail(400, 'Tu correo electrónico todavía no está confirmado.', email);
 			}
 			if (msg.includes('invalid api key') || msg.includes('invalid jwt') || msg.includes('jwt')) {
-				console.error('Supabase Auth rechazó la configuración del ingreso', { code, status });
+				logServerFailure('Supabase Auth rechazó la configuración del ingreso', { code, status });
 				return loginFail(503, LOGIN_UNAVAILABLE_MESSAGE, email);
 			}
 			if (status === 429) {
@@ -146,11 +147,11 @@ export const actions: Actions = {
 				);
 			}
 			if (status >= 500) {
-				console.error('Supabase Auth no pudo completar el ingreso', { code, status });
+				logServerFailure('Supabase Auth no pudo completar el ingreso', { code, status });
 				return loginFail(503, LOGIN_UNAVAILABLE_MESSAGE, email);
 			}
 			if (code && code !== 'invalid_credentials') {
-				console.warn('Supabase Auth rechazó el ingreso', { code, status });
+				logServerWarning('Supabase Auth rechazó el ingreso', { code, status });
 			}
 			return loginFail(400, 'Credenciales inválidas', email);
 		}
@@ -226,7 +227,7 @@ export const actions: Actions = {
 			if (error instanceof RateLimitExceededError) {
 				return registerFail(error.status, error.userMessage, email, acceptedTerms);
 			}
-			console.error('Fallo inesperado aplicando el control de intentos de registro', error);
+			logServerFailure('Fallo inesperado aplicando el control de intentos de registro', error);
 			return registerFail(503, REGISTER_UNAVAILABLE_MESSAGE, email, acceptedTerms);
 		}
 
@@ -235,7 +236,7 @@ export const actions: Actions = {
 			const supabase = await createSupabaseServerClient('odonto', null, fetch);
 			authResult = await supabase.auth.signUp({ email, password });
 		} catch (error) {
-			console.error('No se pudo conectar con Supabase Auth durante el registro', error);
+			logServerFailure('No se pudo conectar con Supabase Auth durante el registro', error);
 			return registerFail(503, REGISTER_UNAVAILABLE_MESSAGE, email, acceptedTerms);
 		}
 		const { data, error } = authResult;
@@ -265,10 +266,10 @@ export const actions: Actions = {
 				msg.includes('invalid jwt') ||
 				msg.includes('email provider is disabled')
 			) {
-				console.error('Supabase Auth no pudo completar el registro', { code, status });
+				logServerFailure('Supabase Auth no pudo completar el registro', { code, status });
 				return registerFail(503, REGISTER_UNAVAILABLE_MESSAGE, email, acceptedTerms);
 			}
-			console.warn('Supabase Auth rechazó el registro', { code, status });
+			logServerWarning('Supabase Auth rechazó el registro', { code, status });
 			return registerFail(
 				400,
 				'No pudimos crear la cuenta. Revisá los datos e intentá de nuevo.',

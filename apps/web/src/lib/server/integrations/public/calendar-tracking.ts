@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 // Tracking honesto de acciones de calendario. La app registra que el paciente TOCÓ
 // una opción ("acción de calendario registrada"), nunca certeza de guardado.
 // La transición corre en la RPC record_calendar_action (un solo UPDATE atómico:
@@ -73,6 +74,6 @@ export const markCalendarOffered = async (
 			.eq('business_id', appointment.business.id)
 			.eq('calendar_action_status', 'not_offered');
 	} catch (error) {
-		console.error('Error marcando calendario ofrecido', error);
+		logServerFailure('Error marcando calendario ofrecido', error);
 	}
 };

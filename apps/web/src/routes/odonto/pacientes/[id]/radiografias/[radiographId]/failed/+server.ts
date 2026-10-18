@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { isRecord } from '$lib/contracts/json';
 import {
 	clinicalFileCacheHeaders,
@@ -32,7 +33,7 @@ export const POST: RequestHandler = async (event) => {
 		if (error) throw error;
 		return json({ id: event.params.radiographId, failed: true });
 	} catch (error) {
-		console.error('Error registrando carga fallida', error);
+		logServerFailure('Error registrando carga fallida', error);
 		const safe = clinicalFileError(error, 'No pudimos actualizar el estado de la carga.');
 		return json(clinicalFileErrorBody(safe), { status: safe.status });
 	}

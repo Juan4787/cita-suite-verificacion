@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { readRecord } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
 import {
@@ -134,7 +135,7 @@ export const GET: RequestHandler = async (event) => {
 				hasMore && last ? encodeCursor({ createdAt: last.created_at, id: last.id }) : null
 		});
 	} catch (error) {
-		console.error('Error cargando imágenes clínicas', error);
+		logServerFailure('Error cargando imágenes clínicas', error);
 		const safe = clinicalFileError(error, 'No pudimos cargar las imágenes. Probá de nuevo.');
 		return json(clinicalFileErrorBody(safe), { status: safe.status });
 	}

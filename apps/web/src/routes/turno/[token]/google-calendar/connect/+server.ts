@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { createGoogleCalendarAuthorizationUrl } from '$lib/server/integrations/public/google-calendar';
 import { loadAppointmentForToken } from '$lib/server/scheduling/public/appointment-token';
 import type { RequestHandler } from './$types';
@@ -30,7 +31,7 @@ export const GET: RequestHandler = async ({ params, fetch, url }) => {
 			}
 		});
 	} catch (error) {
-		console.error('No se pudo iniciar Google Calendar', {
+		logServerFailure('No se pudo iniciar Google Calendar', {
 			appointmentId: appointment.id,
 			code: error instanceof Error ? error.message : 'unknown'
 		});

@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import {
 	enforceRateLimitsFailOpen,
@@ -39,7 +40,7 @@ export const GET: RequestHandler = async ({ url, cookies, fetch, getClientAddres
 		if (error instanceof RateLimitExceededError) {
 			return loginWithError(url, 'google_rate_limited');
 		}
-		console.error('Fallo inesperado aplicando el control de intentos de Google Auth', error);
+		logServerFailure('Fallo inesperado aplicando el control de intentos de Google Auth', error);
 		return loginWithError(url, 'google_start');
 	}
 
@@ -61,14 +62,14 @@ export const GET: RequestHandler = async ({ url, cookies, fetch, getClientAddres
 			return redirectResponse(data.url);
 		}
 
-		console.error('Supabase Auth no pudo iniciar OAuth con Google', {
+		logServerFailure('Supabase Auth no pudo iniciar OAuth con Google', {
 			code:
 				typeof error === 'object' && error !== null && 'code' in error
 					? String((error as { code?: unknown }).code ?? '')
 					: ''
 		});
 	} catch (error) {
-		console.error('No se pudo conectar con Supabase Auth para iniciar Google OAuth', error);
+		logServerFailure('No se pudo conectar con Supabase Auth para iniciar Google OAuth', error);
 	}
 
 	return loginWithError(url, 'google_start');

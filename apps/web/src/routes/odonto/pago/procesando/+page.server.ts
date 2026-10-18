@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { resolveActiveBusiness } from '$lib/server/access/public/business';
 import {
@@ -39,7 +40,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			if (refreshed) context = refreshed;
 		} catch (error) {
 			mpReturnFailed = true;
-			console.error('No se pudo confirmar el retorno de Mercado Pago', error);
+			logServerFailure('No se pudo confirmar el retorno de Mercado Pago', error);
 		}
 	}
 

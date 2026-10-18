@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { Buffer } from 'node:buffer';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import {
@@ -162,7 +163,7 @@ const rpcEnvelope = async (
 ): Promise<Record<string, unknown>> => {
 	const { data, error } = await request;
 	if (error) {
-		console.error('Fallo de dependencia en exportación de pacientes', {
+		logServerFailure('Fallo de dependencia en exportación de pacientes', {
 			operation,
 			...safeRpcErrorDetails(error)
 		});
@@ -171,7 +172,7 @@ const rpcEnvelope = async (
 
 	const value = Array.isArray(data) && data.length === 1 ? data[0] : data;
 	if (!isRecord(value) || typeof value.ok !== 'boolean') {
-		console.error('Respuesta inválida en exportación de pacientes', { operation });
+		logServerFailure('Respuesta inválida en exportación de pacientes', { operation });
 		throw new PatientExportError('EXPORT_DEPENDENCY_UNAVAILABLE');
 	}
 	if (value.ok !== true) {
@@ -491,7 +492,7 @@ export const createPatientExportAdminClient = async (fetchImpl?: typeof fetch) =
 	try {
 		return await createSupabaseAdminClient('odonto', fetchImpl);
 	} catch (error) {
-		console.error('Control plane no disponible para exportación de pacientes', {
+		logServerFailure('Control plane no disponible para exportación de pacientes', {
 			name: error instanceof Error ? error.name : typeof error
 		});
 		throw new PatientExportError('EXPORT_DEPENDENCY_UNAVAILABLE', { cause: error });
@@ -596,7 +597,7 @@ export const readPatientExportPage = async <Dataset extends PatientExportDataset
 	try {
 		rows = result.rows.map((row) => parsePatientExportRow(dataset, row)) as PatientExportPage<Dataset>['rows'];
 	} catch (error) {
-		console.error('Fila inválida en exportación de pacientes', { dataset });
+		logServerFailure('Fila inválida en exportación de pacientes', { dataset });
 		throw error;
 	}
 

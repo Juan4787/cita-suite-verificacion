@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { professionalHasFollowUps } from '$lib/server/patients/public/follow-ups';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
@@ -33,7 +34,7 @@ export const GET: RequestHandler = async ({ params, locals, fetch, cookies, setH
 		professionalHasFollowUps(admin, businessId, professionalId)
 	]);
 	if (appointments.error || entries.error) {
-		console.error('Error cargando dependencias del profesional', appointments.error ?? entries.error);
+		logServerFailure('Error cargando dependencias del profesional', appointments.error ?? entries.error);
 		return json({ message: 'No se pudo comprobar el historial del profesional.' }, { status: 500 });
 	}
 	return json({

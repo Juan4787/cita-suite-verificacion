@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import crypto from 'node:crypto';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { writeAuditLog } from '$lib/server/platform/audit';
@@ -121,7 +122,7 @@ const auditCompletedRequest = async (
 	} catch (auditError) {
 		// La entrega y el cooldown ya quedaron cerrados atómicamente. Un fallo de
 		// auditoría no debe convertirlos en un reenvío ni falsear el resultado.
-		console.error('Error auditando solicitud de reseña enviada', {
+		logServerFailure('Error auditando solicitud de reseña enviada', {
 			requestId: request.request_id,
 			code: auditError instanceof Error ? auditError.message.slice(0, 120) : 'unknown'
 		});
@@ -239,7 +240,7 @@ export const sendDueGoogleReviewRequests = async (
 			const failureCode = String(
 				(sendError as { code?: unknown } | null)?.code ?? ''
 			);
-			console.error('Error enviando solicitud de reseña', {
+			logServerFailure('Error enviando solicitud de reseña', {
 				requestId: request.request_id,
 				failureKind,
 				failureCode: failureCode.slice(0, 80)
@@ -260,7 +261,7 @@ export const sendDueGoogleReviewRequests = async (
 				}
 				await releaseRequest(supabase, request, failureKind, now);
 			} catch (cleanupError) {
-				console.error('Error liberando solicitud de reseña', {
+				logServerFailure('Error liberando solicitud de reseña', {
 					requestId: request.request_id,
 					code: cleanupError instanceof Error ? cleanupError.message.slice(0, 120) : 'unknown'
 				});

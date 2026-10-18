@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
@@ -26,7 +27,7 @@ export const GET: RequestHandler = async ({ url, locals, fetch, cookies }) => {
 		const professionals = await listAssignableProfessionalsForPatient(admin, business.business.id, patientId);
 		return json({ professionals });
 	} catch (err) {
-		console.error('Error listando profesionales del paciente', err);
+		logServerFailure('Error listando profesionales del paciente', err);
 		return json({ message: 'No se pudo cargar la lista de profesionales.' }, { status: 500 });
 	}
 };

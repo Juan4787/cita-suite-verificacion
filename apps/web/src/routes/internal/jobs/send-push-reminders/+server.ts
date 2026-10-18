@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 // Job de envío de recordatorios push (cron externo ~cada 10 min, igual que los jobs
 // de dispatches). Idempotente: claim atómico en la RPC + sent_at tras envío exitoso.
 
@@ -25,7 +26,7 @@ export const POST: RequestHandler = async ({ request, fetch, url }) => {
 		});
 	} catch (error) {
 		failed = true;
-		console.error('Error procesando recordatorios push', {
+		logServerFailure('Error procesando recordatorios push', {
 			code: error instanceof Error ? error.message.slice(0, 120) : 'unknown'
 		});
 	}
@@ -38,7 +39,7 @@ export const POST: RequestHandler = async ({ request, fetch, url }) => {
 		});
 	} catch (error) {
 		failed = true;
-		console.error('Error procesando solicitudes de reseña', {
+		logServerFailure('Error procesando solicitudes de reseña', {
 			code: error instanceof Error ? error.message.slice(0, 120) : 'unknown'
 		});
 	}
@@ -51,7 +52,7 @@ export const POST: RequestHandler = async ({ request, fetch, url }) => {
 		});
 	} catch (error) {
 		failed = true;
-		console.error('Error procesando sincronizaciones Google Calendar', {
+		logServerFailure('Error procesando sincronizaciones Google Calendar', {
 			code: error instanceof Error ? error.message.slice(0, 120) : 'unknown'
 		});
 	}

@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { randomUUID } from 'crypto';
 import { demoBusinessContext } from '$lib/server/access/public/business';
@@ -110,7 +111,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 				pushSubscriptionsSupabase
 			});
 		} catch (reminderError) {
-			console.error('Error contando recordatorios pendientes', reminderError);
+			logServerFailure('Error contando recordatorios pendientes', reminderError);
 			return 0;
 		}
 	})();
@@ -155,7 +156,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			.order('starts_at'));
 	}
 	if (appointmentsError) {
-		console.error('Error cargando agenda diaria', appointmentsError);
+		logServerFailure('Error cargando agenda diaria', appointmentsError);
 	}
 
 	const filteredAppointments = (dayAppointments ?? []).filter((appointment) => {
@@ -187,7 +188,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			services = availabilitySnapshot.services;
 			assignments = availabilitySnapshot.assignments;
 		} catch (error) {
-			console.error('Error cargando referencias y disponibilidad de agenda', error);
+			logServerFailure('Error cargando referencias y disponibilidad de agenda', error);
 		}
 	}
 	const appointments = filteredAppointments;
@@ -343,7 +344,7 @@ export const actions: Actions = {
 		try {
 			admin = await createSupabaseAdminClient('odonto', fetch);
 		} catch (adminError) {
-			console.error('Error preparando la creación del turno', adminError);
+			logServerFailure('Error preparando la creación del turno', adminError);
 			return fail(500, { message: 'No pudimos preparar el turno. Intentá de nuevo.', values });
 		}
 
@@ -358,7 +359,7 @@ export const actions: Actions = {
 				.eq('id', patientId)
 				.maybeSingle();
 			if (selectedPatientError) {
-				console.error('Error validando el teléfono del paciente', selectedPatientError);
+				logServerFailure('Error validando el teléfono del paciente', selectedPatientError);
 				return fail(500, { message: 'No pudimos comprobar el teléfono. Intentá de nuevo.', values });
 			}
 			if (!selectedPatient) {
@@ -423,7 +424,7 @@ export const actions: Actions = {
 				if (replay) throw redirect(303, createdAppointmentDetailUrl(replay.id, date));
 			} catch (error) {
 				if (isRedirect(error)) throw error;
-				console.error('Error recuperando un turno ya creado', error);
+				logServerFailure('Error recuperando un turno ya creado', error);
 				return fail(getAppointmentCreationErrorStatus(error), { message: getHumanAppointmentErrorMessage(error), values });
 			}
 			if (selectedPatientBlocked) {
@@ -450,7 +451,7 @@ export const actions: Actions = {
 				ignoreBreak
 			});
 		} catch (availabilityError) {
-			console.error('Error revalidando disponibilidad antes de crear turno', availabilityError);
+			logServerFailure('Error revalidando disponibilidad antes de crear turno', availabilityError);
 			return fail(500, {
 				message:
 					'No pudimos volver a comprobar la disponibilidad y, por seguridad, no reservamos a ningún profesional. Recargá la agenda y elegí el horario otra vez.',
@@ -489,7 +490,7 @@ export const actions: Actions = {
 			throw redirect(303, createdAppointmentDetailUrl(created.id, date));
 		} catch (error) {
 			if (isRedirect(error)) throw error;
-			console.error('Error creando turno', error);
+			logServerFailure('Error creando turno', error);
 			const message = getHumanAppointmentErrorMessage(error);
 			return fail(getAppointmentCreationErrorStatus(error), { message, values });
 		}
@@ -526,7 +527,7 @@ export const actions: Actions = {
 				reason: String(form.get('reason') ?? '').trim() || null
 			});
 		} catch (error) {
-			console.error('Error actualizando turno', error);
+			logServerFailure('Error actualizando turno', error);
 			return fail(400, { message: getHumanAppointmentErrorMessage(error) });
 		}
 
@@ -536,7 +537,7 @@ export const actions: Actions = {
 				await processAppointmentGoogleCalendarSync(admin, appointmentId, fetch);
 			} catch (calendarError) {
 				// El borrado remoto ya quedó encolado por el trigger transaccional.
-				console.error('Error sincronizando Google Calendar tras cancelar desde agenda', {
+				logServerFailure('Error sincronizando Google Calendar tras cancelar desde agenda', {
 					appointmentId,
 					code:
 						calendarError instanceof Error

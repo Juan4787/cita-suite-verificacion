@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { ACTIVE_BUSINESS_COOKIE } from '$lib/server/access/public/business';
 import { createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { redirect, type RequestHandler } from '@sveltejs/kit';
@@ -34,14 +35,14 @@ export const POST: RequestHandler = async ({ cookies, locals, fetch }) => {
 			// other response means we cannot honestly confirm remote revocation.
 			if (error && ![401, 403, 404].includes(status)) {
 				remoteLogoutFailed = true;
-				console.error('No se pudo confirmar el cierre remoto de sesión', {
+				logServerFailure('No se pudo confirmar el cierre remoto de sesión', {
 					status: status || null,
 					code: 'remote_logout_failed'
 				});
 			}
 		} catch (error) {
 			remoteLogoutFailed = true;
-			console.error('No se pudo conectar para cerrar la sesión remotamente', {
+			logServerFailure('No se pudo conectar para cerrar la sesión remotamente', {
 				status: errorStatus(error) || null,
 				code: 'remote_logout_unavailable'
 			});

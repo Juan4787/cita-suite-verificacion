@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 // Alta de suscripción push para un turno. Si el permiso todavía está sin decidir,
 // el cliente lo pide únicamente después del toque. Si ya estaba concedido, recupera
 // la suscripción automáticamente sin volver a interrumpir a la persona.
@@ -130,7 +131,7 @@ export const POST: RequestHandler = async ({ params, request, fetch, setHeaders 
 					// El proveedor ya aceptó la prueba y existe un identificador durable.
 					// Una lectura transitoria no debe convertir ese envío exitoso en un
 					// falso error de activación: el cliente puede volver a consultarlo.
-					console.error('Error consultando estado de prueba push recién enviada', statusError);
+					logServerFailure('Error consultando estado de prueba push recién enviada', statusError);
 				}
 			}
 			return json({
@@ -150,7 +151,7 @@ export const POST: RequestHandler = async ({ params, request, fetch, setHeaders 
 			verificationAvailable: Boolean(delivery)
 		});
 	} catch (error) {
-		console.error('Error guardando suscripción push', error);
+		logServerFailure('Error guardando suscripción push', error);
 		return json(
 			{
 				ok: false,
@@ -181,7 +182,7 @@ export const GET: RequestHandler = async ({ params, url, fetch, setHeaders }) =>
 		}
 		return json({ ok: true, delivery });
 	} catch (error) {
-		console.error('Error consultando prueba push', error);
+		logServerFailure('Error consultando prueba push', error);
 		return json(
 			{ ok: false, message: 'No pudimos comprobar la notificación todavía.' },
 			{ status: 500 }
@@ -224,7 +225,7 @@ export const PATCH: RequestHandler = async ({ params, request, fetch, setHeaders
 		});
 		return json({ ok: true, delivery });
 	} catch (error) {
-		console.error('Error guardando confirmación de prueba push', error);
+		logServerFailure('Error guardando confirmación de prueba push', error);
 		return json(
 			{ ok: false, message: 'No pudimos guardar tu respuesta. Volvé a intentar.' },
 			{ status: 500 }

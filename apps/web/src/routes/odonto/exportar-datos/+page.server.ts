@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { error as kitError, redirect } from '@sveltejs/kit';
 import { canExportPatientData } from '$lib/server/patients/public/patient-permissions';
 import { createSupabaseServerClient } from '$lib/server/platform/supabase';
@@ -40,7 +41,7 @@ export const load: PageServerLoad = async ({ parent, url, locals, fetch }) => {
 		.maybeSingle();
 
 	if (error) {
-		console.error('Error cargando paciente para exportacion individual', error);
+		logServerFailure('Error cargando paciente para exportacion individual', error);
 		throw kitError(
 			500,
 			'No pudimos abrir la exportación de este paciente. Volvé a intentarlo en unos minutos.'

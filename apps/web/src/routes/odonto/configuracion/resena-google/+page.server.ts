@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { env } from '$env/dynamic/private';
 import {
@@ -78,7 +79,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 		.eq('business_id', context.business.id)
 		.maybeSingle();
 	if (error) {
-		console.error('Error cargando configuración de reseñas', error);
+		logServerFailure('Error cargando configuración de reseñas', error);
 		throw kitError(500, 'No pudimos cargar esta configuración. Volvé a intentarlo.');
 	}
 
@@ -191,7 +192,7 @@ export const actions: Actions = {
 			{ onConflict: 'business_id' }
 		);
 		if (error) {
-			console.error('Error guardando configuración de reseñas', error);
+			logServerFailure('Error guardando configuración de reseñas', error);
 			return fail(500, {
 				message: 'No pudimos guardar la configuración. Volvé a intentarlo.',
 				values

@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import type { Cookies } from '@sveltejs/kit';
 import type { CitaSupabaseClient } from '$lib/types/database';
@@ -235,7 +236,7 @@ const loadAssistanceMemberships = async (
 
 		if (error) {
 			if (!isMissingAssistanceSchemaError(error)) {
-				console.error('Error cargando ayuda para configurar', error);
+				logServerFailure('Error cargando ayuda para configurar', error);
 			}
 			return [];
 		}
@@ -249,7 +250,7 @@ const loadAssistanceMemberships = async (
 					{ target_business_id: businessId }
 				);
 				if (activeGrantError) {
-					console.error('Error validando ayuda para configurar', activeGrantError);
+					logServerFailure('Error validando ayuda para configurar', activeGrantError);
 					continue;
 				}
 				if (hasActiveGrant === true) activeRows.push(row);
@@ -260,7 +261,7 @@ const loadAssistanceMemberships = async (
 				.filter((item): item is BusinessContext => Boolean(item));
 	} catch (error) {
 		if (!isMissingAssistanceSchemaError(error)) {
-			console.error('Error cargando ayuda para configurar', error);
+			logServerFailure('Error cargando ayuda para configurar', error);
 		}
 		return [];
 	}
@@ -310,7 +311,7 @@ const loadMembershipsLegacy = async (
 	if (subscriptionError) {
 		// Compatibility-first fallback: if the migration is not present yet, keep
 		// legacy access active instead of locking out existing consultorios.
-		console.error('Error cargando suscripciones comerciales', subscriptionError);
+		logServerFailure('Error cargando suscripciones comerciales', subscriptionError);
 		return memberships.map((membership) => applySubscription(membership, null, { legacyFallback: true }));
 	}
 
@@ -450,12 +451,12 @@ const hasPendingBusinessInvite = async ({
 			.limit(1)
 			.maybeSingle();
 		if (error) {
-			console.error('No se pudo comprobar la invitación pendiente antes del alta', error);
+			logServerFailure('No se pudo comprobar la invitación pendiente antes del alta', error);
 			return false;
 		}
 		return Boolean(data?.id);
 	} catch (error) {
-		console.error('No se pudo comprobar la invitación pendiente antes del alta', error);
+		logServerFailure('No se pudo comprobar la invitación pendiente antes del alta', error);
 		return false;
 	}
 };

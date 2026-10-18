@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import {
 	defaultInternalAvailabilitySnapshotRange,
@@ -41,7 +42,7 @@ export const GET: RequestHandler = async ({ url, locals, fetch, cookies, setHead
 			.order('updated_at', { ascending: false })
 			.limit(250);
 		if (error) {
-			console.error('Error cargando pacientes de agenda', error);
+			logServerFailure('Error cargando pacientes de agenda', error);
 			return json({ message: 'No se pudieron cargar los pacientes.' }, { status: 500 });
 		}
 		return json({ patients: patients ?? [] });
@@ -58,7 +59,7 @@ export const GET: RequestHandler = async ({ url, locals, fetch, cookies, setHead
 			...range
 		});
 	} catch (error) {
-		console.error('Error cargando snapshot interno de agenda', error);
+		logServerFailure('Error cargando snapshot interno de agenda', error);
 		return json({ message: 'No se pudieron cargar profesionales y servicios.' }, { status: 500 });
 	}
 	const serviceProfessionalIds = snapshot.assignments.reduce<Record<string, string[]>>(

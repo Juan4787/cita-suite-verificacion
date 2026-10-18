@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 // Evento de calendario del turno, servido inline para que el navegador lo abra con
 // el calendario (camino principal en iPhone/iPad). Siempre se genera desde el estado
 // ACTUAL del turno: tras una reprogramación este mismo link entrega fecha nueva y
@@ -23,7 +24,7 @@ export const GET: RequestHandler = async ({ params, url, fetch }) => {
 			await recordCalendarAction(supabase, appointment, action);
 		} catch (trackingError) {
 			// El tracking nunca bloquea la entrega del calendario.
-			console.error('Error registrando acción de calendario', trackingError);
+			logServerFailure('Error registrando acción de calendario', trackingError);
 		}
 	}
 

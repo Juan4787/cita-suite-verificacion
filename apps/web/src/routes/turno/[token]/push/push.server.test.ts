@@ -159,7 +159,7 @@ describe('POST /turno/[token]/push', () => {
 		expect(mocks.sendTestPushNotification).toHaveBeenCalledOnce();
 		expect(consoleError).toHaveBeenCalledWith(
 			'Error consultando estado de prueba push recién enviada',
-			expect.any(Error)
+			{}
 		);
 		consoleError.mockRestore();
 	});

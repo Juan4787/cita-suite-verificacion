@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import {
 	BUSINESS_INDUSTRIES,
 	isBusinessIndustry,
@@ -188,7 +189,7 @@ export const actions: Actions = {
 			);
 			if (assistanceError || assistanceIsActive !== true) {
 				if (assistanceError) {
-					console.error('Error revalidando ayuda para guardar el consultorio', assistanceError);
+					logServerFailure('Error revalidando ayuda para guardar el consultorio', assistanceError);
 				}
 				return fail(403, {
 					message: 'La autorización para configurar este consultorio ya no está activa. Volvé al panel maestro y abrilo nuevamente.',
@@ -220,7 +221,7 @@ export const actions: Actions = {
 			.maybeSingle();
 
 		if (error || !updatedBusiness) {
-			console.error('Error actualizando negocio', error);
+			logServerFailure('Error actualizando negocio', error);
 			const message =
 				error?.code === '23505'
 					? 'Ese nombre de enlace público ya está en uso. Elegí otro y volvé a guardar.'

@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { parsePriceAdjustments } from '$lib/scheduling/price-contracts';
 import {readBoundedBookingForm} from '$lib/server/platform/form-data';
 import {previewMonthlyPrices,formatQuotedPrice,monthForTimezone} from '$lib/booking/pricing';
@@ -129,7 +130,7 @@ const saveProfessionalProfile = async (
 		.maybeSingle();
 
 	if (error) {
-		console.error('Error actualizando profesional', error);
+		logServerFailure('Error actualizando profesional', error);
 		return {
 			ok: false,
 			status: 500,
@@ -161,7 +162,7 @@ const saveProfessionalServices = async (
 	try {
 		defaultServiceIds = await ensureDefaultServices(supabase, businessId);
 	} catch (defaultsError) {
-		console.error('No se pudieron asegurar los servicios predeterminados', defaultsError);
+		logServerFailure('No se pudieron asegurar los servicios predeterminados', defaultsError);
 	}
 
 	try {
@@ -170,7 +171,7 @@ const saveProfessionalServices = async (
 			...serviceIds
 		]);
 	} catch (assignmentError) {
-		console.error('Error asignando servicios al profesional', assignmentError);
+		logServerFailure('Error asignando servicios al profesional', assignmentError);
 		const message =
 			assignmentError instanceof Error && assignmentError.message === 'INVALID_SERVICE_ASSIGNMENT'
 				? 'Algún servicio seleccionado no pertenece a este consultorio.'
@@ -197,7 +198,7 @@ const saveProfessionalWeeklyRules = async (
 			blocks: scheduleBlocks.blocks,expectedRevision:Number(form.get('availability_revision'))
 		});
 	} catch (replaceError) {
-		console.error('Error guardando horarios', replaceError);
+		logServerFailure('Error guardando horarios', replaceError);
 		return { ok: false, status: 500, message: replaceError instanceof Object && 'message' in replaceError && String(replaceError.message).includes('SCHEDULE_CHANGED') ? 'Los horarios cambiaron. Recargá la página antes de guardar.' : 'Revisá las franjas y las prestaciones. No se guardó ningún horario.' };
 	}
 
@@ -412,7 +413,7 @@ export const actions: Actions = {
 			});
 
 		if (error) {
-			console.error('Error creando servicio desde profesional', error);
+			logServerFailure('Error creando servicio desde profesional', error);
 			return fail(500, { message: 'No se pudo crear el servicio.' });
 		}
 
@@ -425,7 +426,7 @@ export const actions: Actions = {
 			{ onConflict: 'business_id,professional_id,service_id' }
 		);
 		if (assignmentError) {
-			console.error('Error asignando servicio creado', assignmentError);
+			logServerFailure('Error asignando servicio creado', assignmentError);
 			return fail(500, { message: 'El servicio se creó, pero no se pudo asignar al profesional.' });
 		}
 
@@ -459,7 +460,7 @@ export const actions: Actions = {
 			.eq('id', serviceId)
 			.maybeSingle();
 		if (serviceError || !currentService) {
-			console.error('Error buscando servicio para editar', serviceError);
+			logServerFailure('Error buscando servicio para editar', serviceError);
 			return fail(404, { message: 'Ese servicio ya no está disponible. Cerrá el editor y recargá la página.' });
 		}
 
@@ -506,7 +507,7 @@ export const actions: Actions = {
 			.maybeSingle();
 		if (!error && !updatedService) return fail(409,{message:"El servicio cambió. Cerrá el editor y recargá antes de guardar."});
 		if (error || !updatedService) {
-			console.error('Error actualizando servicio', error);
+			logServerFailure('Error actualizando servicio', error);
 			return fail(500, { message: 'No pudimos guardar el servicio. Revisá los datos e intentá nuevamente.' });
 		}
 
@@ -556,7 +557,7 @@ export const actions: Actions = {
 
 		const {error}=await supabase.rpc('delete_professional_schedule_rule',{p_business_id:business.business.id,p_professional_id:params.professionalId,p_rule_id:ruleId,p_expected_revision:Number(form.get('availability_revision'))});
 		if (error) {
-			console.error('Error eliminando horario', error);
+			logServerFailure('Error eliminando horario', error);
 			return fail(500, { message: 'No se pudo eliminar el horario.' });
 		}
 
@@ -627,7 +628,7 @@ export const actions: Actions = {
 			.eq('business_id', business.business.id)
 			.eq('id', exceptionId);
 		if (error) {
-			console.error('Error eliminando excepción', error);
+			logServerFailure('Error eliminando excepción', error);
 			return fail(500, { message: 'No se pudo eliminar el cambio.' });
 		}
 
@@ -677,7 +678,7 @@ export const actions: Actions = {
 			.select('id')
 			.maybeSingle();
 		if (error) {
-			console.error('Error archivando profesional', error);
+			logServerFailure('Error archivando profesional', error);
 			return fail(500, { message: 'No se pudo archivar el profesional.' });
 		}
 		if (!updatedProfessional) {
@@ -720,7 +721,7 @@ export const actions: Actions = {
 			.select('id')
 			.maybeSingle();
 		if (error) {
-			console.error('Error restaurando profesional', error);
+			logServerFailure('Error restaurando profesional', error);
 			return fail(500, { message: 'No se pudo restaurar el profesional.' });
 		}
 		if (!updatedProfessional) {
@@ -787,7 +788,7 @@ export const actions: Actions = {
 		];
 		const prepError = steps.find((step) => step.error)?.error;
 		if (prepError) {
-			console.error('Error preparando el borrado del profesional', prepError);
+			logServerFailure('Error preparando el borrado del profesional', prepError);
 			return fail(400, {
 				message:
 					'No se pudo eliminar el profesional en este momento. Reintentá en unos segundos o archivalo para conservar sus registros.'
@@ -800,7 +801,7 @@ export const actions: Actions = {
 			.eq('business_id', businessId)
 			.eq('id', profId);
 		if (error) {
-			console.error('Error eliminando profesional', error);
+			logServerFailure('Error eliminando profesional', error);
 			// 23503 = FK: aún tiene registros asociados → guiar a archivar (nunca exponer el código al usuario).
 			const message =
 				error.code === '23503'

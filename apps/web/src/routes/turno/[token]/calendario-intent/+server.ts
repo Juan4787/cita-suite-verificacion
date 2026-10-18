@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 // Registro best-effort del INTENTO de abrir el calendario nativo Android vía
 // intent:// (FASE 12). Audit-only POR DISEÑO: acá NO se toca calendar_action_status,
 // porque el beacon dispara en el click, antes de saber si se abrió algo; si un
@@ -47,7 +48,7 @@ export const POST: RequestHandler = async ({ params, request, fetch }) => {
 			}
 		});
 	} catch (error) {
-		console.error('Error registrando intento de calendario nativo', error);
+		logServerFailure('Error registrando intento de calendario nativo', error);
 	}
 
 	return noContent();

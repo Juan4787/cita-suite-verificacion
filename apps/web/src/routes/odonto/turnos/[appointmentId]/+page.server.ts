@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import {readBoundedBookingForm} from '$lib/server/platform/form-data';
 import { env } from '$env/dynamic/private';
 import { bookingContextsAvailable } from '$lib/server/sites/public/booking-integration-flags';
@@ -95,7 +96,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
 		.maybeSingle();
 
 	if (error) {
-		console.error('Error cargando turno', error);
+		logServerFailure('Error cargando turno', error);
 		throw kitError(
 			500,
 			'No pudimos cargar el turno. Volvé a la agenda e intentá abrirlo otra vez; si el problema continúa, pedile a un administrador que revise el registro interno.'
@@ -147,10 +148,10 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
 			.order('position')
 	]);
 
-	if (auditResult.error) console.error('Error cargando auditoria del turno', auditResult.error);
-	if (usersResult.error) console.error('Error cargando usuarios para auditoria', usersResult.error);
-	if (messageResult.error) console.error('Error cargando mensajes del turno', messageResult.error);
-	if (teamResult.error) console.error('Error cargando equipo del turno', teamResult.error);
+	if (auditResult.error) logServerFailure('Error cargando auditoria del turno', auditResult.error);
+	if (usersResult.error) logServerFailure('Error cargando usuarios para auditoria', usersResult.error);
+	if (messageResult.error) logServerFailure('Error cargando mensajes del turno', messageResult.error);
+	if (teamResult.error) logServerFailure('Error cargando equipo del turno', teamResult.error);
 
 	const userLabels = Object.fromEntries(
 		(usersResult.data ?? []).map((user) => [String(user.user_id), user.email ?? String(user.user_id).slice(0, 8)])
@@ -270,7 +271,7 @@ export const actions: Actions = {
 				reason: String(form.get('reason') ?? '').trim() || null
 			});
 		} catch (error) {
-			console.error('Error actualizando turno', error);
+			logServerFailure('Error actualizando turno', error);
 			return fail(400, { message: getHumanAppointmentErrorMessage(error) });
 		}
 
@@ -280,7 +281,7 @@ export const actions: Actions = {
 				await processAppointmentGoogleCalendarSync(admin, params.appointmentId, fetch);
 			} catch (calendarError) {
 				// El trigger ya dejó el borrado en la cola durable.
-				console.error('Error sincronizando Google Calendar tras cancelar turno', {
+				logServerFailure('Error sincronizando Google Calendar tras cancelar turno', {
 					appointmentId: params.appointmentId,
 					code:
 						calendarError instanceof Error
@@ -336,10 +337,7 @@ export const actions: Actions = {
 		]);
 		const appointment = appointmentResult.data;
 		if (appointmentResult.error || teamResult.error) {
-			console.error(
-				'Error cargando turno o equipo para reprogramar',
-				appointmentResult.error ?? teamResult.error
-			);
+			logServerFailure('Error cargando turno o equipo para reprogramar', appointmentResult.error ?? teamResult.error);
 			return fail(500, {
 				message:
 					'No pudimos cargar el turno completo y, por seguridad, no modificamos ninguna agenda. Recargá la página y volvé a intentar.'
@@ -370,7 +368,7 @@ export const actions: Actions = {
 				ignoreBreak
 			});
 		} catch (availabilityError) {
-			console.error('Error revalidando equipo antes de reprogramar', availabilityError);
+			logServerFailure('Error revalidando equipo antes de reprogramar', availabilityError);
 			return fail(500, {
 				message:
 					'No pudimos volver a comprobar la disponibilidad de todo el equipo y, por seguridad, el turno conserva su horario anterior. Recargá la página y volvé a intentar.'
@@ -395,7 +393,7 @@ export const actions: Actions = {
 				ignoreBreak
 			});
 		} catch (error) {
-			console.error('Error reprogramando turno', error);
+			logServerFailure('Error reprogramando turno', error);
 			return fail(400, { message: getHumanAppointmentErrorMessage(error) });
 		}
 
@@ -415,7 +413,7 @@ export const actions: Actions = {
 					appointmentId: params.appointmentId
 				});
 			} catch (resetError) {
-				console.error('Error reforzando el reseteo de avisos tras reprogramar', resetError);
+				logServerFailure('Error reforzando el reseteo de avisos tras reprogramar', resetError);
 			}
 			try {
 				await sendReschedulePushNotice(admin, {
@@ -423,10 +421,10 @@ export const actions: Actions = {
 					appointmentId: params.appointmentId
 				});
 			} catch (noticeError) {
-				console.error('Error enviando el aviso inmediato tras reprogramar', noticeError);
+				logServerFailure('Error enviando el aviso inmediato tras reprogramar', noticeError);
 			}
 		} catch (pushSetupError) {
-			console.error('Error preparando avisos push tras reprogramar', pushSetupError);
+			logServerFailure('Error preparando avisos push tras reprogramar', pushSetupError);
 		}
 
 		try {
@@ -434,7 +432,7 @@ export const actions: Actions = {
 			await processAppointmentGoogleCalendarSync(admin, params.appointmentId, fetch);
 		} catch (calendarError) {
 			// La reprogramacion ya quedó confirmada y la cola reintentará sin intervención.
-			console.error('Error sincronizando Google Calendar tras reprogramar', {
+			logServerFailure('Error sincronizando Google Calendar tras reprogramar', {
 				appointmentId: params.appointmentId,
 				code:
 					calendarError instanceof Error

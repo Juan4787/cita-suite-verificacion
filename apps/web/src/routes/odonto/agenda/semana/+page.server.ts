@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { demoBusinessContext } from '$lib/server/access/public/business';
 import { APPOINTMENT_STATUSES } from '$lib/server/scheduling/public/appointments';
@@ -85,7 +86,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 	]);
 
 	if (appointmentsError) {
-		console.error('Error cargando agenda semanal', appointmentsError);
+		logServerFailure('Error cargando agenda semanal', appointmentsError);
 	}
 
 	const days = dates.map((date) => {

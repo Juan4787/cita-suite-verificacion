@@ -1,7 +1,6 @@
 import { isRecord } from '$lib/contracts/json';
 
-/** Call with a static operation label. Never serialize provider/request data. */
-export function logServerFailure(operation: string, cause?: unknown): void {
+function failureMetadata(cause: unknown) {
  const metadata: { sqlState?: string; httpStatus?: number } = {};
  try {
   if (isRecord(cause)) {
@@ -10,5 +9,13 @@ export function logServerFailure(operation: string, cause?: unknown): void {
    if (typeof status === 'number' && Number.isInteger(status) && status >= 400 && status <= 599) metadata.httpStatus = status;
   }
  } catch { /* A malformed diagnostic must not change an operation's result. */ }
- console.error(operation, metadata);
+ return metadata;
+}
+
+/** Call with a static operation label. Never serialize provider/request data. */
+export function logServerFailure(operation: string, cause?: unknown): void {
+ console.error(operation, failureMetadata(cause));
+}
+export function logServerWarning(operation: string, cause?: unknown): void {
+ console.warn(operation, failureMetadata(cause));
 }

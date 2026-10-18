@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { readRecord } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
@@ -55,7 +56,7 @@ export const POST: RequestHandler = async ({ request, locals, fetch, cookies }) 
 	} catch (err) {
 		if (err instanceof FollowUpError)
 			return json({ message: getFollowUpErrorMessage(err.code) }, { status: getFollowUpErrorStatus(err.code) });
-		console.error('Error creando seguimiento', err);
+		logServerFailure('Error creando seguimiento', err);
 		return json({ message: 'No se pudo crear el seguimiento. Intentá de nuevo.' }, { status: 500 });
 	}
 };

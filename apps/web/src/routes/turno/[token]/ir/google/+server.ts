@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 // Redirect-through a Google Calendar: registra la acción server-side (funciona sin
 // JS y en webviews) y recién después redirige al evento prellenado.
 
@@ -26,7 +27,7 @@ export const GET: RequestHandler = async ({ params, fetch, url }) => {
 		try {
 			await recordCalendarAction(supabase, appointment, 'clicked_google', { source });
 		} catch (trackingError) {
-			console.error('Error registrando acción de calendario (google)', trackingError);
+			logServerFailure('Error registrando acción de calendario (google)', trackingError);
 		}
 	}
 

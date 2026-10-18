@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { readDemoDb } from '$lib/server/platform/demo-store';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
@@ -63,7 +64,7 @@ export const GET: RequestHandler = async ({ params, url, locals, fetch, cookies 
 
 	const { data, error } = await query;
 	if (error) {
-		console.error('Error cargando historial paginado', error);
+		logServerFailure('Error cargando historial paginado', error);
 		return json({ message: 'No se pudo cargar el historial.' }, { status: 500 });
 	}
 
@@ -88,7 +89,7 @@ export const GET: RequestHandler = async ({ params, url, locals, fetch, cookies 
 			);
 
 		if (costsError) {
-			console.error('Error cargando costos del historial', costsError);
+			logServerFailure('Error cargando costos del historial', costsError);
 		} else {
 			const costByEntryId = new Map(
 				(costs ?? []).map((item) => [String(item.clinical_entry_id), item.amount])

@@ -8,6 +8,7 @@ import { businessTodayISO, roleParticipatesInFollowUps, roleSeesAllFollowUps } f
 import { parsePatientBookingProfile } from '$lib/patients/booking-profile';
 import { ACTIVE_APPOINTMENT_STATUSES } from '$lib/utils/appointment-visibility';
 import { getProfessionalForUser as getCurrentProfessional } from '$lib/server/team/public/professionals';
+import { logServerFailure } from '$lib/server/platform/logging';
 
 const ENTRIES_PAGE_SIZE = 30;
 export class PatientDetailReadError extends Error {
@@ -31,8 +32,8 @@ export async function readPatientDetail({ patientId, supabase, admin, context, c
 					businessId: context.business.id,
 					userId: currentUserId ?? ''
 				}).catch((err) => {
-					console.error('Error resolviendo profesional actual', err);
-					return null;
+					logServerFailure('patient.professional.read.failed', err);
+					throw new PatientDetailReadError('unavailable');
 				})
 			: null;
 
@@ -95,25 +96,23 @@ export async function readPatientDetail({ patientId, supabase, admin, context, c
 	]);
 
 	if (patientError) {
-		console.error('Error cargando paciente', patientError);
+		logServerFailure('patient.read.failed', patientError);
 		throw new PatientDetailReadError('unavailable');
 	}
 	if (!patient) {
 		throw new PatientDetailReadError('not_found');
 	}
 
-	if (clinicalProfileError) {
-		console.error('Error cargando perfil clinico', clinicalProfileError);
-	}
-	if (entriesError) {
-		console.error('Error cargando entradas', entriesError);
-	}
-	if (appointmentsError) {
-		console.error('Error cargando turnos del paciente', appointmentsError);
-	}
-	if (professionalLinkError) {
-		console.error('Error cargando archivo personal del profesional', professionalLinkError);
-	}
+	// These reads form the editable projection. A failed profile/history/link
+	// cannot become a blank field, empty history or unarchived personal record.
+	const failures = [
+		['patient.profile.read.failed', clinicalProfileError],
+		['patient.history.read.failed', entriesError],
+		['patient.appointments.read.failed', appointmentsError],
+		['patient.professional_link.read.failed', professionalLinkError]
+	] as const;
+	for (const [operation, cause] of failures) if (cause) logServerFailure(operation, cause);
+	if (failures.some(([, cause]) => cause)) throw new PatientDetailReadError('unavailable');
 
 	const safeEntries = entries ?? [];
 	const entriesWithCosts = safeEntries.map((entry) => ({

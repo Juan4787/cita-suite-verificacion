@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import {
 	clinicalFileCacheHeaders,
 	clinicalFileErrorBody,
@@ -117,7 +118,7 @@ export const POST: RequestHandler = async (event) => {
 			throw error;
 		}
 	} catch (error) {
-		console.error('Error iniciando carga de imagen clínica', error);
+		logServerFailure('Error iniciando carga de imagen clínica', error);
 		const safe = clinicalFileError(error, 'No pudimos iniciar la carga. Probá de nuevo.');
 		const headers = safe.retryAfterSeconds ? { 'retry-after': String(safe.retryAfterSeconds) } : undefined;
 		return json(clinicalFileErrorBody(safe), { status: safe.status, headers });

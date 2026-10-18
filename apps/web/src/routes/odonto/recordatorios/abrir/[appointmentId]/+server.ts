@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 // Redirect-through de "Enviar WhatsApp": registra quién abrió el recordatorio y
 // recién después redirige a wa.me con el mensaje prearmado. La app solo prepara el
 // mensaje: el envío real lo hace recepción dentro de WhatsApp (sin API de Meta).
@@ -76,7 +77,7 @@ export const GET: RequestHandler = async ({ params, locals, fetch, cookies, url,
 		})
 		.eq('id', appointment.id)
 		.eq('business_id', context.business.id);
-	if (updateError) console.error('Error registrando apertura de WhatsApp', updateError);
+	if (updateError) logServerFailure('Error registrando apertura de WhatsApp', updateError);
 
 	await writeAuditLog(supabase, {
 		businessId: context.business.id,

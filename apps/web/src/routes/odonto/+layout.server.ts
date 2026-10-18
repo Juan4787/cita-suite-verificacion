@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import {
 	demoBusinessContext,
 	isDefaultBusinessPendingManualSetupError,
@@ -118,7 +119,7 @@ export const load: LayoutServerLoad = async ({
 							});
 						}
 					} catch (assistanceError) {
-						console.error('Error cargando solicitudes globales de ayuda', assistanceError);
+						logServerFailure('Error cargando solicitudes globales de ayuda', assistanceError);
 					}
 					return [];
 				})(),
@@ -140,7 +141,7 @@ export const load: LayoutServerLoad = async ({
 						};
 					} catch (noticeErr) {
 						// Degradación elegante: si la tabla aún no existe en remoto, no rompemos el layout.
-						console.error('Error cargando aviso de seguimientos', noticeErr);
+						logServerFailure('Error cargando aviso de seguimientos', noticeErr);
 						return { notice: { count: 0, single: null, dismissalKey: '0' }, todayISO: '' };
 					}
 				})()
@@ -162,13 +163,13 @@ export const load: LayoutServerLoad = async ({
 				pendingManualSetup = true;
 				businessError = err.userMessage;
 			} else if (isDefaultBusinessSetupUnavailableError(err)) {
-				console.error('No se pudo preparar el consultorio inicial', err);
+				logServerFailure('No se pudo preparar el consultorio inicial', err);
 				if (!pathname.startsWith('/odonto/pendiente')) {
 					throw redirect(303, '/odonto/pendiente?reason=temporarily_unavailable');
 				}
 				pendingManualSetup = true;
 			} else {
-				console.error('Error resolviendo negocio activo', err);
+				logServerFailure('Error resolviendo negocio activo', err);
 				businessError =
 					'No pudimos cargar el consultorio activo. Recargá la página; si continúa, contactá a soporte.';
 			}

@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { redirect } from '@sveltejs/kit';
 import type { Cookies } from '@sveltejs/kit';
 import type { CitaSupabaseClient } from '$lib/types/database';
@@ -60,7 +61,7 @@ export const getOdontoContext = async ({
 			throw redirect(303, '/odonto/pendiente?reason=rate_limited');
 		}
 		if (isDefaultBusinessSetupUnavailableError(error)) {
-			console.error('No se pudo preparar el consultorio inicial', error);
+			logServerFailure('No se pudo preparar el consultorio inicial', error);
 			throw redirect(303, '/odonto/pendiente?reason=temporarily_unavailable');
 		}
 		throw error;

@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { env } from '$env/dynamic/private';
 import { ACTIVE_BUSINESS_COOKIE } from '$lib/server/access/public/business';
@@ -43,7 +44,7 @@ export const GET: RequestHandler = async ({ locals, fetch, cookies, setHeaders }
 		if (diagnostic.includes('AGENDA_SEARCH_DENIED')) {
 			return json({ message: 'No tenés permisos para buscar en la agenda.' }, { status: 403 });
 		}
-		console.error('Error preparando la búsqueda de turnos en la agenda', error);
+		logServerFailure('Error preparando la búsqueda de turnos en la agenda', error);
 		return json({ message: 'No pudimos preparar la búsqueda de turnos. Recargá la agenda y volvé a intentar.' }, { status: 500 });
 	}
 

@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { readBoundedBookingForm } from '$lib/server/platform/form-data';
 import { isRecord } from '$lib/contracts/json';
 import { bookingInformationEnabled, loadProfessionalBookingSchema, informationErrorMessage } from '$lib/server/patients/public/booking-information';
@@ -192,7 +193,7 @@ export const loadPublicBookingPage = async ({ params, fetch, url, setHeaders }: 
 		};
 	} catch (error) {
 		if (isRedirect(error)) throw error;
-		console.error('Error cargando reserva publica', error);
+		logServerFailure('Error cargando reserva publica', error);
 		return {
 			state: {
 				business: null,
@@ -356,8 +357,8 @@ export const submitPublicBookingPage = async ({ request, params, fetch, url, get
 		} catch (error) {
 			if (isRedirect(error)) throw error;
 			const integrationMessage = integratedBookingErrorMessage(error);
-			if (integration) console.error('Error creando reserva integrada', { code: getPublicBookingErrorCode(error) });
-			else console.error('Error creando reserva publica', error);
+			if (integration) logServerFailure('Error creando reserva integrada', { code: getPublicBookingErrorCode(error) });
+			else logServerFailure('Error creando reserva publica', error);
 			return fail(400, {
 				message: publicErrorMessage(error).includes('PRICE_') ? 'El arancel cambió mientras reservabas. Actualizá la página, revisá el precio para tu fecha y confirmá nuevamente.' : /BOOKING_(INFORMATION|PROFILE|INTAKE)/.test(publicErrorMessage(error)) ? informationErrorMessage(error) : integrationMessage ?? getPublicBookingErrorMessage(error),
 				uncertain: Boolean(!/PRICE_|SCHEDULE_SERVICE|SCHEDULE_BLOCKED/.test(publicErrorMessage(error)) && integration && ((!integrationMessage && getPublicBookingErrorCode(error) === 'PUBLIC_BOOKING_UNEXPECTED') || publicErrorMessage(error).includes('APPOINTMENT_IDEMPOTENCY_CONFLICT'))),

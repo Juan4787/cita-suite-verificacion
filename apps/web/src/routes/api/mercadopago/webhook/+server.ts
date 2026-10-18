@@ -1,3 +1,4 @@
+import { logServerFailure, logServerWarning } from '$lib/server/platform/logging';
 import { readRecord } from '$lib/contracts/json';
 import {
 	logMpWebhookEvent,
@@ -58,7 +59,7 @@ export const POST: RequestHandler = async ({ request, url, fetch }) => {
 		// request. Un secret mal configurado se diagnostica por los logs de la
 		// función (esta línea) y por el panel de notificaciones de MP, que
 		// muestra los reintentos fallidos con 401. Nada de cliente admin acá.
-		console.warn('Webhook MP rechazado por firma inválida', {
+		logServerWarning('Webhook MP rechazado por firma inválida', {
 			resource_id: eventBase.resource_id,
 			topic: eventBase.topic,
 			request_id: eventBase.request_id,
@@ -84,7 +85,7 @@ export const POST: RequestHandler = async ({ request, url, fetch }) => {
 	});
 
 	if (result.status === 'error') {
-		console.error('Error procesando webhook MP', result.detail);
+		logServerFailure('Error procesando webhook MP', result.detail);
 		// 500 para que MP reintente: la acreditación es idempotente, así que el
 		// reintento es inofensivo.
 		return json({ message: 'Error procesando la notificación.' }, { status: 500 });

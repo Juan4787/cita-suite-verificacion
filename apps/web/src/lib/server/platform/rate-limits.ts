@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import crypto from 'node:crypto';
 import type { CitaSupabaseClient } from '$lib/types/database';
@@ -155,7 +156,7 @@ export const enforceRateLimitsFailOpen = async (
 		await enforceRateLimits(rules, options.fetchImpl);
 	} catch (error) {
 		if (error instanceof RateLimitExceededError) throw error;
-		console.error(options.logContext, error);
+		logServerFailure(options.logContext, error);
 	}
 };
 
@@ -344,7 +345,7 @@ export const rateLimitFail = (
 	if (error instanceof RateLimitExceededError) {
 		return { status: error.status, message: error.userMessage };
 	}
-	console.error(options.logContext, error);
+	logServerFailure(options.logContext, error);
 	return {
 		status: 503,
 		message: options.unavailableMessage

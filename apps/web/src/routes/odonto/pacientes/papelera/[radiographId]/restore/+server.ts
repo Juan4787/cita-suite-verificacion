@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import {
 	clinicalFileCacheHeaders,
 	clinicalFileErrorBody,
@@ -23,7 +24,7 @@ export const POST: RequestHandler = async (event) => {
 		if (error) throw error;
 		return json({ id: event.params.radiographId, restored: true });
 	} catch (cause) {
-		console.error('Error restaurando imagen clínica', cause);
+		logServerFailure('Error restaurando imagen clínica', cause);
 		const safe = clinicalFileError(cause, 'No pudimos restaurar la imagen. Probá de nuevo.');
 		const headers = safe.retryAfterSeconds ? { 'retry-after': String(safe.retryAfterSeconds) } : undefined;
 		return json(clinicalFileErrorBody(safe), { status: safe.status, headers });

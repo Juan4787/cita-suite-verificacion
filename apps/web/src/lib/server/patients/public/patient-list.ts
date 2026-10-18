@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { InvalidDataContractError } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
 import { resolveActiveBusiness } from '$lib/server/access/public/business';
@@ -160,7 +161,7 @@ export const loadPatientList = async ({
 	try {
 		supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);
 	} catch (cause) {
-		console.error('Error creando cliente Supabase para listar pacientes', cause);
+		logServerFailure('Error creando cliente Supabase para listar pacientes', cause);
 		throw kitError(500, 'No se pudo conectar para cargar los pacientes. Intentá de nuevo.');
 	}
 
@@ -217,11 +218,11 @@ export const loadPatientList = async ({
 			: [await patientsPromise, { data: null, error: null }];
 
 		if (patientsResult.error) {
-			console.error('Error cargando página autorizada de pacientes', patientsResult.error);
+			logServerFailure('Error cargando página autorizada de pacientes', patientsResult.error);
 			throw kitError(500, 'No se pudieron cargar los pacientes.');
 		}
 		if (includeCounts && countsResult.error) {
-			console.error('Error contando pacientes autorizados', countsResult.error);
+			logServerFailure('Error contando pacientes autorizados', countsResult.error);
 			throw kitError(500, 'No se pudieron cargar los totales de pacientes.');
 		}
 

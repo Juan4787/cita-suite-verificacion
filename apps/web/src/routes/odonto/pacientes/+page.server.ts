@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { resolveActiveBusiness } from '$lib/server/access/public/business';
 import { newId, readDemoDb, updateDemoDb } from '$lib/server/platform/demo-store';
@@ -282,7 +283,7 @@ const handleCreatePatient = async ({
 		try {
 			supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);
 		} catch (err) {
-			console.error('Error creando cliente Supabase:', err);
+			logServerFailure('Error creando cliente Supabase:', err);
 			return fail(500, {
 				message: 'Error de conexión con la base de datos. Intentá de nuevo.',
 				full_name,
@@ -362,7 +363,7 @@ const handleCreatePatient = async ({
 						patientId: existingPatient.id
 					});
 				} catch (linkError) {
-					console.error('Error vinculando paciente duplicado al profesional', linkError);
+					logServerFailure('Error vinculando paciente duplicado al profesional', linkError);
 					return fail(500, {
 						message: `${PATIENT_UNIQUE_CONFLICT_MESSAGES[existingPatient.field]} No pudimos mostrar esa ficha en tu lista profesional; intentá de nuevo.`,
 						existingId: existingPatient.id,
@@ -393,7 +394,7 @@ const handleCreatePatient = async ({
 				return returnDuplicatePatient(existingPatient);
 			}
 		} catch (duplicateLookupError) {
-			console.error('Error verificando duplicados de paciente', duplicateLookupError);
+			logServerFailure('Error verificando duplicados de paciente', duplicateLookupError);
 			return fail(500, {
 				message:
 					'No pudimos comprobar si el DNI ya está asociado a otra ficha. Intentá de nuevo antes de crear el paciente.',
@@ -449,10 +450,10 @@ const handleCreatePatient = async ({
 						return returnDuplicatePatient(existingPatient);
 					}
 				} catch (conflictLookupError) {
-					console.error('Error recuperando ficha en conflicto', conflictLookupError);
+					logServerFailure('Error recuperando ficha en conflicto', conflictLookupError);
 				}
 			}
-			console.error('Error creando paciente:', error);
+			logServerFailure('Error creando paciente:', error);
 			return fail(getCreatePatientStatus(error ?? {}), {
 				message: getCreatePatientErrorMessage(error ?? {}),
 				full_name,
@@ -470,7 +471,7 @@ const handleCreatePatient = async ({
 					patientId
 				});
 			} catch (linkError) {
-				console.error('Error vinculando paciente al profesional', linkError);
+				logServerFailure('Error vinculando paciente al profesional', linkError);
 				try {
 					await admin
 						.from('patients')
@@ -478,7 +479,7 @@ const handleCreatePatient = async ({
 						.eq('business_id', context.business.id)
 						.eq('id', patientId);
 				} catch (cleanupError) {
-					console.error('Error limpiando paciente sin vinculo profesional', cleanupError);
+					logServerFailure('Error limpiando paciente sin vinculo profesional', cleanupError);
 				}
 				return fail(500, {
 					message: 'No se pudo vincular el paciente al profesional. Intentá de nuevo.',
@@ -495,7 +496,7 @@ const handleCreatePatient = async ({
 		if (err && typeof err === 'object' && 'status' in err && 'location' in err) {
 			throw err;
 		}
-		console.error('Error inesperado en create_patient:', err);
+		logServerFailure('Error inesperado en create_patient:', err);
 		return fail(500, {
 			message: 'Error interno del servidor. Intentá de nuevo.',
 			full_name: '',

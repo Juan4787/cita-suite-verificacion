@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { isRecord } from '$lib/contracts/json';
 import {
 	authorizeGoogleCalendarAppointment,
@@ -74,7 +75,7 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 		return redirectToAppointment(appointmentToken, status);
 	} catch (error) {
 		const code = error instanceof Error ? error.message : isRecord(error) ? String(error.message ?? error.code ?? 'unknown') : 'unknown';
-		console.error('No se pudo completar Google Calendar', {
+		logServerFailure('No se pudo completar Google Calendar', {
 			appointmentId,
 			code: code.slice(0, 120)
 		});

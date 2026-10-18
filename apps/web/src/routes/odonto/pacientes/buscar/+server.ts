@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import { normalizeSearchText } from '$lib/utils/agenda-search';
@@ -49,7 +50,7 @@ export const GET: RequestHandler = async ({ url, locals, fetch, cookies }) => {
 		.limit(12);
 
 	if (error) {
-		console.error('Error buscando pacientes', error);
+		logServerFailure('Error buscando pacientes', error);
 		return json({ message: 'No pudimos buscar pacientes ahora. Revisá tu conexión y volvé a intentar.' }, { status: 500 });
 	}
 

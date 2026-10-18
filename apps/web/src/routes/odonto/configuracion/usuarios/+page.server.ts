@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { readArray, readRecord } from '$lib/contracts/json';
 import {
 	BUSINESS_ROLES,
@@ -669,7 +670,7 @@ export const actions: Actions = {
 					is_public: false
 				});
 			if (createError) {
-				console.error('Error creando profesional', createError);
+				logServerFailure('Error creando profesional', createError);
 				return fail(500, { message: 'No se pudo crear el profesional.', values });
 			}
 
@@ -786,7 +787,7 @@ export const actions: Actions = {
 				};
 			} catch (error) {
 				await rollback(admin);
-				console.error('Error guardando alta de profesional', error);
+				logServerFailure('Error guardando alta de profesional', error);
 				const code = (error as { message?: string })?.message ?? '';
 				if (code === 'INVALID_SERVICE_ASSIGNMENT') {
 					return fail(400, { message: 'Algún servicio seleccionado no pertenece a este consultorio.', values });
@@ -811,7 +812,7 @@ export const actions: Actions = {
 				currentAccess
 			});
 		} catch (error) {
-			console.error('Error guardando acceso al negocio', error);
+			logServerFailure('Error guardando acceso al negocio', error);
 			const roleError = error as { code?: string; message?: string };
 			return fail(roleAccessErrorStatus(roleError), { message: roleAccessErrorMessage(roleError), values });
 		}
@@ -880,7 +881,7 @@ export const actions: Actions = {
 				.limit(1)
 				.maybeSingle();
 			if (existingLinkError) {
-				console.error('Error verificando vínculo profesional', existingLinkError);
+				logServerFailure('Error verificando vínculo profesional', existingLinkError);
 				return fail(500, { message: 'No se pudo verificar el perfil profesional.' });
 			}
 			if (existingLink?.id) {
@@ -901,7 +902,7 @@ export const actions: Actions = {
 			.select('id')
 			.single();
 		if (createError || !createdProfessional?.id) {
-			console.error('Error creando profesional atendible', createError);
+			logServerFailure('Error creando profesional atendible', createError);
 			return fail(500, { message: 'No se pudo crear el perfil profesional.' });
 		}
 		const professionalId = String(createdProfessional.id);
@@ -930,14 +931,14 @@ export const actions: Actions = {
 		}
 		if (linkError || !linkCreated) {
 			await admin.from('professionals').delete().eq('business_id', businessId).eq('id', professionalId);
-			console.error('Error vinculando profesional al usuario', linkError);
+			logServerFailure('Error vinculando profesional al usuario', linkError);
 			return fail(500, { message: 'No se pudo vincular el perfil profesional a la persona del equipo.' });
 		}
 
 		try {
 			await ensureDefaultServicesAssigned(supabase, businessId, professionalId);
 		} catch (defaultsError) {
-			console.error('No se pudieron asegurar servicios por defecto del atendible', defaultsError);
+			logServerFailure('No se pudieron asegurar servicios por defecto del atendible', defaultsError);
 		}
 
 		await writeAuditLog(admin, {
@@ -1002,7 +1003,7 @@ export const actions: Actions = {
 		});
 
 		if (error) {
-			console.error('Error actualizando rol', error);
+			logServerFailure('Error actualizando rol', error);
 			return fail(roleAccessErrorStatus(error), { message: roleAccessErrorMessage(error) });
 		}
 
@@ -1042,7 +1043,7 @@ export const actions: Actions = {
 					target_invite_id: accessId
 			});
 			if (error) {
-				console.error('Error cancelando invitación', error);
+				logServerFailure('Error cancelando invitación', error);
 				return fail(500, { message: 'No se pudo quitar el rol pendiente.' });
 				}
 				return { success: true, message: 'Rol pendiente quitado.' };
@@ -1060,7 +1061,7 @@ export const actions: Actions = {
 		});
 
 		if (error) {
-			console.error('Error quitando acceso', error);
+			logServerFailure('Error quitando acceso', error);
 			return fail(roleAccessErrorStatus(error), { message: roleAccessErrorMessage(error) });
 		}
 

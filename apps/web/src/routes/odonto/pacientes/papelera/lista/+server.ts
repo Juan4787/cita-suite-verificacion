@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import {
 	CLINICAL_FILES_BUCKET,
 	CLINICAL_FILE_THUMBNAIL_URL_TTL_SECONDS,
@@ -108,7 +109,7 @@ export const GET: RequestHandler = async (event) => {
 					: null
 		});
 	} catch (cause) {
-		console.error('Error cargando papelera de imágenes clínicas', cause);
+		logServerFailure('Error cargando papelera de imágenes clínicas', cause);
 		const safe = clinicalFileError(cause, 'No pudimos cargar la papelera. Probá de nuevo.');
 		return json(clinicalFileErrorBody(safe), { status: safe.status });
 	}

@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 // Vista pública MINIMAL de reprogramación: muestra SOLO el aviso de que el turno
 // cambió, el resumen del nuevo turno (servicio · profesional · nueva fecha y hora ·
 // ubicación) y dos recordatorios (push / calendario). No expone acciones ni la página
@@ -26,7 +27,7 @@ export const load: PageServerLoad = async ({ params, fetch, setHeaders }) => {
 		);
 		return { appointment, active, demo: false };
 	} catch (error) {
-		console.error('Error cargando vista de reprogramación', error);
+		logServerFailure('Error cargando vista de reprogramación', error);
 		return { appointment: null, active: false, demo: false };
 	}
 };

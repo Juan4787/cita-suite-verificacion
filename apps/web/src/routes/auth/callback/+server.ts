@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { dev } from '$app/environment';
 import {
 	clearSupabaseOAuthCookies,
@@ -30,7 +31,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 	clearSupabaseOAuthCookies(cookies);
 
 	if (error || !data.session) {
-		console.error('Error completando OAuth con Google', error);
+		logServerFailure('Error completando OAuth con Google', error);
 		loginWithError(url, 'google_callback');
 	}
 	const session = data.session!;

@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { bookingInformationEnabled } from '$lib/server/patients/public/booking-information';
 import { env } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
@@ -137,7 +138,7 @@ export const load: PageServerLoad = async ({ params, fetch, url, request, setHea
 			} catch (calendarError) {
 				// La reserva sigue siendo util aunque el estado auxiliar no pueda cargarse.
 				// La opcion administrada se oculta para no prometer una accion incierta.
-				console.error('Error cargando estado Google Calendar', {
+				logServerFailure('Error cargando estado Google Calendar', {
 					appointmentId: appointment.id,
 					code:
 						calendarError instanceof Error
@@ -173,7 +174,7 @@ export const load: PageServerLoad = async ({ params, fetch, url, request, setHea
 			calendarMessage: getGoogleCalendarPublicMessage(url.searchParams.get('calendar'))
 		};
 	} catch (error) {
-		console.error('Error cargando turno publico', error);
+		logServerFailure('Error cargando turno publico', error);
 		return {
 			appointment: null,
 			bookingInformationEnabled: false,
@@ -206,7 +207,7 @@ export const actions: Actions = {
 			});
 			return { success: true, message: 'Turno confirmado.' };
 		} catch (error) {
-			console.error('Error confirmando turno publico', error);
+			logServerFailure('Error confirmando turno publico', error);
 			return fail(400, { message: getPublicTokenErrorMessage(error) });
 		}
 	},
@@ -230,7 +231,7 @@ export const actions: Actions = {
 					await processAppointmentGoogleCalendarSync(supabase, result.appointment.id, fetch);
 				} catch (calendarError) {
 					// La cola durable conserva el borrado para el próximo reintento.
-					console.error('Error sincronizando Google Calendar tras cancelar', {
+					logServerFailure('Error sincronizando Google Calendar tras cancelar', {
 						appointmentId: result.appointment.id,
 						code:
 							calendarError instanceof Error
@@ -241,7 +242,7 @@ export const actions: Actions = {
 			}
 			return { success: true, message: 'Turno cancelado.' };
 		} catch (error) {
-			console.error('Error cancelando turno publico', error);
+			logServerFailure('Error cancelando turno publico', error);
 			return fail(400, { message: getPublicTokenErrorMessage(error) });
 		}
 	},
@@ -259,7 +260,7 @@ export const actions: Actions = {
 			});
 			return { success: true, message: 'Pedido de reprogramación recibido.' };
 		} catch (error) {
-			console.error('Error solicitando reprogramacion publica', error);
+			logServerFailure('Error solicitando reprogramacion publica', error);
 			return fail(400, { message: getPublicTokenErrorMessage(error) });
 		}
 	},
@@ -288,7 +289,7 @@ export const actions: Actions = {
 				message: 'Elegí nuevamente tu cuenta Google para terminar de quitar el turno.'
 			});
 		} catch (error) {
-			console.error('Error quitando turno de Google Calendar', {
+			logServerFailure('Error quitando turno de Google Calendar', {
 				code: error instanceof Error ? error.message.slice(0, 120) : 'unknown'
 			});
 			return fail(400, {

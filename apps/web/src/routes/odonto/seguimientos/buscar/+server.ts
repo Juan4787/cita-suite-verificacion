@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
@@ -27,7 +28,7 @@ export const GET: RequestHandler = async ({ url, locals, fetch, cookies }) => {
 		const patients = await listAssignablePatientsSearch(admin, scope, url.searchParams.get('q') ?? '');
 		return json({ patients });
 	} catch (err) {
-		console.error('Error buscando pacientes para seguimiento', err);
+		logServerFailure('Error buscando pacientes para seguimiento', err);
 		return json({ message: 'No pudimos buscar pacientes para el seguimiento. Revisá tu conexión y volvé a intentar.' }, { status: 500 });
 	}
 };

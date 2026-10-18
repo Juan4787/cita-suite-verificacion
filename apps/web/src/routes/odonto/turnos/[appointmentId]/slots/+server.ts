@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { getAvailabilitySlots } from '$lib/server/scheduling/public/availability';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
@@ -63,10 +64,7 @@ export const GET: RequestHandler = async ({ params, url, locals, fetch, cookies 
 	const appointment = appointmentResult.data;
 
 	if (appointmentResult.error || teamResult.error) {
-		console.error(
-			'Error cargando turno para slots de reprogramación',
-			appointmentResult.error ?? teamResult.error
-		);
+		logServerFailure('Error cargando turno para slots de reprogramación', appointmentResult.error ?? teamResult.error);
 		return json(
 			{
 				message:
@@ -111,7 +109,7 @@ export const GET: RequestHandler = async ({ params, url, locals, fetch, cookies 
 		});
 		return json({ slots });
 	} catch (err) {
-		console.error('Error calculando slots de reprogramación', err);
+		logServerFailure('Error calculando slots de reprogramación', err);
 		return json(
 			{
 				message:

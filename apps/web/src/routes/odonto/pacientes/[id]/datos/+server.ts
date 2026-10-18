@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
@@ -36,7 +37,7 @@ export const GET: RequestHandler = async ({ params, locals, fetch, cookies, setH
 		.limit(5);
 
 	if (error) {
-		console.error('Error cargando cambios del paciente', error);
+		logServerFailure('Error cargando cambios del paciente', error);
 		return json({ message: 'No se pudieron cargar los últimos cambios.' }, { status: 500 });
 	}
 	return json({ change_events: data ?? [] });

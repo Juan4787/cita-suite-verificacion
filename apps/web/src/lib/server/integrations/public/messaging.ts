@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
 import { PUBLIC_SITE_URL_FALLBACK } from '$lib/constants';
@@ -535,7 +536,7 @@ const canBusinessUseOperationalMessaging = async (supabase: CitaSupabaseClient, 
 	if (error) {
 		// Compatibility-first fallback: if the migration is not available yet,
 		// do not break legacy messaging paths.
-		console.error('Error cargando suscripción comercial para mensajería', error);
+		logServerFailure('Error cargando suscripción comercial para mensajería', error);
 		return true;
 	}
 
@@ -653,7 +654,7 @@ export const generateReminderDispatches = async (
 			}
 			created += 1;
 		} catch (err) {
-			console.error('Error generando dispatch de recordatorio', err);
+			logServerFailure('Error generando dispatch de recordatorio', err);
 			failed += 1;
 		}
 	}
@@ -824,7 +825,7 @@ export const processQueuedMessageDispatches = async (
 
 			sent += 1;
 		} catch (err) {
-			console.error('Error procesando dispatch', err);
+			logServerFailure('Error procesando dispatch', err);
 			await failDispatch(supabase, dispatch, err, now);
 			failed += 1;
 		}

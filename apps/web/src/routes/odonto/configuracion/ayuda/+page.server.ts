@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import {
 	accountAssistanceErrorMessage,
@@ -102,7 +103,7 @@ export const actions: Actions = {
 			const admin = await createSupabaseAdminClient('odonto', fetch);
 			await activateAccountAssistance({ supabase, admin, businessId: context.business.id });
 		} catch (error) {
-			console.error('Error activando ayuda para configurar', error);
+			logServerFailure('Error activando ayuda para configurar', error);
 			return fail(500, { message: accountAssistanceErrorMessage(error) });
 		}
 
@@ -126,7 +127,7 @@ export const actions: Actions = {
 			}
 			await revokeAccountAssistance({ supabase, businessId: context.business.id });
 		} catch (error) {
-			console.error('Error revocando ayuda para configurar', error);
+			logServerFailure('Error revocando ayuda para configurar', error);
 			return fail(500, { message: accountAssistanceErrorMessage(error) });
 		}
 
@@ -156,7 +157,7 @@ export const actions: Actions = {
 				grantId
 			});
 		} catch (error) {
-			console.error('Error cerrando aviso de ayuda para configurar', error);
+			logServerFailure('Error cerrando aviso de ayuda para configurar', error);
 			return fail(500, { message: accountAssistanceErrorMessage(error) });
 		}
 

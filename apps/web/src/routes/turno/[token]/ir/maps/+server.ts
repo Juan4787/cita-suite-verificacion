@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 // Redirect-through a Google Maps ("Cómo llegar"). No cambia el estado de calendario:
 // solo deja constancia en el audit log como métrica de uso.
 
@@ -23,7 +24,7 @@ export const GET: RequestHandler = async ({ params, fetch }) => {
 				metadata: { source: 'public_token' }
 			});
 		} catch (auditError) {
-			console.error('Error registrando apertura de maps', auditError);
+			logServerFailure('Error registrando apertura de maps', auditError);
 		}
 	}
 

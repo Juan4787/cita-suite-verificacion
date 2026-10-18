@@ -1,3 +1,4 @@
+import { logServerWarning } from '$lib/server/platform/logging';
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
@@ -57,7 +58,7 @@ const persist = (db: DemoDb) => {
 	try {
 		fs.writeFileSync(DEMO_DB_PATH, JSON.stringify(db, null, 2), 'utf8');
 	} catch (err) {
-		console.warn('No se pudo persistir el almacén local demo', err);
+		logServerWarning('No se pudo persistir el almacén local demo', err);
 	}
 };
 

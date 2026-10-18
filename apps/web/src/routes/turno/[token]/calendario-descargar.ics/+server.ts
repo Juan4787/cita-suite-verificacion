@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 // Fallback de descarga del calendario (attachment) para navegadores que no abren
 // bien text/calendar inline. Mismo contenido vivo que /calendario.ics.
 
@@ -18,7 +19,7 @@ export const GET: RequestHandler = async ({ params, fetch }) => {
 		try {
 			await recordCalendarAction(supabase, appointment, 'downloaded_ics');
 		} catch (trackingError) {
-			console.error('Error registrando descarga de calendario', trackingError);
+			logServerFailure('Error registrando descarga de calendario', trackingError);
 		}
 	}
 

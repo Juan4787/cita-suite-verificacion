@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { readRecord } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
@@ -51,7 +52,7 @@ export const POST: RequestHandler = async ({ params, request, locals, fetch, coo
 	} catch (err) {
 		if (err instanceof FollowUpError)
 			return json({ message: getFollowUpErrorMessage(err.code) }, { status: getFollowUpErrorStatus(err.code) });
-		console.error('Error gestionando seguimiento', err);
+		logServerFailure('Error gestionando seguimiento', err);
 		return json({ message: 'No se pudo gestionar el seguimiento.' }, { status: 500 });
 	}
 };

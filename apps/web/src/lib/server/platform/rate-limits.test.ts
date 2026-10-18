@@ -120,7 +120,7 @@ describe('rate limits server helper', () => {
 				{ logContext: 'control de ingreso' }
 			)
 		).resolves.toBeUndefined();
-		expect(log).toHaveBeenCalledWith('control de ingreso', expect.any(RateLimitUnavailableError));
+		expect(log).toHaveBeenCalledWith('control de ingreso', {});
 
 		const rpc = vi.fn(async () => ({
 			data: [{ allowed: false, used: 5, retry_after_seconds: 120 }],

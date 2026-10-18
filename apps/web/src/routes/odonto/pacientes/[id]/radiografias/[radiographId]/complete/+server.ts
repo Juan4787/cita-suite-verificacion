@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import {
   ClinicalFileHttpError,
   clinicalFileCacheHeaders,
@@ -110,7 +111,7 @@ export const POST: RequestHandler = async (event) => {
         // La validación fallida sigue siendo la respuesta principal.
       }
     }
-    console.error("Error confirmando imagen clínica", error);
+    logServerFailure("Error confirmando imagen clínica", error);
     return json(clinicalFileErrorBody(safe), { status: safe.status });
   }
 };

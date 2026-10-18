@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import crypto from 'crypto';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import {
@@ -157,7 +158,7 @@ export const recordPublicBookingAttempt = async (
 	});
 
 	if (error) {
-		console.error('Error registrando intento publico', error);
+		logServerFailure('Error registrando intento publico', error);
 	}
 };
 
@@ -221,7 +222,7 @@ export const canUsePublicBusiness = async (
 		// No se puede habilitar una mutación pública cuando el estado comercial es
 		// desconocido. Un fallback afirmativo convertiría un timeout de Supabase en
 		// una reserva o una acción sobre un turno que debería estar bloqueado.
-		console.error('Error cargando acceso comercial público', error);
+		logServerFailure('Error cargando acceso comercial público', error);
 		return false;
 	}
 
@@ -245,7 +246,7 @@ const getPublicBusinessSubscription = async (
 		// El estado comercial desconocido debe bloquear la reserva pública. La
 		// ausencia de una fila, en cambio, sigue usando el fallback histórico por
 		// fecha de creación en getBusinessAccessState.
-		console.error('Error cargando acceso comercial público', error);
+		logServerFailure('Error cargando acceso comercial público', error);
 		return { subscription: null, lookupFailed: true };
 	}
 	return {

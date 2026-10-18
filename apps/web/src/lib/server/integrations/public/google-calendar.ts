@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { isRecord, readNullableText, readFiniteNumber, readChoice } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
 import type { CitaSupabaseClient } from '$lib/types/database';
@@ -745,7 +746,7 @@ const revokeGoogleRefreshToken = async (
 			signal: timer.signal
 		});
 		if (!response.ok) {
-			console.error('Google no confirmó la revocación de una autorización sin vínculos', {
+			logServerFailure('Google no confirmó la revocación de una autorización sin vínculos', {
 				connectionId: connection.id,
 				httpStatus: response.status
 			});
@@ -753,7 +754,7 @@ const revokeGoogleRefreshToken = async (
 	} catch {
 		// El secreto ya fue eliminado de la base. No se registra ni se reintenta con
 		// una copia adicional: el usuario también puede revocarlo desde Google.
-		console.error('No se pudo confirmar la revocación de Google Calendar', {
+		logServerFailure('No se pudo confirmar la revocación de Google Calendar', {
 			connectionId: connection.id
 		});
 	} finally {
@@ -772,7 +773,7 @@ export const processGoogleCalendarEvent = async (
 	try {
 		loaded = await loadEventLink(supabase, eventRowId);
 	} catch (error) {
-		console.error('Error cargando trabajo Google Calendar', { eventRowId, error });
+		logServerFailure('Error cargando trabajo Google Calendar', { eventRowId, error });
 		throw error;
 	}
 	const { event, connection, appointment } = loaded;
@@ -874,7 +875,7 @@ export const processGoogleCalendarEvent = async (
 				event.attempt_count,
 				now
 			);
-			console.error('Google Calendar no pudo sincronizar el evento', {
+			logServerFailure('Google Calendar no pudo sincronizar el evento', {
 				eventRowId: event.id,
 				appointmentId: event.appointment_id,
 				category: remoteError.category,
@@ -883,7 +884,7 @@ export const processGoogleCalendarEvent = async (
 			});
 			return { status, errorCode: remoteError.safeCode };
 		} catch (recordError) {
-			console.error('Error registrando fallo Google Calendar', {
+			logServerFailure('Error registrando fallo Google Calendar', {
 				eventRowId: event.id,
 				code: remoteError.safeCode,
 				error: recordError
@@ -921,7 +922,7 @@ export const processGoogleCalendarSyncJobs = async (
 			// Un registro dañado o una lectura transitoria no debe bloquear los demás.
 			// El claim vence solo y permite reintentar este trabajo más adelante.
 			result.attention += 1;
-			console.error('Error aislado procesando Google Calendar', {
+			logServerFailure('Error aislado procesando Google Calendar', {
 				eventRowId: id,
 				code: error instanceof Error ? error.message.slice(0, 120) : 'unknown'
 			});

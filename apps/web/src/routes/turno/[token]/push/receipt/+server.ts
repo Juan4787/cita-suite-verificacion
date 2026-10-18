@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 // Acuse técnico enviado por el service worker. El secreto de recibo viaja solamente
 // dentro del payload Web Push cifrado y se compara contra su SHA-256 almacenado.
 
@@ -50,7 +51,7 @@ export const POST: RequestHandler = async ({ params, request, fetch, setHeaders 
 	} catch (error) {
 		// El acuse es best-effort y nunca debe provocar un reintento visible o filtrar
 		// detalles técnicos al navegador del paciente.
-		console.error('Error registrando recepción de push', error);
+		logServerFailure('Error registrando recepción de push', error);
 	}
 	return new Response(null, { status: 204 });
 };
