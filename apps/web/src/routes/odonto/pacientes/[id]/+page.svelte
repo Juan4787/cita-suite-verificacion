@@ -1,6 +1,15 @@
 <script lang="ts">
-	import type { PatientDetailViewData, PatientFormState, PatientHistoryEntry, PatientChangeEvent } from '$lib/patients/contracts';
- import { readPatientHistoryPage, readPatientChangeEvents, readSavedPatientEntry } from '$lib/patients/history-contract';
+	import type {
+		PatientDetailViewData,
+		PatientFormState,
+		PatientHistoryEntry,
+		PatientChangeEvent
+	} from '$lib/patients/contracts';
+	import {
+		comparePatientHistoryEntries,
+		readPatientChangeEvents,
+		readSavedPatientEntry
+	} from '$lib/patients/history-contract';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/stores';
 	import { invalidate, replaceState } from '$app/navigation';
@@ -10,6 +19,7 @@
 	import DateTimePartsInput from '$lib/components/DateTimePartsInput.svelte';
 	import DatePartsInput from '$lib/components/DatePartsInput.svelte';
 	import RadiographsPanel from '$lib/components/patients/RadiographsPanel.svelte';
+	import PatientHistoryPanel from '$lib/components/patients/PatientHistoryPanel.svelte';
 	import { markPatientRevisionUnverified } from '$lib/client/patient-list-cache';
 	import {
 		activatePatientRadiographCache,
@@ -30,12 +40,8 @@
 	let showMobileActions = $state(false);
 	let showFollowUpModal = $state(false);
 	let tab = $state<'historial' | 'datos' | 'radiografias'>(
-		untrack(() => data.permissions.canReadClinicalHistory ? 'historial' : 'datos')
+		untrack(() => (data.permissions.canReadClinicalHistory ? 'historial' : 'datos'))
 	);
-	let filterType = $state<'Todos' | 'Consulta' | 'Diagnóstico' | 'Tratamiento'>('Todos');
-	let onlyWithNote = $state(false);
-	let timelineSearch = $state('');
-	let expandedId = $state<string | null>(null);
 	const currentYear = new Date().getFullYear();
 	const appointmentStatusLabels: Record<string, string> = {
 		reserved: 'Reservado',
@@ -43,14 +49,12 @@
 		cancelled: 'Cancelado',
 		reschedule_requested: 'Quiere reprogramar'
 	};
-	let entries = $state<PatientHistoryEntry[]>([]);
+	let entries = $state<PatientHistoryEntry[]>(untrack(() => data.entries));
 	let changeEvents = $state<PatientChangeEvent[]>([]);
-	let hasMoreEntries = $state(false);
+	let hasMoreEntries = $state(untrack(() => Boolean(data.hasMoreEntries)));
 	let changeEventsLoaded = $state(false);
 	let loadingChangeEvents = $state(false);
 	let changeEventsLoadError = $state('');
-	let historyLoadError = $state('');
-	let loadingMoreEntries = $state(false);
 	const requestedTab = $derived.by(() => $page.url.searchParams.get('tab'));
 	const requestedDelete = $derived.by(() => $page.url.searchParams.has('eliminar'));
 	const permissions = $derived(
@@ -63,12 +67,12 @@
 			canArchivePatient: true,
 			canCreateClinicalEntry: true,
 			canEditClinicalEntry: true,
-				canCreateAppointment: true,
-				canViewRadiographs: true,
-				canUploadRadiographs: true,
-				canViewRadiographTrash: true,
-				canTrashRadiographs: true,
-				canExportPatientData: false
+			canCreateAppointment: true,
+			canViewRadiographs: true,
+			canUploadRadiographs: true,
+			canViewRadiographTrash: true,
+			canTrashRadiographs: true,
+			canExportPatientData: false
 		}
 	);
 	const isProfessional = $derived(data.role === 'professional');
@@ -96,12 +100,9 @@
 	});
 	onDestroy(() => cancelRadiographPreload?.());
 	$effect(() => {
-		if (
-			requestedTab === 'historial' ||
-			requestedTab === 'datos' ||
-			requestedTab === 'radiografias'
-		) {
-			tab = requestedTab === 'historial' && !permissions.canReadClinicalHistory ? 'datos' : requestedTab;
+		if (requestedTab === 'historial' || requestedTab === 'datos' || requestedTab === 'radiografias') {
+			tab =
+				requestedTab === 'historial' && !permissions.canReadClinicalHistory ? 'datos' : requestedTab;
 		}
 		if (!permissions.canReadClinicalHistory && tab === 'historial') tab = 'datos';
 	});
@@ -122,20 +123,6 @@
 		changeEventsLoaded = !data.changeEventsDeferred;
 		changeEventsLoadError = '';
 	});
-	const fmtTime = (dateStr: string) =>
-		new Intl.DateTimeFormat('es-AR', {
-			hour: '2-digit',
-			minute: '2-digit',
-			hourCycle: 'h23'
-		}).format(new Date(dateStr));
-	const mainTitle = (entry: PatientHistoryEntry) => entry.title ?? entry.description ?? entry.entry_type;
-	const isDuplicateDescription = (entry: PatientHistoryEntry) =>
-		entry.description ? entry.description.trim().toLowerCase() === mainTitle(entry).trim().toLowerCase() : false;
-	const hasDistinctNote = (entry: PatientHistoryEntry) =>
-		entry.internal_note &&
-		entry.internal_note.trim() &&
-		entry.internal_note.trim().toLowerCase() !== (entry.description ?? '').trim().toLowerCase();
-
 	const copyToClipboard = (text?: string | null) => {
 		if (!text) return;
 		if (navigator?.clipboard) {
@@ -145,88 +132,30 @@
 
 	const lastVisit = $derived(entries?.[0]?.created_at ?? null);
 	const chips = $derived(
-		(
-			[
-				lastVisit
-					? {
-							label: 'Última visita',
-							value: formatDate(lastVisit, data.businessTimeZone),
-							intent: 'neutral' as const
-					  }
-					: null,
-				data.patient.allergies
-					? {
-							label: 'Alergias',
-							value: data.patient.allergies,
-							intent: 'alert' as const
-					  }
-					: null,
-				data.patient.insurance
-					? {
-							label: 'Obra social',
-							value: data.patient.insurance,
-							intent: 'neutral' as const
-					  }
-					: null
-			].filter((c): c is { label: string; value: string; intent: 'neutral' | 'alert' } => Boolean(c))
-		)
+		[
+			lastVisit
+				? {
+						label: 'Última visita',
+						value: formatDate(lastVisit, data.businessTimeZone),
+						intent: 'neutral' as const
+					}
+				: null,
+			data.patient.allergies
+				? {
+						label: 'Alergias',
+						value: data.patient.allergies,
+						intent: 'alert' as const
+					}
+				: null,
+			data.patient.insurance
+				? {
+						label: 'Obra social',
+						value: data.patient.insurance,
+						intent: 'neutral' as const
+					}
+				: null
+		].filter((c): c is { label: string; value: string; intent: 'neutral' | 'alert' } => Boolean(c))
 	);
-
-	const entryMatches = (entry: PatientHistoryEntry) => {
-		if (filterType !== 'Todos' && entry.entry_type !== filterType) return false;
-		if (onlyWithNote && !entry.internal_note) return false;
-		if (timelineSearch.trim()) {
-			const q = timelineSearch.toLowerCase();
-			const dateText = formatDate(entry.created_at, data.businessTimeZone);
-			const haystack = `${entry.entry_type} ${entry.description ?? ''} ${entry.internal_note ?? ''} ${entry.teeth ?? ''} ${dateText} ${entry.created_at}`.toLowerCase();
-			if (!haystack.includes(q)) return false;
-		}
-		return true;
-	};
-
-	const canEditEntry = (entry: PatientHistoryEntry) => {
-		if (!permissions.canEditClinicalEntry) return false;
-		if (!isProfessional) return true;
-		const ownsEntry = entry.created_by_user_id && entry.created_by_user_id === data.currentUserId;
-		const lockedAt = entry.locked_after ? new Date(entry.locked_after).getTime() : null;
-		const isUnlocked = lockedAt === null || Date.now() <= lockedAt;
-		return Boolean(ownsEntry && isUnlocked);
-	};
-
-	const loadMoreEntries = async () => {
-		if (loadingMoreEntries || !hasMoreEntries) return;
-		const last = entries.at(-1);
-		if (!last?.created_at || !last?.id) {
-			hasMoreEntries = false;
-			return;
-		}
-		const patientId = data.patient.id;
-		loadingMoreEntries = true;
-		historyLoadError = '';
-		try {
-			const params = new URLSearchParams({
-				cursor_created_at: String(last.created_at),
-				cursor_id: String(last.id)
-			});
-			const response = await fetch(
-				`/odonto/pacientes/${patientId}/historial?${params.toString()}`
-			);
-			if (!response.ok) {
-				throw new Error('No se pudo cargar más historial.');
-			}
-			const payload = readPatientHistoryPage(await response.json(), last);
-			if (data.patient.id !== patientId) return;
-			const incoming = payload.items;
-			const existing = new Set(entries.map((entry) => entry.id));
-			const deduped = incoming.filter((entry) => !existing.has(entry.id));
-			entries = [...entries, ...deduped];
-			hasMoreEntries = Boolean(payload.has_more);
-		} catch (err) {
-			if (data.patient.id === patientId) historyLoadError = 'No pudimos cargar más historial. Volvé a intentar.';
-		} finally {
-			loadingMoreEntries = false;
-		}
-	};
 
 	const loadChangeEvents = async () => {
 		if (data.demo || changeEventsLoaded || loadingChangeEvents) return;
@@ -241,7 +170,8 @@
 			changeEvents = incoming;
 			changeEventsLoaded = true;
 		} catch (error) {
-			if (data.patient.id === patientId) changeEventsLoadError = 'No pudimos cargar los últimos cambios. Volvé a intentar.';
+			if (data.patient.id === patientId)
+				changeEventsLoadError = 'No pudimos cargar los últimos cambios. Volvé a intentar.';
 		} finally {
 			loadingChangeEvents = false;
 		}
@@ -264,51 +194,38 @@
 		if (tab === 'datos') void loadChangeEvents();
 	});
 
-	const formatCurrency = (value?: number | string | null) => {
-		if (value == null || value === '') return '';
-		const normalized =
-			typeof value === 'string' ? value.replace(/\./g, '').replace(',', '.') : value;
-		const numeric = Number(normalized);
-		if (!Number.isFinite(numeric)) return '';
-		const formatted = new Intl.NumberFormat('es-AR', {
-			minimumFractionDigits: 0,
-			maximumFractionDigits: 0
-		}).format(numeric);
-		return `$ ${formatted}`;
+	let showEntryErrors = $state(false);
+	let showEditErrors = $state(false);
+	let showEditEntryErrors = $state(false);
+	let showEditEntryModal = $state(false);
+	let editingEntry: PatientHistoryEntry | null = $state(null);
+	let editEntryType = $state('');
+	let editEntryDescription = $state('');
+	let editEntryTeeth = $state('');
+	let editEntryNote = $state('');
+	let editEntryCreatedAt = $state('');
+	let amountDisplay = $state('');
+	let amountRaw = $state('');
+	let editAmountDisplay = $state('');
+	let editAmountRaw = $state('');
+	let savingEntry = $state(false);
+	let savingPatient = $state(false);
+	let patientUpdateError = $state('');
+	let archiveForm: HTMLFormElement | null = $state(null);
+	let unarchiveForm: HTMLFormElement | null = $state(null);
+
+	const openEditPatient = () => {
+		editPatientDismissed = false;
+		patientUpdateError = '';
+		showEditErrors = false;
+		showEditModal = true;
 	};
 
-let showEntryErrors = $state(false);
-let showEditErrors = $state(false);
-let showEditEntryErrors = $state(false);
-let showEditEntryModal = $state(false);
-let editingEntry: PatientHistoryEntry | null = $state(null);
-let editEntryType = $state('');
-let editEntryDescription = $state('');
-let editEntryTeeth = $state('');
-let editEntryNote = $state('');
-let editEntryCreatedAt = $state('');
-let amountDisplay = $state('');
-let amountRaw = $state('');
-let editAmountDisplay = $state('');
-let editAmountRaw = $state('');
-let savingEntry = $state(false);
-let savingPatient = $state(false);
-let patientUpdateError = $state('');
-let archiveForm: HTMLFormElement | null = $state(null);
-let unarchiveForm: HTMLFormElement | null = $state(null);
-
-const openEditPatient = () => {
-	editPatientDismissed = false;
-	patientUpdateError = '';
-	showEditErrors = false;
-	showEditModal = true;
-};
-
-const closeEditPatient = () => {
-	editPatientDismissed = true;
-	patientUpdateError = '';
-	showEditModal = false;
-};
+	const closeEditPatient = () => {
+		editPatientDismissed = true;
+		patientUpdateError = '';
+		showEditModal = false;
+	};
 	const isArchived = $derived(
 		Boolean(isProfessional ? data.patient.professional_archived_at : data.patient.archived_at)
 	);
@@ -316,175 +233,174 @@ const closeEditPatient = () => {
 		Boolean(
 			data.patient.dni ||
 			data.patient.phone ||
-				data.patient.email ||
-				data.patient.address ||
-				data.patient.birth_date ||
-				data.patient.insurance ||
-				data.patient.insurance_plan ||
-				data.patient.allergies ||
-				data.patient.medication ||
-				data.patient.background
+			data.patient.email ||
+			data.patient.address ||
+			data.patient.birth_date ||
+			data.patient.insurance ||
+			data.patient.insurance_plan ||
+			data.patient.allergies ||
+			data.patient.medication ||
+			data.patient.background
 		)
 	);
 
-const formatAmountInput = (value: string) => {
-	const digits = moneyDigits(value);
-	const formatted = formatMoneyInteger(digits);
-	return { digits, formatted };
-};
+	const formatAmountInput = (value: string) => {
+		const digits = moneyDigits(value);
+		const formatted = formatMoneyInteger(digits);
+		return { digits, formatted };
+	};
 
-const mergeSavedClinicalEntry = (value: unknown): boolean => {
- let savedEntry;
- try { savedEntry = readSavedPatientEntry(value, data.patient.id); } catch { return false; }
-
-	const merged = [savedEntry, ...entries.filter((entry) => entry.id !== savedEntry.id)].sort(
-		(left, right) => {
-			const timeDifference =
-				Date.parse(String(right.created_at)) - Date.parse(String(left.created_at));
-			if (Number.isFinite(timeDifference) && timeDifference !== 0) return timeDifference;
-			return String(right.id).localeCompare(String(left.id));
-		}
-	);
-	const exceededFirstPage = merged.length > 30;
-	entries = merged.slice(0, 30);
-	hasMoreEntries = hasMoreEntries || exceededFirstPage;
- return true;
-};
-
-const enhanceEntry: SubmitFunction = ({ cancel, formElement }) => {
-	showEntryErrors = true;
-	const hidden = formElement.querySelector<HTMLInputElement>('input[name="created_at"]');
-	if (!hidden || !hidden.value || hidden.value === '__invalid__') {
-		cancel();
-		return;
-	}
-	savingEntry = true;
-	return async ({ update, result }) => {
+	const mergeSavedClinicalEntry = (value: unknown): boolean => {
+		let savedEntry;
 		try {
-			if (result.type === 'success') {
-				const savedEntry = result.data?.savedEntry;
-				if (!mergeSavedClinicalEntry(savedEntry)) {
+			savedEntry = readSavedPatientEntry(value, data.patient.id);
+		} catch {
+			return false;
+		}
+
+		const merged = [savedEntry, ...entries.filter((entry) => entry.id !== savedEntry.id)].sort(
+			comparePatientHistoryEntries
+		);
+		const exceededFirstPage = merged.length > 30;
+		entries = merged.slice(0, 30);
+		hasMoreEntries = hasMoreEntries || exceededFirstPage;
+		return true;
+	};
+
+	const enhanceEntry: SubmitFunction = ({ cancel, formElement }) => {
+		showEntryErrors = true;
+		const hidden = formElement.querySelector<HTMLInputElement>('input[name="created_at"]');
+		if (!hidden || !hidden.value || hidden.value === '__invalid__') {
+			cancel();
+			return;
+		}
+		savingEntry = true;
+		return async ({ update, result }) => {
+			try {
+				if (result.type === 'success') {
+					const savedEntry = result.data?.savedEntry;
+					if (!mergeSavedClinicalEntry(savedEntry)) {
+						markPatientRevisionUnverified();
+						showEntryModal = false;
+						await update();
+						return;
+					}
 					markPatientRevisionUnverified();
 					showEntryModal = false;
+					showEntryErrors = false;
+					await update({ invalidateAll: false });
+					return;
+				}
+				if (result.type === 'redirect') {
+					markPatientRevisionUnverified();
+					showEntryModal = false;
+				}
+				await update();
+			} finally {
+				savingEntry = false;
+			}
+		};
+	};
+
+	const handleAmountChange = (event: Event, type: 'new' | 'edit') => {
+		const target = event.currentTarget as HTMLInputElement;
+		const { digits, formatted } = formatAmountInput(target.value);
+		target.value = formatted;
+		if (type === 'new') {
+			amountDisplay = formatted;
+			amountRaw = digits;
+		} else {
+			editAmountDisplay = formatted;
+			editAmountRaw = digits;
+		}
+	};
+
+	const handleEditSubmit = (event: SubmitEvent) => {
+		showEditErrors = true;
+		const formEl = event.currentTarget as HTMLFormElement;
+		const birthHidden = formEl.querySelector<HTMLInputElement>('input[name="birth_date"]');
+		if (birthHidden && birthHidden.value === '__invalid__') {
+			event.preventDefault();
+		}
+	};
+
+	const enhancePatientUpdate: SubmitFunction = ({ cancel, formElement }) => {
+		showEditErrors = true;
+		patientUpdateError = '';
+		editPatientDismissed = false;
+		const birthHidden = formElement.querySelector<HTMLInputElement>('input[name="birth_date"]');
+		if (birthHidden && birthHidden.value === '__invalid__') {
+			cancel();
+			return;
+		}
+		if (savingPatient) {
+			cancel();
+			return;
+		}
+		savingPatient = true;
+		return async ({ result, update }) => {
+			try {
+				if (result.type === 'error') {
+					patientUpdateError =
+						'No pudimos guardar los cambios. Revisá tu conexión y volvé a intentar; tus datos siguen en el formulario.';
+					return;
+				}
+				if (result.type === 'redirect' || result.type === 'success') {
+					markPatientRevisionUnverified();
+					showEditModal = false;
+					showEditErrors = false;
+					patientUpdateError = '';
 					await update();
 					return;
 				}
-				markPatientRevisionUnverified();
-				showEntryModal = false;
-				showEntryErrors = false;
-				await update({ invalidateAll: false });
-				return;
+				await update({ reset: false });
+			} finally {
+				savingPatient = false;
 			}
-			if (result.type === 'redirect') {
-				markPatientRevisionUnverified();
-				showEntryModal = false;
-			}
-			await update();
-		} finally {
-			savingEntry = false;
+		};
+	};
+
+	const handleEditEntrySubmit = (event: SubmitEvent) => {
+		showEditEntryErrors = true;
+		const formEl = event.currentTarget as HTMLFormElement;
+		const hidden = formEl.querySelector<HTMLInputElement>('input[name="created_at"]');
+		if (!hidden || !hidden.value || hidden.value === '__invalid__') {
+			event.preventDefault();
 		}
 	};
-};
 
-const handleAmountChange = (event: Event, type: 'new' | 'edit') => {
-	const target = event.currentTarget as HTMLInputElement;
-	const { digits, formatted } = formatAmountInput(target.value);
-	target.value = formatted;
-	if (type === 'new') {
-		amountDisplay = formatted;
-		amountRaw = digits;
-	} else {
+	const openEditEntry = (entry: PatientHistoryEntry) => {
+		editingEntry = entry;
+		editEntryType = entry.entry_type ?? '';
+		editEntryDescription = entry.description ?? '';
+		editEntryTeeth = entry.teeth ?? '';
+		const initialAmount = entry.amount != null ? String(entry.amount) : '';
+		const { digits, formatted } = formatAmountInput(initialAmount);
 		editAmountDisplay = formatted;
 		editAmountRaw = digits;
-	}
-};
-
-const handleEditSubmit = (event: SubmitEvent) => {
-	showEditErrors = true;
-	const formEl = event.currentTarget as HTMLFormElement;
-	const birthHidden = formEl.querySelector<HTMLInputElement>('input[name="birth_date"]');
-	if (birthHidden && birthHidden.value === '__invalid__') {
-		event.preventDefault();
-	}
-};
-
-const enhancePatientUpdate: SubmitFunction = ({ cancel, formElement }) => {
-	showEditErrors = true;
-	patientUpdateError = '';
-	editPatientDismissed = false;
-	const birthHidden = formElement.querySelector<HTMLInputElement>('input[name="birth_date"]');
-	if (birthHidden && birthHidden.value === '__invalid__') {
-		cancel();
-		return;
-	}
-	if (savingPatient) {
-		cancel();
-		return;
-	}
-	savingPatient = true;
-	return async ({ result, update }) => {
-		try {
-			if (result.type === 'error') {
-				patientUpdateError =
-					'No pudimos guardar los cambios. Revisá tu conexión y volvé a intentar; tus datos siguen en el formulario.';
-				return;
-			}
-			if (result.type === 'redirect' || result.type === 'success') {
-				markPatientRevisionUnverified();
-				showEditModal = false;
-				showEditErrors = false;
-				patientUpdateError = '';
-				await update();
-				return;
-			}
-			await update({ reset: false });
-		} finally {
-			savingPatient = false;
-		}
+		editEntryNote = entry.internal_note ?? '';
+		editEntryCreatedAt = entry.created_at ?? '';
+		showEditEntryErrors = false;
+		showEditEntryModal = true;
 	};
-};
 
-const handleEditEntrySubmit = (event: SubmitEvent) => {
-	showEditEntryErrors = true;
-	const formEl = event.currentTarget as HTMLFormElement;
-	const hidden = formEl.querySelector<HTMLInputElement>('input[name="created_at"]');
-	if (!hidden || !hidden.value || hidden.value === '__invalid__') {
+	const openNewEntryModal = () => {
+		amountDisplay = '';
+		amountRaw = '';
+		showEntryErrors = false;
+		showEntryModal = true;
+	};
+
+	const handleFollowUpCreated = async () => {
+		showFollowUpModal = false;
+		await invalidate('app:follow-ups');
+	};
+
+	const preventEnterSubmit = (event: KeyboardEvent) => {
+		if (event.key !== 'Enter') return;
+		const target = event.target as HTMLElement | null;
+		if (target instanceof HTMLTextAreaElement) return;
 		event.preventDefault();
-	}
-};
-
-const openEditEntry = (entry: PatientHistoryEntry) => {
-	editingEntry = entry;
-	editEntryType = entry.entry_type ?? '';
-	editEntryDescription = entry.description ?? '';
-	editEntryTeeth = entry.teeth ?? '';
-	const initialAmount = entry.amount != null ? String(entry.amount) : '';
-	const { digits, formatted } = formatAmountInput(initialAmount);
-	editAmountDisplay = formatted;
-	editAmountRaw = digits;
-	editEntryNote = entry.internal_note ?? '';
-	editEntryCreatedAt = entry.created_at ?? '';
-	showEditEntryErrors = false;
-	showEditEntryModal = true;
-};
-
-const openNewEntryModal = () => {
-	amountDisplay = '';
-	amountRaw = '';
-	showEntryErrors = false;
-	showEntryModal = true;
-};
-
-const handleFollowUpCreated = async () => {
-	showFollowUpModal = false;
-	await invalidate('app:follow-ups');
-};
-
-const preventEnterSubmit = (event: KeyboardEvent) => {
-	if (event.key !== 'Enter') return;
-	const target = event.target as HTMLElement | null;
-	if (target instanceof HTMLTextAreaElement) return;
-	event.preventDefault();
 	};
 </script>
 
@@ -649,152 +565,20 @@ const preventEnterSubmit = (event: KeyboardEvent) => {
 		</div>
 	</div>
 
-	{#if tab === 'historial' && permissions.canReadClinicalHistory}
-		<div class="ux-card">
-			<div class="flex flex-col gap-3 text-sm sm:flex-row sm:items-center">
-				<div class="relative w-full sm:max-w-xs">
-					<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">
-						<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M3 5h18M6 12h12M10 19h4" />
-						</svg>
-					</span>
-					<select
-						bind:value={filterType}
-						class="w-full rounded-full border border-neutral-200 bg-white py-2 pl-9 pr-3 text-sm dark:border-[#1f3554] dark:bg-[#0f1f36]"
-					>
-						<option value="Todos">Filtrar por tipo: Todos</option>
-						<option value="Consulta">Filtrar por tipo: Consulta</option>
-						<option value="Diagnóstico">Filtrar por tipo: Diagnóstico</option>
-						<option value="Tratamiento">Filtrar por tipo: Tratamiento</option>
-					</select>
-				</div>
-				<div class="relative w-full">
-					<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">
-						<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<circle cx="11" cy="11" r="7" />
-							<path stroke-linecap="round" stroke-linejoin="round" d="M20 20l-3.5-3.5" />
-						</svg>
-					</span>
-					<input
-						type="search"
-						placeholder="Buscar (palabra, fecha)"
-						class="w-full rounded-full border border-neutral-200 bg-white py-2 pl-9 pr-3 text-sm text-neutral-700 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-neutral-50"
-						bind:value={timelineSearch}
-					/>
-					</div>
-				</div>
-				{#if historyLoadError}
-					<div class="mt-4 flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-400/40 dark:bg-red-500/10 dark:text-red-100" role="alert">
-						<p>{historyLoadError}</p>
-						<button type="button" class="font-semibold underline" onclick={() => (historyLoadError = '')}>Cerrar</button>
-					</div>
-				{/if}
-				<div class="mt-4">
-				{#if entries.length === 0}
-					<p class="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-600 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-neutral-200">
-						<span class="md:hidden">Sin consultas registradas. Cargá la primera tocando el botón + de abajo a la derecha.</span>
-						<span class="hidden md:inline">Sin consultas registradas. Cargá la primera desde “Registrar consulta”.</span>
-					</p>
-				{:else}
-					<div class="relative pl-8">
-						<span class="absolute left-2 top-0 h-full w-px bg-neutral-200 dark:bg-[#1f3554]/60"></span>
-						<div class="space-y-3">
-							{#each entries as entry (entry.id ?? entry.created_at)}
-								{#if entryMatches(entry)}
-									{#key entry.id ?? entry.created_at}
-										<div
-											role="button"
-											tabindex="0"
-											onclick={() => (expandedId = expandedId === (entry.id ?? entry.created_at) ? null : entry.id ?? entry.created_at)}
-											onkeydown={(e) => e.key === 'Enter' && (expandedId = expandedId === (entry.id ?? entry.created_at) ? null : entry.id ?? entry.created_at)}
-											class="group relative overflow-hidden rounded-xl border border-neutral-100 bg-white px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] dark:border-[#1f3554] dark:bg-[#0f1f36]"
-										>
-											<span class="absolute left-[-14px] top-5 h-3 w-3 rounded-full border-2 border-white bg-[#7c3aed] shadow dark:border-[#0f1f36]"></span>
-											<div class="flex flex-wrap items-start gap-3">
-												<div class="flex min-w-0 flex-1 items-center gap-3">
-													<span class="rounded-full bg-[#7c3aed]/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#5b21b6] dark:bg-[#7c3aed]/20 dark:text-[#d9c5ff]">
-														{entry.entry_type}
-													</span>
-													<p class="text-[16px] font-semibold text-neutral-900 dark:text-white line-clamp-1">
-														{mainTitle(entry)}
-													</p>
-												</div>
-												<div class="flex w-full items-center justify-end gap-2 sm:w-auto sm:shrink-0 sm:justify-start">
-													{#if entry.amount}
-														<span class="text-[15px] font-semibold text-neutral-800 whitespace-nowrap dark:text-neutral-100">
-															{formatCurrency(entry.amount)}
-														</span>
-													{/if}
-													{#if canEditEntry(entry)}
-														<button
-															type="button"
-															class="inline-flex items-center gap-1 rounded-full border border-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-100 dark:hover:bg-[#122641]"
-															onclick={(event) => {
-																event.stopPropagation();
-																openEditEntry(entry);
-															}}
-														>
-															<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-																<path stroke-linecap="round" stroke-linejoin="round" d="M12 20h9" />
-																<path stroke-linecap="round" stroke-linejoin="round" d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-															</svg>
-															Editar
-														</button>
-													{/if}
-												</div>
-											</div>
-											{#if entry.description && !isDuplicateDescription(entry)}
-												<p class="mt-1 text-[13px] font-medium text-neutral-700 opacity-85 line-clamp-1 dark:text-neutral-200">
-													{entry.description}
-												</p>
-											{/if}
-											<div class="mt-3 flex flex-wrap items-center gap-2 text-xs text-neutral-500 dark:text-neutral-300">
-												<span>{formatDate(entry.created_at, data.businessTimeZone)}</span>
-												<span>·</span>
-												<span>{fmtTime(entry.created_at)}</span>
-												{#if entry.teeth}
-													<span class="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-600 dark:bg-white/10 dark:text-neutral-200">
-														Zona {entry.teeth}
-													</span>
-												{/if}
-											</div>
-											{#if hasDistinctNote(entry)}
-												<p class="mt-2 text-xs text-neutral-500 dark:text-neutral-300 line-clamp-1">
-													Nota: {entry.internal_note}
-												</p>
-											{/if}
-											{#if expandedId === (entry.id ?? entry.created_at)}
-												<div class="mt-3 space-y-2 text-sm text-neutral-800 dark:text-neutral-100">
-													{#if entry.amount}
-														<p><span class="font-semibold">Importe:</span> {formatCurrency(entry.amount)}</p>
-													{/if}
-													{#if entry.internal_note}
-														<p><span class="font-semibold">Nota completa:</span> {entry.internal_note}</p>
-													{/if}
-												</div>
-											{/if}
-										</div>
-									{/key}
-								{/if}
-							{/each}
-						</div>
-					</div>
-					{#if hasMoreEntries}
-						<div class="mt-4 flex justify-center">
-							<button
-								type="button"
-								class="rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:-translate-y-0.5 hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-200 dark:hover:bg-[#122641] disabled:cursor-not-allowed disabled:opacity-60"
-								onclick={loadMoreEntries}
-								disabled={loadingMoreEntries}
-							>
-								{loadingMoreEntries ? 'Cargando...' : 'Cargar más historial'}
-							</button>
-						</div>
-					{/if}
-				{/if}
-			</div>
-		</div>
-	{:else if tab === 'datos'}
+	<PatientHistoryPanel
+		active={tab === 'historial' && permissions.canReadClinicalHistory}
+		patientId={data.patient.id}
+		scope={`${data.currentUserId ?? 'session'}:${data.role ?? ''}:${permissions.canReadClinicalHistory}:${permissions.canEditClinicalEntry}:${permissions.canViewCosts}`}
+		historyRevision={data.entries}
+		bind:entries
+		bind:hasMoreEntries
+		businessTimeZone={data.businessTimeZone}
+		canEditClinicalEntry={permissions.canEditClinicalEntry}
+		currentUserId={data.currentUserId}
+		isProfessional={isProfessional}
+		onEdit={openEditEntry}
+	/>
+	{#if tab === 'datos'}
 		<div class="rounded-2xl border border-neutral-100 bg-white p-4 shadow-sm dark:border-[#1f3554] dark:bg-[#122641] sm:p-5">
 			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Datos del paciente</h2>

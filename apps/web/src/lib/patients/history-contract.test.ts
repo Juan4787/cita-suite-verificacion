@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { InvalidDataContractError } from '$lib/contracts/json';
 import {
 	readPatientHistoryPage,
+	comparePatientHistoryEntries,
 	readPatientChangeEvents,
 	readSavedPatientEntry
 } from './history-contract';
@@ -25,6 +26,17 @@ const page = () => ({
 });
 
 describe('patient history HTTP contract', () => {
+	it('preserves PostgreSQL microseconds and equivalent timezone representations during pagination and merging', () => {
+		const newest = row('a', '2026-01-02T12:00:00.000002Z');
+		const older = row('z', '2026-01-02T09:00:00.000001-03:00');
+		expect(readPatientHistoryPage({ items: [newest, older], has_more: false }).items).toHaveLength(
+			2
+		);
+		expect([older, newest].sort(comparePatientHistoryEntries)[0]).toBe(newest);
+		expect(() => readPatientHistoryPage({ items: [older, newest], has_more: false })).toThrow(
+			InvalidDataContractError
+		);
+	});
 	it('accepts an authoritative empty page and preserves historical decimal clinical costs', () => {
 		expect(readPatientHistoryPage({ items: [], has_more: false })).toEqual({
 			items: [],

@@ -25,9 +25,27 @@ function text(value: unknown, name: string) {
 }
 function timestamp(value: unknown, name: string) {
 	const valueText = text(value, name);
-	if (!/^\d{4}-\d{2}-\d{2}T/.test(valueText) || !Number.isFinite(Date.parse(valueText)))
-		throw new InvalidDataContractError(name);
+	patientHistoryInstant(valueText);
 	return valueText;
+}
+/** PostgreSQL timestamps retain microseconds; Date.parse alone loses their order. */
+function patientHistoryInstant(value: string): bigint {
+	const parts = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?(Z|[+-]\d{2}:\d{2})$/.exec(
+		value
+	);
+	if (!parts) throw new InvalidDataContractError('patientHistory.timestamp');
+	const wholeSecond = Date.parse(parts[1] + parts[3]);
+	if (!Number.isFinite(wholeSecond)) throw new InvalidDataContractError('patientHistory.timestamp');
+	return BigInt(wholeSecond) * 1000n + BigInt((parts[2] ?? '').padEnd(6, '0'));
+}
+export function comparePatientHistoryEntries(
+	left: { created_at: string; id: string },
+	right: { created_at: string; id: string }
+): number {
+	const a = patientHistoryInstant(left.created_at),
+		b = patientHistoryInstant(right.created_at);
+	if (a !== b) return a > b ? -1 : 1;
+	return left.id === right.id ? 0 : left.id > right.id ? -1 : 1;
 }
 export function readPatientHistoryEntry(value: unknown): PatientHistoryEntry {
 	const row = readRecord(value, 'patientHistory.entry');
@@ -74,13 +92,7 @@ export function readPatientHistoryPage(
 		throw new InvalidDataContractError('patientHistory.pageSize');
 	let previous = cursor;
 	for (const row of items) {
-		if (
-			previous &&
-			!(
-				Date.parse(row.created_at) < Date.parse(previous.created_at) ||
-				(Date.parse(row.created_at) === Date.parse(previous.created_at) && row.id < previous.id)
-			)
-		)
+		if (previous && comparePatientHistoryEntries(previous, row) >= 0)
 			throw new InvalidDataContractError('patientHistory.order');
 		previous = row;
 	}
