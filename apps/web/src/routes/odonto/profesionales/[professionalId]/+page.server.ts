@@ -1,5 +1,5 @@
 import { parsePriceAdjustments } from '$lib/scheduling/price-contracts';
-import {readBoundedBookingForm} from '$lib/server/scheduling/public/public-booking-page';
+import {readBoundedBookingForm} from '$lib/server/platform/form-data';
 import {previewMonthlyPrices,formatQuotedPrice,monthForTimezone} from '$lib/booking/pricing';
 import { env } from '$env/dynamic/private';
 import { demoBusinessContext } from '$lib/server/access/public/business';

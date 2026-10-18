@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { parseBookingSettings } from "$lib/server/sites/public/booking-settings";
 import { bookingProfileConfig } from "$lib/server/sites/public/booking-profile-config";
-import { readBoundedBookingForm } from "$lib/server/scheduling/public/public-booking-page";
+import { readBoundedBookingForm } from "$lib/server/platform/form-data";
 function settings(max = "60", notice = "120") {
   const form = new FormData();
   form.set("max_booking_days_ahead", max);

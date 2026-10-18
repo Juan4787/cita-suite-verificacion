@@ -3,7 +3,7 @@ import { env } from "$env/dynamic/private";
 import { getOdontoContext } from "$lib/server/access/public/odonto-context";
 import { createSupabaseAdminClient } from "$lib/server/platform/supabase";
 import { bookingInformationEnabled } from "$lib/server/patients/public/booking-information";
-import { readBoundedBookingForm } from "$lib/server/scheduling/public/public-booking-page";
+import { readBoundedBookingForm } from "$lib/server/platform/form-data";
 import { parseBookingSettings } from "$lib/server/sites/public/booking-settings";
 import type { PageServerLoad, Actions } from "./$types";
 export const load: PageServerLoad = async (event) => {

@@ -4,7 +4,7 @@ import { env } from "$env/dynamic/private";
 import { getOdontoContext } from "$lib/server/access/public/odonto-context";
 import { bookingInformationEnabled } from "$lib/server/patients/public/booking-information";
 import { bookingProfileConfig } from "$lib/server/sites/public/booking-profile-config";
-import { readBoundedBookingForm } from "$lib/server/scheduling/public/public-booking-page";
+import { readBoundedBookingForm } from "$lib/server/platform/form-data";
 import type { Actions, PageServerLoad } from "./$types";
 export const load: PageServerLoad = async (event) => {
   const context = await getOdontoContext(event);

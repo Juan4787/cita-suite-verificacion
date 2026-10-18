@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { fail, error, isHttpError } from '@sveltejs/kit';
 import { informationContext, informationErrorMessage, loadBookingInformation } from '$lib/server/patients/public/booking-information';
-import { readBoundedBookingForm } from '$lib/server/scheduling/public/public-booking-page';
+import { readBoundedBookingForm } from '$lib/server/platform/form-data';
 import { intakeAnswersFromForm } from '$lib/server/sites/public/booking-integrations';
 import type { Actions, PageServerLoad } from './$types';
 

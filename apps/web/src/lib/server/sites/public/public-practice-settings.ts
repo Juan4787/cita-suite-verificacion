@@ -2,7 +2,7 @@ import { InvalidDataContractError, readArray, readBoolean, readFiniteNumber, rea
 import { env } from "$env/dynamic/private";
 import { createSupabaseAdminClient } from "$lib/server/platform/supabase";
 import { getOdontoContext } from "$lib/server/access/public/odonto-context";
-import { readBoundedBookingForm } from "$lib/server/scheduling/public/public-booking-page";
+import { readBoundedBookingForm } from "$lib/server/platform/form-data";
 import { error, fail, type RequestEvent, type Actions } from "@sveltejs/kit";
 export const legacyPublicPracticeActions: Actions = {
   cleanup: async (event) => {

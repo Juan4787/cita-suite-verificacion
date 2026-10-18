@@ -2,7 +2,7 @@ import { parsePriceAdjustments } from '$lib/scheduling/price-contracts';
 import { env } from "$env/dynamic/private";
 import { getOdontoContext } from "$lib/server/access/public/odonto-context";
 import { bookingInformationEnabled } from "$lib/server/patients/public/booking-information";
-import { readBoundedBookingForm } from "$lib/server/scheduling/public/public-booking-page";
+import { readBoundedBookingForm } from "$lib/server/platform/form-data";
 import { monthForTimezone } from "$lib/booking/pricing";
 import { error, fail } from "@sveltejs/kit";
 import type { RequestEvent } from "@sveltejs/kit";

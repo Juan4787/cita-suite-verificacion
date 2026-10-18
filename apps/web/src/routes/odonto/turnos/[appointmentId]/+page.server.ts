@@ -1,4 +1,4 @@
-import {readBoundedBookingForm} from '$lib/server/scheduling/public/public-booking-page';
+import {readBoundedBookingForm} from '$lib/server/platform/form-data';
 import { env } from '$env/dynamic/private';
 import { bookingContextsAvailable } from '$lib/server/sites/public/booking-integration-flags';
 import { demoBusinessContext } from '$lib/server/access/public/business';

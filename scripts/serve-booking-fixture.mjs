@@ -447,7 +447,8 @@ try {
       ],
       env: {
         ...process.env,
-        NODE_OPTIONS: "--max-old-space-size=1024",
+        NODE_OPTIONS: "--max-old-space-size=1024" + (process.env.CITA_VERIFICATION_RUN_ID
+          ? " --import=" + new URL('./lib/ssr-fetch-diagnostics.mjs', import.meta.url).href : ""),
         ODONTO_SUPABASE_URL: apiOrigin,
         ODONTO_SUPABASE_ANON_KEY: anon,
         ODONTO_SUPABASE_SERVICE_ROLE_KEY: service,
