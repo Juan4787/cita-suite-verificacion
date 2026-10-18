@@ -99,9 +99,7 @@ describe('professional service task state', () => {
 		expect(document.body).not.toHaveTextContent('PRIVATE_SENTINEL');
 		await fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
 		await fireEvent.click(screen.getByRole('button', { name: 'Crear servicio nuevo' }));
-		expect(
-			document.querySelector('form[action="?/create_service"] button[type="submit"]')
-		).toBeDisabled();
+		expect(screen.getByRole('button', { name: 'Crear y asignar' })).toBeDisabled();
 	});
 	it('ignores a creation result after the professional or actor scope changes', async () => {
 		const view = render(ProfessionalServicesPanel, props());

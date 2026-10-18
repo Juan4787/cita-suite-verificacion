@@ -68,7 +68,8 @@ describe('professional editor cross-task coordination', () => {
 			'input[name="service_id"][value="service-one"]'
 		);
 		if (!checkbox) throw new Error('Missing assigned service');
-		await fireEvent.click(checkbox);
+		await fireEvent.change(checkbox, { target: { checked: false } });
+		expect(checkbox).not.toBeChecked();
 		const payload = document.querySelector<HTMLInputElement>(
 			'form[action="?/save_all"] input[name="schedule_blocks"]'
 		);
