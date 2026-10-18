@@ -65,5 +65,19 @@ test('public source snapshots exclude tracked environment variants while preserv
 		for (const path of [...required, ...examples]) assert.equal(manifest.some(file => file.path === path), true, path);
 		assert.equal(git(['rev-parse', 'HEAD']), before);
 		assert.equal(git(['diff', '--cached', '--name-only']), '');
+		// Reproduce a newly referenced root script silently omitted by the narrow
+		// new-source scope. Failure must happen before changing the snapshot ref.
+		const previousSnapshot = git(['rev-parse', 'refs/verification/maintainability-20261015']);
+		create('scripts/verify-campaign.mjs', "const step = ['performance', 'node', ['scripts/new-runtime-check.mjs']];\n");
+		create('scripts/new-runtime-check.mjs', '// Synthetic new entry point\n');
+		const missing = spawnSync(process.execPath, ['scripts/prepare-ci-snapshot.mjs'], { cwd: root, encoding: 'utf8', timeout: 15000 });
+		assert.equal(missing.status, 1);
+		assert.match(missing.stderr, /entry point missing from CI source snapshot/);
+		assert.equal(git(['rev-parse', 'refs/verification/maintainability-20261015']), previousSnapshot);
+		git(['add', '--', 'scripts/new-runtime-check.mjs']);
+		const staged = git(['diff', '--cached', '--name-only']);
+		const complete = spawnSync(process.execPath, ['scripts/prepare-ci-snapshot.mjs'], { cwd: root, encoding: 'utf8', timeout: 15000 });
+		assert.equal(complete.status, 0, complete.stderr);
+		assert.equal(git(['diff', '--cached', '--name-only']), staged);
 	} finally { rmSync(root, { recursive: true, force: true }); }
 });

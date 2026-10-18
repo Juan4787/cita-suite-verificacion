@@ -49,6 +49,7 @@ const extras = [
 	'scripts/catalog-disposable-database.mjs', 'scripts/check-refactoring-plan.mjs',
 	'scripts/inventory-campaign.mjs', 'scripts/run-campaign-integration.mjs',
 	'scripts/run-campaign-demo.mjs', 'scripts/verify-campaign.mjs',
+	'scripts/measure-natalia-baseline.mjs',
 	'scripts/verify-campaign-staging.mjs', 'scripts/prepare-ci-snapshot.mjs',
 	'scripts/prepare-ci-services.mjs',
 	'scripts/run-campaign-unit-tests.mjs', 'scripts/run-campaign-node-tests.mjs', 'apps/web/vitest.office.config.ts',
@@ -79,6 +80,15 @@ try {
 	for (const required of ['apps/web/src/hooks.server.ts', 'apps/web/src/lib/server/platform/supabase.ts',
 		'apps/natalia/src/pages/index.astro', 'packages/shared/src/database.types.ts', 'supabase/config.toml'])
 		if (!selected.includes(required)) throw new Error('Incomplete CI source snapshot: ' + required);
+	// Reject a verifier that invokes a new untracked entry point outside the
+	// explicit source scope. Do not discover arbitrary unrelated local scripts.
+	for (const entry of ['scripts/verify-campaign.mjs', 'scripts/run-campaign-integration.mjs', 'scripts/run-campaign-demo.mjs']) {
+		if (!existsSync(join(root, entry))) continue;
+		const source = readFileSync(join(root, entry), 'utf8');
+		for (const match of source.matchAll(/['"](scripts\/[\w./-]+\.(?:mjs|py))['"]/g)) {
+			if (!selected.includes(match[1])) throw new Error('Verification entry point missing from CI source snapshot: ' + match[1]);
+		}
+	}
 	const records = [];
 	const manifest = [];
 	let bytes = 0;
