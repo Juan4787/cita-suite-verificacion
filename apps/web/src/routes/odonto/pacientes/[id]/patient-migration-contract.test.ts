@@ -23,11 +23,15 @@ describe('patient migration contracts', () => {
 
 	it('does not create or update clinical entries through direct route table writes', () => {
 		const detailSource = readPeer('./+page.server.ts');
+		const operationSource = readPeer('../../../../lib/server/patients/public/clinical-entries.ts');
 
 		expect(detailSource).not.toMatch(/from\('clinical_entries'\)[\s\S]{0,120}\.insert\(/);
 		expect(detailSource).not.toMatch(/from\('clinical_entries'\)[\s\S]{0,120}\.update\(/);
-		expect(detailSource).toContain("'create_clinical_entry_with_result_safely'");
-		expect(detailSource).toContain("rpc('update_clinical_entry_safely'");
+		expect(detailSource).toContain('await createClinicalEntry(');
+		expect(detailSource).toContain('await updateClinicalEntry(');
+		expect(operationSource).not.toMatch(/from\('clinical_entries'\)/);
+		expect(operationSource).toContain("rpc('create_clinical_entry_with_result_safely'");
+		expect(operationSource).toContain("rpc('update_clinical_entry_safely'");
 	});
 
 	it('persists a clinical entry with one patient metadata update and returns the saved row', () => {

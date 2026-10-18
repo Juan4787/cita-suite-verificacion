@@ -38,7 +38,9 @@ export interface ClinicalEntry {
 	id: string;
 	patient_id: string;
 	created_at: string;
-	entry_type: ClinicalEntryType;
+	// PostgreSQL stores text and existing/custom labels remain valid. The
+	// ClinicalEntryType union describes the suggested options, not stored rows.
+	entry_type: string;
 	description: string;
 	teeth?: string | null;
 	amount?: number | null;

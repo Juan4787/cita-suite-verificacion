@@ -33,7 +33,9 @@ describe('authorized patient detail projection with typed SDK and simulated HTTP
     global: { fetch: async input => {
      const url = new URL(input instanceof Request ? input.url : String(input));
      const table = url.pathname.split('/').at(-1);
-     if (table === tableWithError) return Response.json({ code: 'SYNTHETIC_UNAVAILABLE', message: 'Synthetic outage' }, { status: 503 });
+     // A non-retryable technical failure isolates the application projection;
+     // the SDK's automatic retry of 503 must not turn this into a timer test.
+     if (table === tableWithError) return Response.json({ code: 'XX000', message: 'Synthetic read failure' }, { status: 400 });
      if (table === 'patients') return Response.json({ id: patientId, full_name: 'Synthetic patient' });
      if (table === 'professional_users') return Response.json({ professional_id: userId, professionals: { name: 'Synthetic professional' } });
      if (table === 'patient_clinical_profiles' || table === 'professional_patient_links') return Response.json(null);

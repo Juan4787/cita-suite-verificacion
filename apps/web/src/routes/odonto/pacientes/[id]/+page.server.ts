@@ -1,3 +1,5 @@
+import { createClinicalEntry, updateClinicalEntry, parseClinicalEntryInput, type SavedClinicalEntry } from '$lib/server/patients/public/clinical-entries';
+import { PatientOperationError, type PatientFailureKind } from '$lib/server/patients/public/patient-operation-error';
 import { getProfessionalForUser as getCurrentProfessional } from '$lib/server/team/public/professionals';
 import { readPatientDetail, PatientDetailReadError } from '$lib/server/patients/public/patient-detail';
 import { isRecord } from '$lib/contracts/json';
@@ -18,10 +20,8 @@ import {
 	PATIENT_UNIQUE_CONFLICT_MESSAGES,
 	type PatientUniqueField
 } from '$lib/server/patients/public/patient-identity';
-import { parseMoneyInteger } from '$lib/utils/money-input';
 import { fail, redirect, error as kitError } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import type { ClinicalEntry } from '$lib/types';
 import { businessTodayISO } from '$lib/server/patients/public/follow-ups';
 import { resolvePatientPermissions } from '$lib/server/patients/public/patient-permissions';
 
@@ -268,42 +268,6 @@ const changedFieldsForPatientUpdate = ({
 	return changed;
 };
 
-const clinicalEntryRpcError = (error: { message?: string; code?: string } | null | undefined) => {
-	const message = `${error?.message ?? ''} ${error?.code ?? ''}`;
-
-	if (message.includes('BUSINESS_ACCESS_RESTRICTED')) {
-		return { status: 403, message: COMMERCIAL_RESTRICTED_MESSAGE };
-	}
-	if (message.includes('PATIENT_NOT_FOUND')) {
-		return { status: 404, message: 'Paciente no encontrado en este consultorio.' };
-	}
-	if (message.includes('ENTRY_TYPE_REQUIRED') || message.includes('DESCRIPTION_REQUIRED')) {
-		return { status: 400, message: 'Tipo y descripcion son obligatorios.' };
-	}
-	if (message.includes('INVALID_CLINICAL_ENTRY_DATE')) {
-		return { status: 400, message: 'La fecha de la consulta no puede estar en el futuro.' };
-	}
-	if (message.includes('CLINICAL_COST_DENIED')) {
-		return { status: 403, message: 'Tu rol no permite registrar importes.' };
-	}
-	if (
-		message.includes('CLINICAL_ENTRY_DENIED') ||
-		message.includes('CLINICAL_ENTRY_EDIT_DENIED') ||
-		message.includes('PATIENT_ACCESS_DENIED') ||
-		message.includes('PROFESSIONAL_LINK_REQUIRED')
-	) {
-		return { status: 403, message: 'Tu rol no permite modificar la historia clinica de este paciente.' };
-	}
-	if (message.includes('CLINICAL_ENTRY_LOCKED')) {
-		return { status: 403, message: 'Esta entrada ya no se puede editar.' };
-	}
-	if (message.includes('CLINICAL_ENTRY_NOT_FOUND')) {
-		return { status: 404, message: 'Entrada no encontrada o sin permiso de edicion.' };
-	}
-
-	return { status: 500, message: 'No pudimos guardar la entrada clínica. Revisá los datos y volvé a intentar.' };
-};
-
 const patientArchiveRpcError = (error: { message?: string; code?: string } | null | undefined) => {
 	const message = `${error?.message ?? ''} ${error?.code ?? ''}`;
 
@@ -319,50 +283,21 @@ const patientArchiveRpcError = (error: { message?: string; code?: string } | nul
 	return { status: 500, message: 'No se pudo actualizar el estado de la ficha. Intentá de nuevo.' };
 };
 
-type SavedClinicalEntry = {
-	id: string;
-	patient_id: string;
-	created_at: string;
-	entry_type: string;
-	description: string;
-	teeth: string | null;
-	internal_note: string | null;
-	created_by_user_id: string | null;
-	locked_after: string | null;
-	amount: number | null;
-};
-
-const normalizeSavedClinicalEntry = (value: unknown): SavedClinicalEntry | null => {
-	if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-	const row = value as Record<string, unknown>;
-	if (
-		typeof row.id !== 'string' ||
-		typeof row.patient_id !== 'string' ||
-		typeof row.created_at !== 'string' ||
-		typeof row.entry_type !== 'string' ||
-		typeof row.description !== 'string'
-	) {
-		return null;
-	}
-
-	const parsedAmount = row.amount == null ? null : Number(row.amount);
-	return {
-		id: row.id,
-		patient_id: row.patient_id,
-		created_at: row.created_at,
-		entry_type: row.entry_type,
-		description: row.description,
-		teeth: typeof row.teeth === 'string' ? row.teeth : null,
-		internal_note: typeof row.internal_note === 'string' ? row.internal_note : null,
-		created_by_user_id:
-			typeof row.created_by_user_id === 'string' ? row.created_by_user_id : null,
-		locked_after: typeof row.locked_after === 'string' ? row.locked_after : null,
-		amount: parsedAmount != null && Number.isFinite(parsedAmount) ? parsedAmount : null
-	};
-};
-
 const isEnhancedActionRequest = (request: Request) =>
 	request.headers.get('x-sveltekit-action') === 'true';
+
+const patientFailureStatus: Record<PatientFailureKind, 400 | 403 | 404 | 409 | 500> = {
+ invalid: 400, forbidden: 403, missing: 404, conflict: 409, unavailable: 500
+};
+function patientActionFailure(cause: unknown) {
+ if (cause instanceof PatientOperationError) return fail(patientFailureStatus[cause.kind], { message: cause.message });
+ throw cause;
+}
+const clinicalInputFromForm = (form: FormData) => parseClinicalEntryInput({
+ entryType: String(form.get('entry_type') ?? ''), description: String(form.get('description') ?? ''),
+ createdAt: String(form.get('created_at') ?? ''), teeth: String(form.get('teeth') ?? ''),
+ amount: String(form.get('amount') ?? ''), internalNote: String(form.get('internal_note') ?? '')
+});
 
 export const load: PageServerLoad = async ({ params, locals, fetch, cookies, depends }) => {
 	depends(`app:patient:${params.id}`);
@@ -435,250 +370,59 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, dep
 };
 
 export const actions: Actions = {
-	add_entry: async ({ request, params, locals, fetch, cookies }) => {
-		if (!locals.auth) throw redirect(303, '/login');
-		const enhancedRequest = isEnhancedActionRequest(request);
-		const form = await request.formData();
-		const entry_type = String(form.get('entry_type') ?? '').trim() as ClinicalEntry['entry_type'];
-		const description = String(form.get('description') ?? '').trim();
-		const createdAtRaw = String(form.get('created_at') ?? '').trim();
-		if (!createdAtRaw) {
-			return fail(400, { message: 'Completá la fecha y hora.' });
-		}
-
-		const createdAtMatch = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(createdAtRaw);
-		if (!createdAtMatch) {
-			return fail(400, { message: 'Revisá la fecha y hora. Formato esperado: Año/Mes/Día y Hora.' });
-		}
-
-		const y = Number(createdAtMatch[1]);
-		const m = Number(createdAtMatch[2]);
-		const d = Number(createdAtMatch[3]);
-		const hh = Number(createdAtMatch[4]);
-		const mm = Number(createdAtMatch[5]);
-
-		if (!Number.isInteger(y) || y < 2000 || y > 2045) {
-			return fail(400, { message: 'Revisá el año: debe estar entre 2000 y 2045.' });
-		}
-		if (!Number.isInteger(m) || m < 1 || m > 12) {
-			return fail(400, { message: 'Revisá el mes: debe ir del 1 al 12.' });
-		}
-		const maxDay = new Date(y, m, 0).getDate();
-		if (!Number.isInteger(d) || d < 1 || d > maxDay) {
-			return fail(400, { message: `Revisá el día: para ese mes debe ir del 1 al ${maxDay}.` });
-		}
-		if (!Number.isInteger(hh) || hh < 0 || hh > 23 || !Number.isInteger(mm) || mm < 0 || mm > 59) {
-			return fail(400, { message: 'Revisá la hora: debe estar entre 00:00 y 23:59.' });
-		}
-
-		const created_at = new Date(y, m - 1, d, hh, mm, 0, 0).toISOString();
-		const teeth = String(form.get('teeth') ?? '').trim();
-		const amountRaw = String(form.get('amount') ?? '').trim();
-		const internal_note = String(form.get('internal_note') ?? '').trim();
-
-		if (!entry_type || !description) {
-			return fail(400, { message: 'Tipo y descripción son obligatorios' });
-		}
-
-		const amount = parseMoneyInteger(amountRaw);
-
-		if (env.DEMO_MODE === 'true') {
-			let savedEntry: SavedClinicalEntry | null = null;
-			updateDemoDb((db) => {
-				const patient = db.patients.find((p) => p.id === params.id);
-				if (!patient) return;
-
-				const entry = {
-					id: newId('e'),
-					patient_id: params.id,
-					entry_type,
-					description,
-					created_at,
-					teeth: teeth || null,
-					amount,
-					internal_note: internal_note || null
-				};
-				db.clinicalEntries.unshift(entry);
-				patient.last_entry_at = getLatestEntryDate(params.id, db.clinicalEntries);
-				patient.updated_at = new Date().toISOString();
-				savedEntry = {
-					...entry,
-					created_by_user_id: null,
-					locked_after: null
-				};
-			});
-
-			if (!savedEntry) {
-				return fail(404, { message: 'Paciente no encontrado' });
-			}
-
-			if (!enhancedRequest) throw redirect(303, patientDetailUrl(params.id, 'historial'));
-			return { savedEntry };
-		}
-
-		// La RPC vuelve a validar rol, acceso comercial y vínculo con el paciente en
-		// PostgreSQL. La sesión también resuelve el estado comercial fresco para que
-		// una revocación no quede oculta por una lectura compartida anterior.
-		const session = await resolveBusinessActionContext({
-			locals,
-			fetch,
-			cookies,
-			membershipCache: 'fresh'
-		});
-		if (!session) {
-			return fail(401, { message: 'Sesión inválida. Volvé a iniciar sesión.' });
-		}
-		const permissions = resolvePatientPermissions(session.context);
-		if (!permissions.canCreateClinicalEntry) {
-			return fail(403, {
-				message: session.context.access.allowedCapabilities.canCreateClinicalEntry
-					? 'Tu rol no permite registrar consultas clínicas.'
-					: COMMERCIAL_RESTRICTED_MESSAGE
-			});
-		}
-		if (amount != null && !permissions.canViewCosts) {
-			return fail(403, { message: 'Tu rol no permite registrar importes.' });
-		}
-		const { supabase, context } = session;
-
-		const { data: savedEntryRaw, error } = await supabase.rpc(
-			'create_clinical_entry_with_result_safely',
-			{
-				p_business_id: context.business.id,
-				p_patient_id: params.id,
-				p_entry_type: entry_type,
-				p_description: description,
-				p_created_at: created_at,
-				p_teeth: teeth || null,
-				p_internal_note: internal_note || null,
-				p_amount: amount
-			}
-		);
-
-		if (error) {
-			console.error('Error guardando entrada', error);
-			const mapped = clinicalEntryRpcError(error);
-			return fail(mapped.status, { message: mapped.message });
-		}
-
-		const savedEntry = normalizeSavedClinicalEntry(savedEntryRaw);
-		if (!savedEntry) {
-			console.error('La entrada se guardó sin una respuesta clínica utilizable');
-			throw redirect(303, patientDetailUrl(params.id, 'historial'));
-		}
-
-		if (!enhancedRequest) throw redirect(303, patientDetailUrl(params.id, 'historial'));
-		return { savedEntry };
-	},
-	update_entry: async ({ request, params, locals, fetch, cookies }) => {
-		if (!locals.auth) throw redirect(303, '/login');
-
-		const form = await request.formData();
-		const entry_id = String(form.get('entry_id') ?? '').trim();
-		const entry_type = String(form.get('entry_type') ?? '').trim() as ClinicalEntry['entry_type'];
-		const description = String(form.get('description') ?? '').trim();
-		const createdAtRaw = String(form.get('created_at') ?? '').trim();
-		const teeth = String(form.get('teeth') ?? '').trim();
-		const amountRaw = String(form.get('amount') ?? '').trim();
-		const internal_note = String(form.get('internal_note') ?? '').trim();
-
-		if (!entry_id) return fail(400, { message: 'Entrada inválida.' });
-		if (!entry_type || !description) {
-			return fail(400, { message: 'Tipo y descripción son obligatorios' });
-		}
-		if (!createdAtRaw) {
-			return fail(400, { message: 'Completá la fecha y hora.' });
-		}
-
-		const createdAtMatch = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(createdAtRaw);
-		if (!createdAtMatch) {
-			return fail(400, { message: 'Revisá la fecha y hora. Formato esperado: Año/Mes/Día y Hora.' });
-		}
-
-		const y = Number(createdAtMatch[1]);
-		const m = Number(createdAtMatch[2]);
-		const d = Number(createdAtMatch[3]);
-		const hh = Number(createdAtMatch[4]);
-		const mm = Number(createdAtMatch[5]);
-
-		if (!Number.isInteger(y) || y < 2000 || y > 2045) {
-			return fail(400, { message: 'Revisá el año: debe estar entre 2000 y 2045.' });
-		}
-		if (!Number.isInteger(m) || m < 1 || m > 12) {
-			return fail(400, { message: 'Revisá el mes: debe ir del 1 al 12.' });
-		}
-		const maxDay = new Date(y, m, 0).getDate();
-		if (!Number.isInteger(d) || d < 1 || d > maxDay) {
-			return fail(400, { message: `Revisá el día: para ese mes debe ir del 1 al ${maxDay}.` });
-		}
-		if (!Number.isInteger(hh) || hh < 0 || hh > 23 || !Number.isInteger(mm) || mm < 0 || mm > 59) {
-			return fail(400, { message: 'Revisá la hora: debe estar entre 00:00 y 23:59.' });
-		}
-
-		const created_at = new Date(y, m - 1, d, hh, mm, 0, 0).toISOString();
-		const amount = parseMoneyInteger(amountRaw);
-
-		if (env.DEMO_MODE === 'true') {
-			let updated = false;
-			updateDemoDb((db) => {
-				const entry = db.clinicalEntries.find((e) => e.id === entry_id && e.patient_id === params.id);
-				const patient = db.patients.find((p) => p.id === params.id);
-				if (!entry || !patient) return;
-
-				entry.entry_type = entry_type;
-				entry.description = description;
-				entry.created_at = created_at;
-				entry.teeth = teeth || null;
-				entry.amount = amount;
-				entry.internal_note = internal_note || null;
-				patient.last_entry_at = getLatestEntryDate(params.id, db.clinicalEntries);
-				patient.updated_at = new Date().toISOString();
-				updated = true;
-			});
-
-			if (!updated) {
-				return fail(404, { message: 'Entrada no encontrada' });
-			}
-
-			throw redirect(303, patientDetailUrl(params.id, 'historial'));
-		}
-
-		const session = await resolveBusinessActionContext({ locals, fetch, cookies });
-		if (!session) {
-			return fail(401, { message: 'Sesión inválida. Volvé a iniciar sesión.' });
-		}
-		const permissions = resolvePatientPermissions(session.context);
-		if (!permissions.canEditClinicalEntry) {
-			return fail(403, {
-				message: session.context.access.allowedCapabilities.canEditClinicalEntry
-					? 'Tu rol no permite editar consultas clínicas.'
-					: COMMERCIAL_RESTRICTED_MESSAGE
-			});
-		}
-		if (amount != null && !permissions.canViewCosts) {
-			return fail(403, { message: 'Tu rol no permite registrar importes.' });
-		}
-		const { supabase, context } = session;
-
-		const { error } = await supabase.rpc('update_clinical_entry_safely', {
-			p_business_id: context.business.id,
-			p_patient_id: params.id,
-			p_entry_id: entry_id,
-			p_entry_type: entry_type,
-			p_description: description,
-			p_teeth: teeth || null,
-			p_internal_note: internal_note || null,
-			p_amount: amount
-		});
-
-		if (error) {
-			console.error('Error actualizando entrada', error);
-			const mapped = clinicalEntryRpcError(error);
-			return fail(mapped.status, { message: mapped.message });
-		}
-
-		throw redirect(303, patientDetailUrl(params.id, 'historial'));
-	},
+ add_entry: async ({ request, params, locals, fetch, cookies }) => {
+  if (!locals.auth) throw redirect(303, '/login');
+  try {
+   const input = clinicalInputFromForm(await request.formData());
+   const enhancedRequest = isEnhancedActionRequest(request);
+   let savedEntry: SavedClinicalEntry | null = null;
+   if (env.DEMO_MODE === 'true') {
+    updateDemoDb(db => {
+     const patient = db.patients.find(p => p.id === params.id);
+     if (!patient) return;
+     const entry = { id: newId('e'), patient_id: params.id, ...input };
+     db.clinicalEntries.unshift(entry);
+     patient.last_entry_at = getLatestEntryDate(params.id, db.clinicalEntries);
+     patient.updated_at = new Date().toISOString();
+     savedEntry = { ...entry, created_by_user_id: null, locked_after: null };
+    });
+    if (!savedEntry) return fail(404, { message: 'Paciente no encontrado' });
+   } else {
+    const session = await resolveBusinessActionContext({ locals, fetch, cookies, membershipCache: 'fresh' });
+    if (!session) return fail(401, { message: 'Sesión inválida. Volvé a iniciar sesión.' });
+    savedEntry = await createClinicalEntry({ supabase: session.supabase, context: session.context, patientId: params.id, input });
+   }
+   if (!savedEntry || !enhancedRequest) throw redirect(303, patientDetailUrl(params.id, 'historial'));
+   return { savedEntry };
+  } catch (cause) { return patientActionFailure(cause); }
+ },
+ update_entry: async ({ request, params, locals, fetch, cookies }) => {
+  if (!locals.auth) throw redirect(303, '/login');
+  try {
+   const form = await request.formData();
+   const entryId = String(form.get('entry_id') ?? '').trim();
+   if (!entryId) return fail(400, { message: 'Entrada inválida.' });
+   const input = clinicalInputFromForm(form);
+   if (env.DEMO_MODE === 'true') {
+    let updated = false;
+    updateDemoDb(db => {
+     const entry = db.clinicalEntries.find(e => e.id === entryId && e.patient_id === params.id);
+     const patient = db.patients.find(p => p.id === params.id);
+     if (!entry || !patient) return;
+     Object.assign(entry, input);
+     patient.last_entry_at = getLatestEntryDate(params.id, db.clinicalEntries);
+     patient.updated_at = new Date().toISOString();
+     updated = true;
+    });
+    if (!updated) return fail(404, { message: 'Entrada no encontrada' });
+   } else {
+    const session = await resolveBusinessActionContext({ locals, fetch, cookies });
+    if (!session) return fail(401, { message: 'Sesión inválida. Volvé a iniciar sesión.' });
+    await updateClinicalEntry({ supabase: session.supabase, context: session.context, patientId: params.id, entryId, input });
+   }
+   throw redirect(303, patientDetailUrl(params.id, 'historial'));
+  } catch (cause) { return patientActionFailure(cause); }
+ },
 	update_patient: async ({ request, params, locals, fetch, cookies }) => {
 		if (!locals.auth) throw redirect(303, '/login');
 
