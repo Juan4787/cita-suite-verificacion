@@ -43,3 +43,14 @@ export const scheduleBlocksFromForm = (
 	if (!result.ok) return { ok: false, status: 400, message: result.message };
 	return { ok: true, blocks: result.blocks };
 };
+
+/** Single mapping from normalized schedule blocks to the existing SQL contract. */
+export const professionalSchedulePayload = (blocks: NormalizedScheduleBlock[]) =>
+	blocks.map((block) => ({
+		weekdays: block.weekdays,
+		ranges: block.ranges,
+		slot_interval_minutes: block.slotIntervalMinutes,
+		break_minutes: block.breakMinutes,
+		service_scope: block.serviceScope ?? 'all',
+		service_ids: block.allowedServiceIds ?? []
+	}));

@@ -1,59 +1,34 @@
-import type { BusinessRoleAccess } from '$lib/access/team-contracts';
-import { listBusinessRoleAccess as listRoleAccess } from '$lib/server/access/public/team-access';
-import { getOdontoContext } from '$lib/server/access/public/odonto-context';
+import { readBoundedBookingForm } from '$lib/server/platform/form-data';
 import {
-	scheduleBlocksFromForm,
-	MIN_SERVICE_DURATION_MINUTES,
-	MAX_SERVICE_DURATION_MINUTES
-} from '$lib/team/professional-form';
+	prepareTeamMemberProfile,
+	createTeamMemberProfile,
+	makeTeamMemberAttending,
+	teamMemberFailure
+} from '$lib/server/team/public/member-profile';
+import type { BusinessRoleAccess } from '$lib/access/team-contracts';
+import {
+	grantBusinessRoleAccess,
+	listBusinessRoleAccess as listRoleAccess
+} from '$lib/server/access/public/team-access';
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import { logServerFailure } from '$lib/server/platform/logging';
-import { readArray, readRecord } from '$lib/contracts/json';
 import {
 	BUSINESS_ROLES,
 	demoBusinessContext,
 	isBusinessRole,
-	resolveActiveBusiness,
 	type BusinessRole
 } from '$lib/server/access/public/business';
 import {
-	findProfessionalByEmail,
-	humanProfessionalEmailConflict,
-	normalizeProfessionalEmail
-} from '$lib/server/team/public/professionals';
-import {
 	DEFAULT_SERVICE_NAMES,
-	ensureDefaultServicesAssigned,
 	isDefaultServiceName
 } from '$lib/server/team/public/default-services';
-import { replaceProfessionalScheduleBlocks } from '$lib/server/team/public/availability-rules';
-import { parseAvailabilityExceptionInterval } from '$lib/server/team/public/availability-exceptions';
-import { setProfessionalServices } from '$lib/server/team/public/professional-services';
-import { writeAuditLog } from '$lib/server/platform/audit';
-import {
-	createSupabaseAdminClient,
-	createSupabaseServerClient,
-	getAuthUserId
-} from '$lib/server/platform/supabase';
 import {
 	businessEmailAssociationErrorStatus,
 	EMAIL_ALREADY_ASSOCIATED_WITH_OTHER_BUSINESS_MESSAGE,
 	isEmailAlreadyAssociatedWithOtherBusinessError
 } from '$lib/server/access/public/business-email-association';
-import { formatPriceLabel } from '$lib/utils/money-input';
-import {
-	canAssignTeamRole,
-	canConfigureAttendingProfile,
-	roleSupportsProfessionalProfile,
-	shouldConfigureProfessionalProfile
-} from '$lib/utils/team-permissions';
-import {
-	parseScheduleBlocksJson,
-	validateScheduleBlocks,
-	type NormalizedScheduleBlock,
-	type ScheduleBlockDraft
-} from '$lib/utils/schedule-blocks';
 import { env } from '$env/dynamic/private';
-import { error as kitError, fail, redirect } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import type { CitaSupabaseClient } from '$lib/types/database';
 
@@ -149,7 +124,7 @@ const roleAccessErrorMessage = (error: { code?: string; message?: string } | nul
 		error?.code === '42P10' ||
 		raw.includes('no unique or exclusion constraint matching the on conflict')
 	) {
-		return 'Falta aplicar la migración de roles en la base de datos.';
+		return 'No pudimos guardar el acceso. Volvé a intentar en unos minutos.';
 	}
 	if (raw.includes('ADMIN_OWNER_ACTION_DENIED'))
 		return 'Un administrador no puede modificar dueños ni otros administradores.';
@@ -175,235 +150,6 @@ const roleLabel = (role: BusinessRole) => {
 		readonly: 'Solo lectura'
 	};
 	return labels[role];
-};
-
-const findAuthUserIdByEmail = async (admin: CitaSupabaseClient, email: string) => {
-	for (let page = 1; page <= 20; page += 1) {
-		const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
-		if (error) throw error;
-		const user = data.users.find((item) => item.email?.trim().toLowerCase() === email);
-		if (user?.id) return user.id;
-		if (data.users.length < 1000) return null;
-	}
-	return null;
-};
-
-const saveRoleAccessDirect = async ({
-	admin,
-	businessId,
-	email,
-	role,
-	professionalId,
-	actorId,
-	actorRole,
-	isAssisting,
-	currentAccess
-}: {
-	admin: CitaSupabaseClient;
-	businessId: string;
-	email: string;
-	role: BusinessRole;
-	professionalId: string | null;
-	actorId: string | null;
-	actorRole: BusinessRole;
-	isAssisting: boolean;
-	currentAccess: BusinessRoleAccess[];
-}) => {
-	if (!actorId) throw new Error('AUTH_REQUIRED');
-	if (!canAssignTeamRole({ actorRole, targetRole: role, isAssisting })) {
-		throw new Error('ADMIN_OWNER_ACTION_DENIED');
-	}
-	const currentEmailAccess = currentAccess.find(
-		(item) => item.email.toLowerCase() === email.toLowerCase()
-	);
-	const effectiveProfessionalId =
-		professionalId ??
-		(roleSupportsProfessionalProfile(role) ? (currentEmailAccess?.professional_id ?? null) : null);
-	if (role === 'professional' && !effectiveProfessionalId) {
-		throw new Error('PROFESSIONAL_REQUIRED');
-	}
-	if (effectiveProfessionalId && !roleSupportsProfessionalProfile(role)) {
-		throw new Error('PROFESSIONAL_ROLE_NOT_SUPPORTED');
-	}
-
-	const targetUserId = await findAuthUserIdByEmail(admin, email);
-
-	if (effectiveProfessionalId) {
-		const { data: linkedRows, error: linkedError } = await admin
-			.from('professional_users')
-			.select('id, user_id')
-			.eq('business_id', businessId)
-			.eq('professional_id', effectiveProfessionalId)
-			.limit(10);
-		if (linkedError) throw linkedError;
-		if ((linkedRows ?? []).some((row) => !targetUserId || String(row.user_id) !== targetUserId)) {
-			throw new Error('PROFESSIONAL_ALREADY_LINKED_TO_USER');
-		}
-	}
-
-	if (targetUserId) {
-		const existing = currentAccess.find(
-			(item) => item.status === 'active' && item.user_id === targetUserId
-		);
-		if (
-			actorRole === 'admin' &&
-			existing?.role &&
-			(existing.role === 'owner' || existing.role === 'admin')
-		) {
-			throw new Error('ADMIN_OWNER_ACTION_DENIED');
-		}
-		if (existing?.role === 'owner' && role !== 'owner' && countOwners(currentAccess) <= 1) {
-			throw new Error('LAST_OWNER_BLOCKED');
-		}
-
-		if (existing) {
-			const { data: updatedMembership, error } = await admin
-				.from('business_users')
-				.update({
-					role,
-					status: 'active',
-					disabled_at: null,
-					disabled_reason: null,
-					updated_by: actorId,
-					updated_at: new Date().toISOString()
-				})
-				.eq('id', existing.id)
-				.eq('business_id', businessId)
-				.select('id')
-				.maybeSingle();
-			if (error) throw error;
-			if (!updatedMembership) throw new Error('BUSINESS_USER_NOT_FOUND');
-		} else {
-			const { error } = await admin.from('business_users').insert({
-				business_id: businessId,
-				user_id: targetUserId,
-				role,
-				status: 'active',
-				accepted_at: new Date().toISOString(),
-				created_by: actorId,
-				updated_by: actorId
-			});
-			if (error) throw error;
-		}
-
-		if (effectiveProfessionalId) {
-			const deleteByUser = await admin
-				.from('professional_users')
-				.delete()
-				.eq('business_id', businessId)
-				.eq('user_id', targetUserId);
-			if (deleteByUser.error) throw deleteByUser.error;
-			const deleteByProfessional = await admin
-				.from('professional_users')
-				.delete()
-				.eq('business_id', businessId)
-				.eq('professional_id', effectiveProfessionalId);
-			if (deleteByProfessional.error) throw deleteByProfessional.error;
-			const { error } = await admin.from('professional_users').insert({
-				business_id: businessId,
-				professional_id: effectiveProfessionalId,
-				user_id: targetUserId
-			});
-			if (error) throw error;
-		} else {
-			const { error } = await admin
-				.from('professional_users')
-				.delete()
-				.eq('business_id', businessId)
-				.eq('user_id', targetUserId);
-			if (error) throw error;
-		}
-
-		const { error: inviteError } = await admin
-			.from('business_user_invites')
-			.update({
-				status: 'accepted',
-				accepted_user_id: targetUserId,
-				accepted_at: new Date().toISOString(),
-				updated_at: new Date().toISOString()
-			})
-			.eq('business_id', businessId)
-			.ilike('email', email)
-			.eq('status', 'pending');
-		if (inviteError) throw inviteError;
-
-		return {
-			status:
-				existing?.role === role && existing.professional_id === effectiveProfessionalId
-					? 'already_active'
-					: 'active'
-		};
-	}
-
-	const existingPending = currentAccess.find(
-		(item) => item.status === 'pending' && item.email.toLowerCase() === email
-	);
-	if (existingPending) {
-		const { data: updatedInvite, error } = await admin
-			.from('business_user_invites')
-			.update({
-				role,
-				professional_id: effectiveProfessionalId,
-				invited_by: actorId,
-				updated_at: new Date().toISOString()
-			})
-			.eq('id', existingPending.id)
-			.eq('business_id', businessId)
-			.select('id')
-			.maybeSingle();
-		if (error) throw error;
-		if (!updatedInvite) throw new Error('BUSINESS_INVITE_NOT_FOUND');
-		return {
-			status:
-				existingPending.role === role && existingPending.professional_id === effectiveProfessionalId
-					? 'already_pending'
-					: 'pending'
-		};
-	}
-
-	const { error } = await admin.from('business_user_invites').insert({
-		business_id: businessId,
-		email,
-		role,
-		professional_id: effectiveProfessionalId,
-		invited_by: actorId
-	});
-	if (error) throw error;
-	return { status: 'pending' };
-};
-
-type NewServiceInput = {
-	name: string;
-	duration_minutes: number;
-	price_label: string | null;
-};
-
-const parseNewServices = (raw: string): NewServiceInput[] => {
-	if (!raw.trim()) return [];
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch {
-		throw new Error('INVALID_NEW_SERVICES');
-	}
-	if (!Array.isArray(parsed)) throw new Error('INVALID_NEW_SERVICES');
-	return parsed.map((item) => {
-		const name = String(item?.name ?? '').trim();
-		const duration = Number(item?.duration_minutes ?? 0);
-		if (!name) throw new Error('NEW_SERVICE_NAME_REQUIRED');
-		if (
-			!Number.isInteger(duration) ||
-			duration < MIN_SERVICE_DURATION_MINUTES ||
-			duration > MAX_SERVICE_DURATION_MINUTES
-		) {
-			throw new Error('NEW_SERVICE_DURATION_INVALID');
-		}
-		return {
-			name,
-			duration_minutes: duration,
-			price_label: formatPriceLabel(String(item?.price_label ?? '')) || null
-		};
-	});
 };
 
 export const load: PageServerLoad = async ({ locals, fetch, cookies, depends }) => {
@@ -452,7 +198,12 @@ export const actions: Actions = {
 			return fail(400, { message: 'No disponible en modo demo.' });
 		}
 
-		const form = await request.formData();
+		let form: FormData;
+		try {
+			form = await readBoundedBookingForm(request, ['service_ids']);
+		} catch {
+			return fail(400, { message: 'Revisá los datos del integrante antes de guardar.' });
+		}
 		const values = Object.fromEntries(form);
 		const email = normalizeEmail(form.get('email'));
 		const role = String(form.get('role') ?? '').trim();
@@ -475,11 +226,7 @@ export const actions: Actions = {
 			requested: requestedProfessionalProfile
 		});
 
-		const {
-			supabase,
-			business: context,
-			userId: currentUserId
-		} = await getOdontoContext({ locals, fetch, cookies });
+		const { supabase, business: context } = await getOdontoContext({ locals, fetch, cookies });
 		if (!context.canManage) {
 			return fail(403, { message: 'No tenés permisos para administrar el equipo.', values });
 		}
@@ -499,422 +246,68 @@ export const actions: Actions = {
 			});
 		}
 
-		const businessId = context.business.id;
-		let professionalId: string | null = null;
-		let createdProfessionalId: string | null = null;
-		const createdServiceIds: string[] = [];
-
-		if (configureProfessionalProfile) {
-			const professionalName = String(form.get('professional_name') ?? '').trim();
-			const specialty = String(form.get('professional_specialty') ?? '').trim();
-			if (!professionalName) {
-				return fail(400, { message: 'Completá el nombre del profesional para continuar.', values });
-			}
-
-			// Servicios: personalizados existentes seleccionados + nuevos creados en el wizard.
-			const selectedServiceIds = form
-				.getAll('service_ids')
-				.map((value) => String(value).trim())
-				.filter(Boolean);
-			let newServices: NewServiceInput[];
-			try {
-				newServices = parseNewServices(String(form.get('new_services') ?? ''));
-			} catch (error) {
-				const code = (error as Error)?.message ?? '';
-				if (code === 'NEW_SERVICE_NAME_REQUIRED') {
-					return fail(400, {
-						message: 'No se puede crear un servicio adicional sin nombre.',
+		try {
+			if (configureProfessionalProfile) {
+				const prepared = prepareTeamMemberProfile(form, role, email, context.business.timezone);
+				if (!prepared.ok) return fail(prepared.status, { message: prepared.message, values });
+				if (!prepared.data)
+					return fail(503, {
+						message: 'No pudimos preparar el perfil. Revisá los datos y volvé a intentar.',
 						values
 					});
-				}
-				if (code === 'NEW_SERVICE_DURATION_INVALID') {
-					return fail(400, {
-						message: 'La duración del servicio debe estar entre 5 y 480 minutos.',
-						values
-					});
-				}
-				return fail(400, { message: 'Los servicios cargados no son válidos.', values });
-			}
-
-			// Horarios de atención: obligatorios y separados por bloques de días.
-			const scheduleBlocks = scheduleBlocksFromForm(form);
-			if (!scheduleBlocks.ok) {
-				return fail(400, { message: scheduleBlocks.message, values });
-			}
-
-			// Cambio puntual: opcional, pero si se carga debe ser válido.
-			const exceptionPeriodMode = String(form.get('exception_period_mode') ?? 'single').trim();
-			const exceptionDate = String(form.get('exception_date') ?? '').trim();
-			const exceptionDateFrom = String(form.get('exception_date_from') ?? '').trim();
-			const exceptionDateTo = String(form.get('exception_date_to') ?? '').trim();
-			const exceptionTimeRange = String(form.get('exception_time_range') ?? '').trim();
-			const exceptionAppliesTo = String(form.get('exception_applies_to') ?? 'professional').trim();
-			const exceptionType = String(form.get('exception_type') ?? 'blocked').trim();
-			const exceptionReason = String(form.get('exception_reason') ?? '').trim();
-			const hasException =
-				exceptionPeriodMode === 'range'
-					? Boolean(exceptionDateFrom || exceptionDateTo)
-					: Boolean(exceptionDate || exceptionTimeRange);
-			let exceptionStartsAt: Date | null = null;
-			let exceptionEndsAt: Date | null = null;
-			if (hasException) {
-				const interval = parseAvailabilityExceptionInterval({
-					type: exceptionType,
-					periodMode: exceptionPeriodMode,
-					date: exceptionDate,
-					dateFrom: exceptionDateFrom,
-					dateTo: exceptionDateTo,
-					timeRange: exceptionTimeRange,
-					timeZone: context.business.timezone
-				});
-				if (!interval.ok) return fail(400, { message: interval.message, values });
-				exceptionStartsAt = interval.startsAt;
-				exceptionEndsAt = interval.endsAt;
-			}
-
-			const existingProfessional = await findProfessionalByEmail(
-				supabase,
-				businessId,
-				normalizeProfessionalEmail(email)
-			);
-			if (existingProfessional) {
-				return fail(400, { message: humanProfessionalEmailConflict(existingProfessional), values });
-			}
-
-			const professionalId = crypto.randomUUID();
-			createdProfessionalId = professionalId;
-
-			const { error: createError } = await supabase.from('professionals').insert({
-				id: professionalId,
-				business_id: businessId,
-				name: professionalName,
-				specialty: specialty || null,
-				email,
-				is_active: true,
-				// Se habilita para reservas sólo si la cuenta ya existe. Si queda una
-				// invitación pendiente, la vinculación de la cuenta la publica automáticamente.
-				is_public: false
-			});
-			if (createError) {
-				logServerFailure('Error creando profesional', createError);
-				return fail(500, { message: 'No se pudo crear el profesional.', values });
-			}
-
-			const rollback = async (admin: CitaSupabaseClient) => {
-				// Borrar el profesional limpia en cascada asignaciones, reglas y excepciones.
-				if (createdProfessionalId)
-					await admin
-						.from('professionals')
-						.delete()
-						.eq('business_id', businessId)
-						.eq('id', createdProfessionalId);
-				if (createdServiceIds.length > 0) {
-					await admin
-						.from('services')
-						.delete()
-						.eq('business_id', businessId)
-						.in('id', createdServiceIds);
-				}
-			};
-
-			const admin = await createSupabaseAdminClient('odonto', fetch);
-			try {
-				// Consulta y Otro servicio: existen siempre y quedan asignados automáticamente.
-				const defaultServiceIds = await ensureDefaultServicesAssigned(
-					supabase,
-					businessId,
-					professionalId
-				);
-
-				for (const newService of newServices) {
-					const serviceId = crypto.randomUUID();
-					const { error: serviceError } = await supabase.from('services').insert({
-						id: serviceId,
-						business_id: businessId,
-						name: newService.name,
-						duration_minutes: newService.duration_minutes,
-						price_label: newService.price_label,
-						description: null,
-						buffer_before_minutes: 0,
-						buffer_after_minutes: 0,
-						is_public: true,
-						is_active: true
-					});
-					if (serviceError) {
-						throw serviceError;
-					}
-					createdServiceIds.push(serviceId);
-				}
-
-				await setProfessionalServices(supabase, businessId, professionalId, [
-					...defaultServiceIds,
-					...selectedServiceIds,
-					...createdServiceIds
-				]);
-
-				await replaceProfessionalScheduleBlocks(supabase, {
-					businessId,
-					professionalId,
-					blocks: scheduleBlocks.blocks
-				});
-
-				if (hasException && exceptionStartsAt && exceptionEndsAt) {
-					const { error: exceptionError } = await supabase.from('availability_exceptions').insert({
-						business_id: businessId,
-						professional_id: exceptionAppliesTo === 'business' ? null : professionalId,
-						type: exceptionType,
-						starts_at: exceptionStartsAt.toISOString(),
-						ends_at: exceptionEndsAt.toISOString(),
-						reason: exceptionReason || null
-					});
-					if (exceptionError) throw exceptionError;
-				}
-
-				const result = await saveRoleAccessDirect({
-					admin,
-					businessId,
-					email,
-					role,
-					professionalId,
-					actorId: currentUserId,
-					actorRole: context.role,
-					isAssisting: Boolean(context.assistance),
-					currentAccess
-				});
-
-				await writeAuditLog(supabase, {
-					businessId,
-					userId: currentUserId,
-					action: 'professional.created',
-					entityType: 'professional',
-					entityId: professionalId,
-					metadata: {
-						name: professionalName,
-						email,
-						schedule_blocks: scheduleBlocks.blocks,
-						service_ids: [...defaultServiceIds, ...selectedServiceIds, ...createdServiceIds]
-					}
-				});
-
-				const status = String(result.status ?? '');
-				if (status === 'pending' || status === 'already_pending') {
-					return {
-						success: true,
-						openRole: role,
-						message: `Perfil profesional configurado con rol ${roleLabel(role)}. No aparecerá en las reservas online hasta que la persona cree su cuenta con ${email}.`
-					};
-				}
-
-				const { data: publishedProfessional, error: publishError } = await admin
-					.from('professionals')
-					.update({ is_public: true, updated_at: new Date().toISOString() })
-					.eq('business_id', businessId)
-					.eq('id', professionalId)
-					.eq('is_active', true)
-					.select('id')
-					.maybeSingle();
-				if (publishError) throw publishError;
-				if (!publishedProfessional) throw new Error('PROFESSIONAL_NOT_FOUND');
-
+				const result = await createTeamMemberProfile(supabase, context.business.id, prepared.data);
 				return {
 					success: true,
 					openRole: role,
-					message: `Perfil profesional creado y rol ${roleLabel(role)} asignado al consultorio.`
+					message:
+						result.status === 'pending' || result.status === 'already_pending'
+							? `Perfil profesional configurado con rol ${roleLabel(role)}. No aparecerá en las reservas online hasta que la persona cree su cuenta con ${email}.`
+							: `Perfil profesional creado y rol ${roleLabel(role)} asignado al consultorio.`
 				};
-			} catch (error) {
-				await rollback(admin);
-				logServerFailure('Error guardando alta de profesional', error);
-				const code = (error as { message?: string })?.message ?? '';
-				if (code === 'INVALID_SERVICE_ASSIGNMENT') {
-					return fail(400, {
-						message: 'Algún servicio seleccionado no pertenece a este consultorio.',
-						values
-					});
-				}
-				const roleError = error as { code?: string; message?: string };
-				return fail(roleAccessErrorStatus(roleError), {
-					message: roleAccessErrorMessage(roleError),
-					values
-				});
 			}
-		}
-
-		const admin = await createSupabaseAdminClient('odonto', fetch);
-		let result: { status: string };
-		try {
-			result = await saveRoleAccessDirect({
-				admin,
-				businessId,
-				email,
-				role,
-				professionalId,
-				actorId: currentUserId,
-				actorRole: context.role,
-				isAssisting: Boolean(context.assistance),
-				currentAccess
-			});
-		} catch (error) {
-			logServerFailure('Error guardando acceso al negocio', error);
-			const roleError = error as { code?: string; message?: string };
-			return fail(roleAccessErrorStatus(roleError), {
-				message: roleAccessErrorMessage(roleError),
-				values
-			});
-		}
-
-		const status = String(result.status ?? '');
-		if (status === 'already_active' || status === 'already_pending') {
-			return { success: true, openRole: role, message: 'Ese correo ya tenía ese rol asignado.' };
-		}
-		if (status === 'pending') {
+			const result = await grantBusinessRoleAccess(supabase, context.business.id, email, role);
+			if (result.status === 'already_active' || result.status === 'already_pending') {
+				return { success: true, openRole: role, message: 'Ese correo ya tenía ese rol asignado.' };
+			}
 			return {
 				success: true,
 				openRole: role,
 				message:
-					'Acceso preparado. Cuando la persona cree su cuenta con ese correo, el rol se asignará automáticamente.'
+					result.status === 'pending'
+						? 'Acceso preparado. Cuando la persona cree su cuenta con ese correo, el rol se asignará automáticamente.'
+						: 'Rol asignado al consultorio.'
 			};
+		} catch (error) {
+			logServerFailure('Error guardando integrante del equipo', error);
+			const result = teamMemberFailure(error);
+			return fail(result.status, { message: result.message, values });
 		}
-
-		return { success: true, openRole: role, message: 'Rol asignado al consultorio.' };
 	},
 	make_attending: async ({ request, locals, fetch, cookies }) => {
 		if (!locals.auth) throw redirect(303, '/login');
-		if (env.DEMO_MODE === 'true') {
-			return fail(400, { message: 'No disponible en modo demo.' });
-		}
-
-		const form = await request.formData();
-		const targetAccessId = String(form.get('access_id') ?? '').trim();
-		const professionalName = String(form.get('name') ?? '').trim();
-
-		const {
-			supabase,
-			business: context,
-			userId: currentUserId
-		} = await getOdontoContext({ locals, fetch, cookies });
-		if (!context.canManage) {
-			return fail(403, { message: 'No tenés permisos para administrar el equipo.' });
-		}
-		if (!targetAccessId) return fail(400, { message: 'Elegí a la persona del equipo.' });
-		if (!professionalName) return fail(400, { message: 'El nombre profesional es obligatorio.' });
-
-		const currentAccess = await listRoleAccess(supabase, context.business.id);
-		const member = currentAccess.find((item) => item.id === targetAccessId);
-		if (!member) return fail(400, { message: 'No se encontró a esa persona en el equipo.' });
-		if (member.role !== 'owner' && member.role !== 'admin') {
-			return fail(400, {
-				message: 'Desde acá solo se configura como atendible al dueño o a un administrador.'
-			});
-		}
-		if (
-			!canConfigureAttendingProfile({
-				actorRole: context.role,
-				targetRole: member.role,
-				isAssisting: Boolean(context.assistance)
-			})
-		) {
-			return fail(403, { message: 'Un administrador no puede configurar al dueño.' });
-		}
-		if (member.professional_id) {
-			return fail(400, { message: 'Esa persona ya tiene un perfil profesional.' });
-		}
-
-		const businessId = context.business.id;
-		const admin = await createSupabaseAdminClient('odonto', fetch);
-
-		if (member.user_id) {
-			const { data: existingLink, error: existingLinkError } = await admin
-				.from('professional_users')
-				.select('id')
-				.eq('business_id', businessId)
-				.eq('user_id', member.user_id)
-				.limit(1)
-				.maybeSingle();
-			if (existingLinkError) {
-				logServerFailure('Error verificando vínculo profesional', existingLinkError);
-				return fail(500, { message: 'No se pudo verificar el perfil profesional.' });
-			}
-			if (existingLink?.id) {
-				return fail(400, { message: 'Esa persona ya tiene un perfil profesional.' });
-			}
-		}
-
-		// Sin email en professionals: la identidad se resuelve por la invitación pendiente
-		// o por professional_users y así no se duplican identidades profesionales.
-		const { data: createdProfessional, error: createError } = await admin
-			.from('professionals')
-			.insert({
-				business_id: businessId,
-				name: professionalName,
-				is_active: true,
-				is_public: member.status === 'active'
-			})
-			.select('id')
-			.single();
-		if (createError || !createdProfessional?.id) {
-			logServerFailure('Error creando profesional atendible', createError);
-			return fail(500, { message: 'No se pudo crear el perfil profesional.' });
-		}
-		const professionalId = String(createdProfessional.id);
-
-		let linkError: { message?: string } | null = null;
-		let linkCreated = false;
-		if (member.user_id) {
-			const result = await admin.from('professional_users').insert({
-				business_id: businessId,
-				professional_id: professionalId,
-				user_id: member.user_id
-			});
-			linkError = result.error;
-			linkCreated = !result.error;
-		} else {
-			const result = await admin
-				.from('business_user_invites')
-				.update({ professional_id: professionalId, updated_at: new Date().toISOString() })
-				.eq('business_id', businessId)
-				.eq('id', member.id)
-				.eq('status', 'pending')
-				.select('id')
-				.maybeSingle();
-			linkError = result.error;
-			linkCreated = Boolean(result.data?.id);
-		}
-		if (linkError || !linkCreated) {
-			await admin
-				.from('professionals')
-				.delete()
-				.eq('business_id', businessId)
-				.eq('id', professionalId);
-			logServerFailure('Error vinculando profesional al usuario', linkError);
-			return fail(500, {
-				message: 'No se pudo vincular el perfil profesional a la persona del equipo.'
-			});
-		}
-
+		if (env.DEMO_MODE === 'true') return fail(400, { message: 'No disponible en modo demo.' });
+		let form: FormData;
 		try {
-			await ensureDefaultServicesAssigned(supabase, businessId, professionalId);
-		} catch (defaultsError) {
-			logServerFailure(
-				'No se pudieron asegurar servicios por defecto del atendible',
-				defaultsError
-			);
+			form = await readBoundedBookingForm(request);
+		} catch {
+			return fail(400, { message: 'Revisá el nombre y la persona seleccionada.' });
 		}
-
-		await writeAuditLog(admin, {
-			businessId,
-			userId: currentUserId,
-			action: 'professional.created_attending',
-			entityType: 'professional',
-			entityId: professionalId,
-			metadata: {
-				user_id: member.user_id,
-				email: member.email,
-				account_status: member.status,
-				role: member.role,
-				name: professionalName
-			}
-		});
-
+		const accessId = String(form.get('access_id') ?? '').trim();
+		const name = String(form.get('name') ?? '').trim();
+		if (!accessId) return fail(400, { message: 'Elegí a la persona del equipo.' });
+		if (!name || name.length > 160)
+			return fail(400, { message: 'Ingresá un nombre profesional de hasta 160 caracteres.' });
+		const { supabase, business: context } = await getOdontoContext({ locals, fetch, cookies });
+		if (!context.canManage)
+			return fail(403, { message: 'No tenés permisos para administrar el equipo.' });
+		let professionalId: string;
+		try {
+			professionalId = await makeTeamMemberAttending(supabase, context.business.id, accessId, name);
+		} catch (error) {
+			logServerFailure('Error configurando perfil profesional del integrante', error);
+			const result = teamMemberFailure(error);
+			return fail(result.status, { message: result.message });
+		}
 		throw redirect(303, `/odonto/profesionales/${professionalId}?tab=servicios`);
 	},
 	update_role: async ({ request, locals, fetch, cookies }) => {

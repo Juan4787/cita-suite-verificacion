@@ -1,4 +1,5 @@
-import { boolFromForm, scheduleBlocksFromForm } from '$lib/team/professional-form';
+import {listBusinessRoleAccess} from '$lib/server/access/public/team-access';
+import { boolFromForm, scheduleBlocksFromForm, professionalSchedulePayload } from '$lib/team/professional-form';
 import type { BusinessContext } from '$lib/access/contracts';
 import { parsePriceAdjustments } from '$lib/scheduling/price-contracts';
 import { previewMonthlyPrices, formatQuotedPrice, monthForTimezone } from '$lib/booking/pricing';
@@ -38,16 +39,9 @@ export const getPendingProfessionalAccountEmail = async (
 	businessId: string,
 	professionalId: string
 ) => {
-	const { data, error } = await supabase.rpc('list_business_role_access', {
-		target_business_id: businessId
-	});
-	if (error) throw error;
-	const pending = (data ?? []).find(
-		(item) =>
-			String(item?.status ?? '') === 'pending' &&
-			String(item?.professional_id ?? '') === professionalId
-	);
-	return pending?.email ? String(pending.email).trim().toLowerCase() : null;
+ const members=await listBusinessRoleAccess(supabase,businessId);
+ const pending=members.find(item=>item.status==='pending'&&item.professional_id===professionalId);
+ return pending?.email.trim().toLowerCase()||null;
 };
 
 export const saveProfessionalProfile = async (
@@ -376,15 +370,7 @@ export async function saveProfessionalEditor(
 		p_expected_revision: Number(form.get('availability_revision')),
 		p_profile: readJson(profile, 'professionalEditor.profile'),
 		p_service_ids: serviceIds,
-		p_blocks:
-			blocks?.map((block) => ({
-				weekdays: block.weekdays,
-				ranges: block.ranges,
-				slot_interval_minutes: block.slotIntervalMinutes,
-				break_minutes: block.breakMinutes,
-				service_scope: block.serviceScope ?? 'all',
-				service_ids: block.allowedServiceIds ?? []
-			})) ?? null,
+		p_blocks:blocks?professionalSchedulePayload(blocks):null,
 		p_exception_request_id: items ? String(form.get('exception_request_id')) : null,
 		p_exception_items: readJson(items, 'professionalEditor.exceptions'),
 		p_ack_existing: form.get('ack_existing_appointments') === 'true'

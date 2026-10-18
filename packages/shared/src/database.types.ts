@@ -4244,6 +4244,10 @@ export type Database = {
           starts_at: string
         }[]
       }
+      create_team_member_profile: {
+        Args: { p_business_id: string; p_configuration: Json }
+        Returns: Json
+      }
       current_user_professional_id: {
         Args: { target_business_id: string }
         Returns: string
@@ -4582,6 +4586,10 @@ export type Database = {
           role: string
           subscription: Json
         }[]
+      }
+      make_team_member_attending: {
+        Args: { p_access_id: string; p_business_id: string; p_name: string }
+        Returns: string
       }
       mark_push_device_gone: {
         Args: { gone_time?: string; target_endpoint: string }

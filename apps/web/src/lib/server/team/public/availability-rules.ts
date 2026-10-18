@@ -1,3 +1,4 @@
+import { professionalSchedulePayload } from '$lib/team/professional-form';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import type { TimeRange } from '$lib/utils/time-ranges';
 import { timeRangesOverlap, type NormalizedScheduleBlock } from '$lib/utils/schedule-blocks';
@@ -35,7 +36,9 @@ export const replaceProfessionalWeeklyRules = async (
 	if (!replaceError) return;
 	if (!isMissingAvailabilityRpc(replaceError)) throw replaceError;
 
-	console.warn('RPC replace_professional_availability_rules no disponible; usando fallback compatible.');
+	console.warn(
+		'RPC replace_professional_availability_rules no disponible; usando fallback compatible.'
+	);
 	const { error: deleteError } = await supabase
 		.from('availability_rules')
 		.delete()
@@ -68,8 +71,21 @@ export const replaceProfessionalScheduleBlocks = async (
 		expectedRevision?: number;
 	}
 ) => {
-    let revision=input.expectedRevision;
-    if(revision===undefined){const {data,error}=await supabase.from('businesses').select('booking_availability_revision').eq('id',input.businessId).single();if(error)throw error;revision=Number(data.booking_availability_revision);}
-    const {error}=await supabase.rpc('replace_professional_schedule_blocks',{p_business_id:input.businessId,p_professional_id:input.professionalId,p_expected_revision:revision,p_blocks:input.blocks.map(block=>({weekdays:block.weekdays,ranges:block.ranges,slot_interval_minutes:block.slotIntervalMinutes,break_minutes:block.breakMinutes,service_scope:block.serviceScope??'all',service_ids:block.allowedServiceIds??[]}))});
-    if(error)throw error;
+	let revision = input.expectedRevision;
+	if (revision === undefined) {
+		const { data, error } = await supabase
+			.from('businesses')
+			.select('booking_availability_revision')
+			.eq('id', input.businessId)
+			.single();
+		if (error) throw error;
+		revision = Number(data.booking_availability_revision);
+	}
+	const { error } = await supabase.rpc('replace_professional_schedule_blocks', {
+		p_business_id: input.businessId,
+		p_professional_id: input.professionalId,
+		p_expected_revision: revision,
+		p_blocks: professionalSchedulePayload(input.blocks)
+	});
+	if (error) throw error;
 };

@@ -43,7 +43,7 @@ begin
  values(v_professional,p_business_id,trim(p_configuration->>'name'),nullif(trim(p_configuration->>'specialty'),''),v_email,true,false);
  perform private.assign_team_default_services(p_business_id,v_professional);
  if jsonb_typeof(p_configuration->'serviceIds') is distinct from 'array' or jsonb_array_length(p_configuration->'serviceIds')>500
-  or jsonb_typeof(p_configuration->'newServices') is distinct from 'array' or jsonb_array_length(p_configuration->'newServices')>500 then raise exception 'TEAM_CONFIGURATION_INVALID'; end if;
+  or jsonb_typeof(p_configuration->'newServices') is distinct from 'array' or jsonb_array_length(p_configuration->'newServices')>500 or jsonb_array_length(p_configuration->'serviceIds')+jsonb_array_length(p_configuration->'newServices')>500 then raise exception 'TEAM_CONFIGURATION_INVALID'; end if;
  for v_item in select value from jsonb_array_elements(p_configuration->'serviceIds') loop
   v_service:=(v_item#>>'{}')::uuid;
   if v_service is null or not exists(select 1 from public.services where business_id=p_business_id and id=v_service) then raise exception 'INVALID_SERVICE_ASSIGNMENT'; end if;

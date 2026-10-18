@@ -21,9 +21,7 @@ export async function updateProfessionalService(
 		return {
 			ok: false,
 			status: 400,
-			...{
-				message: 'No pudimos identificar el servicio. Cerrá el editor y volvé a abrirlo.'
-			}
+			message: 'No pudimos identificar el servicio. Cerrá el editor y volvé a abrirlo.'
 		};
 
 	const { data: currentService, error: serviceError } = await supabase
@@ -39,9 +37,7 @@ export async function updateProfessionalService(
 		return {
 			ok: false,
 			status: 404,
-			...{
-				message: 'Ese servicio ya no está disponible. Cerrá el editor y recargá la página.'
-			}
+			message: 'Ese servicio ya no está disponible. Cerrá el editor y recargá la página.'
 		};
 	}
 
@@ -50,9 +46,7 @@ export async function updateProfessionalService(
 		return {
 			ok: false,
 			status: 409,
-			...{
-				message: 'El servicio cambió. Cerrá el editor y recargá antes de guardar.'
-			}
+			message: 'El servicio cambió. Cerrá el editor y recargá antes de guardar.'
 		};
 	const instructions = String(form.get('patient_instructions') ?? '').trim();
 	const reminderDescription = String(form.get('public_reminder_description') ?? '').trim();
@@ -60,9 +54,7 @@ export async function updateProfessionalService(
 		return {
 			ok: false,
 			status: 400,
-			...{
-				message: 'Acortá las indicaciones o el texto del aviso antes de guardar.'
-			}
+			message: 'Acortá las indicaciones o el texto del aviso antes de guardar.'
 		};
 	const isDefault = isDefaultServiceName(String(currentService.name ?? ''));
 	const name = isDefault ? String(currentService.name) : String(form.get('name') ?? '').trim();
@@ -71,12 +63,12 @@ export async function updateProfessionalService(
 	const bufferAfter = Number(form.get('buffer_after_minutes') ?? 0);
 	const priceLabel = formatPriceLabel(String(form.get('price_label') ?? ''));
 	if (!name)
-		return { ok: false, status: 400, ...{ message: 'El nombre del servicio es obligatorio.' } };
+		return { ok: false, status: 400, message: 'El nombre del servicio es obligatorio.' };
 	if (duration < MIN_SERVICE_DURATION_MINUTES || duration > MAX_SERVICE_DURATION_MINUTES) {
 		return {
 			ok: false,
 			status: 400,
-			...{ message: 'La duración debe estar entre 5 y 480 minutos.' }
+			message: 'La duración debe estar entre 5 y 480 minutos.'
 		};
 	}
 	if (
@@ -90,7 +82,7 @@ export async function updateProfessionalService(
 		return {
 			ok: false,
 			status: 400,
-			...{ message: 'Los márgenes deben estar entre 0 y 480 minutos.' }
+			message: 'Los márgenes deben estar entre 0 y 480 minutos.'
 		};
 	}
 
@@ -120,18 +112,14 @@ export async function updateProfessionalService(
 		return {
 			ok: false,
 			status: 409,
-			...{
-				message: 'El servicio cambió. Cerrá el editor y recargá antes de guardar.'
-			}
+			message: 'El servicio cambió. Cerrá el editor y recargá antes de guardar.'
 		};
 	if (error || !updatedService) {
 		logServerFailure('Error actualizando servicio', error);
 		return {
 			ok: false,
 			status: 500,
-			...{
-				message: 'No pudimos guardar el servicio. Revisá los datos e intentá nuevamente.'
-			}
+			message: 'No pudimos guardar el servicio. Revisá los datos e intentá nuevamente.'
 		};
 	}
 
