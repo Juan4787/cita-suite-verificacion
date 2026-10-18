@@ -1,7 +1,7 @@
 <script lang="ts">
  import { enhance } from '$app/forms';
  import type { SubmitFunction } from '@sveltejs/kit';
- import { BOOKING_MODALITY_LABELS, type BookingModality } from '@turnos-saas/shared/booking-integration';
+ import { BOOKING_MODALITY_LABELS, type BookingModality, type BookingIntakeField } from '@turnos-saas/shared/booking-integration';
  import { isRecord } from '$lib/contracts/json';
  import type { BookingViewData, BookingFormState, BookingConfirmation } from '$lib/scheduling/booking-view';
  import { normalizePatientFullName, patientFullNameErrorMessage, PATIENT_FULL_NAME_INVALID_ERROR_MESSAGE } from '$lib/utils/patient-name';
@@ -18,8 +18,8 @@
  const business = $derived(data.state.business);
  const values = $derived(form?.values ?? localDraft);
  const intakeFields = $derived(data.patientFields?.fields ?? data.presentation?.intakeFields ?? []);
- const requiredIntakeFields = $derived(intakeFields.filter(field => field.required));
- const optionalIntakeFields = $derived(intakeFields.filter(field => !field.required));
+ const requiredIntakeFields = $derived(intakeFields.filter((field: BookingIntakeField) => field.required));
+ const optionalIntakeFields = $derived(intakeFields.filter((field: BookingIntakeField) => !field.required));
  const patientToday = $derived(new Intl.DateTimeFormat('sv-SE', {
   year: 'numeric', month: '2-digit', day: '2-digit', timeZone: timezone
  }).format(new Date()));

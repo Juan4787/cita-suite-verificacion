@@ -291,7 +291,7 @@ const patientFailureStatus: Record<PatientFailureKind, 400 | 403 | 404 | 409 | 5
  invalid: 400, forbidden: 403, missing: 404, conflict: 409, unavailable: 500
 };
 function patientActionFailure(cause: unknown) {
- if (cause instanceof PatientOperationError) return fail(patientFailureStatus[cause.kind], { message: cause.message });
+ if (cause instanceof PatientOperationError) return fail(patientFailureStatus[cause.kind], { message: cause.message, ...cause.feedback });
  throw cause;
 }
 const clinicalInputFromForm = (form: FormData) => parseClinicalEntryInput({

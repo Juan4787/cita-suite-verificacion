@@ -1,11 +1,11 @@
 <script lang="ts">
 	import PublicBookingConfirmation from './PublicBookingConfirmation.svelte';
- import type { BookingViewData, BookingFormState, BookingService as Service, BookingProfessional as Professional, BookingSlot as Slot } from '$lib/scheduling/booking-view';
+ import type { BookingViewData, BookingFormState, BookingService as Service, BookingProfessional as Professional, BookingSlot as Slot, BookingDay as Day } from '$lib/scheduling/booking-view';
 	import "./patient-booking.css";
  import { formatQuotedPrice } from './pricing';
 	import BookingAppearance from '$lib/booking/BookingAppearance.svelte';
 	import BookingFrameBridge from '$lib/booking/BookingFrameBridge.svelte';
-	import { BOOKING_MODALITY_LABELS } from '@turnos-saas/shared/booking-integration';
+	import { BOOKING_MODALITY_LABELS, type BookingModality } from '@turnos-saas/shared/booking-integration';
 	import { afterNavigate } from '$app/navigation';
 	import { navigating, page } from '$app/state';
 
@@ -17,7 +17,8 @@
 
 	const bookingPath = $derived(page.url.pathname);
 	const navigationURL = $derived(navigating.to?.url.pathname === page.url.pathname ? navigating.to.url : page.url);
-	const modality = $derived(data.presentation?.modalities.find(option => option === navigationURL.searchParams.get('modality')) ?? data.presentation?.modalities[0] ?? 'in_person');
+	const modality = $derived(data.presentation?.modalities.find((option: BookingModality) => option === navigationURL.searchParams.get('modality')) ?? data.presentation?.modalities[0] ?? 'in_person');
+	const modalityLabel = (value: BookingModality) => BOOKING_MODALITY_LABELS[value];
 
 	// ------------------------------------------------------------------
 	// Selección efectiva. El `slot` vive SOLO en la URL (el load del server
@@ -331,7 +332,7 @@
                             <legend class="ux-label">Modalidad de atención</legend>
                             <div class="mt-2 flex flex-wrap gap-2">
                                 {#each data.presentation.modalities as option}
-                                    <a href={(() => { const target = new URL(queryFor({ service_id: '', professional_id: '', professional_ids: '', date: '', slot: '' }), page.url); target.searchParams.set('modality', option); return target.pathname + target.search; })()} class={option === modality ? 'ux-btn-primary' : 'ux-btn-secondary'} aria-current={option === modality ? 'true' : undefined}>{BOOKING_MODALITY_LABELS[option as BookingModality]}</a>
+                                    <a href={(() => { const target = new URL(queryFor({ service_id: '', professional_id: '', professional_ids: '', date: '', slot: '' }), page.url); target.searchParams.set('modality', option); return target.pathname + target.search; })()} class={option === modality ? 'ux-btn-primary' : 'ux-btn-secondary'} aria-current={option === modality ? 'true' : undefined}>{modalityLabel(option)}</a>
                                 {/each}
                             </div>
                         </fieldset>

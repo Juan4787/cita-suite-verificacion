@@ -1,10 +1,15 @@
 export type PatientFailureKind = 'invalid' | 'forbidden' | 'missing' | 'conflict' | 'unavailable';
+export type PatientFailureFeedback = {
+ duplicate?: boolean; duplicateField?: 'dni'; existingId?: string;
+ currentPatientUpdatedAt?: string; currentClinicalProfileUpdatedAt?: string;
+};
 
 /** Domain failure; routes decide how to represent it over HTTP. */
 export class PatientOperationError extends Error {
  readonly kind: PatientFailureKind;
- constructor(kind: PatientFailureKind, message: string) {
-  super(message); this.name = 'PatientOperationError'; this.kind = kind;
+ readonly feedback: PatientFailureFeedback;
+ constructor(kind: PatientFailureKind, message: string, feedback: PatientFailureFeedback = {}) {
+  super(message); this.name = 'PatientOperationError'; this.kind = kind; this.feedback = feedback;
  }
 }
 
