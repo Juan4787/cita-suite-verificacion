@@ -742,14 +742,14 @@
 								</a>
 							</div>
 						{/if}
-                        {#if dateWindow?.previousFromDate || dateWindow?.nextFromDate}
-                            <nav aria-label="Otras fechas para reservar" class="mt-5 grid grid-cols-2 gap-3">
+                        {#if dateWindow && (dateWindow.previousFromDate || (dateWindow.nextFromDate && visibleDayCount >= data.state.days.length))}
+                            <nav aria-label="Otras fechas para reservar" class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 {#if dateWindow.previousFromDate}
                                     <a class="ux-btn-secondary min-w-0 text-center" data-sveltekit-noscroll data-sveltekit-preload-data="off"
                                         href={queryFor({ dates_from: dateWindow.previousFromDate, date: '', slot: '' })}>Fechas anteriores</a>
                                 {/if}
-                                {#if dateWindow.nextFromDate}
-                                    <a class="ux-btn-secondary col-start-2 min-w-0 text-center" data-sveltekit-noscroll data-sveltekit-preload-data="off"
+                                {#if dateWindow.nextFromDate && visibleDayCount >= data.state.days.length}
+                                    <a class={data.state.days.length === 0 ? "ux-btn-primary min-w-0 text-center sm:col-start-2" : "ux-btn-secondary min-w-0 text-center sm:col-start-2"} data-sveltekit-noscroll data-sveltekit-preload-data="off"
                                         href={queryFor({ dates_from: dateWindow.nextFromDate, date: '', slot: '' })}>Fechas siguientes</a>
                                 {/if}
                             </nav>

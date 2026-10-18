@@ -31,7 +31,10 @@ describe('price preview boundary in the editor', () => {
  });
  it('translates invalid complete configuration into a human recovery action', () => {
   render(PricePolicyEditor, fixture('2026-10', 1001));
-  expect(screen.getByRole('status')).toHaveTextContent('Revisá el importe, los porcentajes y los meses');
+  expect(screen.getByRole('status')).toHaveTextContent('0 a 1.000 %');
+  const input = screen.getByLabelText(/^Aumento mensual desde el primer ajuste/);
+  expect(input).toHaveAttribute('aria-invalid', 'true');
+  expect(input).toHaveAttribute('aria-describedby', screen.getByRole('status').id);
   expect(screen.getByRole('status')).not.toHaveTextContent('PRICE_');
   expect(screen.getByRole('button', { name: 'Guardar aranceles' })).toBeDisabled();
  });

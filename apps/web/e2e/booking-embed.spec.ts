@@ -253,6 +253,10 @@ test.describe('isolated booking integration', () => {
           const navigation = page.getByRole('navigation', { name: 'Otras fechas para reservar', exact: true });
           const next = navigation.getByRole('link', { name: 'Fechas siguientes', exact: true });
           await expect(next).toBeVisible();
+          if (variant.width === 320) {
+            const box = await next.boundingBox();
+            expect(box!.width).toBeGreaterThan(200); expect(box!.height).toBeLessThanOrEqual(64);
+          }
           expect(new URL(await next.getAttribute('href') ?? '', fixture.appOrigin).searchParams.get('dates_from')).toBe(addDays(15));
           await page.evaluate(() => window.scrollTo(0, 0));
           await page.screenshot({ path: test.info().outputPath('availability-empty-' + variant.theme + '-' + variant.width + '.png'), fullPage: true });
@@ -270,6 +274,16 @@ test.describe('isolated booking integration', () => {
           await page.evaluate(() => window.scrollTo(0, 0));
           await page.screenshot({ path: test.info().outputPath('availability-dates-' + variant.theme + '-' + variant.width + '.png'), fullPage: true });
           expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+          const moreDays = page.getByRole('button', { name: 'Ver más días', exact: true });
+          if (await moreDays.count()) await expect(next).toHaveCount(0);
+          for (let expansion = 0; expansion < 3 && await moreDays.count(); expansion++) await moreDays.click();
+          await expect(next).toBeVisible();
+          expect(new URL(await next.getAttribute('href') ?? '', fixture.appOrigin).searchParams.get('dates_from')).toBe(addDays(30));
+          if (variant.width === 320) {
+            for (const box of await navigation.getByRole('link').evaluateAll(links => links.map(link => ({ width: link.getBoundingClientRect().width, height: link.getBoundingClientRect().height })))) {
+              expect(box.width).toBeGreaterThan(200); expect(box.height).toBeLessThanOrEqual(64);
+            }
+          }
           await days.first().click();
           await expect(page.getByRole('link', { name: /^\d{2}:\d{2}$/ }).first()).toBeVisible();
           await page.goBack();
@@ -340,8 +354,10 @@ test.describe('isolated booking integration', () => {
       }
       fail = false;
       const recovered = page.waitForResponse(response => response.url().includes('/odonto/disponibilidad/slots?'));
-      await page.getByRole('button', { name: 'Semana siguiente', exact: true }).click();
+      await page.getByRole('button', { name: 'Reintentar búsqueda', exact: true }).click();
       const recoveredResponse = await recovered;
+      expect(new URL(recoveredResponse.url()).searchParams.get('from')).toBe(query.searchParams.get('from'));
+      expect(new URL(recoveredResponse.url()).searchParams.get('to')).toBe(query.searchParams.get('to'));
       expect(recoveredResponse.status()).toBe(200);
       expect((await recoveredResponse.json()).slots.length).toBeGreaterThan(0);
       await expect(page.getByText('No pudimos actualizar los horarios.', { exact: false })).toHaveCount(0);
@@ -355,7 +371,8 @@ test.describe('isolated booking integration', () => {
       await expect(editor).toBeVisible();
       const rate = editor.getByLabel(/^Aumento mensual desde el primer ajuste/);
       await rate.fill('1001');
-      await expect(editor.getByRole('status')).toContainText('Revisá el importe, los porcentajes y los meses');
+      await expect(editor.getByRole('status')).toContainText('0 a 1.000 %');
+      await expect(rate).toHaveAttribute('aria-invalid', 'true');
       await expect(editor.getByRole('button', { name: 'Guardar aranceles', exact: true })).toBeDisabled();
       for (const width of [1280, 320]) {
         await page.setViewportSize({ width, height: 900 });
@@ -366,6 +383,7 @@ test.describe('isolated booking integration', () => {
       await rate.fill('0');
       await expect(editor.getByRole('table')).toBeVisible();
       await expect(editor.getByRole('status')).toHaveCount(0);
+      await expect(rate).not.toHaveAttribute('aria-invalid', 'true');
       await expect(editor.getByRole('button', { name: 'Guardar aranceles', exact: true })).toBeEnabled();
       expect(priceWrites).toBe(0);
 

@@ -600,7 +600,7 @@
 			selectedSlotStartsAt = '';
 			if (step > 4) step = 4;
 			slotsError =
-				'No pudimos actualizar los horarios. No se reservó nada. Volvé a elegir el día para intentar nuevamente.';
+				'No pudimos actualizar los horarios. No se reservó nada. Probá nuevamente.';
 		} finally {
 			if (request === slotRequest) {
 				if (!silent) loadingSlots = false;
@@ -632,6 +632,9 @@
 		}
 	};
 
+    let lastSlotInput: Parameters<typeof loadServiceSlots>[0] | null = null;
+    const retrySlots = () => { if (lastSlotInput) void loadServiceSlots(lastSlotInput); };
+
 	$effect(() => {
 		const serviceId = selectedServiceId;
 		const individualProfessionalId = bookingMode === 'individual' ? selectedProfessionalId : '';
@@ -640,6 +643,7 @@
 				? [...selectedProfessionalIds]
 				: [];
 		if (!serviceId || (!individualProfessionalId && teamProfessionalIds.length < 2)) {
+			lastSlotInput = null;
 			slotAbortController?.abort();
 			slotAbortController = null;
 			slotRequest += 1;
@@ -662,6 +666,7 @@
 			shouldIgnoreBreak: ignoreBreak,
 			maxSlotsPerDate: isTimeRequest ? undefined : 1
 		};
+		lastSlotInput = requestInput;
 		const snapshotSlots = calculateSnapshotSlots(requestInput);
 		if (snapshotSlots !== null) {
 			slotAbortController?.abort();
@@ -776,6 +781,14 @@
 		void onNeedPatients();
 	});
 </script>
+
+{#snippet slotFailure()}
+ <div class="mt-5 space-y-3">
+  <p class="ux-alert" role="alert">{slotsError}</p>
+  <button type="button" class="ux-btn-secondary w-full sm:w-auto" disabled={loadingSlots} onclick={retrySlots}>Reintentar búsqueda</button>
+ </div>
+{/snippet}
+
 
 <form bind:this={appointmentForm} method="POST" action="?/create_appointment" class="mx-auto grid w-full max-w-5xl gap-4" onsubmit={validatePhoneBeforeSubmit}>
 	<input type="hidden" name="service_id" value={selectedServiceId} />
@@ -954,7 +967,7 @@
 			{/if}
 
 			{#if slotsError}
-				<p class="ux-alert mt-5">{slotsError}</p>
+				{@render slotFailure()}
 			{/if}
 
 			<div class="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1070,7 +1083,7 @@
 			{/if}
 
 			{#if slotsError}
-				<p class="ux-alert mt-5">{slotsError}</p>
+				{@render slotFailure()}
 			{/if}
 
 			<div class="mt-7 flex flex-wrap gap-3">
@@ -1130,7 +1143,7 @@
 			{/if}
 
 			{#if slotsError}
-				<p class="ux-alert mt-5">{slotsError}</p>
+				{@render slotFailure()}
 			{/if}
 		</section>
 	{:else}

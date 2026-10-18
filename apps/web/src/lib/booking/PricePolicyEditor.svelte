@@ -5,6 +5,7 @@
   import {
     previewMonthlyPrices,
     MAX_PRICE_MONTH_OFFSET,
+    PriceConfigurationError,
     formatQuotedPrice,
     type PriceAdjustment,
   } from "./pricing";
@@ -23,6 +24,7 @@
     canEdit?: boolean;
     canConfigureShared?: boolean;
   } = $props();
+  const feedbackId = $props.id();
   let scope = $state("professional");
   const initialService = () => services[0]?.id ?? "";
   let selected = $state(initialService());
@@ -126,7 +128,7 @@
   );
   const previewResult = $derived.by(() => {
     if (![base, rate, rounding, baseMonth, firstMonth].every(value => value.trim()))
-      return { rows: [], error: null };
+      return { rows: [], error: null, monthlyError: false };
     try {
       const [baseYear, baseNumber] = baseMonth.split("-").map(Number);
       const [startYear, startNumber] = currentMonth.split("-").map(Number);
@@ -134,15 +136,16 @@
       // The editor asks for up to six valid results. It must still display the
       // inclusive last month, rather than requesting five out-of-range months.
       const count = Math.min(6, Math.max(1, MAX_PRICE_MONTH_OFFSET - offset + 1));
-      return { rows: previewMonthlyPrices(base, rate, rounding, baseMonth, firstMonth, adjustments, count, currentMonth), error: null };
+      return { rows: previewMonthlyPrices(base, rate, rounding, baseMonth, firstMonth, adjustments, count, currentMonth), error: null, monthlyError: false };
     } catch (cause) {
       const code = cause instanceof Error ? cause.message : '';
-      const message = code === 'PRICE_DATE_INVALID'
+      const monthlyError = cause instanceof PriceConfigurationError && cause.field === 'monthly_percentage';
+      const message = monthlyError ? 'El aumento mensual admite valores de 0 a 1.000 %, con hasta cuatro decimales.' : code === 'PRICE_DATE_INVALID'
         ? 'El mes de referencia no puede ser posterior al actual ni tener más de 50 años de antigüedad.'
         : code === 'PRICE_AMOUNT_INVALID'
           ? 'Los ajustes superan el arancel máximo admitido. Reducí el importe o el porcentaje.'
           : 'Revisá el importe, los porcentajes y los meses de los ajustes.';
-      return { rows: [], error: message };
+      return { rows: [], error: message, monthlyError };
     }
   });
   const preview = $derived(previewResult.rows);
@@ -249,6 +252,8 @@
       >
       <label class="ux-label"
         >Aumento mensual desde el primer ajuste (%)<input
+          aria-invalid={previewResult.monthlyError || undefined}
+          aria-describedby={previewResult.monthlyError ? feedbackId : undefined}
           bind:value={rate}
           inputmode="decimal"
           class="ux-input mt-2"
@@ -359,7 +364,7 @@
               >{/each}</tbody
           >
         </table>
-      </div>{:else if previewResult.error}<p role="status" class="ux-alert mt-4">{previewResult.error}</p>{:else}<p class="mt-4 text-sm text-white/70">
+      </div>{:else if previewResult.error}<p id={feedbackId} role="status" class="ux-alert mt-4">{previewResult.error}</p>{:else}<p class="mt-4 text-sm text-white/70">
         Completá el importe y los meses para ver los aranceles antes de guardar.
       </p>{/if}
     <button

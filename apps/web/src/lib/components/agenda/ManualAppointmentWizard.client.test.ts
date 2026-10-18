@@ -106,6 +106,12 @@ describe('validación previa del teléfono al crear un turno', () => {
   expect(screen.queryByRole('button', { name: 'Confirmar turno' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Cambiar día' })).toBeInTheDocument();
   expect(container.querySelector('[name="slot_starts_at"]')).toBeNull();
+  vi.mocked(globalThis.fetch).mockResolvedValue(Response.json({ slots: [{ date, time: '10:00', starts_at: startsAt,
+   ends_at: '2099-08-25T13:30:00.000Z', professional_id: 'professional-1', professional_name: 'Dra. Prueba' }] }));
+  await fireEvent.click(screen.getByRole('button', { name: 'Reintentar búsqueda' }));
+  expect(await screen.findByRole('button', { name: '10:00' })).toBeInTheDocument();
+  expect(screen.queryByText(/No pudimos actualizar los horarios/)).not.toBeInTheDocument();
+
  });
 
 	it('no presenta el campo como problemático mientras se completa normalmente', async () => {

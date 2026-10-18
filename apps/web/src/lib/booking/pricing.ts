@@ -34,13 +34,16 @@ export const formatQuotedPrice = (
   }).format(quote.amount);
 export const MAX_PRICE_MONTH_OFFSET = 600;
 export const MAX_PRICE_PREVIEW_RESULTS = 120;
-const invalid = () => new Error("PRICE_CONFIGURATION_INVALID");
-const percentageUnits = (text: string) => {
+export class PriceConfigurationError extends Error {
+  constructor(readonly field: 'configuration' | 'monthly_percentage' = 'configuration') { super('PRICE_CONFIGURATION_INVALID'); }
+}
+const invalid = () => new PriceConfigurationError();
+const percentageUnits = (text: string, field: PriceConfigurationError['field'] = 'configuration') => {
   const match = /^(\d+)(?:[.,](\d{1,4}))?$/.exec(text);
-  if (!match) throw invalid();
+  if (!match) throw new PriceConfigurationError(field);
   const rate =
     BigInt(match[1]) * 10000n + BigInt((match[2] ?? "").padEnd(4, "0") || "0");
-  if (rate > 10000000n) throw invalid();
+  if (rate > 10000000n) throw new PriceConfigurationError(field);
   return rate;
 };
 const monthPattern = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -67,7 +70,7 @@ export function previewMonthlyPrices(
   const unit = BigInt(rounding);
   let numerator = BigInt(base);
   let denominator = 1n;
-  const recurring = percentageUnits(monthly);
+  const recurring = percentageUnits(monthly, 'monthly_percentage');
   if (unit < 1n || unit > 1000n || numerator > 1000000000000n) throw invalid();
   const keys = new Set<string>();
   for (const row of adjustments) {
