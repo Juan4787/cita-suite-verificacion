@@ -79,7 +79,7 @@ SQL
 writer_pid=$!
 ready=false
 for attempt in {1..200}; do
- if rg -q '^GATE_HELD$' "$verification_tmp/writer.log"; then ready=true; break; fi
+ if grep -q '^GATE_HELD$' "$verification_tmp/writer.log"; then ready=true; break; fi
  if ! kill -0 "$writer_pid" 2>/dev/null; then break; fi
  sleep 0.025
 done

@@ -1,6 +1,6 @@
 # Disponibilidad y aranceles
 
-Autoridad: [plan íntegro, etapa 4](../plans/refactorizacion-cita-suite.md). El [registro](../plans/registro-refactorizacion-cita-suite.md) distingue cada fuente y resultado. **Etapa 4 cerrada en entorno descartable:** contratos, consumidores, cotización y lote visual comprobados en full `39090572628` sobre `c0129e4`, con revisión independiente ship y documentación contrastada. No se aplicaron migraciones remotas.
+Autoridad: [plan íntegro, etapa 4](../plans/refactorizacion-cita-suite.md). El [registro](../plans/registro-refactorizacion-cita-suite.md) distingue cada fuente y resultado. **Garantía de concurrencia de configuración reabierta durante etapa5:** el cierre previo39090572628 conserva su evidencia funcional/visual, pero39092194979 expuso un deadlock al insertar profesionales concurrentemente. Se exige comparación con la nueva carrera real y la migración compatible antes de volver a cerrar esta garantía. No se aplicaron migraciones remotas.
 
 ## Propiedad y límites
 
@@ -78,3 +78,9 @@ Los desplazamientos válidos son de 0 a 600, inclusive. Una previsualización de
 | CI `39051023222` | Fast aprobado sobre `982ef9a`: once controles de fechas/JSON y cuatro del coordinador. Sus respuestas HTTP son simuladas; no se presentan como PostgreSQL ni como navegador desplegado. |
 
 Las verificaciones alojadas, capacidad, UI completa, reserva desde Natalia/enlace directo y auditoría transversal tienen sus puertas posteriores. Este cierre descartable no reduce ninguna condición de las etapas posteriores.
+
+## Corrección de lock de configuración en comparación
+
+La función inicial toma FOR UPDATE sobre el consultorio tras una inserción hija. La FK ya mantiene KEY SHARE sobre esa fila. La reproducción controlada conserva FK/constraints reales y un gate AFTER ordenado después de sus checks; exige dos inserciones confirmadas y revisión+2 sin retry. El SQL negativo176b121 mantiene el lock anterior; el borrador20261018000000 cambia únicamente a FOR NO KEY UPDATE, compatible con KEY SHARE y todavía exclusivo entre escritores. Conserva orden consultorio→revisión, firma/OID/privilegios y datos. No se modifica la prueba de roles para evitar su concurrencia.
+
+La comparación permanece pendiente. Fuente normativa del modo: [locks de fila de PostgreSQL17](https://www.postgresql.org/docs/17/explicit-locking.html#LOCKING-ROWS). El contador real de deadlocks forma parte del guarda de plataforma siguiente; no basta que todos los escenarios de interfaz concluyan.

@@ -25,4 +25,6 @@
 
 Posible error observado estáticamente, todavía sin reproducción nueva: el cargador de ficha registra errores secundarios de perfil/historia/turnos/vínculo y continúa con valores vacíos. Debe contrastarse el contrato y reproducirse en la etapa antes de decidir recuperación por panel o rechazo completo; no se presenta aún como defecto publicado demostrado.
 
+El full de extracción39092194979 detectó40P01 durante inserciones concurrentes de profesionales y no aprobó. Se reabre esa garantía previa y se corrige su mecanismo antes de continuar la extracción funcional; el verde fast no la sustituye. La prueba CLI nueva reprodujo además un alias Vite no resoluble desde Node.
+
 La campaña conserva etapas6/capacidad/staging/release/producción/auditoría final; ninguna fila de esta etapa las declara satisfechas.
