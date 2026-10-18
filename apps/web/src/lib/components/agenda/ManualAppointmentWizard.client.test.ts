@@ -109,7 +109,10 @@ describe('validación previa del teléfono al crear un turno', () => {
   vi.mocked(globalThis.fetch).mockResolvedValue(Response.json({ slots: [{ date, time: '10:00', starts_at: startsAt,
    ends_at: '2099-08-25T13:30:00.000Z', professional_id: 'professional-1', professional_name: 'Dra. Prueba' }] }));
   await fireEvent.click(screen.getByRole('button', { name: 'Reintentar búsqueda' }));
-  expect(await screen.findByRole('button', { name: '10:00' })).toBeInTheDocument();
+  // The existing form restores its pending initial time once real slots validate.
+  // Recovery must certify that selection before allowing the patient step again.
+  expect(await screen.findByRole('button', { name: 'Confirmar turno' })).toBeEnabled();
+  expect(container.querySelector<HTMLInputElement>('[name="slot_starts_at"]')?.value).toBe(startsAt);
   expect(screen.queryByText(/No pudimos actualizar los horarios/)).not.toBeInTheDocument();
 
  });
