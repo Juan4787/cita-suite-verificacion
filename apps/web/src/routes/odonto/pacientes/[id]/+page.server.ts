@@ -4,7 +4,6 @@ import {
 	parsePatientProfileUpdate,
 	type PatientProfileUpdate
 } from '$lib/server/patients/public/patient-profile';
-import { logServerFailure } from '$lib/server/platform/logging';
 import {
 	createClinicalEntry,
 	updateClinicalEntry,
