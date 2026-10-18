@@ -1,4 +1,5 @@
-import { isRecord } from '$lib/contracts/json';
+import { InvalidDataContractError } from '$lib/contracts/json';
+import { readSavedPatientEntry, type SavedPatientEntry } from '$lib/patients/history-contract';
 import type { BusinessContext } from '$lib/access/contracts';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { parseMoneyInteger } from '$lib/utils/money-input';
@@ -14,18 +15,7 @@ export type ClinicalEntryInput = {
 	amount: number | null;
 	internal_note: string | null;
 };
-export type SavedClinicalEntry = {
-	id: string;
-	patient_id: string;
-	created_at: string;
-	entry_type: string;
-	description: string;
-	teeth: string | null;
-	internal_note: string | null;
-	created_by_user_id: string | null;
-	locked_after: string | null;
-	amount: number | null;
-};
+export type SavedClinicalEntry = SavedPatientEntry;
 
 /** The existing local datetime contract is shared by create/edit and demo. */
 export function parseClinicalEntryInput(raw: {
@@ -114,33 +104,6 @@ function clinicalFailure(cause: { message?: string; code?: string }): PatientOpe
 	);
 }
 
-function readSavedClinicalEntry(value: unknown, patientId: string): SavedClinicalEntry | null {
-	if (
-		!isRecord(value) ||
-		typeof value.id !== 'string' ||
-		!value.id ||
-		value.patient_id !== patientId ||
-		typeof value.created_at !== 'string' ||
-		typeof value.entry_type !== 'string' ||
-		typeof value.description !== 'string'
-	)
-		return null;
-	const amount = value.amount == null ? null : Number(value.amount);
-	return {
-		id: value.id,
-		patient_id: patientId,
-		created_at: value.created_at,
-		entry_type: value.entry_type,
-		description: value.description,
-		teeth: typeof value.teeth === 'string' ? value.teeth : null,
-		internal_note: typeof value.internal_note === 'string' ? value.internal_note : null,
-		created_by_user_id:
-			typeof value.created_by_user_id === 'string' ? value.created_by_user_id : null,
-		locked_after: typeof value.locked_after === 'string' ? value.locked_after : null,
-		amount: amount != null && Number.isFinite(amount) ? amount : null
-	};
-}
-
 function assertClinicalWrite(context: BusinessContext, input: ClinicalEntryInput, edit: boolean) {
 	const permissions = resolvePatientPermissions(context);
 	const permitted = edit ? permissions.canEditClinicalEntry : permissions.canCreateClinicalEntry;
@@ -188,11 +151,14 @@ export async function createClinicalEntry({
 		logServerFailure('clinical.entry.create.failed', error);
 		throw clinicalFailure(error);
 	}
-	const saved = readSavedClinicalEntry(data, patientId);
-	// A successful commit with an unusable result must reload, never invite a
-	// second INSERT. The HTTP adapter preserves the non-enhanced redirect too.
-	if (!saved) logServerFailure('clinical.entry.create.result_invalid');
-	return saved;
+	try {
+		return readSavedPatientEntry(data, patientId);
+	} catch (cause) {
+		if (!(cause instanceof InvalidDataContractError)) throw cause;
+		// A committed write with an invalid projection reloads; it never retries the INSERT.
+		logServerFailure('clinical.entry.create.result_invalid');
+		return null;
+	}
 }
 
 export async function updateClinicalEntry({

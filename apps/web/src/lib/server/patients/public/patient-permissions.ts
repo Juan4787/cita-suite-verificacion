@@ -1,10 +1,11 @@
 import type { BusinessContext } from '$lib/server/access/public/business';
 import { canExportPatientDataFromContext } from '$lib/utils/patient-export-permissions';
+import type { PatientPermissions } from '$lib/patients/contracts';
 
 export const canExportPatientData = (context: BusinessContext) =>
 	canExportPatientDataFromContext(context);
 
-export const resolvePatientPermissions = (context: BusinessContext) => {
+export const resolvePatientPermissions = (context: BusinessContext): PatientPermissions => {
 	const role = context.role;
 	const capabilities = context.access.allowedCapabilities;
 	const isOwnerOrAdmin = role === 'owner' || role === 'admin';

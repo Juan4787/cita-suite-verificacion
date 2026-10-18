@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { PatientDetailViewData, PatientFormState, PatientHistoryEntry, PatientChangeEvent } from '$lib/patients/contracts';
+ import { readPatientHistoryPage, readPatientChangeEvents, readSavedPatientEntry } from '$lib/patients/history-contract';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/stores';
 	import { invalidate, replaceState } from '$app/navigation';
@@ -18,52 +20,7 @@
 	import { formatMoneyInteger, moneyDigits } from '$lib/utils/money-input';
 	import type { SubmitFunction } from '@sveltejs/kit';
 
-	let { data, form }: {
-		data: {
-			patient: any;
-			entries: any[];
-			appointments: any[];
-			radiographs: any[];
-			changeEvents?: any[];
-			changeEventsDeferred?: boolean;
-			role?: string;
-			currentUserId?: string | null;
-			clinicalTodayISO: string;
-			businessTimeZone?: string;
-			bookingInformationEnabled?: boolean;
-			businessIndustry?: import('$lib/access/contracts').BusinessIndustry;
-			documentUploads: 'available' | 'paused' | 'unavailable' | 'not_permitted';
-			followUpParticipates: boolean;
-			followUpCanAssign: boolean;
-			followUpTodayISO: string;
-			hasMoreEntries?: boolean;
-			permissions: {
-				canReadClinicalHistory: boolean;
-				canReadClinicalProfile: boolean;
-				canEditClinicalProfile: boolean;
-				canViewCosts: boolean;
-				canEditPatient: boolean;
-				canArchivePatient: boolean;
-				canCreateClinicalEntry: boolean;
-				canEditClinicalEntry: boolean;
-				canCreateAppointment: boolean;
-				canViewRadiographs: boolean;
-				canUploadRadiographs: boolean;
-				canViewRadiographTrash: boolean;
-				canTrashRadiographs: boolean;
-				canExportPatientData: boolean;
-			};
-			demo?: boolean;
-		};
-		form: {
-			message?: string;
-			duplicate?: boolean;
-			existingId?: string;
-			savedEntry?: Record<string, unknown>;
-			currentPatientUpdatedAt?: string;
-			currentClinicalProfileUpdatedAt?: string;
-		};
-	} = $props();
+	let { data, form }: { data: PatientDetailViewData; form?: PatientFormState | null } = $props();
 
 	let showEntryModal = $state(false);
 	let showEditModal = $state(false);
@@ -75,7 +32,7 @@
 	let tab = $state<'historial' | 'datos' | 'radiografias'>(
 		untrack(() => data.permissions.canReadClinicalHistory ? 'historial' : 'datos')
 	);
-	let filterType = $state<'Todos' | 'Consulta' | 'Tratamiento'>('Todos');
+	let filterType = $state<'Todos' | 'Consulta' | 'Diagnóstico' | 'Tratamiento'>('Todos');
 	let onlyWithNote = $state(false);
 	let timelineSearch = $state('');
 	let expandedId = $state<string | null>(null);
@@ -86,8 +43,8 @@
 		cancelled: 'Cancelado',
 		reschedule_requested: 'Quiere reprogramar'
 	};
-	let entries = $state<any[]>([]);
-	let changeEvents = $state<any[]>([]);
+	let entries = $state<PatientHistoryEntry[]>([]);
+	let changeEvents = $state<PatientChangeEvent[]>([]);
 	let hasMoreEntries = $state(false);
 	let changeEventsLoaded = $state(false);
 	let loadingChangeEvents = $state(false);
@@ -171,10 +128,10 @@
 			minute: '2-digit',
 			hourCycle: 'h23'
 		}).format(new Date(dateStr));
-	const mainTitle = (entry: any) => entry.title ?? entry.description ?? entry.entry_type;
-	const isDuplicateDescription = (entry: any) =>
+	const mainTitle = (entry: PatientHistoryEntry) => entry.title ?? entry.description ?? entry.entry_type;
+	const isDuplicateDescription = (entry: PatientHistoryEntry) =>
 		entry.description ? entry.description.trim().toLowerCase() === mainTitle(entry).trim().toLowerCase() : false;
-	const hasDistinctNote = (entry: any) =>
+	const hasDistinctNote = (entry: PatientHistoryEntry) =>
 		entry.internal_note &&
 		entry.internal_note.trim() &&
 		entry.internal_note.trim().toLowerCase() !== (entry.description ?? '').trim().toLowerCase();
@@ -215,7 +172,7 @@
 		)
 	);
 
-	const entryMatches = (entry: any) => {
+	const entryMatches = (entry: PatientHistoryEntry) => {
 		if (filterType !== 'Todos' && entry.entry_type !== filterType) return false;
 		if (onlyWithNote && !entry.internal_note) return false;
 		if (timelineSearch.trim()) {
@@ -227,7 +184,7 @@
 		return true;
 	};
 
-	const canEditEntry = (entry: any) => {
+	const canEditEntry = (entry: PatientHistoryEntry) => {
 		if (!permissions.canEditClinicalEntry) return false;
 		if (!isProfessional) return true;
 		const ownsEntry = entry.created_by_user_id && entry.created_by_user_id === data.currentUserId;
@@ -243,6 +200,7 @@
 			hasMoreEntries = false;
 			return;
 		}
+		const patientId = data.patient.id;
 		loadingMoreEntries = true;
 		historyLoadError = '';
 		try {
@@ -251,23 +209,20 @@
 				cursor_id: String(last.id)
 			});
 			const response = await fetch(
-				`/odonto/pacientes/${data.patient.id}/historial?${params.toString()}`
+				`/odonto/pacientes/${patientId}/historial?${params.toString()}`
 			);
 			if (!response.ok) {
 				throw new Error('No se pudo cargar más historial.');
 			}
-			const payload = (await response.json()) as {
-				items?: any[];
-				has_more?: boolean;
-			};
-			const incoming = Array.isArray(payload.items) ? payload.items : [];
+			const payload = readPatientHistoryPage(await response.json(), last);
+			if (data.patient.id !== patientId) return;
+			const incoming = payload.items;
 			const existing = new Set(entries.map((entry) => entry.id));
 			const deduped = incoming.filter((entry) => !existing.has(entry.id));
 			entries = [...entries, ...deduped];
 			hasMoreEntries = Boolean(payload.has_more);
 		} catch (err) {
-			const message = err instanceof Error ? err.message : 'No se pudo cargar más historial.';
-			historyLoadError = message;
+			if (data.patient.id === patientId) historyLoadError = 'No pudimos cargar más historial. Volvé a intentar.';
 		} finally {
 			loadingMoreEntries = false;
 		}
@@ -275,19 +230,18 @@
 
 	const loadChangeEvents = async () => {
 		if (data.demo || changeEventsLoaded || loadingChangeEvents) return;
+		const patientId = data.patient.id;
 		loadingChangeEvents = true;
 		changeEventsLoadError = '';
 		try {
-			const response = await fetch(`/odonto/pacientes/${data.patient.id}/datos`);
-			const payload = await response.json().catch(() => ({}));
-			if (!response.ok) {
-				throw new Error(payload?.message ?? 'No se pudieron cargar los últimos cambios.');
-			}
-			changeEvents = Array.isArray(payload?.change_events) ? payload.change_events : [];
+			const response = await fetch(`/odonto/pacientes/${patientId}/datos`);
+			if (!response.ok) throw new Error('Patient changes unavailable');
+			const incoming = readPatientChangeEvents(await response.json());
+			if (data.patient.id !== patientId) return;
+			changeEvents = incoming;
 			changeEventsLoaded = true;
 		} catch (error) {
-			changeEventsLoadError =
-				error instanceof Error ? error.message : 'No se pudieron cargar los últimos cambios.';
+			if (data.patient.id === patientId) changeEventsLoadError = 'No pudimos cargar los últimos cambios. Volvé a intentar.';
 		} finally {
 			loadingChangeEvents = false;
 		}
@@ -327,7 +281,7 @@ let showEntryErrors = $state(false);
 let showEditErrors = $state(false);
 let showEditEntryErrors = $state(false);
 let showEditEntryModal = $state(false);
-let editingEntry: any | null = $state(null);
+let editingEntry: PatientHistoryEntry | null = $state(null);
 let editEntryType = $state('');
 let editEntryDescription = $state('');
 let editEntryTeeth = $state('');
@@ -379,8 +333,9 @@ const formatAmountInput = (value: string) => {
 	return { digits, formatted };
 };
 
-const mergeSavedClinicalEntry = (savedEntry: Record<string, unknown>) => {
-	if (typeof savedEntry.id !== 'string' || typeof savedEntry.created_at !== 'string') return;
+const mergeSavedClinicalEntry = (value: unknown): boolean => {
+ let savedEntry;
+ try { savedEntry = readSavedPatientEntry(value, data.patient.id); } catch { return false; }
 
 	const merged = [savedEntry, ...entries.filter((entry) => entry.id !== savedEntry.id)].sort(
 		(left, right) => {
@@ -393,6 +348,7 @@ const mergeSavedClinicalEntry = (savedEntry: Record<string, unknown>) => {
 	const exceededFirstPage = merged.length > 30;
 	entries = merged.slice(0, 30);
 	hasMoreEntries = hasMoreEntries || exceededFirstPage;
+ return true;
 };
 
 const enhanceEntry: SubmitFunction = ({ cancel, formElement }) => {
@@ -407,8 +363,11 @@ const enhanceEntry: SubmitFunction = ({ cancel, formElement }) => {
 		try {
 			if (result.type === 'success') {
 				const savedEntry = result.data?.savedEntry;
-				if (savedEntry && typeof savedEntry === 'object' && !Array.isArray(savedEntry)) {
-					mergeSavedClinicalEntry(savedEntry);
+				if (!mergeSavedClinicalEntry(savedEntry)) {
+					markPatientRevisionUnverified();
+					showEntryModal = false;
+					await update();
+					return;
 				}
 				markPatientRevisionUnverified();
 				showEntryModal = false;
@@ -494,7 +453,7 @@ const handleEditEntrySubmit = (event: SubmitEvent) => {
 	}
 };
 
-const openEditEntry = (entry: any) => {
+const openEditEntry = (entry: PatientHistoryEntry) => {
 	editingEntry = entry;
 	editEntryType = entry.entry_type ?? '';
 	editEntryDescription = entry.description ?? '';
@@ -884,7 +843,7 @@ const preventEnterSubmit = (event: KeyboardEvent) => {
 							{/if}
 					</div>
 					{#if data.patient.clinical_profile_patient_reported}<p class="mb-3 text-xs text-neutral-600 dark:text-neutral-300">Última actualización informada por el paciente desde su reserva. Revisá el historial de información previa para consultar los cambios.</p>{/if}
-                    {#if permissions.canReadClinicalProfile && data.patient.custom_fields?.booking_age}<p class="mb-3 text-sm">Edad declarada: {data.patient.custom_fields.booking_age.years} años (al {data.patient.custom_fields.booking_age.as_of}).</p>{/if}
+                    {#if permissions.canReadClinicalProfile && data.patient.booking_age}<p class="mb-3 text-sm">Edad declarada: {data.patient.booking_age.years} años (al {data.patient.booking_age.as_of}).</p>{/if}
                     {#if permissions.canReadClinicalProfile && data.patient.booking_extra_fields?.length}<dl class="mb-4 space-y-2">{#each data.patient.booking_extra_fields as field}<div><dt class="text-xs text-neutral-600 dark:text-neutral-300">{field.label}</dt><dd class="text-sm whitespace-pre-wrap break-words">{typeof field.value === 'boolean' ? field.value ? 'Sí' : 'No' : String(field.value)}</dd></div>{/each}</dl>{/if}
                     <div class="space-y-3">
                         <div class="flex min-w-0 items-start justify-between gap-3 rounded-lg bg-amber-100/30 px-3 py-2 dark:bg-amber-500/10">

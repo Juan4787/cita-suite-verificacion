@@ -5,10 +5,11 @@ import { readClinicalEntryAmount } from './clinical-entry-costs';
 import { bookingInformationEnabled } from './booking-information';
 import { resolvePatientPermissions } from './patient-permissions';
 import { businessTodayISO, roleParticipatesInFollowUps, roleSeesAllFollowUps } from './follow-ups';
-import { parsePatientBookingProfile } from '$lib/patients/booking-profile';
+import { parsePatientBookingProfile, readPatientBookingAge } from '$lib/patients/booking-profile';
 import { ACTIVE_APPOINTMENT_STATUSES } from '$lib/utils/appointment-visibility';
 import { getProfessionalForUser as getCurrentProfessional } from '$lib/server/team/public/professionals';
 import { logServerFailure } from '$lib/server/platform/logging';
+import type { PatientDetailViewData } from '$lib/patients/contracts';
 
 const ENTRIES_PAGE_SIZE = 30;
 export class PatientDetailReadError extends Error {
@@ -32,7 +33,7 @@ export async function readPatientDetail({
 	admin: CitaSupabaseClient;
 	context: BusinessContext;
 	currentUserId: string | null;
-}) {
+}): Promise<PatientDetailViewData> {
 	const permissions = resolvePatientPermissions(context);
 	const nowIso = new Date().toISOString();
 	const documentUploads: Promise<ClinicalUploadAvailability> = permissions.canUploadRadiographs
@@ -146,6 +147,7 @@ export async function readPatientDetail({
 			background: clinicalProfile?.background ?? null,
 			custom_fields: clinicalProfile?.custom_fields ?? null,
 			booking_extra_fields: bookingProfile.fields,
+			booking_age: readPatientBookingAge(clinicalProfile?.custom_fields),
 			clinical_profile_updated_at: clinicalProfile?.updated_at ?? null,
 			clinical_profile_patient_reported:
 				bookingInformationEnabled() &&

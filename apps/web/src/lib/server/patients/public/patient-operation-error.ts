@@ -1,11 +1,5 @@
 export type PatientFailureKind = 'invalid' | 'forbidden' | 'missing' | 'conflict' | 'unavailable';
-export type PatientFailureFeedback = {
-	duplicate?: boolean;
-	duplicateField?: 'dni';
-	existingId?: string;
-	currentPatientUpdatedAt?: string;
-	currentClinicalProfileUpdatedAt?: string;
-};
+import type { PatientFailureFeedback } from '$lib/patients/contracts';
 
 /** Domain failure; routes decide how to represent it over HTTP. */
 export class PatientOperationError extends Error {

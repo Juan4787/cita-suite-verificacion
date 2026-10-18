@@ -38,6 +38,7 @@ import { fail, redirect, error as kitError } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { businessTodayISO } from '$lib/server/patients/public/follow-ups';
 import { resolvePatientPermissions } from '$lib/server/patients/public/patient-permissions';
+import { readPatientBookingAge } from '$lib/patients/booking-profile';
 
 const getLatestEntryDate = (
 	patientId: string,
@@ -150,7 +151,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, dep
 			.filter((r) => r.patient_id === params.id)
 			.sort((a, b) => ((a.created_at ?? '') < (b.created_at ?? '') ? 1 : -1));
 		return {
-			patient,
+			patient: { ...patient, booking_age: readPatientBookingAge(patient.custom_fields) },
 			entries,
 			radiographs,
 			appointments: [],
