@@ -220,7 +220,7 @@ test('patient structure preserves role scope, keyboard access and long content a
 					await page.setViewportSize({ width, height: 900 });
 					await page.evaluate((theme) => localStorage.setItem('theme', theme), theme);
 					await page.goto(`/odonto/pacientes/${patient.id}`);
-					await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+					await expect(page.getByRole('main').getByRole('heading', { name, exact: true })).toBeVisible();
 					await expect
 						.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark')))
 						.toBe(theme === 'dark');

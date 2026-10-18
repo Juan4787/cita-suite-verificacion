@@ -1,8 +1,9 @@
+import { isRecord } from '$lib/contracts/json';
 import { formatTimeRanges, parseTimeRanges, type TimeRange } from './time-ranges';
 
 export type ScheduleBlockDraft = {
-    serviceScope?: 'all' | 'restricted';
-    allowedServiceIds?: string[];
+	serviceScope?: 'all' | 'restricted';
+	allowedServiceIds?: string[];
 	id?: string;
 	weekdays: number[];
 	timeRanges: string;
@@ -16,8 +17,8 @@ export type ScheduleBlockDraft = {
 };
 
 export type NormalizedScheduleBlock = {
-    serviceScope?: 'all' | 'restricted';
-    allowedServiceIds?: string[];
+	serviceScope?: 'all' | 'restricted';
+	allowedServiceIds?: string[];
 	weekdays: number[];
 	ranges: TimeRange[];
 	slotIntervalMinutes: number;
@@ -25,9 +26,9 @@ export type NormalizedScheduleBlock = {
 };
 
 type RuleLike = {
-    service_scope?: 'all' | 'restricted';
-    allowed_service_ids?: string[];
-    rule_services?: {service_id:string}[];
+	service_scope?: 'all' | 'restricted';
+	allowed_service_ids?: string[];
+	rule_services?: { service_id: string }[];
 	weekday: number;
 	start_time: string;
 	end_time: string;
@@ -55,9 +56,18 @@ export const createDefaultScheduleBlock = (id?: string): ScheduleBlockDraft => (
 
 export const normalizeScheduleWeekdays = (weekdays: unknown) => {
 	if (!Array.isArray(weekdays)) return [];
-	return [...new Set(weekdays.map(Number).filter((value) => Number.isInteger(value) && value >= 0 && value <= 6))].sort(
-		(a, b) => a - b
-	);
+	const values: unknown[] = weekdays;
+	return [
+		...new Set(
+			values
+				.filter(
+					(value): value is string | number =>
+						typeof value === 'string' || typeof value === 'number'
+				)
+				.map(Number)
+				.filter((value) => Number.isInteger(value) && value >= 0 && value <= 6)
+		)
+	].sort((a, b) => a - b);
 };
 
 export const timeRangesOverlap = (ranges: TimeRange[]) => {
@@ -85,10 +95,33 @@ export const validateScheduleBlocks = (
 			return { ok: false, message: `Horario inválido en el ${label}.`, blockIndex: index };
 		}
 		if (timeRangesOverlap(ranges)) {
-			return { ok: false, message: `Los horarios del ${label} no pueden superponerse.`, blockIndex: index };
+			return {
+				ok: false,
+				message: `Los horarios del ${label} no pueden superponerse.`,
+				blockIndex: index
+			};
 		}
-        for(const weekday of weekdays){const previous=usedWeekdays.get(weekday)??[];if(timeRangesOverlap([...previous,...ranges]))return {ok:false,message:'Los horarios de un mismo día no pueden superponerse. Revisá las franjas.',blockIndex:index};usedWeekdays.set(weekday,[...previous,...ranges]);}
-        if(block.serviceScope==='restricted'&&(!Array.isArray(block.allowedServiceIds)||block.allowedServiceIds.length>100||new Set(block.allowedServiceIds).size!==block.allowedServiceIds.length))return {ok:false,message:'Elegí las prestaciones permitidas para esta franja.',blockIndex:index};
+		for (const weekday of weekdays) {
+			const previous = usedWeekdays.get(weekday) ?? [];
+			if (timeRangesOverlap([...previous, ...ranges]))
+				return {
+					ok: false,
+					message: 'Los horarios de un mismo día no pueden superponerse. Revisá las franjas.',
+					blockIndex: index
+				};
+			usedWeekdays.set(weekday, [...previous, ...ranges]);
+		}
+		if (
+			block.serviceScope === 'restricted' &&
+			(!Array.isArray(block.allowedServiceIds) ||
+				block.allowedServiceIds.length > 100 ||
+				new Set(block.allowedServiceIds).size !== block.allowedServiceIds.length)
+		)
+			return {
+				ok: false,
+				message: 'Elegí las prestaciones permitidas para esta franja.',
+				blockIndex: index
+			};
 
 		const rawBreakMinutes = String(block.slotInterval ?? '').trim();
 		const breakMinutes = rawBreakMinutes === '' ? Number.NaN : Number(rawBreakMinutes);
@@ -112,7 +145,15 @@ export const validateScheduleBlocks = (
 			};
 		}
 
-		normalized.push({ weekdays, ranges, slotIntervalMinutes, breakMinutes,...(block.serviceScope==='restricted'?{serviceScope:'restricted' as const,allowedServiceIds:block.allowedServiceIds}:{}) });
+		normalized.push({
+			weekdays,
+			ranges,
+			slotIntervalMinutes,
+			breakMinutes,
+			...(block.serviceScope === 'restricted'
+				? { serviceScope: 'restricted' as const, allowedServiceIds: block.allowedServiceIds }
+				: {})
+		});
 	}
 
 	if (normalized.length === 0) {
@@ -122,7 +163,8 @@ export const validateScheduleBlocks = (
 	return { ok: true, blocks: normalized };
 };
 
-const rangeKey = (ranges: TimeRange[]) => ranges.map((range) => `${range.start}-${range.end}`).join(',');
+const rangeKey = (ranges: TimeRange[]) =>
+	ranges.map((range) => `${range.start}-${range.end}`).join(',');
 
 export const canonicalScheduleBlocks = (blocks: ScheduleBlockDraft[]) => {
 	const result = validateScheduleBlocks(blocks);
@@ -130,7 +172,9 @@ export const canonicalScheduleBlocks = (blocks: ScheduleBlockDraft[]) => {
 	return JSON.stringify(
 		result.blocks
 			.map((block) => ({
-				weekdays: block.weekdays,serviceScope:block.serviceScope??'all',allowedServiceIds:[...(block.allowedServiceIds??[])].sort(),
+				weekdays: block.weekdays,
+				serviceScope: block.serviceScope ?? 'all',
+				allowedServiceIds: [...(block.allowedServiceIds ?? [])].sort(),
 				ranges: rangeKey(block.ranges),
 				slotIntervalMinutes: block.slotIntervalMinutes,
 				breakMinutes: block.breakMinutes
@@ -142,7 +186,9 @@ export const canonicalScheduleBlocks = (blocks: ScheduleBlockDraft[]) => {
 export const serializeScheduleBlocks = (blocks: ScheduleBlockDraft[]) =>
 	JSON.stringify(
 		blocks.map((block) => ({
-			weekdays: normalizeScheduleWeekdays(block.weekdays),serviceScope:block.serviceScope??'all',allowedServiceIds:block.allowedServiceIds??[],
+			weekdays: normalizeScheduleWeekdays(block.weekdays),
+			serviceScope: block.serviceScope ?? 'all',
+			allowedServiceIds: block.allowedServiceIds ?? [],
 			timeRanges: block.timeRanges,
 			slotInterval: String(block.slotInterval),
 			gridInterval: String(block.gridInterval || '15')
@@ -158,29 +204,81 @@ export const parseScheduleBlocksJson = (raw: string): ScheduleBlockDraft[] | nul
 		return null;
 	}
 	if (!Array.isArray(parsed)) return null;
-	return parsed.map((item: any) => ({
-        serviceScope:item?.serviceScope==='restricted'?'restricted':'all',
-        allowedServiceIds:Array.isArray(item?.allowedServiceIds)?item.allowedServiceIds.map(String):[],
-		weekdays: normalizeScheduleWeekdays(item?.weekdays),
-		timeRanges: String(item?.timeRanges ?? item?.time_ranges ?? ''),
-		slotInterval: String(item?.breakMinutes ?? item?.break_minutes ?? item?.slotInterval ?? '15'),
-		gridInterval: String(item?.gridInterval ?? item?.slot_interval_minutes ?? '15')
-	}));
+	const rows: unknown[] = parsed;
+	const result: ScheduleBlockDraft[] = [];
+	const scalarText = (value: unknown, fallback: string) =>
+		value == null
+			? fallback
+			: typeof value === 'string' || typeof value === 'number'
+				? String(value)
+				: null;
+	for (const item of rows) {
+		if (
+			!isRecord(item) ||
+			(item.serviceScope != null &&
+				item.serviceScope !== 'all' &&
+				item.serviceScope !== 'restricted')
+		)
+			return null;
+		const serviceIds: unknown = item.allowedServiceIds ?? [];
+		if (!Array.isArray(serviceIds)) return null;
+		const identifiers: unknown[] = serviceIds;
+		if (!identifiers.every((id): id is string => typeof id === 'string')) return null;
+		const timeRanges = scalarText(item.timeRanges ?? item.time_ranges, '');
+		const slotInterval = scalarText(
+			item.breakMinutes ?? item.break_minutes ?? item.slotInterval,
+			'15'
+		);
+		const gridInterval = scalarText(item.gridInterval ?? item.slot_interval_minutes, '15');
+		if (timeRanges === null || slotInterval === null || gridInterval === null) return null;
+		result.push({
+			serviceScope: item.serviceScope === 'restricted' ? 'restricted' : 'all',
+			allowedServiceIds: identifiers,
+			weekdays: normalizeScheduleWeekdays(item.weekdays),
+			timeRanges,
+			slotInterval,
+			gridInterval
+		});
+	}
+	return result;
 };
 
-export const scheduleBlocksFromRules = (rules: RuleLike[], idPrefix = 'block'): ScheduleBlockDraft[] => {
+export const scheduleBlocksFromRules = (
+	rules: RuleLike[],
+	idPrefix = 'block'
+): ScheduleBlockDraft[] => {
 	if (rules.length === 0) return [createDefaultScheduleBlock(`${idPrefix}-1`)];
 
 	const groups = new Map<string, ScheduleBlockDraft>();
-    for(const rule of [...rules].sort((a,b)=>a.weekday-b.weekday||a.start_time.localeCompare(b.start_time))){
-        const range={start:rule.start_time.slice(0,5),end:rule.end_time.slice(0,5)};
-        const allowed=rule.allowed_service_ids??rule.rule_services?.map(row=>row.service_id)??[];
-        const scope=rule.service_scope??'all';const pause=Math.max(0,Number(rule.break_minutes??rule.slot_interval_minutes??15));
-        const key=JSON.stringify([range,rule.slot_interval_minutes,pause,scope,[...allowed].sort()]);
-        const existing=groups.get(key);
-        if(existing){existing.weekdays=[...new Set([...existing.weekdays,rule.weekday])].sort((a,b)=>a-b);continue;}
-        groups.set(key,{id:`${idPrefix}-${groups.size+1}`,weekdays:[rule.weekday],timeRanges:formatTimeRanges([range]),slotInterval:String(pause),gridInterval:String(rule.slot_interval_minutes),...(scope==='restricted'?{serviceScope:'restricted',allowedServiceIds:allowed}:{})});
-    }
+	for (const rule of [...rules].sort(
+		(a, b) => a.weekday - b.weekday || a.start_time.localeCompare(b.start_time)
+	)) {
+		const range = { start: rule.start_time.slice(0, 5), end: rule.end_time.slice(0, 5) };
+		const allowed =
+			rule.allowed_service_ids ?? rule.rule_services?.map((row) => row.service_id) ?? [];
+		const scope = rule.service_scope ?? 'all';
+		const pause = Math.max(0, Number(rule.break_minutes ?? rule.slot_interval_minutes ?? 15));
+		const key = JSON.stringify([
+			range,
+			rule.slot_interval_minutes,
+			pause,
+			scope,
+			[...allowed].sort()
+		]);
+		const existing = groups.get(key);
+		if (existing) {
+			existing.weekdays = [...new Set([...existing.weekdays, rule.weekday])].sort((a, b) => a - b);
+			continue;
+		}
+		groups.set(key, {
+			id: `${idPrefix}-${groups.size + 1}`,
+			weekdays: [rule.weekday],
+			timeRanges: formatTimeRanges([range]),
+			slotInterval: String(pause),
+			gridInterval: String(rule.slot_interval_minutes),
+			...(scope === 'restricted' ? { serviceScope: 'restricted', allowedServiceIds: allowed } : {})
+		});
+	}
 
 	return [...groups.values()];
 };

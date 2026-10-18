@@ -108,7 +108,7 @@ CREATE OR REPLACE FUNCTION public.set_clinical_entry_actor_fields()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'pg_catalog'
+ SET search_path TO pg_catalog, pg_temp
 AS $function$
 declare
 	v_role text;

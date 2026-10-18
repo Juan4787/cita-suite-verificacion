@@ -143,6 +143,7 @@
 						isRecord(result.data) && typeof result.data.serviceId === 'string'
 							? result.data.serviceId
 							: '';
+					if (!id) { uncertainCreation = true; return; }
 					if (id) {
 						if (!selectedIds.includes(id)) selectedIds = [...selectedIds, id];
 						if (!baselineIds.includes(id)) baselineIds = [...baselineIds, id];
@@ -154,7 +155,6 @@
 				}
 				if (result.type === 'error' || (result.type === 'failure' && result.status >= 500)) {
 					uncertainCreation = true;
-					await update({ reset: false, invalidateAll: false });
 					return;
 				}
 				await update({ reset: false });
@@ -184,7 +184,7 @@
 					result,
 					'No pudimos guardar el servicio. Revisá los datos e intentá nuevamente.'
 				);
-				await update({ reset: false, invalidateAll: false });
+				if (result.type !== 'error') await update({ reset: false, invalidateAll: false });
 			} finally {
 				if (isCurrent(requestedScope)) saving = null;
 			}

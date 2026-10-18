@@ -105,16 +105,85 @@ describe('schedule blocks', () => {
 	it('canoniza bloques equivalentes aunque vengan con sintaxis horaria distinta', () => {
 		expect(
 			canonicalScheduleBlocks([{ weekdays: [5, 1], timeRanges: '8 a 15', slotInterval: '15' }])
-		).toBe(canonicalScheduleBlocks([{ weekdays: [1, 5], timeRanges: '08:00-15:00', slotInterval: '15' }]));
+		).toBe(
+			canonicalScheduleBlocks([{ weekdays: [1, 5], timeRanges: '08:00-15:00', slotInterval: '15' }])
+		);
 	});
 });
 
-describe('service restrictions in schedule drafts',()=>{
- it('permits adjacent blocks on the same weekday and preserves a closed restriction',()=>{
-  const blocks=[{weekdays:[2],timeRanges:'14-17',slotInterval:'0'}, {weekdays:[2],timeRanges:'17-19',slotInterval:'0',serviceScope:'restricted' as const,allowedServiceIds:[]}];
-  expect(validateScheduleBlocks(blocks).ok).toBe(true);
-  expect(canonicalScheduleBlocks(blocks)).toContain('restricted');
-  const reconstructed=scheduleBlocksFromRules([{weekday:2,start_time:'17:00',end_time:'19:00',slot_interval_minutes:30,service_scope:'restricted',allowed_service_ids:[]}]);
-  expect(reconstructed[0]).toMatchObject({serviceScope:'restricted',allowedServiceIds:[]});
- });
+describe('service restrictions in schedule drafts', () => {
+	it('permits adjacent blocks on the same weekday and preserves a closed restriction', () => {
+		const blocks = [
+			{ weekdays: [2], timeRanges: '14-17', slotInterval: '0' },
+			{
+				weekdays: [2],
+				timeRanges: '17-19',
+				slotInterval: '0',
+				serviceScope: 'restricted' as const,
+				allowedServiceIds: []
+			}
+		];
+		expect(validateScheduleBlocks(blocks).ok).toBe(true);
+		expect(canonicalScheduleBlocks(blocks)).toContain('restricted');
+		const reconstructed = scheduleBlocksFromRules([
+			{
+				weekday: 2,
+				start_time: '17:00',
+				end_time: '19:00',
+				slot_interval_minutes: 30,
+				service_scope: 'restricted',
+				allowed_service_ids: []
+			}
+		]);
+		expect(reconstructed[0]).toMatchObject({ serviceScope: 'restricted', allowedServiceIds: [] });
+	});
+});
+
+describe('unknown schedule draft JSON', () => {
+	it('rejects unknown restriction scope and object identifiers without broadening a closed window', async () => {
+		const { parseScheduleBlocksJson } = await import('./schedule-blocks');
+		const block = {
+			weekdays: [1],
+			timeRanges: '9-12',
+			slotInterval: '15',
+			serviceScope: 'restricted',
+			allowedServiceIds: []
+		};
+		expect(parseScheduleBlocksJson(JSON.stringify([block]))).toMatchObject([
+			{ serviceScope: 'restricted', allowedServiceIds: [] }
+		]);
+		expect(
+			parseScheduleBlocksJson(JSON.stringify([{ ...block, serviceScope: 'unknown' }]))
+		).toBeNull();
+		expect(
+			parseScheduleBlocksJson(
+				JSON.stringify([{ ...block, allowedServiceIds: [{ id: 'synthetic' }] }])
+			)
+		).toBeNull();
+		expect(parseScheduleBlocksJson(JSON.stringify([null]))).toBeNull();
+	});
+	it('retains historical scalar field names and break/grid values', async () => {
+		const { parseScheduleBlocksJson } = await import('./schedule-blocks');
+		expect(
+			parseScheduleBlocksJson(
+				JSON.stringify([
+					{
+						weekdays: [1, '3', true, {}],
+						time_ranges: '10-12',
+						break_minutes: 25,
+						slot_interval_minutes: 10
+					}
+				])
+			)
+		).toEqual([
+			{
+				serviceScope: 'all',
+				allowedServiceIds: [],
+				weekdays: [1, 3],
+				timeRanges: '10-12',
+				slotInterval: '25',
+				gridInterval: '10'
+			}
+		]);
+	});
 });
