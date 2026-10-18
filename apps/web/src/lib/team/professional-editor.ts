@@ -206,3 +206,92 @@ export function acceptProfessionalDraftSave(
 	}
 	return { baseline: saved, draft: next };
 }
+
+export type ProfessionalEditorRule = {
+	service_scope?: 'all' | 'restricted';
+	rule_services?: Array<{ service_id: string }>;
+	id: string;
+	weekday: number;
+	start_time: string;
+	end_time: string;
+	slot_interval_minutes: number;
+	break_minutes: number;
+	is_active: boolean;
+	created_at: string | null;
+};
+export type ProfessionalEditorException = {
+	exception_services?: Array<{ service_id: string }>;
+	id: string;
+	professional_id: string | null;
+	starts_at: string;
+	ends_at: string;
+	type: 'blocked' | 'extra_available' | 'restricted';
+	reason: string | null;
+};
+export type ProfessionalDirtyFields = {
+	name: boolean;
+	specialty: boolean;
+	phone: boolean;
+	email: boolean;
+	profilePublic: boolean;
+	services: boolean;
+	schedule: boolean;
+	exception: boolean;
+};
+export type ProfessionalEditorData = {
+	context: {
+		business: { id: string; timezone: string };
+		canOperate: boolean;
+		canManage: boolean;
+	};
+	professional: {
+		id: string;
+		name: string;
+		specialty: string | null;
+		phone: string | null;
+		email: string | null;
+		is_active: boolean;
+		is_public: boolean;
+	} | null;
+	services: ProfessionalEditorService[];
+	currentPriceLabels?: Record<string, string>;
+	availabilityRevision?: number;
+	exceptionRequestId?: string;
+	assignedServiceIds: string[];
+	defaultServiceIds: string[];
+	rules: ProfessionalEditorRule[];
+	exceptions: ProfessionalEditorException[];
+	appointmentCount?: number | null;
+	clinicalEntryCount?: number | null;
+	followUpCount?: number | null;
+	dependencyCountsDeferred?: boolean;
+	tab: string;
+	userId: string | null;
+	pendingAccountEmail: string | null;
+	demo: boolean;
+};
+
+export type ProfessionalDependencyCounts = {
+	appointment_count: number;
+	clinical_entry_count: number;
+	follow_up_count: number;
+};
+/** Malformed or missing counts never authorize the destructive confirmation. */
+export function parseProfessionalDependencyCounts(
+	value: unknown
+): ProfessionalDependencyCounts | null {
+	if (!isRecord(value)) return null;
+	const { appointment_count, clinical_entry_count, follow_up_count } = value;
+	const count = (item: unknown): item is number =>
+		typeof item === 'number' && Number.isSafeInteger(item) && item >= 0;
+	return count(appointment_count) && count(clinical_entry_count) && count(follow_up_count)
+		? { appointment_count, clinical_entry_count, follow_up_count }
+		: null;
+}
+
+export const hasProfessionalExceptionDraft = (exception: ProfessionalDraft['exception']) =>
+	exception.periodMode === 'multiple'
+		? Boolean(exception.dates?.length || exception.date.trim() || exception.reason.trim())
+		: exception.periodMode === 'range'
+			? Boolean(exception.dateFrom.trim() || exception.dateTo.trim() || exception.reason.trim())
+			: Boolean(exception.date.trim() || exception.timeRange.trim() || exception.reason.trim());

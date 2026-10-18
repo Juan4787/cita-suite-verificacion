@@ -22,7 +22,8 @@
 		saving = $bindable(),
 		dependencyKey,
 		scope,
-		onToggleService
+		onToggleService,
+		availabilityRevision
 	}: {
 		active: boolean;
 		services: Service[];
@@ -36,6 +37,7 @@
 		dependencyKey: string;
 		scope: string;
 		onToggleService: (serviceId: string) => void;
+		availabilityRevision: number;
 	} = $props();
 	let showNewService = $state(false),
 		editingService = $state<Service | null>(null),
@@ -194,6 +196,7 @@
         <a class="ux-btn-secondary mb-5 inline-flex" href={`/odonto/profesionales/${professional?.id}/aranceles`}>Configurar aranceles y ajustes mensuales</a>
 		<div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
 			<form method="POST" action="?/save_services" class={`ux-card ${dirty ? 'ux-state-unsaved' : ''}`} use:enhance={saveAssignment}>
+				<input type="hidden" name="availability_revision" value={availabilityRevision} />
 				<div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
 					<div>
 						<h2 class="ux-section-title">Servicios que ofrece</h2>
