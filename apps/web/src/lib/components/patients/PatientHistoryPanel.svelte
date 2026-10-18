@@ -97,6 +97,7 @@
 	};
 	const fmtTime = (dateStr: string) =>
 		new Intl.DateTimeFormat('es-AR', {
+			...(businessTimeZone ? { timeZone: businessTimeZone } : {}),
 			hour: '2-digit',
 			minute: '2-digit',
 			hourCycle: 'h23'

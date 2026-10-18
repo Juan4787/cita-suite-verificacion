@@ -5,6 +5,7 @@ import type { CitaSupabaseClient } from '$lib/types/database';
 import { parseMoneyInteger } from '$lib/utils/money-input';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { resolvePatientPermissions } from './patient-permissions';
+import { zonedDateTimeToUtc } from '$lib/availability/calculate';
 import { COMMERCIAL_RESTRICTED_MESSAGE, PatientOperationError } from './patient-operation-error';
 
 export type ClinicalEntryInput = {
@@ -18,14 +19,17 @@ export type ClinicalEntryInput = {
 export type SavedClinicalEntry = SavedPatientEntry;
 
 /** The existing local datetime contract is shared by create/edit and demo. */
-export function parseClinicalEntryInput(raw: {
-	entryType: string;
-	description: string;
-	createdAt: string;
-	teeth: string;
-	amount: string;
-	internalNote: string;
-}): ClinicalEntryInput {
+export function parseClinicalEntryInput(
+	raw: {
+		entryType: string;
+		description: string;
+		createdAt: string;
+		teeth: string;
+		amount: string;
+		internalNote: string;
+	},
+	timeZone = 'UTC'
+): ClinicalEntryInput {
 	const createdAtRaw = raw.createdAt.trim();
 	if (!createdAtRaw) throw new PatientOperationError('invalid', 'Completá la fecha y hora.');
 	const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(createdAtRaw);
@@ -55,12 +59,31 @@ export function parseClinicalEntryInput(raw: {
 	const description = raw.description.trim();
 	if (!entryType || !description)
 		throw new PatientOperationError('invalid', 'Tipo y descripción son obligatorios');
+	const instant = zonedDateTimeToUtc(createdAtRaw.slice(0, 10), createdAtRaw.slice(11), timeZone);
+	const parts = new Intl.DateTimeFormat('en-CA', {
+		timeZone,
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+		hour: '2-digit',
+		minute: '2-digit',
+		hourCycle: 'h23'
+	}).formatToParts(instant);
+	const part = (type: string) => parts.find((item) => item.type === type)?.value ?? '';
+	if (
+		`${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}` !==
+		createdAtRaw
+	)
+		throw new PatientOperationError(
+			'invalid',
+			'Esa hora no existe en la zona horaria del consultorio. Elegí otra hora.'
+		);
 	// This is a text column: preserve existing custom/historical labels. The demo's
 	// narrower display type does not impose a new database constraint.
 	return {
 		entry_type: entryType,
 		description,
-		created_at: new Date(y, m - 1, d, hh, mm, 0, 0).toISOString(),
+		created_at: instant.toISOString(),
 		teeth: raw.teeth.trim() || null,
 		amount: parseMoneyInteger(raw.amount.trim()),
 		internal_note: raw.internalNote.trim() || null
@@ -79,6 +102,11 @@ function clinicalFailure(cause: { message?: string; code?: string }): PatientOpe
 		return new PatientOperationError(
 			'invalid',
 			'La fecha de la consulta no puede estar en el futuro.'
+		);
+	if (message.includes('CLINICAL_ENTRY_DATE_EDIT_DENIED'))
+		return new PatientOperationError(
+			'forbidden',
+			'La fecha y hora de registro de esta consulta se conservan.'
 		);
 	if (message.includes('CLINICAL_COST_DENIED'))
 		return new PatientOperationError('forbidden', 'Tu rol no permite registrar importes.');
@@ -176,12 +204,13 @@ export async function updateClinicalEntry({
 }): Promise<void> {
 	if (!entryId) throw new PatientOperationError('invalid', 'Entrada inválida.');
 	assertClinicalWrite(context, input, true);
-	const { error } = await supabase.rpc('update_clinical_entry_safely', {
+	const { error } = await supabase.rpc('update_clinical_entry_with_date_safely', {
 		p_business_id: context.business.id,
 		p_patient_id: patientId,
 		p_entry_id: entryId,
 		p_entry_type: input.entry_type,
 		p_description: input.description,
+		p_created_at: input.created_at,
 		p_teeth: input.teeth,
 		p_internal_note: input.internal_note,
 		p_amount: input.amount

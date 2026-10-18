@@ -676,7 +676,8 @@
 			</div>
 			<div class="space-y-2">
 				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="created_at-year">Fecha y hora</label>
-				<DateTimePartsInput name="created_at" minYear={2000} maxYear={2045} showErrors={showEntryErrors} />
+				<DateTimePartsInput name="created_at" readOnly={isProfessional} timeZone={data.businessTimeZone} minYear={2000} maxYear={2045} showErrors={showEntryErrors} />
+				{#if isProfessional}<p class="text-xs text-neutral-600 dark:text-neutral-300">La fecha y hora se registrarán al guardar.</p>{/if}
 			</div>
 		</div>
 		<div class="space-y-2">
@@ -840,8 +841,9 @@
 				</select>
 			</div>
 			<div class="space-y-2">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="edit_created_at-year">Fecha y hora</label>
-				<DateTimePartsInput name="created_at" minYear={2000} maxYear={2045} initialValue={editEntryCreatedAt} showErrors={showEditEntryErrors} />
+				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="created_at-year">Fecha y hora</label>
+				<DateTimePartsInput name="created_at" readOnly={isProfessional} timeZone={data.businessTimeZone} minYear={2000} maxYear={2045} initialValue={editEntryCreatedAt} showErrors={showEditEntryErrors} />
+				{#if isProfessional}<p class="text-xs text-neutral-600 dark:text-neutral-300">La fecha y hora de registro se conservan.</p>{/if}
 			</div>
 		</div>
 		<div class="space-y-2">

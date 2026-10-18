@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	type InvalidField = 'year' | 'month' | 'day' | 'time' | null;
 
 	let {
@@ -10,21 +11,35 @@
 		initialValue = null,
 		minYear = 2000,
 		maxYear = 2045,
-		showErrors = false
+		showErrors = false,
+		timeZone,
+		readOnly = false
 	}: {
 		name?: string;
 		initialValue?: string | null;
 		minYear?: number;
 		maxYear?: number;
 		showErrors?: boolean;
+		timeZone?: string;
+		readOnly?: boolean;
 	} = $props();
 
-	const now = new Date();
-
-	let year = $state(String(now.getFullYear()));
-	let month = $state(String(now.getMonth() + 1).padStart(2, '0'));
-	let day = $state(String(now.getDate()).padStart(2, '0'));
-	let time = $state(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+	const calendarParts = (date: Date, zone?: string) => {
+		const parts = new Intl.DateTimeFormat('en-CA', {
+			...(zone ? { timeZone: zone } : {}), year: 'numeric', month: '2-digit', day: '2-digit',
+			hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+		}).formatToParts(date);
+		const part = (type: string) => parts.find(item => item.type === type)?.value ?? '';
+		return { year: part('year'), month: part('month'), day: part('day'), time: `${part('hour')}:${part('minute')}` };
+	};
+	const initialParts = untrack(() => {
+		const date = initialValue ? new Date(initialValue) : new Date();
+		return calendarParts(Number.isFinite(date.valueOf()) ? date : new Date(), timeZone);
+	});
+	let year = $state(initialParts.year);
+	let month = $state(initialParts.month);
+	let day = $state(initialParts.day);
+	let time = $state(initialParts.time);
 
 	let yearEl: HTMLInputElement | null = $state(null);
 	let monthEl: HTMLInputElement | null = $state(null);
@@ -36,10 +51,11 @@
 		if (!initialValue) return;
 		const initial = new Date(initialValue);
 		if (Number.isNaN(initial.valueOf())) return;
-		year = String(initial.getFullYear());
-		month = String(initial.getMonth() + 1).padStart(2, '0');
-		day = String(initial.getDate()).padStart(2, '0');
-		time = `${String(initial.getHours()).padStart(2, '0')}:${String(initial.getMinutes()).padStart(2, '0')}`;
+		const parts = calendarParts(initial, timeZone);
+		year = parts.year;
+		month = parts.month;
+		day = parts.day;
+		time = parts.time;
 	});
 
 	const normalizeTime = (raw: string) => {
@@ -154,6 +170,7 @@
 		<label class="text-xs font-semibold text-neutral-500 dark:text-neutral-300" for={`${name}-year`}>Año</label>
 		<input
 			id={`${name}-year`}
+			readonly={readOnly}
 			inputmode="numeric"
 			autocomplete="off"
 			placeholder="AAAA"
@@ -169,6 +186,7 @@
 		<label class="text-xs font-semibold text-neutral-500 dark:text-neutral-300" for={`${name}-month`}>Mes</label>
 		<input
 			id={`${name}-month`}
+			readonly={readOnly}
 			inputmode="numeric"
 			autocomplete="off"
 			placeholder="MM"
@@ -185,6 +203,7 @@
 		<label class="text-xs font-semibold text-neutral-500 dark:text-neutral-300" for={`${name}-day`}>Día</label>
 		<input
 			id={`${name}-day`}
+			readonly={readOnly}
 			inputmode="numeric"
 			autocomplete="off"
 			placeholder="DD"
@@ -201,6 +220,7 @@
 		<label class="text-xs font-semibold text-neutral-500 dark:text-neutral-300" for={`${name}-time`}>Hora</label>
 		<input
 			id={`${name}-time`}
+			readonly={readOnly}
 			inputmode="numeric"
 			autocomplete="off"
 			placeholder="HH:MM"

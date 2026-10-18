@@ -4935,6 +4935,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_clinical_entry_with_date_safely: {
+        Args: {
+          p_amount?: number
+          p_business_id: string
+          p_created_at: string
+          p_description: string
+          p_entry_id: string
+          p_entry_type: string
+          p_internal_note?: string
+          p_patient_id: string
+          p_teeth?: string
+        }
+        Returns: undefined
+      }
       update_patient_with_clinical_profile_safely: {
         Args: {
           p_actor_id: string

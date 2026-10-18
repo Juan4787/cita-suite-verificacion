@@ -137,7 +137,7 @@ describe('clinical operations through typed SDK with simulated HTTP', () => {
 			}
 		}
 	);
-	it('updates with the existing safe RPC and preserves its scope', async () => {
+	it('updates with the compatible date-aware RPC and preserves its scope', async () => {
 		const { supabase, requests } = clientFor(() => new Response(null, { status: 204 }));
 		await updateClinicalEntry({
 			supabase,
@@ -148,13 +148,14 @@ describe('clinical operations through typed SDK with simulated HTTP', () => {
 		});
 		expect(requests).toEqual([
 			{
-				path: '/rest/v1/rpc/update_clinical_entry_safely',
+				path: '/rest/v1/rpc/update_clinical_entry_with_date_safely',
 				body: {
 					p_business_id: businessId,
 					p_patient_id: patientId,
 					p_entry_id: userId,
 					p_entry_type: 'Consulta',
 					p_description: 'Synthetic entry',
+					p_created_at: input().created_at,
 					p_teeth: null,
 					p_internal_note: null,
 					p_amount: 25000
@@ -174,5 +175,22 @@ describe('clinical operations through typed SDK with simulated HTTP', () => {
 		expect(() => parseClinicalEntryInput(raw)).toThrow(PatientOperationError);
 		raw.createdAt = '2024-02-29T09:30';
 		expect(parseClinicalEntryInput(raw).entry_type).toBe('Custom historical label');
+	});
+	it('uses the practice timezone instead of the server zone and rejects a nonexistent local DST hour', () => {
+		const raw = {
+			entryType: 'Consulta',
+			description: 'Synthetic time',
+			createdAt: '2026-01-15T09:30',
+			teeth: '',
+			amount: '',
+			internalNote: ''
+		};
+		expect(parseClinicalEntryInput(raw, 'America/Argentina/Buenos_Aires').created_at).toBe(
+			'2026-01-15T12:30:00.000Z'
+		);
+		expect(parseClinicalEntryInput(raw, 'UTC').created_at).toBe('2026-01-15T09:30:00.000Z');
+		expect(() =>
+			parseClinicalEntryInput({ ...raw, createdAt: '2026-03-08T02:30' }, 'America/New_York')
+		).toThrow(PatientOperationError);
 	});
 });

@@ -124,15 +124,18 @@ function patientActionFailure(cause: unknown) {
 		return fail(patientFailureStatus[cause.kind], { message: cause.message, ...cause.feedback });
 	throw cause;
 }
-const clinicalInputFromForm = (form: FormData) =>
-	parseClinicalEntryInput({
-		entryType: String(form.get('entry_type') ?? ''),
-		description: String(form.get('description') ?? ''),
-		createdAt: String(form.get('created_at') ?? ''),
-		teeth: String(form.get('teeth') ?? ''),
-		amount: String(form.get('amount') ?? ''),
-		internalNote: String(form.get('internal_note') ?? '')
-	});
+const clinicalInputFromForm = (form: FormData, timeZone: string) =>
+	parseClinicalEntryInput(
+		{
+			entryType: String(form.get('entry_type') ?? ''),
+			description: String(form.get('description') ?? ''),
+			createdAt: String(form.get('created_at') ?? ''),
+			teeth: String(form.get('teeth') ?? ''),
+			amount: String(form.get('amount') ?? ''),
+			internalNote: String(form.get('internal_note') ?? '')
+		},
+		timeZone
+	);
 
 export const load: PageServerLoad = async ({ params, locals, fetch, cookies, depends }) => {
 	depends(`app:patient:${params.id}`);
@@ -213,10 +216,11 @@ export const actions: Actions = {
 	add_entry: async ({ request, params, locals, fetch, cookies }) => {
 		if (!locals.auth) throw redirect(303, '/login');
 		try {
-			const input = clinicalInputFromForm(await request.formData());
+			const form = await request.formData();
 			const enhancedRequest = isEnhancedActionRequest(request);
 			let savedEntry: SavedClinicalEntry | null = null;
 			if (env.DEMO_MODE === 'true') {
+				const input = clinicalInputFromForm(form, 'America/Argentina/Buenos_Aires');
 				updateDemoDb((db) => {
 					const patient = db.patients.find((p) => p.id === params.id);
 					if (!patient) return;
@@ -239,7 +243,7 @@ export const actions: Actions = {
 					supabase: session.supabase,
 					context: session.context,
 					patientId: params.id,
-					input
+					input: clinicalInputFromForm(form, session.context.business.timezone)
 				});
 			}
 			if (!savedEntry || !enhancedRequest)
@@ -255,8 +259,8 @@ export const actions: Actions = {
 			const form = await request.formData();
 			const entryId = String(form.get('entry_id') ?? '').trim();
 			if (!entryId) return fail(400, { message: 'Entrada inválida.' });
-			const input = clinicalInputFromForm(form);
 			if (env.DEMO_MODE === 'true') {
+				const input = clinicalInputFromForm(form, 'America/Argentina/Buenos_Aires');
 				let updated = false;
 				updateDemoDb((db) => {
 					const entry = db.clinicalEntries.find(
@@ -278,7 +282,7 @@ export const actions: Actions = {
 					context: session.context,
 					patientId: params.id,
 					entryId,
-					input
+					input: clinicalInputFromForm(form, session.context.business.timezone)
 				});
 			}
 			throw redirect(303, patientDetailUrl(params.id, 'historial'));
