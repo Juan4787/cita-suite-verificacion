@@ -17,14 +17,14 @@ const mocks = vi.hoisted(() => ({
 	}
 }));
 
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/platform/supabase', () => ({
 	createSupabaseAdminClient: mocks.createSupabaseAdminClient,
 	createSupabaseServerClient: mocks.createSupabaseServerClient,
 	getAuthUserId: mocks.getAuthUserId,
 	isJwtExpired: mocks.isJwtExpired
 }));
 
-vi.mock('$lib/server/business', () => ({
+vi.mock('$lib/server/access/public/business', () => ({
 	resolveActiveBusiness: mocks.resolveActiveBusiness
 }));
 

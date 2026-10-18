@@ -8,19 +8,19 @@ import {
 	reconcileMercadoPago,
 	settleApprovedChargesForPreapproval,
 	type MpSubscriptionRow
-} from '$lib/server/mercadopago';
-import { ACTIVE_BUSINESS_COOKIE, normalizeSlug } from '$lib/server/business';
+} from '$lib/server/integrations/public/mercadopago';
+import { ACTIVE_BUSINESS_COOKIE, normalizeSlug } from '$lib/server/access/public/business';
 import {
 	createSupabaseAdminClient,
 	getEmailFromAccessToken,
 	getUserIdFromAccessToken,
 	isMasterEmail
-} from '$lib/server/supabase';
+} from '$lib/server/platform/supabase';
 import {
 	businessEmailAssociationErrorMessage,
 	businessEmailAssociationErrorStatus,
 	EMAIL_ALREADY_ASSOCIATED_WITH_OTHER_BUSINESS_MESSAGE
-} from '$lib/server/business-email-association';
+} from '$lib/server/access/public/business-email-association';
 import { parseMoneyInteger } from '$lib/utils/money-input';
 import { defaultManualAccessNote } from '$lib/utils/commercial-access-copy';
 import { fail, redirect } from '@sveltejs/kit';

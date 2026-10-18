@@ -5,10 +5,10 @@
 // tener ningún aviso. La cobertura real la registran ir/google (fallback) o el push.
 
 import { env } from '$env/dynamic/private';
-import { loadAppointmentForToken } from '$lib/server/appointment-token';
-import { canRegisterCalendarAction } from '$lib/server/calendar-tracking';
-import { isAndroidCalendarIntentVariant } from '$lib/server/android-calendar-intent';
-import { writeAuditLog } from '$lib/server/audit';
+import { loadAppointmentForToken } from '$lib/server/scheduling/public/appointment-token';
+import { canRegisterCalendarAction } from '$lib/server/integrations/public/calendar-tracking';
+import { isAndroidCalendarIntentVariant } from '$lib/server/integrations/public/android-calendar-intent';
+import { writeAuditLog } from '$lib/server/platform/audit';
 import type { RequestHandler } from './$types';
 
 const noContent = () =>

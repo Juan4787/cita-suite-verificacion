@@ -1,6 +1,6 @@
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { env } from '$env/dynamic/private';
-import { demoBusinessContext, resolveActiveBusiness } from '$lib/server/business';
+import { demoBusinessContext, resolveActiveBusiness } from '$lib/server/access/public/business';
 import {
 	cancelPreapproval,
 	confirmMpSubscriptionForBusiness,
@@ -15,14 +15,14 @@ import {
 	type MpApiResult,
 	type MpPreapproval,
 	type MpReturnSummary
-} from '$lib/server/mercadopago';
-import { getExternalCallbackSiteUrl } from '$lib/server/messaging';
+} from '$lib/server/integrations/public/mercadopago';
+import { getExternalCallbackSiteUrl } from '$lib/server/integrations/public/messaging';
 import {
 	enforceRateLimits,
 	mpSubscriptionRateLimitRules,
 	rateLimitFail
-} from '$lib/server/rate-limits';
-import { createSupabaseAdminClient, createSupabaseServerClient } from '$lib/server/supabase';
+} from '$lib/server/platform/rate-limits';
+import { createSupabaseAdminClient, createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { error as kitError, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 

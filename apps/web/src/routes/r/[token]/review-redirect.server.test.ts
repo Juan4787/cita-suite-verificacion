@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ createSupabaseAdminClient: vi.fn() }));
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/platform/supabase', () => ({
 	createSupabaseAdminClient: mocks.createSupabaseAdminClient
 }));
 

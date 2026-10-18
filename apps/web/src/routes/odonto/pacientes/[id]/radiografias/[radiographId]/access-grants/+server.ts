@@ -6,11 +6,11 @@ import {
 	createSignedClinicalFileUrl,
 	getClinicalFileRequestContext,
 	requireClinicalFileView
-} from '$lib/server/clinical-files';
+} from '$lib/server/patients/public/clinical-files';
 import {
 	enforceRateLimits,
 	radiographOriginalAccessRateLimitRules
-} from '$lib/server/rate-limits';
+} from '$lib/server/platform/rate-limits';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import {clinicalDownloadName} from '$lib/clinical-documents';

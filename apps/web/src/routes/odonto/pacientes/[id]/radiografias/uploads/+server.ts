@@ -10,8 +10,8 @@ import {
 	normalizeClinicalNote,
 	requireClinicalFileUpload,
 	CLINICAL_FILE_MAX_BYTES, readClinicalJson
-} from '$lib/server/clinical-files';
-import { enforceRateLimits, radiographUploadRateLimitRules } from '$lib/server/rate-limits';
+} from '$lib/server/patients/public/clinical-files';
+import { enforceRateLimits, radiographUploadRateLimitRules } from '$lib/server/platform/rate-limits';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 

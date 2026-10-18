@@ -3,10 +3,10 @@ import {
 	isBusinessIndustry,
 	normalizeSlug,
 	resolveActiveBusiness
-} from '$lib/server/business';
-import { createSupabaseAdminClient, createSupabaseServerClient } from '$lib/server/supabase';
-import { isValidMapsUrl } from '$lib/server/location';
-import { isAllowedPublicImageUrl } from '$lib/server/public-image';
+} from '$lib/server/access/public/business';
+import { createSupabaseAdminClient, createSupabaseServerClient } from '$lib/server/platform/supabase';
+import { isValidMapsUrl } from '$lib/sites/location';
+import { isAllowedPublicImageUrl } from '$lib/server/sites/public/public-image';
 import { env } from '$env/dynamic/private';
 import { error as kitError, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -15,7 +15,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 	if (!locals.auth) throw redirect(303, '/login');
 
 	if (env.DEMO_MODE === 'true') {
-		const { demoBusinessContext } = await import('$lib/server/business');
+		const { demoBusinessContext } = await import('$lib/server/access/public/business');
 		return {
 			context: demoBusinessContext(),
 			industries: BUSINESS_INDUSTRIES,

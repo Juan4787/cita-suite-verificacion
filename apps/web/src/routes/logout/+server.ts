@@ -1,5 +1,5 @@
-import { ACTIVE_BUSINESS_COOKIE } from '$lib/server/business';
-import { createSupabaseServerClient } from '$lib/server/supabase';
+import { ACTIVE_BUSINESS_COOKIE } from '$lib/server/access/public/business';
+import { createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { redirect, type RequestHandler } from '@sveltejs/kit';
 
 const cookieOptions = { path: '/' };

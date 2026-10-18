@@ -7,11 +7,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
-vi.mock('$lib/server/business', () => ({ ACTIVE_BUSINESS_COOKIE: 'active-business-id' }));
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/access/public/business', () => ({ ACTIVE_BUSINESS_COOKIE: 'active-business-id' }));
+vi.mock('$lib/server/platform/supabase', () => ({
 	createSupabaseServerClient: mocks.createSupabaseServerClient
 }));
-vi.mock('$lib/server/odonto-context', () => ({
+vi.mock('$lib/server/access/public/odonto-context', () => ({
 	getOdontoContext: mocks.getOdontoContext
 }));
 

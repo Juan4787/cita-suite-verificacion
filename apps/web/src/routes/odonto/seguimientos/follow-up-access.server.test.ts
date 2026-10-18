@@ -11,13 +11,13 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: envState.privateEnv }));
-vi.mock('$lib/server/odonto-context', () => ({
+vi.mock('$lib/server/access/public/odonto-context', () => ({
 	getOdontoContext: mocks.getOdontoContext
 }));
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/platform/supabase', () => ({
 	createSupabaseAdminClient: mocks.createSupabaseAdminClient
 }));
-vi.mock('$lib/server/follow-ups', () => ({
+vi.mock('$lib/server/patients/public/follow-ups', () => ({
 	buildFollowUpScope: vi.fn(),
 	businessTodayISO: vi.fn(() => '2026-07-07'),
 	createFollowUp: vi.fn(),

@@ -1,6 +1,6 @@
-import { assertInternalJobRequest } from '$lib/server/internal-jobs';
-import { reconcileMercadoPago } from '$lib/server/mercadopago';
-import { createSupabaseAdminClient } from '$lib/server/supabase';
+import { assertInternalJobRequest } from '$lib/server/integrations/public/internal-jobs';
+import { reconcileMercadoPago } from '$lib/server/integrations/public/mercadopago';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 

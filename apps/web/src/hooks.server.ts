@@ -7,8 +7,8 @@ import {
 	isJwtExpired,
 	isMasterEmail,
 	type Module
-} from '$lib/server/supabase';
-import { ACTIVE_BUSINESS_COOKIE } from '$lib/server/business';
+} from '$lib/server/platform/supabase';
+import { ACTIVE_BUSINESS_COOKIE } from '$lib/server/access/public/business';
 import { redirect, type Handle } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 

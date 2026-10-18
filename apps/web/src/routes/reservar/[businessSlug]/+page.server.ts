@@ -1,10 +1,10 @@
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
-import { loadPublicBookingPage, submitPublicBookingPage } from '$lib/server/public-booking-page';
-import { getPublicBusinessBySlug } from '$lib/server/public-booking';
-import { loadDefaultBookingIntegration } from '$lib/server/booking-integrations';
-import { createSupabaseAdminClient } from '$lib/server/supabase';
-import { bookingContextsAvailable } from '$lib/server/booking-integration-flags';
+import { loadPublicBookingPage, submitPublicBookingPage } from '$lib/server/scheduling/public/public-booking-page';
+import { getPublicBusinessBySlug } from '$lib/server/scheduling/public/public-booking';
+import { loadDefaultBookingIntegration } from '$lib/server/sites/public/booking-integrations';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
+import { bookingContextsAvailable } from '$lib/server/sites/public/booking-integration-flags';
 import { error, type RequestEvent } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 

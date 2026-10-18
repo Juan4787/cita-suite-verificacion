@@ -1,8 +1,8 @@
 import { env } from '$env/dynamic/private';
-import { demoBusinessContext } from '$lib/server/business';
-import { APPOINTMENT_STATUSES } from '$lib/server/appointments';
-import { getOdontoContext } from '$lib/server/odonto-context';
-import { zonedDateTimeToUtc } from '$lib/server/availability';
+import { demoBusinessContext } from '$lib/server/access/public/business';
+import { APPOINTMENT_STATUSES } from '$lib/server/scheduling/public/appointments';
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
+import { zonedDateTimeToUtc } from '$lib/server/scheduling/public/availability';
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 

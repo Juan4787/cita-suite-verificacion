@@ -1,13 +1,13 @@
 import { env } from '$env/dynamic/private';
-import { resolveActiveBusiness } from '$lib/server/business';
-import { newId, readDemoDb, updateDemoDb } from '$lib/server/demo-store';
-import { normalizePhoneE164, normalizePhoneRaw } from '$lib/server/phone';
+import { resolveActiveBusiness } from '$lib/server/access/public/business';
+import { newId, readDemoDb, updateDemoDb } from '$lib/server/platform/demo-store';
+import { normalizePhoneE164, normalizePhoneRaw } from '$lib/utils/phone';
 import {
 	createSupabaseAdminClient,
 	createSupabaseServerClient,
 	getAuthUserId,
 	isJwtExpired
-} from '$lib/server/supabase';
+} from '$lib/server/platform/supabase';
 import { normalizePhone } from '$lib/utils/format';
 import {
 	getPatientUniqueConflictField,
@@ -15,7 +15,7 @@ import {
 	isLegacyPatientNameConflict,
 	PATIENT_UNIQUE_CONFLICT_MESSAGES,
 	type PatientUniqueField
-} from '$lib/server/patient-identity';
+} from '$lib/server/patients/public/patient-identity';
 import { fail, redirect } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 import type { Actions } from './$types';

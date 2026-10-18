@@ -10,10 +10,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: envState.privateEnv }));
-vi.mock('$lib/server/appointment-token', () => ({
+vi.mock('$lib/server/scheduling/public/appointment-token', () => ({
 	loadAppointmentForToken: mocks.loadAppointmentForToken
 }));
-vi.mock('$lib/server/push', () => ({
+vi.mock('$lib/server/integrations/public/push', () => ({
 	isValidPushDeliveryId: mocks.isValidPushDeliveryId,
 	recordPushDeliveryReceipt: mocks.recordPushDeliveryReceipt
 }));

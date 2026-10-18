@@ -2,8 +2,8 @@
 // dentro del payload Web Push cifrado y se compara contra su SHA-256 almacenado.
 
 import { env } from '$env/dynamic/private';
-import { loadAppointmentForToken } from '$lib/server/appointment-token';
-import { isValidPushDeliveryId, recordPushDeliveryReceipt } from '$lib/server/push';
+import { loadAppointmentForToken } from '$lib/server/scheduling/public/appointment-token';
+import { isValidPushDeliveryId, recordPushDeliveryReceipt } from '$lib/server/integrations/public/push';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ params, request, fetch, setHeaders }) => {

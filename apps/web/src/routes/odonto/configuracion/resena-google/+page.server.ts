@@ -10,8 +10,8 @@ import {
 	isValidGoogleReviewUrl,
 	trimGoogleReviewMessage
 } from '$lib/google-reviews';
-import { demoBusinessContext, resolveActiveBusiness } from '$lib/server/business';
-import { createSupabaseAdminClient, createSupabaseServerClient } from '$lib/server/supabase';
+import { demoBusinessContext, resolveActiveBusiness } from '$lib/server/access/public/business';
+import { createSupabaseAdminClient, createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { error as kitError, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 

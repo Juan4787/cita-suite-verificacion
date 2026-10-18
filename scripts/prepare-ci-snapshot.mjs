@@ -40,6 +40,7 @@ const extras = [
 	'docs/architecture/disponibilidad-y-aranceles.md',
 	'docs/architecture/evidencia-etapa4-agenda.md',
 	'docs/architecture/revision-ui-agenda-aranceles.md',
+	'docs/architecture/areas-y-fronteras.md',
 	'docs/archive/administrativo-inactivo/README.md', 'docs/archive/administrativo-inactivo/integridad.json',
 	...JSON.parse(readFileSync(join(root, 'docs/archive/administrativo-inactivo/integridad.json'), 'utf8')).map(entry => entry.archive),
 	'docs/architecture/functional-contracts.md', 'docs/architecture/refactoring-campaign.md',
@@ -73,7 +74,7 @@ try {
 	if (untracked.status !== 0) throw new Error('Could not enumerate scoped new source files.');
 	const newSource = untracked.stdout.split('\0').filter(Boolean).filter(permitted).filter(path => /\.(?:ts|svelte|js|mjs|sql|sh|astro|css|json)$/.test(path));
 	const selected = [...new Set([...tracked, ...newSource, ...rootFiles, ...extras])].filter(path => existsSync(join(root, path))).sort();
-	for (const required of ['apps/web/src/hooks.server.ts', 'apps/web/src/lib/server/supabase.ts',
+	for (const required of ['apps/web/src/hooks.server.ts', 'apps/web/src/lib/server/platform/supabase.ts',
 		'apps/natalia/src/pages/index.astro', 'packages/shared/src/database.types.ts', 'supabase/config.toml'])
 		if (!selected.includes(required)) throw new Error('Incomplete CI source snapshot: ' + required);
 	const records = [];

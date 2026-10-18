@@ -2,12 +2,12 @@
 // bien text/calendar inline. Mismo contenido vivo que /calendario.ics.
 
 import { error } from '@sveltejs/kit';
-import { loadAppointmentForToken } from '$lib/server/appointment-token';
-import { icsForAppointment } from '$lib/server/calendar-content';
+import { loadAppointmentForToken } from '$lib/server/scheduling/public/appointment-token';
+import { icsForAppointment } from '$lib/server/integrations/public/calendar-content';
 import {
 	canRegisterCalendarAction,
 	recordCalendarAction
-} from '$lib/server/calendar-tracking';
+} from '$lib/server/integrations/public/calendar-tracking';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params, fetch }) => {

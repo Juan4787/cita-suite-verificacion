@@ -4,16 +4,16 @@
 
 import { env } from '$env/dynamic/private';
 import { redirect } from '@sveltejs/kit';
-import { createSupabaseServerClient, getAuthUserId } from '$lib/server/supabase';
-import { resolveActiveBusiness } from '$lib/server/business';
-import { writeAuditLog } from '$lib/server/audit';
-import { resolveMapsUrl } from '$lib/server/location';
-import { normalizeArgentineWhatsAppPhone } from '$lib/server/phone';
+import { createSupabaseServerClient, getAuthUserId } from '$lib/server/platform/supabase';
+import { resolveActiveBusiness } from '$lib/server/access/public/business';
+import { writeAuditLog } from '$lib/server/platform/audit';
+import { resolveMapsUrl } from '$lib/sites/location';
+import { normalizeArgentineWhatsAppPhone } from '$lib/utils/phone';
 import {
 	buildReminderWhatsAppMessage,
 	buildWaMeUrl,
 	buildWhatsAppWebUrl
-} from '$lib/server/reminders';
+} from '$lib/server/scheduling/public/reminders';
 import { classifyUserAgent, type DeviceClass, whatsappHrefFor } from '$lib/device';
 import type { RequestHandler } from './$types';
 

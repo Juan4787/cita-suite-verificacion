@@ -1,4 +1,4 @@
-import { getModuleEntryRoute } from '$lib/server/supabase';
+import { getModuleEntryRoute } from '$lib/server/platform/supabase';
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 

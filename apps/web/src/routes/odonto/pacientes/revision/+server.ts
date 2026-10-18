@@ -1,17 +1,17 @@
 import { env } from '$env/dynamic/private';
-import type { BusinessRole } from '$lib/server/business';
-import { getOdontoContext } from '$lib/server/odonto-context';
+import type { BusinessRole } from '$lib/server/access/public/business';
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import {
 	getPatientDataRevision,
 	getViewerPatientDataRevision,
 	patientDataCacheScope,
 	type PatientDataRevision
-} from '$lib/server/patient-data-revision';
+} from '$lib/server/patients/public/patient-data-revision';
 import {
 	createSupabaseAdminClient,
 	createSupabaseServerClient,
 	getUserIdFromAccessToken
-} from '$lib/server/supabase';
+} from '$lib/server/platform/supabase';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 

@@ -1,7 +1,7 @@
-import { createSupabaseAdminClient } from '$lib/server/supabase';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import { error, redirect } from '@sveltejs/kit';
-import { resolveBookingIntegrationRequest } from '$lib/server/booking-integration-request';
-import { loadPublicAppointmentByToken } from '$lib/server/public-appointments';
+import { resolveBookingIntegrationRequest } from '$lib/server/sites/public/booking-integration-request';
+import { loadPublicAppointmentByToken } from '$lib/server/scheduling/public/public-appointments';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {

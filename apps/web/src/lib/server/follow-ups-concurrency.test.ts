@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assertExpectedFollowUpVersion, FollowUpError, isStaleFollowUpUpdatedAt } from './follow-ups';
+import { assertExpectedFollowUpVersion, FollowUpError, isStaleFollowUpUpdatedAt } from '$lib/server/patients/public/follow-ups';
 
 describe('isStaleFollowUpUpdatedAt & assertExpectedFollowUpVersion', () => {
 	it('reconoce como frescas versiones con idéntico string', () => {

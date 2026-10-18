@@ -4,8 +4,8 @@
 // de gestión completa. Detrás del token → nunca cachear.
 
 import { env } from '$env/dynamic/private';
-import { createSupabaseAdminClient } from '$lib/server/supabase';
-import { demoPublicAppointment, loadPublicAppointmentByToken } from '$lib/server/public-appointments';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
+import { demoPublicAppointment, loadPublicAppointmentByToken } from '$lib/server/scheduling/public/public-appointments';
 import { isActiveAppointmentStatus } from '$lib/utils/appointment-visibility';
 import type { PageServerLoad } from './$types';
 

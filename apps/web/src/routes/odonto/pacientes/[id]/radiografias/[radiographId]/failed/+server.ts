@@ -5,7 +5,7 @@ import {
 	clinicalFileError,
 	getClinicalFileRequestContext,
 	requireClinicalFileUpload
-} from '$lib/server/clinical-files';
+} from '$lib/server/patients/public/clinical-files';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 

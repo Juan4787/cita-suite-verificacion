@@ -11,36 +11,36 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
-vi.mock('$lib/server/business', () => ({ demoBusinessContext: vi.fn() }));
-vi.mock('$lib/server/availability', () => ({
+vi.mock('$lib/server/access/public/business', () => ({ demoBusinessContext: vi.fn() }));
+vi.mock('$lib/server/scheduling/public/availability', () => ({
 	getAvailabilitySlots: mocks.getAvailabilitySlots
 }));
-vi.mock('$lib/server/appointments', () => ({
+vi.mock('$lib/server/scheduling/public/appointments', () => ({
 	getHumanAppointmentErrorMessage: () => 'No pudimos reprogramar el turno.',
 	isAppointmentStatus: vi.fn(),
 	rescheduleAppointment: mocks.rescheduleAppointment,
 	updateAppointmentStatus: vi.fn(),
 	updateProfessionalAppointmentStatus: vi.fn()
 }));
-vi.mock('$lib/server/odonto-context', () => ({
+vi.mock('$lib/server/access/public/odonto-context', () => ({
 	getOdontoContext: mocks.getOdontoContext
 }));
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/platform/supabase', () => ({
 	createSupabaseAdminClient: mocks.createSupabaseAdminClient
 }));
-vi.mock('$lib/server/google-calendar', () => ({
+vi.mock('$lib/server/integrations/public/google-calendar', () => ({
 	processAppointmentGoogleCalendarSync: mocks.processAppointmentGoogleCalendarSync
 }));
-vi.mock('$lib/server/push', () => ({
+vi.mock('$lib/server/integrations/public/push', () => ({
 	resetPushRemindersForReschedule: mocks.resetPushRemindersForReschedule,
 	sendReschedulePushNotice: mocks.sendReschedulePushNotice
 }));
-vi.mock('$lib/server/reminders', () => ({
+vi.mock('$lib/server/scheduling/public/reminders', () => ({
 	buildAppointmentActivationDelivery: vi.fn(),
 	buildArgentineWaMeUrl: vi.fn(),
 	buildRescheduleWhatsAppMessage: vi.fn()
 }));
-vi.mock('$lib/server/messaging', () => ({ publicRescheduleUrl: vi.fn() }));
+vi.mock('$lib/server/integrations/public/messaging', () => ({ publicRescheduleUrl: vi.fn() }));
 
 const { actions } = await import('./+page.server');
 

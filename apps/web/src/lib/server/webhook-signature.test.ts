@@ -10,7 +10,7 @@ const envState = vi.hoisted(() => ({
 vi.mock('$env/dynamic/private', () => ({ env: envState.privateEnv }));
 vi.mock('$env/dynamic/public', () => ({ env: envState.publicEnv }));
 
-import { verifyWebhookSignature } from './messaging';
+import { verifyWebhookSignature } from '$lib/server/integrations/public/messaging';
 
 const sign = (body: string, secret: string) =>
 	'sha256=' + crypto.createHmac('sha256', secret).update(body, 'utf8').digest('hex');

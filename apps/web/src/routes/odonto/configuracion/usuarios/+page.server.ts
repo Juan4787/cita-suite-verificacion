@@ -5,33 +5,33 @@ import {
 	isBusinessRole,
 	resolveActiveBusiness,
 	type BusinessRole
-} from '$lib/server/business';
+} from '$lib/server/access/public/business';
 import {
 	findProfessionalByEmail,
 	humanProfessionalEmailConflict,
 	normalizeProfessionalEmail
-} from '$lib/server/professionals';
+} from '$lib/server/team/public/professionals';
 import {
 	DEFAULT_SERVICE_NAMES,
 	ensureDefaultServicesAssigned,
 	isDefaultServiceName
-} from '$lib/server/default-services';
+} from '$lib/server/team/public/default-services';
 import {
 	replaceProfessionalScheduleBlocks
-} from '$lib/server/availability-rules';
-import { parseAvailabilityExceptionInterval } from '$lib/server/availability-exceptions';
-import { setProfessionalServices } from '$lib/server/professional-services';
-import { writeAuditLog } from '$lib/server/audit';
+} from '$lib/server/team/public/availability-rules';
+import { parseAvailabilityExceptionInterval } from '$lib/server/team/public/availability-exceptions';
+import { setProfessionalServices } from '$lib/server/team/public/professional-services';
+import { writeAuditLog } from '$lib/server/platform/audit';
 import {
 	createSupabaseAdminClient,
 	createSupabaseServerClient,
 	getAuthUserId
-} from '$lib/server/supabase';
+} from '$lib/server/platform/supabase';
 import {
 	businessEmailAssociationErrorStatus,
 	EMAIL_ALREADY_ASSOCIATED_WITH_OTHER_BUSINESS_MESSAGE,
 	isEmailAlreadyAssociatedWithOtherBusinessError
-} from '$lib/server/business-email-association';
+} from '$lib/server/access/public/business-email-association';
 import { formatPriceLabel } from '$lib/utils/money-input';
 import {
 	canAssignTeamRole,

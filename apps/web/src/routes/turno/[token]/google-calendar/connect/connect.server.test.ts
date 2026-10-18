@@ -4,10 +4,10 @@ const mocks = vi.hoisted(() => ({
 	loadAppointmentForToken: vi.fn(),
 	createGoogleCalendarAuthorizationUrl: vi.fn()
 }));
-vi.mock('$lib/server/appointment-token', () => ({
+vi.mock('$lib/server/scheduling/public/appointment-token', () => ({
 	loadAppointmentForToken: mocks.loadAppointmentForToken
 }));
-vi.mock('$lib/server/google-calendar', () => ({
+vi.mock('$lib/server/integrations/public/google-calendar', () => ({
 	createGoogleCalendarAuthorizationUrl: mocks.createGoogleCalendarAuthorizationUrl
 }));
 

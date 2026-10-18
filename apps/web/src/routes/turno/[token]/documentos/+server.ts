@@ -1,5 +1,5 @@
 import { json } from "@sveltejs/kit";
-import { informationContext } from "$lib/server/booking-information";
+import { informationContext } from "$lib/server/patients/public/booking-information";
 import {
   clinicalFileCacheHeaders,
   clinicalFileError,
@@ -10,8 +10,8 @@ import {
   normalizeClinicalFilename,
   normalizeClinicalNote,
   readClinicalJson,
-} from "$lib/server/clinical-files";
-import { enforceRateLimits } from "$lib/server/rate-limits";
+} from "$lib/server/patients/public/clinical-files";
+import { enforceRateLimits } from "$lib/server/platform/rate-limits";
 import type { RequestHandler } from "./$types";
 export const POST: RequestHandler = async (event) => {
   try {

@@ -4,8 +4,8 @@ import {
 	clinicalFileError,
 	getClinicalFileRequestContext,
 	requireClinicalFileTrash
-} from '$lib/server/clinical-files';
-import { enforceRateLimits, radiographTrashRateLimitRules } from '$lib/server/rate-limits';
+} from '$lib/server/patients/public/clinical-files';
+import { enforceRateLimits, radiographTrashRateLimitRules } from '$lib/server/platform/rate-limits';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 

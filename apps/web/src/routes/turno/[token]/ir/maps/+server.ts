@@ -1,8 +1,8 @@
 // Redirect-through a Google Maps ("Cómo llegar"). No cambia el estado de calendario:
 // solo deja constancia en el audit log como métrica de uso.
 
-import { loadAppointmentForToken, uncachedRedirect } from '$lib/server/appointment-token';
-import { writeAuditLog } from '$lib/server/audit';
+import { loadAppointmentForToken, uncachedRedirect } from '$lib/server/scheduling/public/appointment-token';
+import { writeAuditLog } from '$lib/server/platform/audit';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params, fetch }) => {

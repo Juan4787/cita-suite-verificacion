@@ -1,7 +1,7 @@
 import { env } from '$env/dynamic/private';
-import { readDemoDb } from '$lib/server/demo-store';
-import { getOdontoContext } from '$lib/server/odonto-context';
-import { resolvePatientPermissions } from '$lib/server/patient-permissions';
+import { readDemoDb } from '$lib/server/platform/demo-store';
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
+import { resolvePatientPermissions } from '$lib/server/patients/public/patient-permissions';
 import { json, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 

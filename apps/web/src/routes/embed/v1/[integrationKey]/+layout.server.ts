@@ -1,4 +1,4 @@
-import { resolveBookingIntegrationRequest } from '$lib/server/booking-integration-request';
+import { resolveBookingIntegrationRequest } from '$lib/server/sites/public/booking-integration-request';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async (event) => {

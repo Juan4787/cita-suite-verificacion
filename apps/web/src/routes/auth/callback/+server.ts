@@ -4,7 +4,7 @@ import {
 	createSupabaseOAuthClient,
 	getModuleEntryRoute,
 	isMasterEmail
-} from '$lib/server/supabase';
+} from '$lib/server/platform/supabase';
 import { redirect, type RequestHandler } from '@sveltejs/kit';
 
 const loginWithError = (url: URL, code: string): never => {

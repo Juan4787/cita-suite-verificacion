@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
 import type { CitaDatabase } from '$lib/types/database';
 import { readRecord, readText, readFiniteNumber } from '$lib/contracts/json';
-import { getAvailabilitySlots, zonedDateTimeToUtc } from './availability';
+import { getAvailabilitySlots, zonedDateTimeToUtc } from '$lib/server/scheduling/public/availability';
 
 const TIMEZONE = 'America/Argentina/Cordoba';
 

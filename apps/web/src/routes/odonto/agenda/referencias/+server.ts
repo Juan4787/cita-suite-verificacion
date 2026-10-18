@@ -2,8 +2,8 @@ import { env } from '$env/dynamic/private';
 import {
 	defaultInternalAvailabilitySnapshotRange,
 	loadInternalAvailabilitySnapshot
-} from '$lib/server/availability-snapshot';
-import { getOdontoContext } from '$lib/server/odonto-context';
+} from '$lib/server/scheduling/public/availability-snapshot';
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import { json, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 

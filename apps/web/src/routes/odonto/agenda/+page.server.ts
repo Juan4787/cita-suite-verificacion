@@ -1,11 +1,11 @@
 import { env } from '$env/dynamic/private';
 import { randomUUID } from 'crypto';
-import { demoBusinessContext } from '$lib/server/business';
-import { getAvailabilitySlots, zonedDateTimeToUtc } from '$lib/server/availability';
+import { demoBusinessContext } from '$lib/server/access/public/business';
+import { getAvailabilitySlots, zonedDateTimeToUtc } from '$lib/server/scheduling/public/availability';
 import {
 	defaultInternalAvailabilitySnapshotRange,
 	loadInternalAvailabilitySnapshot
-} from '$lib/server/availability-snapshot';
+} from '$lib/server/scheduling/public/availability-snapshot';
 import {
 	APPOINTMENT_STATUSES,
 	createJointAppointment,
@@ -15,12 +15,12 @@ import {
 	getAppointmentCreationErrorStatus,
 	isAppointmentStatus,
 	updateAppointmentStatus
-} from '$lib/server/appointments';
-import { getOdontoContext } from '$lib/server/odonto-context';
-import { countTomorrowUncovered } from '$lib/server/reminders';
-import { createSupabaseAdminClient } from '$lib/server/supabase';
-import { processAppointmentGoogleCalendarSync } from '$lib/server/google-calendar';
-import { createdAppointmentDetailUrl } from '$lib/server/agenda-navigation';
+} from '$lib/server/scheduling/public/appointments';
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
+import { countTomorrowUncovered } from '$lib/server/scheduling/public/reminders';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
+import { processAppointmentGoogleCalendarSync } from '$lib/server/integrations/public/google-calendar';
+import { createdAppointmentDetailUrl } from '$lib/scheduling/agenda-navigation';
 import {
 	ACTIVE_APPOINTMENT_STATUSES,
 	isActiveAppointmentStatus

@@ -1,12 +1,12 @@
 // Redirect-through a Google Calendar: registra la acción server-side (funciona sin
 // JS y en webviews) y recién después redirige al evento prellenado.
 
-import { loadAppointmentForToken, uncachedRedirect } from '$lib/server/appointment-token';
-import { googleCalendarUrlFor } from '$lib/server/calendar-content';
+import { loadAppointmentForToken, uncachedRedirect } from '$lib/server/scheduling/public/appointment-token';
+import { googleCalendarUrlFor } from '$lib/server/integrations/public/calendar-content';
 import {
 	canRegisterCalendarAction,
 	recordCalendarAction
-} from '$lib/server/calendar-tracking';
+} from '$lib/server/integrations/public/calendar-tracking';
 import type { RequestHandler } from './$types';
 
 // Orígenes conocidos del redirect (FASE 12): el fallback del intent nativo Android

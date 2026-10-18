@@ -4,7 +4,7 @@
 
 import { env } from '$env/dynamic/private';
 import { json } from '@sveltejs/kit';
-import { loadAppointmentForToken } from '$lib/server/appointment-token';
+import { loadAppointmentForToken } from '$lib/server/scheduling/public/appointment-token';
 import {
 	getLatestPushTestStatus,
 	getPushDeliveryStatus,
@@ -15,7 +15,7 @@ import {
 	recordPushTestFeedback,
 	saveAppointmentPushSubscription,
 	sendTestPushNotification
-} from '$lib/server/push';
+} from '$lib/server/integrations/public/push';
 import type { RequestHandler } from './$types';
 import { isActiveAppointmentStatus } from '$lib/utils/appointment-visibility';
 

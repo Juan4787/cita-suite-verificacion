@@ -3,8 +3,8 @@ import {
 	authorizeGoogleCalendarAppointment,
 	consumeGoogleCalendarOAuthAttempt,
 	processGoogleCalendarEvent
-} from '$lib/server/google-calendar';
-import { createSupabaseAdminClient } from '$lib/server/supabase';
+} from '$lib/server/integrations/public/google-calendar';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import type { RequestHandler } from './$types';
 

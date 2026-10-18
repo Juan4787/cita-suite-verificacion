@@ -1,14 +1,14 @@
 import type { RequestHandler } from './$types';
-import { getOdontoContext } from '$lib/server/odonto-context';
-import { canExportPatientData } from '$lib/server/patient-permissions';
-import { patientExportFailure, patientExportJson } from '$lib/server/patient-export-http';
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
+import { canExportPatientData } from '$lib/server/patients/public/patient-permissions';
+import { patientExportFailure, patientExportJson } from '$lib/server/patients/public/patient-export-http';
 import {
 	PatientExportError,
 	createPatientExportAdminClient,
 	isUuid,
 	readPatientExportJson,
 	startPatientExport
-} from '$lib/server/patient-exports';
+} from '$lib/server/patients/public/patient-exports';
 
 const INPUT_KEYS = new Set(['scope', 'patient_id', 'request_key']);
 

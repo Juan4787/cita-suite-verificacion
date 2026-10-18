@@ -1,8 +1,8 @@
-import { bookingInformationEnabled } from '$lib/server/booking-information';
+import { bookingInformationEnabled } from '$lib/server/patients/public/booking-information';
 import { env } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
-import { getPublicSiteUrl } from '$lib/server/messaging';
-import { createSupabaseAdminClient } from '$lib/server/supabase';
+import { getPublicSiteUrl } from '$lib/server/integrations/public/messaging';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import {
 	applyPublicAppointmentAction,
 	demoPublicAppointment,
@@ -10,26 +10,26 @@ import {
 	getPublicTokenErrorMessage,
 	loadPublicAppointmentByToken,
 	type PublicAppointmentView
-} from '$lib/server/public-appointments';
-import { canRegisterCalendarAction, markCalendarOffered } from '$lib/server/calendar-tracking';
+} from '$lib/server/scheduling/public/public-appointments';
+import { canRegisterCalendarAction, markCalendarOffered } from '$lib/server/integrations/public/calendar-tracking';
 import {
 	getGoogleCalendarPublicMessage,
 	loadGoogleCalendarUiState,
 	processAppointmentGoogleCalendarSync,
 	requestGoogleCalendarEventDeletion,
 	type GoogleCalendarUiState
-} from '$lib/server/google-calendar';
+} from '$lib/server/integrations/public/google-calendar';
 import {
 	buildAndroidCalendarIntentUrl,
 	isAndroidCalendarIntentVariant,
 	type AndroidCalendarIntentVariant
-} from '$lib/server/android-calendar-intent';
+} from '$lib/server/integrations/public/android-calendar-intent';
 import {
 	calendarDescriptionFor,
 	calendarLocationFor,
 	calendarSummaryFor
-} from '$lib/server/calendar-content';
-import { publicAppointmentUrl } from '$lib/server/messaging';
+} from '$lib/server/integrations/public/calendar-content';
+import { publicAppointmentUrl } from '$lib/server/integrations/public/messaging';
 import {
 	classifyUserAgent,
 	isLikelyBotUserAgent,

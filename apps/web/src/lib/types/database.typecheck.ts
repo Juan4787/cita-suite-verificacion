@@ -1,4 +1,4 @@
-import type { createSupabaseServerClient } from '$lib/server/supabase';
+import type { createSupabaseServerClient } from '$lib/server/platform/supabase';
 import type { CitaSupabaseClient } from './database';
 
 // Compile-only negative contract tests. This function is never imported or run.

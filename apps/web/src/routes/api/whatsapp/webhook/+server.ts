@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/private';
-import { processWhatsAppWebhookPayload, verifyWebhookSignature } from '$lib/server/messaging';
-import { createSupabaseAdminClient } from '$lib/server/supabase';
+import { processWhatsAppWebhookPayload, verifyWebhookSignature } from '$lib/server/integrations/public/messaging';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import { json, text } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 

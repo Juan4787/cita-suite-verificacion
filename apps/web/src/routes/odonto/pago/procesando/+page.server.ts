@@ -1,11 +1,11 @@
 import { env } from '$env/dynamic/private';
-import { resolveActiveBusiness } from '$lib/server/business';
+import { resolveActiveBusiness } from '$lib/server/access/public/business';
 import {
 	confirmMpSubscriptionForBusiness,
 	getSubscriptionAmountArs,
 	type MpReturnSummary
-} from '$lib/server/mercadopago';
-import { createSupabaseAdminClient, createSupabaseServerClient } from '$lib/server/supabase';
+} from '$lib/server/integrations/public/mercadopago';
+import { createSupabaseAdminClient, createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { error as kitError, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 

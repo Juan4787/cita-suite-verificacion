@@ -11,16 +11,16 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: envState.privateEnv }));
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/platform/supabase', () => ({
 	createSupabaseAdminClient: mocks.createSupabaseAdminClient
 }));
-vi.mock('$lib/server/push', () => ({
+vi.mock('$lib/server/integrations/public/push', () => ({
 	sendDuePushReminders: mocks.sendDuePushReminders
 }));
-vi.mock('$lib/server/google-reviews', () => ({
+vi.mock('$lib/server/integrations/public/google-reviews', () => ({
 	sendDueGoogleReviewRequests: mocks.sendDueGoogleReviewRequests
 }));
-vi.mock('$lib/server/google-calendar', () => ({
+vi.mock('$lib/server/integrations/public/google-calendar', () => ({
 	processGoogleCalendarSyncJobs: mocks.processGoogleCalendarSyncJobs
 }));
 

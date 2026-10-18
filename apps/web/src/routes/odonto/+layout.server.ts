@@ -3,33 +3,33 @@ import {
 	isDefaultBusinessPendingManualSetupError,
 	isDefaultBusinessSetupUnavailableError,
 	resolveActiveBusiness
-} from '$lib/server/business';
+} from '$lib/server/access/public/business';
 import {
 	createSupabaseAdminClient,
 	createSupabaseServerClient,
 	getAuthUserId,
 	getEmailFromAccessToken,
 	isMasterEmail
-} from '$lib/server/supabase';
-import { RateLimitExceededError } from '$lib/server/rate-limits';
+} from '$lib/server/platform/supabase';
+import { RateLimitExceededError } from '$lib/server/platform/rate-limits';
 import {
 	buildFollowUpScope,
 	businessTodayISO,
 	getNoticeSummary,
 	roleParticipatesInFollowUps,
 	type FollowUpNotice
-} from '$lib/server/follow-ups';
+} from '$lib/server/patients/public/follow-ups';
 import {
 	loadAccountAssistanceView,
 	loadActiveMasterAccountAssistanceRequests,
 	type AccountAssistanceView,
 	type MasterAccountAssistanceRequest
-} from '$lib/server/account-assistance';
-import { getSubscriptionAmountArs } from '$lib/server/mercadopago';
+} from '$lib/server/access/public/account-assistance';
+import { getSubscriptionAmountArs } from '$lib/server/integrations/public/mercadopago';
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import { env } from '$env/dynamic/private';
-import { canExportPatientData } from '$lib/server/patient-permissions';
+import { canExportPatientData } from '$lib/server/patients/public/patient-permissions';
 
 export const load: LayoutServerLoad = async ({
 	locals,

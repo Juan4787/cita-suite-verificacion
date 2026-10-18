@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
 import type { CitaDatabase } from '$lib/types/database';
-import { loadClinicalUploadsEnabled, loadClinicalUploadAvailability } from './clinical-files';
+import { loadClinicalUploadsEnabled, loadClinicalUploadAvailability } from '$lib/server/patients/public/clinical-files';
 
 function client(body: unknown, status = 200) {
 	return createClient<CitaDatabase>('https://storage-contract.example.test', 'synthetic-key', {

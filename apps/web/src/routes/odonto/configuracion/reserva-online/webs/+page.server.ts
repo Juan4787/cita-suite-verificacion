@@ -1,10 +1,10 @@
 import { isRedirect } from '@sveltejs/kit';
 import { fail, error, redirect } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
-import { getOdontoContext } from "$lib/server/odonto-context";
-import { bookingInformationEnabled } from "$lib/server/booking-information";
-import { bookingProfileConfig } from "$lib/server/booking-profile-config";
-import { readBoundedBookingForm } from "$lib/server/public-booking-page";
+import { getOdontoContext } from "$lib/server/access/public/odonto-context";
+import { bookingInformationEnabled } from "$lib/server/patients/public/booking-information";
+import { bookingProfileConfig } from "$lib/server/sites/public/booking-profile-config";
+import { readBoundedBookingForm } from "$lib/server/scheduling/public/public-booking-page";
 import type { Actions, PageServerLoad } from "./$types";
 export const load: PageServerLoad = async (event) => {
   const context = await getOdontoContext(event);

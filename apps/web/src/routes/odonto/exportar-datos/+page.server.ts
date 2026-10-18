@@ -1,6 +1,6 @@
 import { error as kitError, redirect } from '@sveltejs/kit';
-import { canExportPatientData } from '$lib/server/patient-permissions';
-import { createSupabaseServerClient } from '$lib/server/supabase';
+import { canExportPatientData } from '$lib/server/patients/public/patient-permissions';
+import { createSupabaseServerClient } from '$lib/server/platform/supabase';
 import type { PageServerLoad } from './$types';
 
 const UUID_PATTERN =

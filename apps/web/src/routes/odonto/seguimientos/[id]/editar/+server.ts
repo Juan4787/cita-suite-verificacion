@@ -1,7 +1,7 @@
 import { readRecord } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
-import { getOdontoContext } from '$lib/server/odonto-context';
-import { createSupabaseAdminClient } from '$lib/server/supabase';
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import {
 	buildFollowUpScope,
 	FollowUpError,
@@ -9,7 +9,7 @@ import {
 	getFollowUpErrorStatus,
 	roleParticipatesInFollowUps,
 	updateFollowUp
-} from '$lib/server/follow-ups';
+} from '$lib/server/patients/public/follow-ups';
 import { json, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 

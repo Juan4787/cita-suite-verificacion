@@ -22,26 +22,26 @@ function check(files) {
 }
 
 const base = {
-	'server/access/internal.ts': 'export const permission = true;',
-	'server/access/index.ts': "export { permission } from './internal';"
+	'server/access/internal/permission.ts': 'export const permission = true;',
+	'server/access/public/context.ts': "export { permission } from '../internal/permission';"
 };
 
 test('public cross-area interfaces are permitted', () => {
-	const result = check({ ...base, 'server/team/index.ts': "import {permission} from '../access/index'; export const allowed=permission;" });
+	const result = check({ ...base, 'server/team/public/workflow.ts': "import {permission} from '../../access/public/context'; export const allowed=permission;" });
 	assert.equal(result.status, 0, result.stdout + result.stderr);
 });
 test('a cross-area private import is rejected', () => {
-	const result = check({ ...base, 'server/team/index.ts': "import {permission} from '../access/internal'; export const allowed=permission;" });
+	const result = check({ ...base, 'server/team/public/workflow.ts': "import {permission} from '../../access/internal/permission'; export const allowed=permission;" });
 	assert.notEqual(result.status, 0);
 	assert.match(result.stdout + result.stderr, /public-interface-of-access/);
 });
 test('browser code cannot import a server public interface', () => {
-	const result = check({ ...base, 'client/unsafe.ts': "import {permission} from '../server/access/index'; console.log(permission);" });
+	const result = check({ ...base, 'client/unsafe.ts': "import {permission} from '../server/access/public/context'; console.log(permission);" });
 	assert.notEqual(result.status, 0);
 	assert.match(result.stdout + result.stderr, /browser-cannot-import-server/);
 });
 test('a real Svelte component cannot import server code at runtime', () => {
-	const result = check({ ...base, 'unsafe.svelte': "<script lang='ts'>import {permission} from './server/access/index';</script><p>{permission}</p>" });
+	const result = check({ ...base, 'unsafe.svelte': "<script lang='ts'>import {permission} from './server/access/public/context';</script><p>{permission}</p>" });
 	assert.notEqual(result.status, 0);
 	assert.match(result.stdout + result.stderr, /browser-cannot-import-server/);
 });
@@ -64,8 +64,25 @@ test('type-only dependency cycles are rejected', () => {
 });
 test('browser code cannot depend on server implementation types', () => {
  const result = check({
-  'server/access/internal.ts': 'export interface Permission { allowed: boolean }',
-  'client/unsafe.ts': "import type {Permission} from '../server/access/internal'; export type State=Permission;"
+  'server/access/internal/permission.ts': 'export interface Permission { allowed: boolean }',
+  'client/unsafe.ts': "import type {Permission} from '../server/access/internal/permission'; export type State=Permission;"
+ });
+ assert.notEqual(result.status, 0);
+ assert.match(result.stdout + result.stderr, /browser-cannot-import-server/);
+});
+
+test('a cross-area private type import is rejected', () => {
+ const result = check({
+  'server/access/internal/permission.ts': 'export interface Permission { allowed: boolean }',
+  'server/team/public/workflow.ts': "import type {Permission} from '../../access/internal/permission'; export type State=Permission;"
+ });
+ assert.notEqual(result.status, 0);
+ assert.match(result.stdout + result.stderr, /public-interface-of-access/);
+});
+test('a browser utility cannot bridge into a server public interface', () => {
+ const result = check({ ...base,
+  'utils/unsafe.ts': "import {permission} from '../server/access/public/context'; export const value=permission;",
+  'client/entry.ts': "import {value} from '../utils/unsafe'; console.log(value);"
  });
  assert.notEqual(result.status, 0);
  assert.match(result.stdout + result.stderr, /browser-cannot-import-server/);

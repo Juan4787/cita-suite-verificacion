@@ -21,11 +21,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: state.privateEnv }));
-vi.mock('$lib/server/business', () => ({
+vi.mock('$lib/server/access/public/business', () => ({
 	demoBusinessContext: vi.fn(),
 	resolveActiveBusiness: mocks.resolveActiveBusiness
 }));
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/platform/supabase', () => ({
 	createSupabaseServerClient: mocks.createSupabaseServerClient,
 	createSupabaseAdminClient: mocks.createSupabaseAdminClient
 }));

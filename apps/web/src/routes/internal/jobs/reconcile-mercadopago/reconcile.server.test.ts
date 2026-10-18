@@ -10,10 +10,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: envState.privateEnv }));
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/platform/supabase', () => ({
 	createSupabaseAdminClient: mocks.createSupabaseAdminClient
 }));
-vi.mock('$lib/server/mercadopago', () => ({
+vi.mock('$lib/server/integrations/public/mercadopago', () => ({
 	reconcileMercadoPago: mocks.reconcileMercadoPago
 }));
 

@@ -8,13 +8,18 @@ module.exports = {
 		},
 		{
 			name: 'browser-cannot-import-server', severity: 'error',
-			from: { path: '(?:/lib/client/|\\.svelte$|/\\+(?:page|layout)\\.ts$)' },
+			from: { path: '(?:^apps/web/src/lib/(?!server/)|\\.svelte$|/\\+(?:page|layout)\\.ts$)', pathNot: '\\.(?:test|office\\.test)\\.ts$' },
 			to: { path: '(?:/lib/server/|\\.server\\.[jt]s$)' }
 		},
 		...areas.map(area => ({
 			name: `public-interface-of-${area}`, severity: 'error',
-			from: { pathNot: `^apps/web/src/lib/server/${area}/` },
-			to: { path: `^apps/web/src/lib/server/${area}/`, pathNot: '/index\\.ts$' }
+			from: { pathNot: `^apps/web/src/lib/(?:server/)?${area}/` },
+			to: { path: `^apps/web/src/lib/server/${area}/`, pathNot: `^apps/web/src/lib/server/${area}/public/[^/]+\\.ts$` }
+		})),
+		...areas.map(area => ({
+			name: `shared-interface-of-${area}`, severity: 'error',
+			from: { pathNot: `^apps/web/src/lib/(?:server/)?${area}/` },
+			to: { path: `^apps/web/src/lib/${area}/internal/` }
 		}))
 	],
 	options: {

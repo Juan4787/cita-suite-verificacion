@@ -1,13 +1,13 @@
 import { env } from '$env/dynamic/private';
-import { getOdontoContext } from '$lib/server/odonto-context';
-import { createSupabaseAdminClient } from '$lib/server/supabase';
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import {
 	buildFollowUpScope,
 	businessTodayISO,
 	listExecutingFollowUps,
 	roleParticipatesInFollowUps,
 	roleSeesAllFollowUps
-} from '$lib/server/follow-ups';
+} from '$lib/server/patients/public/follow-ups';
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 

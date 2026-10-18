@@ -1,28 +1,28 @@
-import {readBoundedBookingForm} from '$lib/server/public-booking-page';
+import {readBoundedBookingForm} from '$lib/server/scheduling/public/public-booking-page';
 import { env } from '$env/dynamic/private';
-import { bookingContextsAvailable } from '$lib/server/booking-integration-flags';
-import { demoBusinessContext } from '$lib/server/business';
-import { getAvailabilitySlots } from '$lib/server/availability';
+import { bookingContextsAvailable } from '$lib/server/sites/public/booking-integration-flags';
+import { demoBusinessContext } from '$lib/server/access/public/business';
+import { getAvailabilitySlots } from '$lib/server/scheduling/public/availability';
 import {
 	getHumanAppointmentErrorMessage,
 	isAppointmentStatus,
 	rescheduleAppointment,
 	updateAppointmentStatus
-} from '$lib/server/appointments';
-import { getOdontoContext } from '$lib/server/odonto-context';
-import { createSupabaseAdminClient } from '$lib/server/supabase';
-import { loadAppointmentBookingContext, loadAppointmentIntakeForPatient } from '$lib/server/booking-integrations';
-import { processAppointmentGoogleCalendarSync } from '$lib/server/google-calendar';
-import { resetPushRemindersForReschedule, sendReschedulePushNotice } from '$lib/server/push';
+} from '$lib/server/scheduling/public/appointments';
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
+import { loadAppointmentBookingContext, loadAppointmentIntakeForPatient } from '$lib/server/sites/public/booking-integrations';
+import { processAppointmentGoogleCalendarSync } from '$lib/server/integrations/public/google-calendar';
+import { resetPushRemindersForReschedule, sendReschedulePushNotice } from '$lib/server/integrations/public/push';
 import {
 	buildAppointmentActivationDelivery,
 	buildArgentineWaMeUrl,
 	buildRescheduleWhatsAppMessage,
 	buildWhatsAppWebUrl
-} from '$lib/server/reminders';
-import { publicRescheduleUrl } from '$lib/server/messaging';
-import { shouldOfferCreatedAppointmentActivation } from '$lib/server/agenda-navigation';
-import { normalizeArgentineWhatsAppPhone } from '$lib/server/phone';
+} from '$lib/server/scheduling/public/reminders';
+import { publicRescheduleUrl } from '$lib/server/integrations/public/messaging';
+import { shouldOfferCreatedAppointmentActivation } from '$lib/scheduling/agenda-navigation';
+import { normalizeArgentineWhatsAppPhone } from '$lib/utils/phone';
 import { classifyUserAgent } from '$lib/device';
 import { isActiveAppointmentStatus } from '$lib/utils/appointment-visibility';
 import { error as kitError, fail, redirect } from '@sveltejs/kit';

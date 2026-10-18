@@ -12,15 +12,15 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: envState.privateEnv }));
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/platform/supabase', () => ({
 	createSupabaseServerClient: mocks.createSupabaseServerClient,
 	createSupabaseAdminClient: mocks.createSupabaseAdminClient
 }));
-vi.mock('$lib/server/business', () => ({
+vi.mock('$lib/server/access/public/business', () => ({
 	resolveActiveBusiness: mocks.resolveActiveBusiness,
 	demoBusinessContext: mocks.demoBusinessContext
 }));
-vi.mock('$lib/server/messaging', () => ({
+vi.mock('$lib/server/integrations/public/messaging', () => ({
 	getExternalCallbackSiteUrl: () => 'https://app.test'
 }));
 

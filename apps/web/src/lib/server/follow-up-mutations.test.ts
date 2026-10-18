@@ -6,7 +6,7 @@ import {
 	markFollowUpDone,
 	snoozeFollowUp,
 	type RoleScope
-} from './follow-ups';
+} from '$lib/server/patients/public/follow-ups';
 
 /**
  * Simula el contrato mínimo de Supabase para asegurar que una mutación que

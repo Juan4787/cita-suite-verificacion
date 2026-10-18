@@ -8,8 +8,8 @@ import {
 	clinicalFileError,
 	getClinicalFileRequestContext,
 	requireClinicalFileView
-} from '$lib/server/clinical-files';
-import { readDemoDb } from '$lib/server/demo-store';
+} from '$lib/server/patients/public/clinical-files';
+import { readDemoDb } from '$lib/server/platform/demo-store';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 

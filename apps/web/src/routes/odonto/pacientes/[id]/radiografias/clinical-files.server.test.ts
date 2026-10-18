@@ -13,8 +13,8 @@ vi.mock('$env/dynamic/private', () => ({
 	env: { DEMO_MODE: 'false', RATE_LIMIT_SALT: 'clinical-route-test-salt' }
 }));
 
-vi.mock('$lib/server/clinical-files', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/clinical-files')>()),
+vi.mock('$lib/server/patients/public/clinical-files', async (importOriginal) => ({
+	...(await importOriginal<typeof import('$lib/server/patients/public/clinical-files')>()),
 	getClinicalFileRequestContext: mocks.getClinicalFileRequestContext,
 	createClinicalFileUploadUrls: mocks.createClinicalFileUploadUrls,
 	createSignedClinicalFileUrl: mocks.createSignedClinicalFileUrl,
@@ -22,8 +22,8 @@ vi.mock('$lib/server/clinical-files', async (importOriginal) => ({
 	verifyStoredClinicalThumbnail: mocks.verifyStoredClinicalThumbnail
 }));
 
-vi.mock('$lib/server/rate-limits', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/rate-limits')>()),
+vi.mock('$lib/server/platform/rate-limits', async (importOriginal) => ({
+	...(await importOriginal<typeof import('$lib/server/platform/rate-limits')>()),
 	enforceRateLimits: mocks.enforceRateLimits
 }));
 
@@ -48,7 +48,7 @@ const [
 		import('../../papelera/lista/+server')
 	]);
 
-const { ClinicalFileHttpError } = await import('$lib/server/clinical-files');
+const { ClinicalFileHttpError } = await import('$lib/server/patients/public/clinical-files');
 
 const businessId = '10000000-0000-4000-8000-000000000001';
 const patientId = '20000000-0000-4000-8000-000000000001';

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { InvalidDataContractError, readJson } from '$lib/contracts/json';
-import { parsePatientBookingProfile } from './patient-booking-profile';
-import { parseIntegratedAvailabilityRows } from './integrated-availability';
+import { parsePatientBookingProfile } from '$lib/patients/booking-profile';
+import { parseIntegratedAvailabilityRows } from '$lib/availability/rows';
 
 describe('runtime JSON contracts', () => {
 	it('preserves JSON values, optional object fields and literal prototype keys', () => {

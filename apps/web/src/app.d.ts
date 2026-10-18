@@ -6,9 +6,9 @@ declare global {
 			verifiedUser?: { id: string; email: string | null } | null;
 			bookingInformationHeadersApplied?: boolean;
 			bookingFrameAncestors?: string[];
-			bookingIntegrationRequest?: { publicKey: string; promise: Promise<import('$lib/server/booking-integration-request').ResolvedBookingIntegration> };
+			bookingIntegrationRequest?: { publicKey: string; promise: Promise<import('$lib/server/sites/public/booking-integration-request').ResolvedBookingIntegration> };
 			auth: {
-				module: import('$lib/server/supabase').Module;
+				module: import('$lib/server/platform/supabase').Module;
 				access_token: string;
 				refresh_token: string;
 			} | null;

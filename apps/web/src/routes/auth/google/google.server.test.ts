@@ -9,11 +9,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: mocks.env }));
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/platform/supabase', () => ({
 	clearSupabaseOAuthCookies: mocks.clearSupabaseOAuthCookies,
 	createSupabaseOAuthClient: mocks.createSupabaseOAuthClient
 }));
-vi.mock('$lib/server/rate-limits', () => ({
+vi.mock('$lib/server/platform/rate-limits', () => ({
 	enforceRateLimitsFailOpen: mocks.enforceRateLimitsFailOpen,
 	googleAuthRateLimitRules: mocks.googleAuthRateLimitRules,
 	RateLimitExceededError: class RateLimitExceededError extends Error {}
@@ -123,7 +123,7 @@ describe('/auth/google OAuth start', () => {
 	});
 
 	it('bloquea Google únicamente cuando el límite real fue alcanzado', async () => {
-		const { RateLimitExceededError } = await import('$lib/server/rate-limits');
+		const { RateLimitExceededError } = await import('$lib/server/platform/rate-limits');
 		mocks.enforceRateLimitsFailOpen.mockRejectedValueOnce(new RateLimitExceededError('límite', 60));
 
 		const response = await GET(makeEvent('https://app.test/auth/google?mode=login') as never);

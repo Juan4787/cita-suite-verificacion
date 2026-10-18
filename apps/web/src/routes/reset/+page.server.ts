@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/private';
 import { PUBLIC_SITE_URL_FALLBACK } from '$lib/constants';
-import { createSupabaseServerClient } from '$lib/server/supabase';
+import { createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 

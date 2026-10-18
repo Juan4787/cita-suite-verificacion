@@ -1,12 +1,12 @@
 import type { RequestHandler } from './$types';
-import { patientExportFailure, patientExportJson } from '$lib/server/patient-export-http';
+import { patientExportFailure, patientExportJson } from '$lib/server/patients/public/patient-export-http';
 import {
 	PatientExportError,
 	cancelPatientExport,
 	createPatientExportAdminClient,
 	getPatientExportActorId,
 	isUuid
-} from '$lib/server/patient-exports';
+} from '$lib/server/patients/public/patient-exports';
 
 export const DELETE: RequestHandler = async ({ params, locals, fetch }) => {
 	try {

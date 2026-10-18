@@ -4,13 +4,13 @@ import {
 	getModuleEntryRoute,
 	isMasterEmail,
 	MASTER_EMAIL
-} from '$lib/server/supabase';
+} from '$lib/server/platform/supabase';
 import {
 	enforceRateLimitsFailOpen,
 	loginPasswordRateLimitRules,
 	RateLimitExceededError,
 	signupEmailRateLimitRules
-} from '$lib/server/rate-limits';
+} from '$lib/server/platform/rate-limits';
 import { dev } from '$app/environment';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';

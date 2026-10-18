@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { patientExportFailure, patientExportJson } from '$lib/server/patient-export-http';
+import { patientExportFailure, patientExportJson } from '$lib/server/patients/public/patient-export-http';
 import {
 	PatientExportError,
 	assertPatientExportDataset,
@@ -7,7 +7,7 @@ import {
 	getPatientExportActorId,
 	isUuid,
 	readPatientExportPage
-} from '$lib/server/patient-exports';
+} from '$lib/server/patients/public/patient-exports';
 
 export const GET: RequestHandler = async ({ params, url, locals, fetch }) => {
 	try {

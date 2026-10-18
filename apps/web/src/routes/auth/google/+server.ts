@@ -3,8 +3,8 @@ import {
 	enforceRateLimitsFailOpen,
 	googleAuthRateLimitRules,
 	RateLimitExceededError
-} from '$lib/server/rate-limits';
-import { clearSupabaseOAuthCookies, createSupabaseOAuthClient } from '$lib/server/supabase';
+} from '$lib/server/platform/rate-limits';
+import { clearSupabaseOAuthCookies, createSupabaseOAuthClient } from '$lib/server/platform/supabase';
 import type { RequestHandler } from '@sveltejs/kit';
 
 const loginWithError = (url: URL, code: string): Response => {

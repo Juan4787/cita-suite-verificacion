@@ -1,23 +1,23 @@
 import { isRecord } from '$lib/contracts/json';
-import { loadClinicalUploadAvailability, type ClinicalUploadAvailability } from '$lib/server/clinical-files';
-import { readClinicalEntryAmount } from '$lib/server/clinical-entry-costs';
-import { bookingInformationEnabled } from '$lib/server/booking-information';
+import { loadClinicalUploadAvailability, type ClinicalUploadAvailability } from '$lib/server/patients/public/clinical-files';
+import { readClinicalEntryAmount } from '$lib/server/patients/public/clinical-entry-costs';
+import { bookingInformationEnabled } from '$lib/server/patients/public/booking-information';
 import { env } from '$env/dynamic/private';
-import { resolveActiveBusiness } from '$lib/server/business';
-import { newId, readDemoDb, updateDemoDb } from '$lib/server/demo-store';
-import { normalizePhoneE164, normalizePhoneRaw } from '$lib/server/phone';
+import { resolveActiveBusiness } from '$lib/server/access/public/business';
+import { newId, readDemoDb, updateDemoDb } from '$lib/server/platform/demo-store';
+import { normalizePhoneE164, normalizePhoneRaw } from '$lib/utils/phone';
 import {
 	createSupabaseAdminClient,
 	createSupabaseServerClient,
 	getAuthUserId
-} from '$lib/server/supabase';
+} from '$lib/server/platform/supabase';
 import { normalizePhone } from '$lib/utils/format';
 import {
 	getPatientUniqueConflictField,
 	getPatientWriteConflictMessage,
 	PATIENT_UNIQUE_CONFLICT_MESSAGES,
 	type PatientUniqueField
-} from '$lib/server/patient-identity';
+} from '$lib/server/patients/public/patient-identity';
 import { parseMoneyInteger } from '$lib/utils/money-input';
 import { fail, redirect, error as kitError } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -26,8 +26,8 @@ import {
 	businessTodayISO,
 	roleParticipatesInFollowUps,
 	roleSeesAllFollowUps
-} from '$lib/server/follow-ups';
-import { resolvePatientPermissions } from '$lib/server/patient-permissions';
+} from '$lib/server/patients/public/follow-ups';
+import { resolvePatientPermissions } from '$lib/server/patients/public/patient-permissions';
 import { ACTIVE_APPOINTMENT_STATUSES } from '$lib/utils/appointment-visibility';
 
 const getLatestEntryDate = (patientId: string, entries: { patient_id: string; created_at: string }[]) =>
@@ -1328,4 +1328,4 @@ export const actions: Actions = {
 		});
 	}
 };
-import { parsePatientBookingProfile } from '$lib/server/patient-booking-profile';
+import { parsePatientBookingProfile } from '$lib/patients/booking-profile';

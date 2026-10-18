@@ -3,8 +3,8 @@
 // desde el estado ACTUAL del turno; no cachear (lleva el token en la URL).
 
 import { error } from '@sveltejs/kit';
-import { loadAppointmentForToken } from '$lib/server/appointment-token';
-import { buildAppointmentReceiptPdf, type ReceiptField } from '$lib/server/receipt-pdf';
+import { loadAppointmentForToken } from '$lib/server/scheduling/public/appointment-token';
+import { buildAppointmentReceiptPdf, type ReceiptField } from '$lib/server/scheduling/public/receipt-pdf';
 import { formatDateTime } from '$lib/utils/format';
 import { BOOKING_MODALITY_LABELS } from '@turnos-saas/shared/booking-integration';
 import type { RequestHandler } from './$types';

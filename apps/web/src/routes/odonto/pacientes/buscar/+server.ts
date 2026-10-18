@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/private';
-import { getOdontoContext } from '$lib/server/odonto-context';
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import { normalizeSearchText } from '$lib/utils/agenda-search';
 import { json, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';

@@ -1,12 +1,12 @@
 import { env } from '$env/dynamic/private';
-import { resolveActiveBusiness } from '$lib/server/business';
+import { resolveActiveBusiness } from '$lib/server/access/public/business';
 import {
 	createSupabaseServerClient,
 	getEmailFromAccessToken,
 	isMasterEmail
-} from '$lib/server/supabase';
+} from '$lib/server/platform/supabase';
 import { redirect } from '@sveltejs/kit';
-import { canExportPatientData } from '$lib/server/patient-permissions';
+import { canExportPatientData } from '$lib/server/patients/public/patient-permissions';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {

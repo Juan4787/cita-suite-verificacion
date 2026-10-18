@@ -1,7 +1,7 @@
 import { env } from '$env/dynamic/private';
-import { getOdontoContext } from '$lib/server/odonto-context';
-import { createSupabaseAdminClient } from '$lib/server/supabase';
-import { listAssignableProfessionalsForPatient, roleSeesAllFollowUps } from '$lib/server/follow-ups';
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
+import { listAssignableProfessionalsForPatient, roleSeesAllFollowUps } from '$lib/server/patients/public/follow-ups';
 import { json, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 

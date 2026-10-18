@@ -6,10 +6,10 @@ const mocks = vi.hoisted(() => ({
 	authorizeGoogleCalendarAppointment: vi.fn(),
 	processGoogleCalendarEvent: vi.fn()
 }));
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/platform/supabase', () => ({
 	createSupabaseAdminClient: mocks.createSupabaseAdminClient
 }));
-vi.mock('$lib/server/google-calendar', () => ({
+vi.mock('$lib/server/integrations/public/google-calendar', () => ({
 	consumeGoogleCalendarOAuthAttempt: mocks.consumeGoogleCalendarOAuthAttempt,
 	authorizeGoogleCalendarAppointment: mocks.authorizeGoogleCalendarAppointment,
 	processGoogleCalendarEvent: mocks.processGoogleCalendarEvent

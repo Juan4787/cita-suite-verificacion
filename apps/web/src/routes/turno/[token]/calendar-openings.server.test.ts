@@ -9,15 +9,15 @@ const mocks = vi.hoisted(() => ({
 	uncachedRedirect: vi.fn()
 }));
 
-vi.mock('$lib/server/appointment-token', () => ({
+vi.mock('$lib/server/scheduling/public/appointment-token', () => ({
 	loadAppointmentForToken: mocks.loadAppointmentForToken,
 	uncachedRedirect: mocks.uncachedRedirect
 }));
-vi.mock('$lib/server/calendar-content', () => ({
+vi.mock('$lib/server/integrations/public/calendar-content', () => ({
 	googleCalendarUrlFor: mocks.googleCalendarUrlFor,
 	icsForAppointment: mocks.icsForAppointment
 }));
-vi.mock('$lib/server/calendar-tracking', () => ({
+vi.mock('$lib/server/integrations/public/calendar-tracking', () => ({
 	canRegisterCalendarAction: mocks.canRegisterCalendarAction,
 	recordCalendarAction: mocks.recordCalendarAction
 }));

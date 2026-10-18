@@ -1,4 +1,4 @@
-import { loadPatientList } from '$lib/server/patient-list';
+import { loadPatientList } from '$lib/server/patients/public/patient-list';
 import { isHttpError, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 

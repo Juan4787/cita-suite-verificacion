@@ -1,5 +1,5 @@
 import { error, redirect } from "@sveltejs/kit";
-import { getOdontoContext } from "$lib/server/odonto-context";
+import { getOdontoContext } from "$lib/server/access/public/odonto-context";
 import type { PageServerLoad } from "./$types";
 export const load: PageServerLoad = async (event) => {
   const context = await getOdontoContext(event);

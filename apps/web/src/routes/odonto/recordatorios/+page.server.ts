@@ -4,14 +4,14 @@ import {
 	createSupabaseAdminClient,
 	createSupabaseServerClient,
 	getAuthUserId
-} from '$lib/server/supabase';
-import { resolveActiveBusiness } from '$lib/server/business';
-import { writeAuditLog } from '$lib/server/audit';
+} from '$lib/server/platform/supabase';
+import { resolveActiveBusiness } from '$lib/server/access/public/business';
+import { writeAuditLog } from '$lib/server/platform/audit';
 import {
 	loadReminderCandidates,
 	type ReminderCandidate,
 	type ReminderDay
-} from '$lib/server/reminders';
+} from '$lib/server/scheduling/public/reminders';
 import type { Actions, PageServerLoad } from './$types';
 
 const parseDay = (raw: string | null): ReminderDay => (raw === 'hoy' ? 'hoy' : 'manana');

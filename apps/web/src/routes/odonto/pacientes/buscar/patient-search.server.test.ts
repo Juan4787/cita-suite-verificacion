@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
-vi.mock('$lib/server/odonto-context', () => ({
+vi.mock('$lib/server/access/public/odonto-context', () => ({
 	getOdontoContext: mocks.getOdontoContext
 }));
 

@@ -3,8 +3,8 @@ import {
 	logMpWebhookEvent,
 	processMpWebhookEvent,
 	verifyMpWebhookSignature
-} from '$lib/server/mercadopago';
-import { createSupabaseAdminClient } from '$lib/server/supabase';
+} from '$lib/server/integrations/public/mercadopago';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 

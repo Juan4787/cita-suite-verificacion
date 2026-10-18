@@ -1,7 +1,7 @@
-import { parsePublicContactResponse } from '$lib/server/public-catalogue';
+import { parsePublicContactResponse } from '$lib/sites/catalogue';
 import { json, error } from "@sveltejs/kit";
-import { createSupabaseAdminClient } from "$lib/server/supabase";
-import { hashRateLimitSubject } from "$lib/server/rate-limits";
+import { createSupabaseAdminClient } from "$lib/server/platform/supabase";
+import { hashRateLimitSubject } from "$lib/server/platform/rate-limits";
 import type { RequestHandler } from "./$types";
 export const GET: RequestHandler = async (event) => {
   event.setHeaders({

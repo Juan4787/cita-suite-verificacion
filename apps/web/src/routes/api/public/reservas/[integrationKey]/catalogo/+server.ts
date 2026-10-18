@@ -1,9 +1,9 @@
-import { createSupabaseAdminClient } from '$lib/server/supabase';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import { json, error } from '@sveltejs/kit';
-import { resolveBookingIntegrationRequest } from '$lib/server/booking-integration-request';
-import { parseServicePriceLabels } from '$lib/server/price-contracts';
-import { parsePublicCatalogue } from '$lib/server/public-catalogue';
-import { canUsePublicBusiness } from '$lib/server/public-booking';
+import { resolveBookingIntegrationRequest } from '$lib/server/sites/public/booking-integration-request';
+import { parseServicePriceLabels } from '$lib/scheduling/price-contracts';
+import { parsePublicCatalogue } from '$lib/sites/catalogue';
+import { canUsePublicBusiness } from '$lib/server/scheduling/public/public-booking';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async (event) => {

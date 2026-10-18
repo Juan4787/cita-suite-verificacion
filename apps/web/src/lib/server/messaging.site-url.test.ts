@@ -8,7 +8,7 @@ const envState = vi.hoisted(() => ({
 vi.mock('$env/dynamic/private', () => ({ env: envState.privateEnv }));
 vi.mock('$env/dynamic/public', () => ({ env: envState.publicEnv }));
 
-import { getPublicSiteUrl } from './messaging';
+import { getPublicSiteUrl } from '$lib/server/integrations/public/messaging';
 
 describe('URL pública del sitio', () => {
 	beforeEach(() => {

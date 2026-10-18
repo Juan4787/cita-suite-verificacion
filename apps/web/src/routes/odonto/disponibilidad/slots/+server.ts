@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/private';
-import { getAvailabilitySlots, groupSlotsByDate } from '$lib/server/availability';
-import { getOdontoContext } from '$lib/server/odonto-context';
+import { getAvailabilitySlots, groupSlotsByDate } from '$lib/server/scheduling/public/availability';
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import { json, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 

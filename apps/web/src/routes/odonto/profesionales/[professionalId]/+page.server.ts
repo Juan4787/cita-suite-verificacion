@@ -1,21 +1,21 @@
-import { parsePriceAdjustments } from '$lib/server/price-contracts';
-import {readBoundedBookingForm} from '$lib/server/public-booking-page';
+import { parsePriceAdjustments } from '$lib/scheduling/price-contracts';
+import {readBoundedBookingForm} from '$lib/server/scheduling/public/public-booking-page';
 import {previewMonthlyPrices,formatQuotedPrice,monthForTimezone} from '$lib/booking/pricing';
 import { env } from '$env/dynamic/private';
-import { demoBusinessContext } from '$lib/server/business';
-import { writeAuditLog } from '$lib/server/audit';
-import { parseAvailabilityExceptionInterval } from '$lib/server/availability-exceptions';
-import { getOdontoContext } from '$lib/server/odonto-context';
-import { createSupabaseAdminClient } from '$lib/server/supabase';
-import { professionalHasFollowUps } from '$lib/server/follow-ups';
-import { idsFromForm, setProfessionalServices } from '$lib/server/professional-services';
-import { ensureDefaultServices, isDefaultServiceName } from '$lib/server/default-services';
-import { replaceProfessionalScheduleBlocks } from '$lib/server/availability-rules';
+import { demoBusinessContext } from '$lib/server/access/public/business';
+import { writeAuditLog } from '$lib/server/platform/audit';
+import { parseAvailabilityExceptionInterval } from '$lib/server/team/public/availability-exceptions';
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
+import { professionalHasFollowUps } from '$lib/server/patients/public/follow-ups';
+import { idsFromForm, setProfessionalServices } from '$lib/server/team/public/professional-services';
+import { ensureDefaultServices, isDefaultServiceName } from '$lib/server/team/public/default-services';
+import { replaceProfessionalScheduleBlocks } from '$lib/server/team/public/availability-rules';
 import {
 	findProfessionalByEmail,
 	humanProfessionalEmailConflict,
 	normalizeProfessionalEmail
-} from '$lib/server/professionals';
+} from '$lib/server/team/public/professionals';
 import { formatPriceLabel } from '$lib/utils/money-input';
 import {
 	parseScheduleBlocksJson,

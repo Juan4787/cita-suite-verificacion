@@ -26,13 +26,13 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('$env/dynamic/private', () => ({ env: mocks.env }));
 vi.mock('$app/environment', () => ({ dev: false }));
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/platform/supabase', () => ({
 	createSupabaseServerClient: mocks.createSupabaseServerClient,
 	getModuleEntryRoute: mocks.getModuleEntryRoute,
 	isMasterEmail: mocks.isMasterEmail,
 	MASTER_EMAIL: mocks.MASTER_EMAIL
 }));
-vi.mock('$lib/server/rate-limits', () => ({
+vi.mock('$lib/server/platform/rate-limits', () => ({
 	enforceRateLimitsFailOpen: mocks.enforceRateLimitsFailOpen,
 	loginPasswordRateLimitRules: mocks.loginPasswordRateLimitRules,
 	signupEmailRateLimitRules: mocks.signupEmailRateLimitRules,

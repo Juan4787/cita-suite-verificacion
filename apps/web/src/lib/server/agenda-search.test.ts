@@ -4,7 +4,7 @@ import {
 	filterAgendaAppointmentsByQuery,
 	normalizeSearchText,
 	patientMatchesAgendaQuery
-} from './agenda-search';
+} from '$lib/utils/agenda-search';
 
 describe('normalizeSearchText', () => {
 	it('lowercases, trims, strips diacritics and collapses spaces', () => {

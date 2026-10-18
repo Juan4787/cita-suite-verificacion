@@ -12,14 +12,14 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: envState.privateEnv }));
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/platform/supabase', () => ({
 	createSupabaseServerClient: mocks.createSupabaseServerClient,
 	createSupabaseAdminClient: mocks.createSupabaseAdminClient
 }));
-vi.mock('$lib/server/business', () => ({
+vi.mock('$lib/server/access/public/business', () => ({
 	resolveActiveBusiness: mocks.resolveActiveBusiness
 }));
-vi.mock('$lib/server/mercadopago', () => ({
+vi.mock('$lib/server/integrations/public/mercadopago', () => ({
 	confirmMpSubscriptionForBusiness: mocks.confirmMpSubscriptionForBusiness,
 	getSubscriptionAmountArs: () => 50000
 }));

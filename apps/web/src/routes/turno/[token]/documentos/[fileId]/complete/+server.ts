@@ -1,12 +1,12 @@
 import { json } from "@sveltejs/kit";
-import { informationContext } from "$lib/server/booking-information";
+import { informationContext } from "$lib/server/patients/public/booking-information";
 import {
   clinicalFileCacheHeaders,
   clinicalFileError,
   clinicalFileErrorBody,
   verifyStoredClinicalImage,
   isClinicalFileMime,
-} from "$lib/server/clinical-files";
+} from "$lib/server/patients/public/clinical-files";
 import type { RequestHandler } from "./$types";
 export const POST: RequestHandler = async (event) => {
   try {

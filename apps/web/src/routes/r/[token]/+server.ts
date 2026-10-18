@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { isValidGoogleReviewUrl } from '$lib/google-reviews';
-import { createSupabaseAdminClient } from '$lib/server/supabase';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import type { RequestHandler } from './$types';
 
 const responseHeaders = {

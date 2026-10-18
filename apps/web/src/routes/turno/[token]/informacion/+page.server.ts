@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { fail, error, isHttpError } from '@sveltejs/kit';
-import { informationContext, informationErrorMessage, loadBookingInformation } from '$lib/server/booking-information';
-import { readBoundedBookingForm } from '$lib/server/public-booking-page';
-import { intakeAnswersFromForm } from '$lib/server/booking-integrations';
+import { informationContext, informationErrorMessage, loadBookingInformation } from '$lib/server/patients/public/booking-information';
+import { readBoundedBookingForm } from '$lib/server/scheduling/public/public-booking-page';
+import { intakeAnswersFromForm } from '$lib/server/sites/public/booking-integrations';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {

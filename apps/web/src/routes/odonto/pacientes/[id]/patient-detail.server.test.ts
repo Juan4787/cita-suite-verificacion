@@ -15,18 +15,18 @@ const mocks = vi.hoisted(() => ({
 	}
 }));
 
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/platform/supabase', () => ({
 	createSupabaseAdminClient: mocks.createSupabaseAdminClient,
 	createSupabaseServerClient: mocks.createSupabaseServerClient,
 	getAuthUserId: mocks.getAuthUserId
 }));
 
-vi.mock('$lib/server/business', () => ({
+vi.mock('$lib/server/access/public/business', () => ({
 	resolveActiveBusiness: mocks.resolveActiveBusiness
 }));
 
 const { actions } = await import('./+page.server');
-const { resolvePatientPermissions } = await import('$lib/server/patient-permissions');
+const { resolvePatientPermissions } = await import('$lib/server/patients/public/patient-permissions');
 
 const businessId = '00000000-0000-4000-8000-000000000001';
 const ownerId = '00000000-0000-4000-8000-000000000002';

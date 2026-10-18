@@ -1,5 +1,5 @@
-import { createGoogleCalendarAuthorizationUrl } from '$lib/server/google-calendar';
-import { loadAppointmentForToken } from '$lib/server/appointment-token';
+import { createGoogleCalendarAuthorizationUrl } from '$lib/server/integrations/public/google-calendar';
+import { loadAppointmentForToken } from '$lib/server/scheduling/public/appointment-token';
 import type { RequestHandler } from './$types';
 
 const redirectBack = (token: string, status: string) =>

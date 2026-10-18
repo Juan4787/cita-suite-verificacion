@@ -7,14 +7,14 @@ import {
 	loadAccountAssistanceView,
 	revokeAccountAssistance,
 	safeAssistanceReturnTo
-} from '$lib/server/account-assistance';
-import { demoBusinessContext, resolveActiveBusiness } from '$lib/server/business';
+} from '$lib/server/access/public/account-assistance';
+import { demoBusinessContext, resolveActiveBusiness } from '$lib/server/access/public/business';
 import {
 	createSupabaseAdminClient,
 	createSupabaseServerClient,
 	getEmailFromAccessToken,
 	isMasterEmail
-} from '$lib/server/supabase';
+} from '$lib/server/platform/supabase';
 import { error as kitError, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 

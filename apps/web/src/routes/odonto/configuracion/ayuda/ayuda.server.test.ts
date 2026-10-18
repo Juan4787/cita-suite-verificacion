@@ -19,17 +19,17 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: envState.privateEnv }));
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/platform/supabase', () => ({
 	createSupabaseServerClient: mocks.createSupabaseServerClient,
 	createSupabaseAdminClient: mocks.createSupabaseAdminClient,
 	getEmailFromAccessToken: mocks.getEmailFromAccessToken,
 	isMasterEmail: mocks.isMasterEmail
 }));
-vi.mock('$lib/server/business', () => ({
+vi.mock('$lib/server/access/public/business', () => ({
 	resolveActiveBusiness: mocks.resolveActiveBusiness,
 	demoBusinessContext: mocks.demoBusinessContext
 }));
-vi.mock('$lib/server/account-assistance', () => ({
+vi.mock('$lib/server/access/public/account-assistance', () => ({
 	activateAccountAssistance: mocks.activateAccountAssistance,
 	revokeAccountAssistance: mocks.revokeAccountAssistance,
 	dismissAccountAssistanceNotice: mocks.dismissAccountAssistanceNotice,

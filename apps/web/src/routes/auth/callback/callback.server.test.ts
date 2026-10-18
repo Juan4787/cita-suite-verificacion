@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$app/environment', () => ({ dev: false }));
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/platform/supabase', () => ({
 	clearSupabaseOAuthCookies: mocks.clearSupabaseOAuthCookies,
 	createSupabaseOAuthClient: mocks.createSupabaseOAuthClient,
 	getModuleEntryRoute: mocks.getModuleEntryRoute,

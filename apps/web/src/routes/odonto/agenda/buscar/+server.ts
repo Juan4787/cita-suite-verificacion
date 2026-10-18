@@ -1,8 +1,8 @@
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { env } from '$env/dynamic/private';
-import { ACTIVE_BUSINESS_COOKIE } from '$lib/server/business';
-import { getOdontoContext } from '$lib/server/odonto-context';
-import { createSupabaseServerClient } from '$lib/server/supabase';
+import { ACTIVE_BUSINESS_COOKIE } from '$lib/server/access/public/business';
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
+import { createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { splitActiveAppointmentGroups } from '$lib/utils/appointment-visibility';
 import { json, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';

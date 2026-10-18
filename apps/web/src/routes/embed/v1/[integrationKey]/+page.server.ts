@@ -1,7 +1,7 @@
 import { env } from '$env/dynamic/private';
 import { fail } from '@sveltejs/kit';
-import { resolveBookingIntegrationRequest } from '$lib/server/booking-integration-request';
-import { loadPublicBookingPage, submitPublicBookingPage } from '$lib/server/public-booking-page';
+import { resolveBookingIntegrationRequest } from '$lib/server/sites/public/booking-integration-request';
+import { loadPublicBookingPage, submitPublicBookingPage } from '$lib/server/scheduling/public/public-booking-page';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {

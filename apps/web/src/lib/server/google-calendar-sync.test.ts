@@ -7,8 +7,8 @@ const testState = vi.hoisted(() => ({
 }));
 vi.mock('$env/dynamic/private', () => ({ env: testState.privateEnv }));
 vi.mock('$env/dynamic/public', () => ({ env: testState.publicEnv }));
-vi.mock('./public-appointments', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('./public-appointments')>();
+vi.mock('$lib/server/scheduling/public/public-appointments', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('$lib/server/scheduling/public/public-appointments')>();
 	return {
 		...actual,
 		loadPublicAppointmentByToken: vi.fn(async () => testState.appointment)
@@ -19,8 +19,8 @@ import {
 	deterministicGoogleCalendarEventId,
 	encryptGoogleCalendarSecret,
 	processGoogleCalendarEvent
-} from './google-calendar';
-import type { PublicAppointmentView } from './public-appointments';
+} from '$lib/server/integrations/public/google-calendar';
+import type { PublicAppointmentView } from '$lib/server/scheduling/public/public-appointments';
 
 const appointment = (overrides: Partial<PublicAppointmentView> = {}): PublicAppointmentView => ({
 	id: '11111111-1111-4111-8111-111111111111',

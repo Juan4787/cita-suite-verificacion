@@ -4,8 +4,8 @@ const mocks = vi.hoisted(() => ({
 	createSupabaseServerClient: vi.fn()
 }));
 
-vi.mock('$lib/server/business', () => ({ ACTIVE_BUSINESS_COOKIE: 'active-business-id' }));
-vi.mock('$lib/server/supabase', () => ({
+vi.mock('$lib/server/access/public/business', () => ({ ACTIVE_BUSINESS_COOKIE: 'active-business-id' }));
+vi.mock('$lib/server/platform/supabase', () => ({
 	createSupabaseServerClient: mocks.createSupabaseServerClient
 }));
 

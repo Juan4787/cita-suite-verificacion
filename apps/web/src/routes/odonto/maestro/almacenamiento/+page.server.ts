@@ -1,6 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { createSupabaseAdminClient, isMasterEmail } from '$lib/server/supabase';
-import { readBoundedBookingForm } from '$lib/server/public-booking-page';
+import { createSupabaseAdminClient, isMasterEmail } from '$lib/server/platform/supabase';
+import { readBoundedBookingForm } from '$lib/server/scheduling/public/public-booking-page';
 import { parseStorageMegabytes } from '$lib/clinical-storage-units';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
