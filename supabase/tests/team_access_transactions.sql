@@ -7,6 +7,7 @@ do $fixture$
 declare a uuid:=gen_random_uuid();t uuid:=gen_random_uuid();r uuid:=gen_random_uuid();b uuid:=gen_random_uuid();p uuid:=gen_random_uuid();q uuid:=gen_random_uuid();x uuid:=gen_random_uuid();e text:=gen_random_uuid()||'@example.test';
 begin
  insert into auth.users(id,email) values(a,a||'@example.test'),(t,t||'@example.test'),(r,r||'@example.test');
+ insert into public.allowed_emails(email,enabled) values(a||'@example.test',true),(t||'@example.test',true),(r||'@example.test',true);
  insert into public.businesses(id,name,slug,industry) values(b,'Synthetic team access transactions',b::text,'other');
  update public.business_subscriptions set commercial_access_enabled=true,is_permanent=true,subscription_status='active',paid_until=null,grace_until=null,restricted_until=null,archived_at=null where business_id=b;
  insert into public.business_users(business_id,user_id,role,status,accepted_at) values(b,a,'owner','active',now()),(b,t,'owner','active',now()),(b,r,'reception','active',now());
