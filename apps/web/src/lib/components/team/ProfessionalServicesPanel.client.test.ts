@@ -97,7 +97,7 @@ describe('professional service task state', () => {
 			'/odonto/profesionales/professional-one?tab=servicios'
 		);
 		expect(document.body).not.toHaveTextContent('PRIVATE_SENTINEL');
-		await fireEvent.click(screen.getByRole('button', { name: 'Cerrar', exact: true }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
 		await fireEvent.click(screen.getByRole('button', { name: 'Crear servicio nuevo' }));
 		expect(
 			document.querySelector('form[action="?/create_service"] button[type="submit"]')

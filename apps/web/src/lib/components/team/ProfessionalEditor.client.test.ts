@@ -33,7 +33,7 @@ afterEach(cleanup);
 describe('professional editor cross-task coordination', () => {
 	it('does not mark edits made during a submitted profile save as persisted', async () => {
 		render(ProfessionalEditor, { data: professionalEditorData() });
-		const field = screen.getByRole('textbox', { name: 'Nombre', exact: true });
+		const field = screen.getByRole('textbox', { name: 'Nombre' });
 		await fireEvent.input(field, { target: { value: 'Primera edición' } });
 		const form = document.querySelector<HTMLFormElement>('form[action="?/update_profile"]');
 		const handler = form && mocks.handlers.get(form);

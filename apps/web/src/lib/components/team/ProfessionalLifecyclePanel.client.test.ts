@@ -24,16 +24,16 @@ describe('professional dependency inspection task', () => {
 			canManage: true,
 			professionalDependencyKey: 'app:professional:professional-one'
 		});
-		await fireEvent.click(screen.getByRole('button', { name: 'Eliminar', exact: true }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
 		expect(
 			await screen.findByText('No pudimos comprobar el historial. Volvé a intentar.')
 		).toBeVisible();
 		expect(
-			screen.queryByRole('button', { name: 'Eliminar profesional', exact: true })
+			screen.queryByRole('button', { name: 'Eliminar profesional' })
 		).not.toBeInTheDocument();
 		await fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
 		expect(
-			await screen.findByRole('button', { name: 'Eliminar profesional', exact: true })
+			await screen.findByRole('button', { name: 'Eliminar profesional' })
 		).toBeVisible();
 		expect(fetch).toHaveBeenCalledTimes(2);
 	});
@@ -51,7 +51,7 @@ describe('professional dependency inspection task', () => {
 			canManage: true,
 			professionalDependencyKey: 'app:professional:professional-one'
 		});
-		await fireEvent.click(screen.getByRole('button', { name: 'Eliminar', exact: true }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
 		expect(signal?.aborted).toBe(false);
 		view.unmount();
 		expect(signal?.aborted).toBe(true);
