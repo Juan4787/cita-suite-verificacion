@@ -38,13 +38,10 @@ describe('patient navigation performance contracts', () => {
 
 	it('warms radiograph metadata and thumbnails on the client without adding originals to profile load', () => {
 		const patientDetailSource = readSource('../../routes/odonto/pacientes/[id]/+page.svelte');
-		const patientDetailServerSource = readSource(
-			'../../routes/odonto/pacientes/[id]/+page.server.ts'
-		);
 		const radiographCacheSource = readSource('./patient-radiographs-cache.ts');
 
 		expect(patientDetailSource).toContain('schedulePatientRadiographPreload({');
-		expect(patientDetailServerSource).toContain('radiographs: []');
+		// Initial document deferral is exercised through the actual operation in patient-detail.test.ts.
 		expect(radiographCacheSource).toContain('THUMBNAIL_PRELOAD_CONCURRENCY = 2');
 		expect(radiographCacheSource).not.toContain('access-grants');
 	});

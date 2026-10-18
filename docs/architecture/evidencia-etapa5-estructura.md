@@ -25,6 +25,8 @@
 
 Posible error observado estáticamente, todavía sin reproducción nueva: el cargador de ficha registra errores secundarios de perfil/historia/turnos/vínculo y continúa con valores vacíos. Debe contrastarse el contrato y reproducirse en la etapa antes de decidir recuperación por panel o rechazo completo; no se presenta aún como defecto publicado demostrado.
 
-El full de extracción39092194979 detectó40P01 durante inserciones concurrentes de profesionales y no aprobó. Se reabre esa garantía previa y se corrige su mecanismo antes de continuar la extracción funcional; el verde fast no la sustituye. La prueba CLI nueva reprodujo además un alias Vite no resoluble desde Node.
+El full de extracción39092194979 detectó40P01 durante inserciones concurrentes de profesionales y no aprobó. Se reabre esa garantía previa y se corrige su mecanismo antes de continuar la extracción funcional; el verde fast no la sustituye. La prueba CLI nueva reprodujo además un alias Vite no resoluble desde Node. La carrera controlada39093073514 reprodujo40P01 con FK reales y bloqueo observado; comparación positiva pendiente.
 
 La campaña conserva etapas6/capacidad/staging/release/producción/auditoría final; ninguna fila de esta etapa las declara satisfechas.
+
+Otro candidato estático que debe contrastarse en la auditoría del contexto: `loadMembershipsLegacy` mantiene compatibilidad ante error de suscripción mediante legacyFallback. Debe distinguir ausencia de esquema compatible de indisponibilidad técnica y conservar las reglas históricas efectivas; no se presume permiso indebido ni se cambia esta ruta antes de verificar el contrato con pruebas.
