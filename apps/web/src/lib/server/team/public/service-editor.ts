@@ -6,9 +6,9 @@ import { formatPriceLabel } from '$lib/utils/money-input';
 import {
 	parsePositiveInt,
 	MIN_SERVICE_DURATION_MINUTES,
-	MAX_SERVICE_DURATION_MINUTES,
-	type SaveResult
-} from './professional-editor';
+	MAX_SERVICE_DURATION_MINUTES
+} from '$lib/team/professional-form';
+import type { SaveResult } from './professional-editor';
 
 export async function updateProfessionalService(
 	supabase: CitaSupabaseClient,

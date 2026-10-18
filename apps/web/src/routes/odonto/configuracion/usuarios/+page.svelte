@@ -8,6 +8,7 @@
 	import { normalizeTimeRangesForCommit, normalizeTimeRangesInput, parseTimeRanges } from '$lib/utils/time-ranges';
 	import { createEmptyScheduleBlock,
 		serializeScheduleBlocks,
+		parseScheduleBlocksJson,
 		validateScheduleBlocks,
 		type ScheduleBlockDraft
 	} from '$lib/utils/schedule-blocks';
@@ -179,31 +180,14 @@
 		if (!form?.values) return;
 		showWizard = true;
 		if (form.values.email) email = String(form.values.email);
-		if (form.values.role && roles.includes(String(form.values.role) as BusinessRole)) {
-			role = String(form.values.role) as BusinessRole;
-		}
+		const restoredRole = roles.find(candidate => candidate === String(form.values.role ?? ''));
+  if (restoredRole) role = restoredRole;
 		professionalProfileRequested = form.values.has_professional_profile === 'true';
 		if (form.values.professional_name) professionalName = String(form.values.professional_name);
 		if (form.values.professional_specialty) professionalSpecialty = String(form.values.professional_specialty);
 		if (form.values.schedule_blocks) {
-			try {
-				const parsed = JSON.parse(String(form.values.schedule_blocks));
-				if (Array.isArray(parsed)) {
-					scheduleBlocks = parsed.map((item: any, index) => ({
-						id: `restored-wizard-block-${index + 1}`,
-						weekdays: Array.isArray(item?.weekdays)
-							? item.weekdays.map(Number).filter((value: number) => Number.isInteger(value) && value >= 0 && value <= 6)
-							: [],
-						timeRanges: String(item?.timeRanges ?? item?.time_ranges ?? ''),
-						slotInterval: String(
-							item?.breakMinutes ?? item?.break_minutes ?? item?.slotInterval ?? '15'
-						),
-						gridInterval: String(item?.gridInterval ?? item?.slot_interval_minutes ?? '15')
-					}));
-				}
-			} catch {
-				scheduleBlocks = [{ ...createEmptyScheduleBlock('wizard-block-1') }];
-			}
+			const restoredBlocks = parseScheduleBlocksJson(String(form.values.schedule_blocks));
+   scheduleBlocks = restoredBlocks?.map((block,index) => ({...block,id:`restored-wizard-block-${index+1}`})) ?? [{...createEmptyScheduleBlock('wizard-block-1')}];
 		} else if (form.values.time_ranges || form.values.weekdays_csv) {
 			scheduleBlocks = [
 				{

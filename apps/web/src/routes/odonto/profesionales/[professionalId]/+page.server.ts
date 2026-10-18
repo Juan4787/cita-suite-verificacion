@@ -8,9 +8,6 @@ import {
 } from '$lib/server/team/public/service-editor';
 import {
 	loadProfessionalEditor,
-	parsePositiveInt,
-	MIN_SERVICE_DURATION_MINUTES,
-	MAX_SERVICE_DURATION_MINUTES,
 	getPendingProfessionalAccountEmail,
 	saveProfessionalProfile,
 	saveProfessionalServices,

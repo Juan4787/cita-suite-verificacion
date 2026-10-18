@@ -1,3 +1,9 @@
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
+import {
+	scheduleBlocksFromForm,
+	MIN_SERVICE_DURATION_MINUTES,
+	MAX_SERVICE_DURATION_MINUTES
+} from '$lib/team/professional-form';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { readArray, readRecord } from '$lib/contracts/json';
 import {
@@ -17,9 +23,7 @@ import {
 	ensureDefaultServicesAssigned,
 	isDefaultServiceName
 } from '$lib/server/team/public/default-services';
-import {
-	replaceProfessionalScheduleBlocks
-} from '$lib/server/team/public/availability-rules';
+import { replaceProfessionalScheduleBlocks } from '$lib/server/team/public/availability-rules';
 import { parseAvailabilityExceptionInterval } from '$lib/server/team/public/availability-exceptions';
 import { setProfessionalServices } from '$lib/server/team/public/professional-services';
 import { writeAuditLog } from '$lib/server/platform/audit';
@@ -96,8 +100,6 @@ const DEMO_MEMBERS: BusinessRoleAccess[] = [
 ];
 
 const EMAIL_FORMAT_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_SERVICE_DURATION_MINUTES = 5;
-const MAX_SERVICE_DURATION_MINUTES = 480;
 
 // Roles que se ofrecen al agregar un integrante desde Equipo.
 const TEAM_ROLES = BUSINESS_ROLES.filter((role) => role !== 'readonly');
@@ -159,34 +161,6 @@ const listServices = async (
 	}));
 };
 
-const getUsersPageContext = async ({
-	locals,
-	fetch,
-	cookies
-}: {
-	locals: App.Locals;
-	fetch: typeof globalThis.fetch;
-	cookies: import('@sveltejs/kit').Cookies;
-}) => {
-	if (!locals.auth) throw redirect(303, '/login');
-
-	const supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);
-	const [context, currentUserId] = await Promise.all([
-		resolveActiveBusiness({
-			supabase,
-			accessToken: locals.auth.access_token,
-			cookies
-		}),
-		getAuthUserId(supabase, locals.auth.access_token)
-	]);
-
-	if (!context) {
-		throw kitError(500, 'No se pudo resolver el negocio activo');
-	}
-
-	return { supabase, context, currentUserId };
-};
-
 const countOwners = (members: BusinessRoleAccess[]) =>
 	members.filter((member) => member.status === 'active' && member.role === 'owner').length;
 
@@ -195,7 +169,8 @@ const roleAccessErrorMessage = (error: { code?: string; message?: string } | nul
 	if (isEmailAlreadyAssociatedWithOtherBusinessError(error)) {
 		return EMAIL_ALREADY_ASSOCIATED_WITH_OTHER_BUSINESS_MESSAGE;
 	}
-	if (raw.includes('BUSINESS_MANAGE_DENIED')) return 'No tenés permisos para administrar el equipo.';
+	if (raw.includes('BUSINESS_MANAGE_DENIED'))
+		return 'No tenés permisos para administrar el equipo.';
 	if (raw.includes('INVALID_EMAIL')) return 'Ingresá un email válido.';
 	if (raw.includes('INVALID_ROLE')) return 'El rol seleccionado no es válido.';
 	if (raw.includes('PROFESSIONAL_REQUIRED')) return 'Completá los datos del profesional.';
@@ -212,18 +187,24 @@ const roleAccessErrorMessage = (error: { code?: string; message?: string } | nul
 	if (raw.includes('PROFESSIONAL_EMAIL_ALREADY_EXISTS')) {
 		return 'Ese correo ya está cargado en otro profesional.';
 	}
-	if (error?.code === '42P10' || raw.includes('no unique or exclusion constraint matching the on conflict')) {
+	if (
+		error?.code === '42P10' ||
+		raw.includes('no unique or exclusion constraint matching the on conflict')
+	) {
 		return 'Falta aplicar la migración de roles en la base de datos.';
 	}
-	if (raw.includes('ADMIN_OWNER_ACTION_DENIED')) return 'Un administrador no puede modificar dueños ni otros administradores.';
+	if (raw.includes('ADMIN_OWNER_ACTION_DENIED'))
+		return 'Un administrador no puede modificar dueños ni otros administradores.';
 	if (raw.includes('LAST_OWNER_BLOCKED')) return 'El consultorio debe conservar al menos un dueño.';
-	if (raw.includes('SELF_REMOVE_DENIED')) return 'No podés quitar tu propio rol desde esta pantalla.';
+	if (raw.includes('SELF_REMOVE_DENIED'))
+		return 'No podés quitar tu propio rol desde esta pantalla.';
 	return 'No se pudo guardar el rol.';
 };
 
 const roleAccessErrorStatus = (error: { code?: string; message?: string } | null | undefined) => {
 	const raw = error?.message ?? '';
-	if (raw.includes('BUSINESS_USER_NOT_FOUND') || raw.includes('BUSINESS_INVITE_NOT_FOUND')) return 409;
+	if (raw.includes('BUSINESS_USER_NOT_FOUND') || raw.includes('BUSINESS_INVITE_NOT_FOUND'))
+		return 409;
 	return businessEmailAssociationErrorStatus(error);
 };
 
@@ -279,7 +260,7 @@ const saveRoleAccessDirect = async ({
 	);
 	const effectiveProfessionalId =
 		professionalId ??
-		(roleSupportsProfessionalProfile(role) ? currentEmailAccess?.professional_id ?? null : null);
+		(roleSupportsProfessionalProfile(role) ? (currentEmailAccess?.professional_id ?? null) : null);
 	if (role === 'professional' && !effectiveProfessionalId) {
 		throw new Error('PROFESSIONAL_REQUIRED');
 	}
@@ -306,7 +287,11 @@ const saveRoleAccessDirect = async ({
 		const existing = currentAccess.find(
 			(item) => item.status === 'active' && item.user_id === targetUserId
 		);
-		if (actorRole === 'admin' && existing?.role && (existing.role === 'owner' || existing.role === 'admin')) {
+		if (
+			actorRole === 'admin' &&
+			existing?.role &&
+			(existing.role === 'owner' || existing.role === 'admin')
+		) {
 			throw new Error('ADMIN_OWNER_ACTION_DENIED');
 		}
 		if (existing?.role === 'owner' && role !== 'owner' && countOwners(currentAccess) <= 1) {
@@ -412,8 +397,7 @@ const saveRoleAccessDirect = async ({
 		if (!updatedInvite) throw new Error('BUSINESS_INVITE_NOT_FOUND');
 		return {
 			status:
-				existingPending.role === role &&
-				existingPending.professional_id === effectiveProfessionalId
+				existingPending.role === role && existingPending.professional_id === effectiveProfessionalId
 					? 'already_pending'
 					: 'pending'
 		};
@@ -464,34 +448,6 @@ const parseNewServices = (raw: string): NewServiceInput[] => {
 	});
 };
 
-const scheduleBlocksFromForm = (
-	form: FormData
-):
-	| { ok: true; blocks: NormalizedScheduleBlock[] }
-	| { ok: false; message: string } => {
-	const rawBlocks = String(form.get('schedule_blocks') ?? '').trim();
-	let draftBlocks: ScheduleBlockDraft[] | null = rawBlocks ? parseScheduleBlocksJson(rawBlocks) : null;
-	if (rawBlocks && !draftBlocks) {
-		return { ok: false, message: 'Los bloques horarios no son válidos.' };
-	}
-	if (!draftBlocks) {
-		draftBlocks = [
-			{
-				weekdays: form
-					.getAll('weekdays')
-					.map((value) => Number(value))
-					.filter((value) => Number.isInteger(value) && value >= 0 && value <= 6),
-				timeRanges: String(form.get('time_ranges') ?? ''),
-				slotInterval: String(form.get('break_minutes') ?? 15),
-				gridInterval: String(form.get('slot_interval_minutes') ?? 15)
-			}
-		];
-	}
-	const result = validateScheduleBlocks(draftBlocks);
-	if (!result.ok) return { ok: false, message: result.message };
-	return { ok: true, blocks: result.blocks };
-};
-
 export const load: PageServerLoad = async ({ locals, fetch, cookies, depends }) => {
 	depends('app:team');
 	if (!locals.auth) throw redirect(303, '/login');
@@ -508,7 +464,11 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, depends }) 
 		};
 	}
 
-	const { supabase, context, currentUserId } = await getUsersPageContext({ locals, fetch, cookies });
+	const {
+		supabase,
+		business: context,
+		userId: currentUserId
+	} = await getOdontoContext({ locals, fetch, cookies });
 	if (context.role === 'professional') throw redirect(303, '/odonto/mis-turnos');
 	if (context.role !== 'owner' && context.role !== 'admin') throw redirect(303, '/odonto/agenda');
 	const [members, services] = await Promise.all([
@@ -557,18 +517,22 @@ export const actions: Actions = {
 			requested: requestedProfessionalProfile
 		});
 
-		const { supabase, context, currentUserId } = await getUsersPageContext({ locals, fetch, cookies });
-			if (!context.canManage) {
-				return fail(403, { message: 'No tenés permisos para administrar el equipo.', values });
-			}
-			if (context.assistance && role === 'owner') {
-				return fail(403, {
-					message: 'La propiedad del consultorio solo puede administrarla su dueño.',
-					values
-				});
-			}
+		const {
+			supabase,
+			business: context,
+			userId: currentUserId
+		} = await getOdontoContext({ locals, fetch, cookies });
+		if (!context.canManage) {
+			return fail(403, { message: 'No tenés permisos para administrar el equipo.', values });
+		}
+		if (context.assistance && role === 'owner') {
+			return fail(403, {
+				message: 'La propiedad del consultorio solo puede administrarla su dueño.',
+				values
+			});
+		}
 
-			const currentAccess = await listRoleAccess(supabase, context.business.id);
+		const currentAccess = await listRoleAccess(supabase, context.business.id);
 		const existing = currentAccess.find((item) => item.email.toLowerCase() === email);
 		if (existing?.role === role) {
 			return fail(400, {
@@ -600,10 +564,16 @@ export const actions: Actions = {
 			} catch (error) {
 				const code = (error as Error)?.message ?? '';
 				if (code === 'NEW_SERVICE_NAME_REQUIRED') {
-					return fail(400, { message: 'No se puede crear un servicio adicional sin nombre.', values });
+					return fail(400, {
+						message: 'No se puede crear un servicio adicional sin nombre.',
+						values
+					});
 				}
 				if (code === 'NEW_SERVICE_DURATION_INVALID') {
-					return fail(400, { message: 'La duración del servicio debe estar entre 5 y 480 minutos.', values });
+					return fail(400, {
+						message: 'La duración del servicio debe estar entre 5 y 480 minutos.',
+						values
+					});
 				}
 				return fail(400, { message: 'Los servicios cargados no son válidos.', values });
 			}
@@ -656,19 +626,17 @@ export const actions: Actions = {
 			const professionalId = crypto.randomUUID();
 			createdProfessionalId = professionalId;
 
-			const { error: createError } = await supabase
-				.from('professionals')
-				.insert({
-					id: professionalId,
-					business_id: businessId,
-					name: professionalName,
-					specialty: specialty || null,
-					email,
-					is_active: true,
-					// Se habilita para reservas sólo si la cuenta ya existe. Si queda una
-					// invitación pendiente, la vinculación de la cuenta la publica automáticamente.
-					is_public: false
-				});
+			const { error: createError } = await supabase.from('professionals').insert({
+				id: professionalId,
+				business_id: businessId,
+				name: professionalName,
+				specialty: specialty || null,
+				email,
+				is_active: true,
+				// Se habilita para reservas sólo si la cuenta ya existe. Si queda una
+				// invitación pendiente, la vinculación de la cuenta la publica automáticamente.
+				is_public: false
+			});
 			if (createError) {
 				logServerFailure('Error creando profesional', createError);
 				return fail(500, { message: 'No se pudo crear el profesional.', values });
@@ -676,33 +644,44 @@ export const actions: Actions = {
 
 			const rollback = async (admin: CitaSupabaseClient) => {
 				// Borrar el profesional limpia en cascada asignaciones, reglas y excepciones.
-				if (createdProfessionalId) await admin.from('professionals').delete().eq('business_id', businessId).eq('id', createdProfessionalId);
+				if (createdProfessionalId)
+					await admin
+						.from('professionals')
+						.delete()
+						.eq('business_id', businessId)
+						.eq('id', createdProfessionalId);
 				if (createdServiceIds.length > 0) {
-					await admin.from('services').delete().eq('business_id', businessId).in('id', createdServiceIds);
+					await admin
+						.from('services')
+						.delete()
+						.eq('business_id', businessId)
+						.in('id', createdServiceIds);
 				}
 			};
 
 			const admin = await createSupabaseAdminClient('odonto', fetch);
 			try {
 				// Consulta y Otro servicio: existen siempre y quedan asignados automáticamente.
-				const defaultServiceIds = await ensureDefaultServicesAssigned(supabase, businessId, professionalId);
+				const defaultServiceIds = await ensureDefaultServicesAssigned(
+					supabase,
+					businessId,
+					professionalId
+				);
 
 				for (const newService of newServices) {
 					const serviceId = crypto.randomUUID();
-					const { error: serviceError } = await supabase
-						.from('services')
-						.insert({
-							id: serviceId,
-							business_id: businessId,
-							name: newService.name,
-							duration_minutes: newService.duration_minutes,
-							price_label: newService.price_label,
-							description: null,
-							buffer_before_minutes: 0,
-							buffer_after_minutes: 0,
-							is_public: true,
-							is_active: true
-						});
+					const { error: serviceError } = await supabase.from('services').insert({
+						id: serviceId,
+						business_id: businessId,
+						name: newService.name,
+						duration_minutes: newService.duration_minutes,
+						price_label: newService.price_label,
+						description: null,
+						buffer_before_minutes: 0,
+						buffer_after_minutes: 0,
+						is_public: true,
+						is_active: true
+					});
 					if (serviceError) {
 						throw serviceError;
 					}
@@ -764,8 +743,7 @@ export const actions: Actions = {
 					return {
 						success: true,
 						openRole: role,
-						message:
-							`Perfil profesional configurado con rol ${roleLabel(role)}. No aparecerá en las reservas online hasta que la persona cree su cuenta con ${email}.`
+						message: `Perfil profesional configurado con rol ${roleLabel(role)}. No aparecerá en las reservas online hasta que la persona cree su cuenta con ${email}.`
 					};
 				}
 
@@ -790,10 +768,16 @@ export const actions: Actions = {
 				logServerFailure('Error guardando alta de profesional', error);
 				const code = (error as { message?: string })?.message ?? '';
 				if (code === 'INVALID_SERVICE_ASSIGNMENT') {
-					return fail(400, { message: 'Algún servicio seleccionado no pertenece a este consultorio.', values });
+					return fail(400, {
+						message: 'Algún servicio seleccionado no pertenece a este consultorio.',
+						values
+					});
 				}
 				const roleError = error as { code?: string; message?: string };
-				return fail(roleAccessErrorStatus(roleError), { message: roleAccessErrorMessage(roleError), values });
+				return fail(roleAccessErrorStatus(roleError), {
+					message: roleAccessErrorMessage(roleError),
+					values
+				});
 			}
 		}
 
@@ -814,7 +798,10 @@ export const actions: Actions = {
 		} catch (error) {
 			logServerFailure('Error guardando acceso al negocio', error);
 			const roleError = error as { code?: string; message?: string };
-			return fail(roleAccessErrorStatus(roleError), { message: roleAccessErrorMessage(roleError), values });
+			return fail(roleAccessErrorStatus(roleError), {
+				message: roleAccessErrorMessage(roleError),
+				values
+			});
 		}
 
 		const status = String(result.status ?? '');
@@ -825,7 +812,8 @@ export const actions: Actions = {
 			return {
 				success: true,
 				openRole: role,
-				message: 'Acceso preparado. Cuando la persona cree su cuenta con ese correo, el rol se asignará automáticamente.'
+				message:
+					'Acceso preparado. Cuando la persona cree su cuenta con ese correo, el rol se asignará automáticamente.'
 			};
 		}
 
@@ -841,7 +829,11 @@ export const actions: Actions = {
 		const targetAccessId = String(form.get('access_id') ?? '').trim();
 		const professionalName = String(form.get('name') ?? '').trim();
 
-		const { supabase, context, currentUserId } = await getUsersPageContext({ locals, fetch, cookies });
+		const {
+			supabase,
+			business: context,
+			userId: currentUserId
+		} = await getOdontoContext({ locals, fetch, cookies });
 		if (!context.canManage) {
 			return fail(403, { message: 'No tenés permisos para administrar el equipo.' });
 		}
@@ -930,15 +922,24 @@ export const actions: Actions = {
 			linkCreated = Boolean(result.data?.id);
 		}
 		if (linkError || !linkCreated) {
-			await admin.from('professionals').delete().eq('business_id', businessId).eq('id', professionalId);
+			await admin
+				.from('professionals')
+				.delete()
+				.eq('business_id', businessId)
+				.eq('id', professionalId);
 			logServerFailure('Error vinculando profesional al usuario', linkError);
-			return fail(500, { message: 'No se pudo vincular el perfil profesional a la persona del equipo.' });
+			return fail(500, {
+				message: 'No se pudo vincular el perfil profesional a la persona del equipo.'
+			});
 		}
 
 		try {
 			await ensureDefaultServicesAssigned(supabase, businessId, professionalId);
 		} catch (defaultsError) {
-			logServerFailure('No se pudieron asegurar servicios por defecto del atendible', defaultsError);
+			logServerFailure(
+				'No se pudieron asegurar servicios por defecto del atendible',
+				defaultsError
+			);
 		}
 
 		await writeAuditLog(admin, {
@@ -975,26 +976,33 @@ export const actions: Actions = {
 			return fail(400, { message: 'El rol seleccionado no es válido.' });
 		}
 
-		const { supabase, context } = await getUsersPageContext({ locals, fetch, cookies });
+		const { supabase, business: context } = await getOdontoContext({ locals, fetch, cookies });
 		if (!context.canManage) {
 			return fail(403, { message: 'No tenés permisos para administrar el equipo.' });
 		}
 
-			const members = await listRoleAccess(supabase, context.business.id);
-			const target = members.find((member) => member.id === membershipId && member.status === 'active');
-			if (!target) {
-				return fail(404, { message: 'Rol no encontrado en este consultorio.' });
-			}
-			if (context.assistance && (target.role === 'owner' || target.role === 'admin' || role === 'owner' || role === 'admin')) {
-				return fail(403, {
-					message: 'El dueño y los administradores se configuran desde el consultorio.'
-				});
-			}
-			if (target.role === 'owner' && role !== 'owner' && countOwners(members) <= 1) {
-				return fail(400, { message: 'El consultorio debe conservar al menos un dueño.' });
-			}
+		const members = await listRoleAccess(supabase, context.business.id);
+		const target = members.find(
+			(member) => member.id === membershipId && member.status === 'active'
+		);
+		if (!target) {
+			return fail(404, { message: 'Rol no encontrado en este consultorio.' });
+		}
+		if (
+			context.assistance &&
+			(target.role === 'owner' || target.role === 'admin' || role === 'owner' || role === 'admin')
+		) {
+			return fail(403, {
+				message: 'El dueño y los administradores se configuran desde el consultorio.'
+			});
+		}
+		if (target.role === 'owner' && role !== 'owner' && countOwners(members) <= 1) {
+			return fail(400, { message: 'El consultorio debe conservar al menos un dueño.' });
+		}
 		if (role === 'professional' && !target.professional_id) {
-			return fail(400, { message: 'Para asignar rol profesional, usá Agregar integrante con rol Profesional.' });
+			return fail(400, {
+				message: 'Para asignar rol profesional, usá Agregar integrante con rol Profesional.'
+			});
 		}
 
 		const { error } = await supabase.rpc('update_business_role_access', {
@@ -1022,36 +1030,40 @@ export const actions: Actions = {
 			return fail(400, { message: 'Rol inválido.' });
 		}
 
-		const { supabase, context, currentUserId } = await getUsersPageContext({ locals, fetch, cookies });
-			if (!context.canManage) {
-				return fail(403, { message: 'No tenés permisos para administrar el equipo.' });
-			}
+		const {
+			supabase,
+			business: context,
+			userId: currentUserId
+		} = await getOdontoContext({ locals, fetch, cookies });
+		if (!context.canManage) {
+			return fail(403, { message: 'No tenés permisos para administrar el equipo.' });
+		}
 
-			const members = await listRoleAccess(supabase, context.business.id);
-			const target = members.find((member) => member.id === accessId && member.status === status);
-			if (!target) {
-				return fail(404, { message: 'Rol no encontrado en este consultorio.' });
-			}
-			if (context.assistance && (target.role === 'owner' || target.role === 'admin')) {
-				return fail(403, {
-					message: 'El dueño y los administradores se configuran desde el consultorio.'
-				});
-			}
+		const members = await listRoleAccess(supabase, context.business.id);
+		const target = members.find((member) => member.id === accessId && member.status === status);
+		if (!target) {
+			return fail(404, { message: 'Rol no encontrado en este consultorio.' });
+		}
+		if (context.assistance && (target.role === 'owner' || target.role === 'admin')) {
+			return fail(403, {
+				message: 'El dueño y los administradores se configuran desde el consultorio.'
+			});
+		}
 
-			if (status === 'pending') {
-				const { error } = await supabase.rpc('cancel_business_role_invite', {
-					target_invite_id: accessId
+		if (status === 'pending') {
+			const { error } = await supabase.rpc('cancel_business_role_invite', {
+				target_invite_id: accessId
 			});
 			if (error) {
 				logServerFailure('Error cancelando invitación', error);
 				return fail(500, { message: 'No se pudo quitar el rol pendiente.' });
-				}
-				return { success: true, message: 'Rol pendiente quitado.' };
 			}
+			return { success: true, message: 'Rol pendiente quitado.' };
+		}
 
-			if (target.user_id === currentUserId) {
-				return fail(400, { message: 'No podés quitar tu propio acceso desde esta pantalla.' });
-			}
+		if (target.user_id === currentUserId) {
+			return fail(400, { message: 'No podés quitar tu propio acceso desde esta pantalla.' });
+		}
 		if (target.role === 'owner' && countOwners(members) <= 1) {
 			return fail(400, { message: 'El consultorio debe conservar al menos un dueño.' });
 		}

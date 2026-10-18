@@ -52,17 +52,18 @@ describe('team lifecycle operations with real SDK and simulated HTTP', () => {
 		});
 		expect(calls).toHaveLength(1);
 	});
-	it.each([[], [{}], [{ appointment_count: 0, clinical_entry_count: 0, follow_up_count: '0' }]])(
-		'rejects incomplete count projection %j',
-		async (rows) => {
-			const { client, calls } = sdk(() => Response.json(rows));
-			expect(await getProfessionalDependencies(client, business, professional)).toMatchObject({
-				ok: false,
-				status: 503
-			});
-			expect(calls).toHaveLength(1);
-		}
-	);
+	it.each([
+		{ rows: [] },
+		{ rows: [{}] },
+		{ rows: [{ appointment_count: 0, clinical_entry_count: 0, follow_up_count: '0' }] }
+	])('rejects incomplete count projection %j', async ({ rows }) => {
+		const { client, calls } = sdk(() => Response.json(rows));
+		expect(await getProfessionalDependencies(client, business, professional)).toMatchObject({
+			ok: false,
+			status: 503
+		});
+		expect(calls).toHaveLength(1);
+	});
 	it('reads the complete dependency projection as informational data', async () => {
 		const counts = { appointment_count: 2, clinical_entry_count: 3, follow_up_count: 1 };
 		const { client, calls } = sdk(() => Response.json([counts]));
