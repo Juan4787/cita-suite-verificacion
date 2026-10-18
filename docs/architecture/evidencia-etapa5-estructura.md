@@ -1,0 +1,28 @@
+# Evidencia de etapa 5: estructura, interfaz e identidad
+
+**Etapa abierta.** Autoridad: [plan aprobado íntegro](../plans/refactorizacion-cita-suite.md). Esta matriz orienta el seguimiento; no sustituye ni reduce el original. [Registro y fuentes](../plans/registro-refactorizacion-cita-suite.md).
+
+| Condición | Evidencia actual | Cierre pendiente |
+|---|---|---|
+| Seis áreas y entradas públicas sin privados cruzados | 62 módulos con propietarios; reglas sobre public/internal, sin índice masivo. Fast39091959358 sobree30daa4. | Recorridos/controladores/componentes, auditoría de APIs y full actual. |
+| Sin ciclos, incluidos tipos | Excepción type-only retirada; prueba adversaria real aprobada en fast39091606334 y39091959358. | Mantenerla al descomponer recorridos. |
+| Navegador sin implementación de servidor | Cuatro consumidores migrados a contratos; guardas de import directo, tipo e intermediario compartido. | Build/release y auditoría transversal de código restante. |
+| Sin capas vacías ni reglas duplicadas | Entradas públicas implementan operaciones; dos fachadas redundantes eliminadas. Parser HTTP común extraído de controlador público. | Revisar invariantes/operaciones al adelgazar rutas. |
+| Rutas con parámetros, autorización, operación y traducción | Contexto por petición y contratos previos preservados. | Descomponer controladores extensos y comprobar errores/roles. |
+| Componentes por tareas y estados | Inventario estático de extensiones grandes registrado. | Extracción y equivalencia render/interacciones. |
+| Profesional/prestación/horario permanecen en su sección | Regresiones previas conservadas. | Comparación específica tras extraer/configurar sitios. |
+| Obligatorios antes de opcionales | Formulario final previo sin cambio funcional. | Recorrido y geometría en matriz amplia. |
+| Marca sólo presentación | Contratos/cálculo únicos de etapa4. | Auditoría de imports, permisos y ambos temas. |
+| Natalia nativa, notificaciones/gestión mismo origen | Recorridos CI previos completos. | Repetición con build final y hosting real. |
+| Retornos validados | Validadores/contratos vigentes conservados. | Casos manipulados y publicación. |
+| Sin recortes, desbordamientos ni estilos accidentales | Etapas3/4 revisadas sólo a alcance propio. |320/390/768/1280/1600, teclado/foco/carga/error/vacío/contenido largo. |
+| Errores legibles y logs sin datos sensibles | No se presume conformidad por verde unitario. | Pantalla503 Auth estilizada con cookies/no-store/estado503; logging acotado por metadatos. |
+| Diagnóstico SSR cerrado | Tres advertencias genéricas preservadas. Instrumentación de callsites exclusiva CI preparada. | Identificar causa real, corregir mecanismo y comprobar. |
+| Semántica de documentos | Backend y pruebas de PDF cerrados en etapa3. | Corregir textos preexistentes de papelera y comprobar permisos/estados. |
+| JS transferido e hidratación de Natalia | Fuente de Natalia no tocada en estos lotes. Eso no sustituye medición. | Baseline/resultado de artefacto y red comparables. |
+| Identidad Cita Suite consistente | Inventario en identidad-cita-suite.md; accesos resueltos. | Paquetes/referencias activas, ensayo de renombrado, transición/repositorio y proveedores en release. |
+| Cursos/noticias intactos | No forman parte de los cambios autorizados. | Verificación de diff en cierre. |
+
+Posible error observado estáticamente, todavía sin reproducción nueva: el cargador de ficha registra errores secundarios de perfil/historia/turnos/vínculo y continúa con valores vacíos. Debe contrastarse el contrato y reproducirse en la etapa antes de decidir recuperación por panel o rechazo completo; no se presenta aún como defecto publicado demostrado.
+
+La campaña conserva etapas6/capacidad/staging/release/producción/auditoría final; ninguna fila de esta etapa las declara satisfechas.

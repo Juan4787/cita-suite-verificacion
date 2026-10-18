@@ -41,6 +41,7 @@ const extras = [
 	'docs/architecture/evidencia-etapa4-agenda.md',
 	'docs/architecture/revision-ui-agenda-aranceles.md',
 	'docs/architecture/areas-y-fronteras.md',
+	'docs/architecture/evidencia-etapa5-estructura.md',
 	'docs/archive/administrativo-inactivo/README.md', 'docs/archive/administrativo-inactivo/integridad.json',
 	...JSON.parse(readFileSync(join(root, 'docs/archive/administrativo-inactivo/integridad.json'), 'utf8')).map(entry => entry.archive),
 	'docs/architecture/functional-contracts.md', 'docs/architecture/refactoring-campaign.md',
