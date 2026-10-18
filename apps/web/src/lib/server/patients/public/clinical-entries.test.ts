@@ -49,6 +49,18 @@ function clientFor(response: () => Response) {
 }
 
 describe('clinical operations through typed SDK with simulated HTTP', () => {
+	it('preserves a historical canonical fractional clinical amount instead of stripping its decimal point', () => {
+		expect(
+			parseClinicalEntryInput({
+				entryType: 'Consulta',
+				description: 'Synthetic historical amount',
+				createdAt: '2026-01-15T09:30',
+				teeth: '',
+				amount: '125.5',
+				internalNote: ''
+			}).amount
+		).toBe(125.5);
+	});
 	it('sends the accepted clinical date when editing instead of silently ignoring the field', async () => {
 		const { supabase, requests } = clientFor(() => new Response(null, { status: 204 }));
 		const value = input();

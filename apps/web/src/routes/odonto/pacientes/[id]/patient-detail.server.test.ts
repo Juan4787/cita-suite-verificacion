@@ -319,10 +319,11 @@ describe('patient detail migrated actions', () => {
 
 		await expectRedirectToPatient(actions.update_entry!(makeEvent(form)), 'historial');
 
-		expect(mocks.supabase.rpc).toHaveBeenCalledWith('update_clinical_entry_safely', {
+		expect(mocks.supabase.rpc).toHaveBeenCalledWith('update_clinical_entry_with_date_safely', {
 			p_business_id: businessId,
 			p_patient_id: patientId,
 			p_entry_id: 'entry-1',
+			p_created_at: '2026-06-05T10:00:00.000Z',
 			p_entry_type: 'Tratamiento',
 			p_description: 'Evolucion controlada',
 			p_teeth: '21',

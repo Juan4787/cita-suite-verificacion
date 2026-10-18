@@ -31,7 +31,7 @@ describe('patient migration contracts', () => {
 		expect(detailSource).toContain('await updateClinicalEntry(');
 		expect(operationSource).not.toMatch(/from\('clinical_entries'\)/);
 		expect(operationSource).toContain("rpc('create_clinical_entry_with_result_safely'");
-		expect(operationSource).toContain("rpc('update_clinical_entry_safely'");
+		expect(operationSource).toContain("rpc('update_clinical_entry_with_date_safely'");
 	});
 
 	it('persists a clinical entry with one patient metadata update and returns the saved row', () => {
