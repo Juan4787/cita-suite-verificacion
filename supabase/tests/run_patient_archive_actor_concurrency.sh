@@ -46,7 +46,7 @@ SQL
 for scenario in role assignment link commercial admin_role assistance support; do
  psql "$database_url" -X -v ON_ERROR_STOP=1 -q <<SQL
 update public.business_subscriptions set commercial_access_enabled=true,is_permanent=true,subscription_status='active',
- archived_at=null where business_id='$business_id';
+ paid_until=null,grace_until=null,restricted_until=null,archived_at=null where business_id='$business_id';
 update public.business_users set role='professional',status='active',accepted_at=now(),disabled_at=null
  where business_id='$business_id' and user_id='$actor_id';
 insert into public.professional_users(business_id,professional_id,user_id)

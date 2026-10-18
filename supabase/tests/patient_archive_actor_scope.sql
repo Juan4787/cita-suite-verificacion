@@ -20,7 +20,7 @@ begin
 	insert into public.businesses(id,name,slug,industry) values
 		(a,'Synthetic archive A','archive-a-'||a,'other'),(b,'Synthetic archive B','archive-b-'||b,'other');
 	update public.business_subscriptions set commercial_access_enabled=true,is_permanent=true,
-		subscription_status='active',archived_at=null where business_id in(a,b);
+		subscription_status='active',paid_until=null,grace_until=null,restricted_until=null,archived_at=null where business_id in(a,b);
 	insert into public.business_users(business_id,user_id,role,status,accepted_at) values
 		(a,o,'owner','active',now()),(a,rec,'reception','active',now()),(a,ro,'readonly','active',now());
 	insert into public.business_users(business_id,user_id,role,status,accepted_at)
