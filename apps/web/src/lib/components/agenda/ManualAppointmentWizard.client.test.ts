@@ -105,14 +105,17 @@ describe('validación previa del teléfono al crear un turno', () => {
   expect(screen.queryByText(/No hay horarios para ese día/)).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Confirmar turno' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Cambiar día' })).toBeInTheDocument();
-  expect(container.querySelector('[name="slot_starts_at"]')).toBeNull();
+  const submittedValues = () => new FormData(container.querySelector('form')!);
+  expect(submittedValues().get('time')).toBe('');
   vi.mocked(globalThis.fetch).mockResolvedValue(Response.json({ slots: [{ date, time: '10:00', starts_at: startsAt,
    ends_at: '2099-08-25T13:30:00.000Z', professional_id: 'professional-1', professional_name: 'Dra. Prueba' }] }));
   await fireEvent.click(screen.getByRole('button', { name: 'Reintentar búsqueda' }));
   // The existing form restores its pending initial time once real slots validate.
   // Recovery must certify that selection before allowing the patient step again.
   expect(await screen.findByRole('button', { name: 'Confirmar turno' })).toBeEnabled();
-  expect(container.querySelector<HTMLInputElement>('[name="slot_starts_at"]')?.value).toBe(startsAt);
+  expect(submittedValues().get('date')).toBe(date);
+  expect(submittedValues().get('time')).toBe('10:00');
+  expect(submittedValues().get('professional_id')).toBe('professional-1');
   expect(screen.queryByText(/No pudimos actualizar los horarios/)).not.toBeInTheDocument();
 
  });
