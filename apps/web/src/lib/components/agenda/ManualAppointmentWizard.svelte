@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatDuration } from '$lib/utils/format';
+	import { formatDuration, formatStepCounter } from '$lib/utils/format';
 	import ManualPatientPicker from './ManualPatientPicker.svelte';
 	import type { ManualBookingPatient as Patient } from '$lib/patients/manual-booking';
 	import { calculateAvailabilitySlots, type AvailabilitySlot } from '$lib/availability/calculate';
@@ -729,9 +729,9 @@
 	<input type="hidden" name="phone_warning_override" value={phoneWarningOverride} />
 
 	<section class="ux-card min-w-0 w-full px-5 py-4 sm:px-6">
-		<div class="flex items-center justify-between gap-4">
-			<p class="text-base font-bold text-white/75 sm:text-lg">
-				Paso {step} de 5 · {stepLabels[step - 1]}
+		<div class="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+			<p class="min-w-0 text-base font-bold text-white/75 sm:text-lg">
+				{formatStepCounter(step, 5)} ·&nbsp;{stepLabels[step - 1]}
 			</p>
 			{#if step > 1}
 				<button

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatDuration } from '$lib/utils/format';
+	import { formatDuration, formatStepCounter } from '$lib/utils/format';
 	import PublicBookingConfirmation from './PublicBookingConfirmation.svelte';
  import PublicBookingProfessionals from './PublicBookingProfessionals.svelte';
  import PublicBookingDates from './PublicBookingDates.svelte';
@@ -285,8 +285,8 @@
 				</div>
 			{/if}
 			<section class="ux-card py-4">
-				<div class="flex items-center justify-between gap-3">
-					<p class="text-sm font-bold text-white/70">Paso {displayStep} de {displayStepCount} · {compact ? ['Servicio', 'Día y horario', 'Tus datos'][displayStep - 1] : stepNames[step - 1]}</p>
+				<div class="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+					<p class="min-w-0 text-sm font-bold text-white/70">{formatStepCounter(displayStep, displayStepCount)} ·&nbsp;{compact ? ['Servicio', 'Día y horario', 'Tus datos'][displayStep - 1] : stepNames[step - 1]}</p>
 					{#if step > 1}
 						<a data-sveltekit-noscroll href={data.integration ? queryFor({ service_id: '', professional_id: '', professional_ids: '', booking_mode: 'individual', date: '', slot: '' }) : bookingPath} class="text-xs font-bold text-white/45 hover:text-white/70">
 							Empezar de nuevo

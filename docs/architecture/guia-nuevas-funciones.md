@@ -52,6 +52,7 @@ Para UI, cubrir320/390/768/1280/1600, claro/oscuro, teclado/foco, carga/error/va
 ## Interfaz y pruebas de navegador
 
 - **Layouts con texto junto a acciones o estados.** `overflow-wrap: anywhere` es global: cualquier texto puede comprimirse hasta letras sueltas sin desbordar la página. Dar `min-w-0` a la columna flexible y `shrink-0` (o grid) a los grupos de acciones y estados. Cuando varios elementos comparten una fila angosta, usar `flex-wrap` con una base explícita (por ejemplo `flex-[1_1_12rem]`) para que la acción pase debajo en vez de comprimir el texto.
+- **Texto que no se corta:** duraciones con `formatDuration`, contadores de pasos con `formatStepCounter` y el «·» unido al grupo siguiente con `·&nbsp;`. Dentro de `main` y de los diálogos no se trunca con «…»; una excepción revisada lleva `data-truncation="allowed"`.
 - **Cubrir la pantalla con `layoutIssues`** (`apps/web/e2e/helpers/layout-usability.ts`) en 320/390/768/1280/1600. Acumular los problemas de todas las combinaciones y afirmarlos una vez. El selector de controles nombra los controles operables, no las fuentes nativas invisibles `.ux-native-source`.
 - **Capturas que certifican una tarea:** `alignTaskForCapture` antes de la captura; si una región corregida queda fuera de la tarea (cabeceras, encabezados), capturarla aparte.
 - **Controles que requieren JavaScript:** deshabilitados hasta hidratar (`createClientReadiness`). En las pruebas, un único clic y la verificación de su efecto. Nunca un reintento `toPass` alrededor de un clic.
