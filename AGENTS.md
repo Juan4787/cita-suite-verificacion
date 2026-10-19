@@ -11,8 +11,14 @@
 ## Campaña de refactorización de Cita Suite
 
 - La fuente de verdad es `docs/plans/refactorizacion-cita-suite.md`: contiene el plan aprobado íntegro y la instrucción de ejecución del usuario. Sus requisitos prevalecen sobre cualquier resumen de compactación.
-- Después de cada compactación y antes de comenzar cada etapa, leer el documento original completo y contrastarlo con `docs/plans/registro-refactorizacion-cita-suite.md` y sus evidencias. No reconstruir el plan de memoria ni considerar eliminado un requisito porque falte en un resumen.
+- Después de cada compactación y antes de comenzar cada etapa, leer el documento original completo y contrastarlo con `docs/plans/registro-refactorizacion-cita-suite.md`, el traspaso vigente `docs/plans/traspaso-refactorizacion-cita-suite.md` y sus evidencias. No reconstruir el plan de memoria ni considerar eliminado un requisito porque falte en un resumen.
 - Identificar el último punto verificado y continuar desde el siguiente trabajo pendiente, sin repetir innecesariamente operaciones ya comprobadas ni dar por terminadas tareas incompletas.
 - Mantener el registro separado con etapas, cambios, pruebas, resultados, decisiones, bloqueos y pendientes. No modificar el plan original para hacerlo coincidir con una implementación incompleta.
 - La autonomía cubre la campaña íntegra en rama aislada. El usuario autorizó además publicación y pruebas masivas en producción el 17 de octubre: consultar la ampliación literal del plan. Mantener la secuencia de validación/respaldo/reversión y usar datos sintéticos acotados, preservando los reales. No se autorizaron contrataciones; conservar todas las restricciones de RAM.
 - Antes de declarar la campaña terminada, verificar punto por punto todos los requisitos y criterios de aceptación del documento original mediante evidencia comprobable.
+- Alcance vigente (19 de octubre): al cerrar una etapa, avisar al usuario y continuar con la siguiente sin detenerse, hasta terminar la campaña. Esto no reduce ningún control.
+
+## Pruebas de navegador
+
+- Seguir `docs/architecture/verificacion.md`: los specs e2e se tipan (`pnpm --filter web check:e2e`); las matrices visuales usan `layoutIssues` y `alignTaskForCapture`; los fixtures usan `e2e/helpers/fixture-db.ts`; un spec con varios casos reutiliza la sesión (`loginWithSharedSession`); no hay reintentos `toPass` alrededor de un clic.
+- Un defecto encontrado a mano se reproduce primero con una prueba que falle y después se corrige. Una prueba verde sólo vale si puede detectar el defecto que protege.

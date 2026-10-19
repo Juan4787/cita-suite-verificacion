@@ -136,8 +136,7 @@
 				        month: "long",
 				        year: "numeric",
 				        timeZone: timezone,
-				      }).format(new Date(selectedSlot.starts_at))} · {selectedSlot.time} h · {selectedService.duration_minutes}
-				      min
+				      }).format(new Date(selectedSlot.starts_at))} · {selectedSlot.time}&nbsp;h · {selectedService.duration_minutes}&nbsp;min
 				    </p>
 				    {#if data.presentation && (data.presentation.modalities.length > 1 || modality === "video")}<p
 				        class="patient-summary-modality"

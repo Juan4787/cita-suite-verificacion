@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatDuration } from '$lib/utils/format';
 	import ManualPatientPicker from './ManualPatientPicker.svelte';
 	import type { ManualBookingPatient as Patient } from '$lib/patients/manual-booking';
 	import { calculateAvailabilitySlots, type AvailabilitySlot } from '$lib/availability/calculate';
@@ -80,8 +81,6 @@
 		new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: '2-digit', month: 'long' }).format(
 			new Date(date + 'T12:00:00')
 		);
-	const durationLabel = (minutes: number) =>
-		String(minutes) + ' ' + (minutes === 1 ? 'minuto' : 'minutos');
 	const initialsFor = (name: string) =>
 		name
 			.split(/\s+/)
@@ -769,7 +768,7 @@
 						<span class="min-w-0">
 							<span class="block text-lg font-bold leading-tight text-white">{service.name}</span>
 						</span>
-						<span class="ux-badge shrink-0 text-sm">{durationLabel(service.duration_minutes)}</span>
+						<span class="ux-badge shrink-0 text-sm">{formatDuration(service.duration_minutes)}</span>
 					</button>
 				{/each}
 			</div>
@@ -783,7 +782,7 @@
 			<h2 class="text-xl font-bold tracking-tight text-white sm:text-2xl">¿Con quién?</h2>
 			{#if selectedService}
 				<p class="mt-2 text-base text-white/60">
-					{selectedService.name} · {durationLabel(selectedService.duration_minutes)}
+					{selectedService.name} · {formatDuration(selectedService.duration_minutes)}
 				</p>
 			{/if}
 
@@ -941,7 +940,7 @@
 					<h2 class="text-xl font-bold tracking-tight text-white sm:text-2xl">Elegí un día</h2>
 					{#if selectedService}
 						<p class="mt-2 text-base text-white/60">
-							{selectedService.name} · {durationLabel(selectedService.duration_minutes)}
+							{selectedService.name} · {formatDuration(selectedService.duration_minutes)}
 						</p>
 					{/if}
 				</div>

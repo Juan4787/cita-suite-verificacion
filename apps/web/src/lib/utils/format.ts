@@ -108,4 +108,8 @@ export const formatAccessRemaining = (
 	return `${days} ${days === 1 ? 'día restante' : 'días restantes'}`;
 };
 
+/** Service duration. The non-breaking space keeps the number on the same line as its unit. */
+export const formatDuration = (minutes: number) =>
+	`${minutes}\u00a0${minutes === 1 ? 'minuto' : 'minutos'}`;
+
 export const normalizePhone = (phone: string) => phone.replace(/\D/g, '');

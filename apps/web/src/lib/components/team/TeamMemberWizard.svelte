@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatDuration } from '$lib/utils/format';
 	import { onDestroy } from 'svelte';
 	import type { BusinessRole } from '$lib/access/contracts';
 	import { isRecord } from '$lib/contracts/json';
@@ -428,7 +429,6 @@
 		})
 	);
 
-	const durationLabel = (minutes: number) => `${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`;
 
 	const handleWizardSubmit = (event: SubmitEvent) => {
 		if (!hasProfessionalProfile) return;
@@ -603,9 +603,9 @@
 								<div class="ux-choice ux-choice-active flex min-w-0 items-center gap-4 p-4">
 									<input type="checkbox" checked disabled class="accent-[#7c3aed]" />
 									<span class="min-w-0 flex-1">
-										<span class="block truncate font-black text-white">{service.name}</span>
+										<span class="block break-words font-black text-white">{service.name}</span>
 										<span class="mt-1 block text-sm text-white/55">
-											{durationLabel(service.duration_minutes)}{service.price_label ? ` · ${service.price_label}` : ''}
+											{formatDuration(service.duration_minutes)}{service.price_label ? ` · ${service.price_label}` : ''}
 										</span>
 									</span>
 								</div>
@@ -620,9 +620,9 @@
 										onchange={() => toggleService(service.id)}
 									/>
 									<span class="min-w-0 flex-1">
-										<span class="block truncate font-black text-white">{service.name}</span>
+										<span class="block break-words font-black text-white">{service.name}</span>
 										<span class="mt-1 block text-sm text-white/55">
-											{durationLabel(service.duration_minutes)}{service.price_label ? ` · ${service.price_label}` : ''}
+											{formatDuration(service.duration_minutes)}{service.price_label ? ` · ${service.price_label}` : ''}
 										</span>
 									</span>
 								</label>
@@ -631,9 +631,9 @@
 								<div class="ux-choice ux-choice-active flex min-w-0 items-center gap-4 p-4">
 									<input type="checkbox" checked disabled class="accent-[#7c3aed]" />
 									<span class="min-w-0 flex-1">
-										<span class="block truncate font-black text-white">{service.name}</span>
+										<span class="block break-words font-black text-white">{service.name}</span>
 										<span class="mt-1 block text-sm text-white/55">
-											{durationLabel(service.duration_minutes)}{service.price_label ? ` · ${service.price_label}` : ''}
+											{formatDuration(service.duration_minutes)}{service.price_label ? ` · ${service.price_label}` : ''}
 										</span>
 									</span>
 									<span class="ux-badge shrink-0">Nuevo</span>

@@ -296,9 +296,12 @@ a {
 			box-shadow 160ms ease;
 	}
 
-	.ux-profile-tab:hover {
-		background: rgba(255, 255, 255, 0.07);
-		color: var(--text);
+	/* Hover never overrides the selected tab, and touch screens do not keep it after a tap. */
+	@media (hover: hover) {
+		.ux-profile-tab:not(.ux-profile-tab-active):hover {
+			background: rgba(255, 255, 255, 0.07);
+			color: var(--text);
+		}
 	}
 
 	.ux-profile-tab-active {
@@ -762,10 +765,11 @@ progress::-moz-progress-bar {
   font: inherit;
   font-weight: 400;
 }
+/* The selected value wraps instead of being truncated: on narrow forms an ellipsis
+   hid which option was chosen ("Sólo las seleccio…"). */
 .ux-control-trigger > span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .ux-control-trigger[aria-expanded="true"] {
   border-color: var(--accent);

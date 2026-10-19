@@ -255,10 +255,11 @@
 			</div>
 		</div>
 		{#if data.bookingInformationEnabled && data.permissions.canReadClinicalProfile}<a class="ux-btn-secondary mt-4" href={`/odonto/pacientes/${data.patient.id}/informacion-previa`}>Información aportada al reservar</a>{/if}
-		<div class="mt-4 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4 sm:text-sm md:flex md:items-center md:gap-3">
+		<!-- Each section keeps its label on one line and grows to fill its row; no half-empty cells. -->
+		<div class="mt-4 flex flex-wrap gap-2 text-xs sm:text-sm md:items-center md:gap-3">
 			<a
 				href="/odonto/pacientes"
-				class="flex w-full items-center justify-center gap-2 rounded-full border border-neutral-200 px-2 py-2 text-xs font-semibold text-neutral-700 transition hover:-translate-y-0.5 hover:bg-neutral-100 hover:shadow-card dark:border-[#1f3554] dark:text-[#eaf1ff] dark:hover:bg-[#122641] sm:px-4 sm:text-sm md:w-auto"
+				class="flex flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full border border-neutral-200 px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:-translate-y-0.5 hover:bg-neutral-100 hover:shadow-card dark:border-[#1f3554] dark:text-[#eaf1ff] dark:hover:bg-[#122641] sm:px-4 sm:text-sm md:flex-none"
 			>
 				<svg
 					aria-hidden="true"
@@ -274,7 +275,7 @@
 			</a>
 			{#if permissions.canReadClinicalHistory}
 			<button disabled={!client.ready}
-				class={`w-full rounded-full px-2 py-2 text-center text-xs font-semibold transition sm:px-4 sm:text-sm md:w-auto ${
+				class={`flex-auto whitespace-nowrap rounded-full px-3 py-2 text-center text-xs font-semibold transition sm:px-4 sm:text-sm md:flex-none ${
 					tab === 'historial'
 						? 'bg-[#7c3aed] text-white shadow-sm'
 						: 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-[#0f1f36]'
@@ -285,7 +286,7 @@
 			</button>
 			{/if}
 			<button disabled={!client.ready}
-				class={`w-full rounded-full px-2 py-2 text-center text-xs font-semibold transition sm:px-4 sm:text-sm md:w-auto ${
+				class={`flex-auto whitespace-nowrap rounded-full px-3 py-2 text-center text-xs font-semibold transition sm:px-4 sm:text-sm md:flex-none ${
 					tab === 'datos'
 						? 'bg-[#7c3aed] text-white shadow-sm'
 						: 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-[#0f1f36]'
@@ -295,7 +296,7 @@
 				Datos
 			</button>
 			<button disabled={!client.ready}
-				class={`w-full rounded-full px-2 py-2 text-center text-xs font-semibold transition sm:px-4 sm:text-sm md:w-auto ${
+				class={`flex-auto whitespace-nowrap rounded-full px-3 py-2 text-center text-xs font-semibold transition sm:px-4 sm:text-sm md:flex-none ${
 					tab === 'radiografias'
 						? 'bg-[#7c3aed] text-white shadow-sm'
 						: 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-[#0f1f36]'

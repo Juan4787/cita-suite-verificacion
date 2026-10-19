@@ -2,13 +2,24 @@
 
 ## Estado de este documento
 
-**RELEVO INMEDIATO SOLICITADO POR EL USUARIO — 19 de octubre de 2026, alrededor de 06:02 UTC. La etapa 5 sigue ABIERTA.** El usuario indicó: «actualiza traspado que ya se acaba la cuota, sigue opus ahora mismo». Se entrega el estado actual sin dar por terminada la etapa ni continuar hacia la 6. La campaña completa no está terminada.
+**Actualizado por Opus 5.5 — 19 de octubre de 2026, ~08:40 UTC.** La etapa 5 tiene **cierre técnico comprobado** sobre `a940f23cdd65a03b08d8f1d2e7f51117ca60b702` (full 39220668360). El cierre formal se registra con el dictamen independiente de Impeccable sobre `.impeccable/review/structure-20261018/round-2/` y la verificación de DESIGN.md por el documentador. La campaña completa **no** está terminada.
 
-**Alcance vigente (instrucción del usuario del 19 de octubre al retomar con Opus 5.5):** completar y verificar íntegramente la fase 5, avisar al usuario cuando esté realmente cerrada y **continuar automáticamente con la fase 6 y todas las etapas restantes** hasta terminar la campaña, incluida la auditoría transversal, release, publicación y comprobaciones posteriores según las autorizaciones vigentes. Esta instrucción sustituye la restricción anterior de «detenerse antes de fase 6» (conservada abajo sólo como antecedente histórico de la intervención de GPT-6.1 Sol). Cambia únicamente el punto de detención: no reduce requisitos, garantías, controles ni procedimientos de seguridad.
+**Alcance vigente (instrucción del usuario del 19 de octubre al retomar con Opus 5.5):** completar y verificar íntegramente la fase 5, avisar al usuario cuando esté realmente cerrada y **continuar automáticamente con la fase 6 y todas las etapas restantes** hasta terminar la campaña, incluida la auditoría transversal, release, publicación y comprobaciones posteriores según las autorizaciones vigentes. Esta instrucción sustituye la restricción anterior de «detenerse antes de fase 6», que se conserva abajo sólo como antecedente de la intervención de GPT-6.1 Sol. Cambia únicamente el punto de detención: no reduce requisitos, garantías, controles ni procedimientos de seguridad.
 
 *Antecedente reemplazado:* la intervención anterior tenía como instrucción cerrar la fase 5, avisar y detenerse antes de fase 6. Ya no está vigente.
 
-## Punto exacto del relevo: leer antes de ejecutar
+## Punto exacto actual (19 de octubre, Opus 5.5)
+
+1. **Evidencia de cierre de etapa 5:** full 39220668360 sobre `a940f23` (digest `93825d2e…`), recibo `9d0be4c3-9edf-41ff-9213-acacb21a48b5`, paquete `.verification/remote-39220668360/` (SHA-256 `4510a25d…`). 37/37 navegador, 2/2 demo, 1.264 servidor, 167 cliente, exportación nativa, tipos web/e2e/Natalia, SQL/carreras, deadlocks 0, Natalia idéntica. Detalle en el registro y en `docs/architecture/evidencia-etapa5-estructura.md`.
+2. **Revisión Impeccable:** ronda 2 propia completa (`round-2/inspection-round-2.md`). Detector ejecutado una vez: 0 hallazgos primarios y 14 advisories preexistentes (`round-2/detector-notes.md`). El revisor fresco recibió el paquete. Si el dictamen es `fix`, aplicar sus correcciones, verificar con full y pedir el puntaje; si es `ship`, ejecutar el documentador (frontera de escritura: `apps/web/DESIGN.md` y `apps/web/.impeccable/design.json`) y luego registrar el cierre formal, avisar al usuario y entrar en la etapa 6.
+3. **Verificación reforzada en el cierre** (no deshacer): `layoutIssues` y su prueba de sensibilidad, alineación de capturas, tipado e2e en `verify:fast` (`browser-test-types`), `fixture-db.ts`, readiness en los menús del shell, categorías de Equipo y «Agregar seguimiento», sin reintentos `toPass` alrededor de clics, prueba de respuesta lenta de referencias, sesión compartida por spec, capturas JPEG dentro del presupuesto de evidencia y diagnóstico de navegador sin `--max-failures=1`. Todo está documentado en `docs/architecture/verificacion.md`.
+4. **Etapa 6 (siguiente):** releer la etapa 6 del plan y `docs/architecture/tareas-automaticas.md`, que ya contiene los límites vigentes verificados de Cloudflare y Supabase y el estado de partida. Hallazgos de entrada: el endpoint antiguo mezcla tres categorías; ningún proceso automático libera hoy las reservas de carga vencidas (sólo la acción manual del dueño); las reclamaciones no reparten entre consultorios; calendario ya usa ids de evento deterministas; push ya usa `topic` por turno.
+5. **Bloqueo de release descubierto:** `https://cita-suite.netlify.app` sirve una copia completa y activa de la aplicación. Sus funciones responden en us-east-2 y su endpoint de tareas existe. No figura en los inventarios y podría tener credenciales de producción y ser el destino del cron antiguo de cron-job.org. Identificar su versión, variables y disparadores, y retirarlo o neutralizarlo de forma reversible antes de activar el programador nuevo. Es un recurso externo: confirmar con el usuario la operación concreta si no hay acceso o si es irreversible.
+6. Pendiente para la auditoría transversal: tres `as unknown as` en producción (transporte `ws` del cliente Supabase de servidor, `configuracion/negocio/+page.svelte` y `patient-export.worker.ts`); escala tipográfica con tamaños literales preexistentes; costo clínico mostrado como «$ 125,5»; casts de errores en `push.ts`.
+
+## Antecedente: relevo de GPT-6.1 Sol (19 de octubre, ~06:02 UTC)
+
+### Punto exacto del relevo de GPT-6.1 Sol (histórico, ya resuelto)
 
 ### Corrida que quedó trabajando
 

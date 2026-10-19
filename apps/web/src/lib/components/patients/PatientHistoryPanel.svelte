@@ -200,12 +200,12 @@
 							<button type="button" class="mt-3 font-semibold underline" disabled={!client.ready} onclick={() => { timelineSearch = ''; filterType = 'Todos'; }}>Limpiar filtros</button>
 						</div>
 					{:else}
-						<div class="relative pl-8">
-							<span class="absolute left-2 top-0 h-full w-px bg-neutral-200 dark:bg-[#1f3554]/60" aria-hidden="true"></span>
+						<div class="relative pl-5 sm:pl-8">
+							<span class="absolute left-0 top-0 h-full w-px bg-neutral-200 dark:bg-[#1f3554]/60 sm:left-2" aria-hidden="true"></span>
 							<div class="space-y-3">
 								{#each filteredEntries as entry (entry.id)}
 									{@const expanded = expandedId === entry.id}
-									<article class="relative rounded-xl border border-neutral-100 bg-white p-4 shadow-sm dark:border-[#1f3554] dark:bg-[#0f1f36]">
+									<article class="relative rounded-xl border border-neutral-100 bg-white p-3 shadow-sm dark:border-[#1f3554] dark:bg-[#0f1f36] sm:p-4">
 										<span class="absolute left-[-14px] top-5 h-3 w-3 rounded-full border-2 border-white bg-[#7c3aed] shadow dark:border-[#0f1f36]" aria-hidden="true"></span>
 										<div class="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
 											<button type="button" disabled={!client.ready} aria-expanded={expanded}
@@ -218,7 +218,7 @@
 												</span>
 												{#if entry.description && !isDuplicateDescription(entry)}<span class="mt-1 block text-[13px] font-medium text-neutral-700 line-clamp-1 dark:text-neutral-200">{entry.description}</span>{/if}
 												<span class="mt-3 flex flex-wrap items-center gap-2 text-xs text-neutral-500 dark:text-neutral-300">
-													<span>{formatDate(entry.created_at, businessTimeZone)}</span><span aria-hidden="true">·</span><span>{fmtTime(entry.created_at)}</span>
+													<span>{formatDate(entry.created_at, businessTimeZone)}</span><span class="whitespace-nowrap"><span aria-hidden="true">·</span> {fmtTime(entry.created_at)}</span>
 													{#if entry.teeth}<span class="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-600 dark:bg-white/10 dark:text-neutral-200">Zona {entry.teeth}</span>{/if}
 												</span>
 												{#if hasDistinctNote(entry)}<span class="mt-2 block text-xs text-neutral-500 line-clamp-1 dark:text-neutral-300">Nota: {entry.internal_note}</span>{/if}
@@ -234,7 +234,7 @@
 											</div>
 										</div>
 										{#if expanded}
-										<div id={`clinical-entry-${patientId}-${entry.id}`} class="mt-3 space-y-2 whitespace-pre-wrap break-words text-sm text-neutral-800 [overflow-wrap:anywhere] dark:text-neutral-100">
+										<div id={`clinical-entry-${patientId}-${entry.id}`} class="mt-3 max-w-[70ch] space-y-2 whitespace-pre-wrap break-words text-sm text-neutral-800 [overflow-wrap:anywhere] dark:text-neutral-100">
 											{#if entry.description}<p><span class="font-semibold">Descripción:</span> {entry.description}</p>{/if}
 											{#if entry.amount != null}<p><span class="font-semibold">Importe:</span> {formatCurrency(entry.amount)}</p>{/if}
 											{#if entry.internal_note}<p><span class="font-semibold">Nota completa:</span> {entry.internal_note}</p>{/if}

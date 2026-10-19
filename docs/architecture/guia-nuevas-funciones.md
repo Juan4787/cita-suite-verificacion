@@ -49,9 +49,19 @@ No escribir tests que sólo repitan la implementación. Elegir casos que fallen 
 
 Para UI, cubrir320/390/768/1280/1600, claro/oscuro, teclado/foco, carga/error/vacío y contenido largo. Conservar capturas representativas de cada superficie y una matriz comprobable; distinguir fallos inyectados de recuperación real. Una confirmación de pantalla requiere lectura posterior en backend cuando se afirme persistencia.
 
+## Interfaz y pruebas de navegador
+
+- **Layouts con texto junto a acciones o estados.** `overflow-wrap: anywhere` es global: cualquier texto puede comprimirse hasta letras sueltas sin desbordar la página. Dar `min-w-0` a la columna flexible y `shrink-0` (o grid) a los grupos de acciones y estados. Cuando varios elementos comparten una fila angosta, usar `flex-wrap` con una base explícita (por ejemplo `flex-[1_1_12rem]`) para que la acción pase debajo en vez de comprimir el texto.
+- **Cubrir la pantalla con `layoutIssues`** (`apps/web/e2e/helpers/layout-usability.ts`) en 320/390/768/1280/1600. Acumular los problemas de todas las combinaciones y afirmarlos una vez. El selector de controles nombra los controles operables, no las fuentes nativas invisibles `.ux-native-source`.
+- **Capturas que certifican una tarea:** `alignTaskForCapture` antes de la captura; si una región corregida queda fuera de la tarea (cabeceras, encabezados), capturarla aparte.
+- **Controles que requieren JavaScript:** deshabilitados hasta hidratar (`createClientReadiness`). En las pruebas, un único clic y la verificación de su efecto. Nunca un reintento `toPass` alrededor de un clic.
+- **Respuestas lentas o fallidas:** compuertas deterministas con `page.route` (una promesa que se libera después de verificar la carga), nunca esperas fijas. No retirar el handler mientras hay una petición retenida.
+- **Fixtures:** `e2e/helpers/fixture-db.ts` (cliente tipado, `must` exige fila y `write` para escrituras y limpiezas). Ningún error de preparación o limpieza se ignora. Leer JSON con `toMatchObject`, sin `any`.
+- **Sesiones:** un spec con varios casos sobre la misma identidad usa `loginWithSharedSession`. Los límites reales de ingreso (5 por correo y 40 por IP cada 15 minutos) siguen activos.
+
 ## Ejecutar y dejar evidencia
 
-- `pnpm verify:fast`: tipos de ambas aplicaciones/shared, guardas, fronteras, unidades de servidor/cliente.
+- `pnpm verify:fast`: tipos de ambas aplicaciones/shared **y de las pruebas de navegador**, guardas, fronteras, unidades de servidor/cliente.
 - `pnpm verify:full`: lo anterior más exportación nativa, reconstrucción SQL, concurrencia, Auth/Storage, navegador, demo y comparación de JS de Natalia.
 - `pnpm verify:release`: lo anterior más builds y puertas de staging/release. No sustituirlo por un nombre similar de script.
 

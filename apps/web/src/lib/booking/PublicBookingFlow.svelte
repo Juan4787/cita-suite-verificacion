@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatDuration } from '$lib/utils/format';
 	import PublicBookingConfirmation from './PublicBookingConfirmation.svelte';
  import PublicBookingProfessionals from './PublicBookingProfessionals.svelte';
  import PublicBookingDates from './PublicBookingDates.svelte';
@@ -171,7 +172,6 @@
 	$effect(() => {
 		if (uncertainBooking && data.recoveryCheckId && data.recoveryCheckId !== uncertainRecoveryId) uncertainBooking = false;
 	});
-	const durationLabel = (minutes: number) => `${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`;
 
 	// Horarios agrupados como los piensa el paciente: mañana / tarde.
 	const morningSlots = $derived(data.state.slots.filter((slot: Slot) => slot.time < '13:00'));
@@ -332,7 +332,7 @@
 									<p class="mt-1 text-sm text-white/55">{service.description}</p>
 								{/if}
 								<p class="mt-2 text-sm font-semibold text-white/55">
-									{durationLabel(service.duration_minutes)}{service.price_label ? ` · ${service.price_label}` : ''}
+									{formatDuration(service.duration_minutes)}{service.price_label ? ` · ${service.price_label}` : ''}
 								</p>
 							</a>
 						{/each}
@@ -341,7 +341,7 @@
 			{:else if selectedService}
 				{@render doneStep(
 					'Servicio',
-					`${selectedService.name} · ${durationLabel(selectedService.duration_minutes)}`,
+					`${selectedService.name} · ${formatDuration(selectedService.duration_minutes)}`,
 					queryFor({
 						service_id: '',
 						booking_mode: 'individual',
@@ -436,7 +436,7 @@
 					</section>
 				{/if}
 			{:else if step > 4 && selectedSlot}
-				{@render doneStep('Horario', `${selectedDay?.label ?? ''} · ${selectedSlot.time} h`, queryFor({ slot: '' }))}
+				{@render doneStep('Horario', `${selectedDay?.label ?? ''} · ${selectedSlot.time}\u00a0h`, queryFor({ slot: '' }))}
 			{/if}
 
 			<!-- Paso 5 · Datos del paciente -->

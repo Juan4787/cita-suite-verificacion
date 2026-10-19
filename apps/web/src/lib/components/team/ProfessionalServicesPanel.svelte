@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatDuration } from '$lib/utils/format';
 	import { enhance } from '$app/forms';
 	import { invalidate } from '$app/navigation';
 	import { onDestroy, untrack } from 'svelte';
@@ -63,7 +64,6 @@
 			: serviceDelta.removed.includes(id)
 				? 'ux-choice-removed'
 				: '';
-	const durationLabel = (minutes: number) => `${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`;
 	$effect(() => {
 		if (services.length === 0) showNewService = true;
 	});
@@ -228,7 +228,7 @@
 								<span class="min-w-0 flex-1">
 									<span class="block font-black text-white">{service.name}</span>
 									<span class="mt-1 block text-sm text-white/55">
-										{durationLabel(service.duration_minutes)}{currentPriceLabels?.[service.id] ? ` · ${currentPriceLabels[service.id]} este mes` : service.price_label ? ` · ${service.price_label}` : ''}
+										{formatDuration(service.duration_minutes)}{currentPriceLabels?.[service.id] ? ` · ${currentPriceLabels[service.id]} este mes` : service.price_label ? ` · ${service.price_label}` : ''}
 									</span>
 								</span>
 							</label>

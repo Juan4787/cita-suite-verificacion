@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { brokenOrdinaryWords, layoutIssues } from './helpers/layout-usability';
+import { brokenOrdinaryWords, layoutIssues, textIssues } from './helpers/layout-usability';
 
 // The shared layout contract must not be vacuous. Each squeeze mechanism observed in
 // the stage 5 inspection (history button beside costs, header actions and status
@@ -14,6 +14,7 @@ test('layout usability detector reports squeezed ordinary words and accepts legi
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<style>
 			body { margin: 0; font: 16px/1.25 monospace; overflow-wrap: anywhere; }
+			button { font: inherit; }
 			section > div { width: 320px; display: flex; gap: 16px; margin-bottom: 24px; }
 			h1, h2, p { margin: 0; }
 			.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -35,6 +36,15 @@ test('layout usability detector reports squeezed ordinary words and accepts legi
 				<h2 style="min-width: 0">Agregar integrante</h2>
 				<div style="flex: 0 0 260px; display: flex; gap: 8px">${'<span>1</span>'.repeat(6)}</div>
 			</div>
+			<div id="schedule-block">
+				<p style="flex: 0 0 200px">Días que comparten la misma franja habitual.</p>
+				<button style="min-width: 0">Quitar bloque</button>
+			</div>
+			<p id="split-duration" style="width: 70px">30 minutos</p>
+			<p id="split-amount" style="width: 70px">$ 20.000</p>
+			<div class="ux-choice" id="truncated-choice" style="width: 120px">
+				<span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">E2E Consulta sintética larga</span>
+			</div>
 		</section>
 		<section id="legitimate">
 			<p style="width: 120px">Paciente ${longName}</p>
@@ -46,6 +56,9 @@ test('layout usability detector reports squeezed ordinary words and accepts legi
 			<div style="opacity: 0"><button style="width: 10px">Transparente</button></div>
 			<select><option>Opción extensamente larga</option></select>
 			<button style="white-space: nowrap">Guardar cambios</button>
+			<button style="width: 150px">Confirmar la reserva del turno de control anual</button>
+			<p style="width: 70px">30&nbsp;min</p>
+			<div class="ux-choice" style="width: 120px"><span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Corto</span></div>
 		</section>
 	</main></body></html>`);
 	const words = async (scope: string) => (await brokenOrdinaryWords(page, scope)).map(({ word }) => word);
@@ -55,7 +68,14 @@ test('layout usability detector reports squeezed ordinary words and accepts legi
 	expect(await words('#wizard-heading')).toContain('Agregar');
 	for (const issue of await brokenOrdinaryWords(page, '#history, #header-actions, #status-badge, #wizard-heading'))
 		expect(issue.lines).toBeGreaterThan(1);
-	expect(await brokenOrdinaryWords(page, '#legitimate')).toEqual([]);
+	// A squeezed short label wraps between words: no word is broken, yet the control is unreadable.
+	expect(await textIssues(page, '#schedule-block')).toEqual([
+		{ check: 'wrapped-control', label: 'Quitar bloque', lines: 2, width: expect.any(Number) }
+	]);
+	expect((await textIssues(page, '#split-duration')).map(({ check }) => check)).toEqual(['split-quantity']);
+	expect((await textIssues(page, '#split-amount')).map(({ check }) => check)).toEqual(['split-quantity']);
+	expect((await textIssues(page, '#truncated-choice')).map(({ check }) => check)).toEqual(['truncated-value']);
+	expect(await textIssues(page, '#legitimate')).toEqual([]);
 	expect(await layoutIssues(page, '#legitimate p', '#legitimate')).toEqual([]);
 
 	// The remaining checks of the shared contract must also report real failures.

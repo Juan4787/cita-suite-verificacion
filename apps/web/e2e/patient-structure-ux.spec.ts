@@ -249,7 +249,8 @@ test('patient structure preserves role scope, keyboard access and long content a
 					// The name and record actions share the header (long name observed at 768);
 					// later task captures start below it.
 					if (role === 'owner' && theme === 'dark') {
-						await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+						// Notices precede the record on narrow screens; frame the name, actions and sections.
+						await alignTaskForCapture(page.getByRole('main').getByRole('heading', { name, exact: true }));
 						await page.screenshot({
 							path: testInfo.outputPath(`${role}-${width}-${theme}-header.jpg`),
 							type: 'jpeg',
@@ -311,7 +312,7 @@ test('patient structure preserves role scope, keyboard access and long content a
 							await expect(loading).toBeVisible();
 							await alignTaskForCapture(loading);
 							await page.screenshot({
-								path: testInfo.outputPath('simulated-profile-loading.jpg'),
+								path: testInfo.outputPath(`simulated-profile-loading-${width}-${theme}.jpg`),
 								type: 'jpeg',
 								quality: 65
 							});
@@ -322,7 +323,7 @@ test('patient structure preserves role scope, keyboard access and long content a
 							await expect(failure).toBeVisible();
 							await alignTaskForCapture(failure);
 							await page.screenshot({
-								path: testInfo.outputPath('simulated-profile-error.jpg'),
+								path: testInfo.outputPath(`simulated-profile-error-${width}-${theme}.jpg`),
 								type: 'jpeg',
 								quality: 65
 							});

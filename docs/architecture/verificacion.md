@@ -131,3 +131,9 @@ La ausencia de desbordamiento no demuestra que una pantalla sea legible. `app.cs
 
 Las capturas de evidencia usan `alignTaskForCapture` (`e2e/helpers/task-capture.ts`): desplazan la tarea evaluada debajo del encabezado fijo y exigen que esté en pantalla. Una captura que muestra otra parte de la página no certifica la tarea, aunque las aserciones del caso hayan aprobado.
 
+
+## Sesiones en las pruebas de navegador
+
+El ingreso con contraseña conserva sus límites reales también en el entorno descartable: 5 intentos por correo y 40 por IP cada 15 minutos (`loginPasswordRateLimitRules`). Toda la suite sale de una sola IP local. Un spec con varios casos sobre la misma identidad debe usar `loginWithSharedSession` (`e2e/helpers/shared-auth.ts`), que inicia sesión una vez y restaura cookies en memoria. No se desactiva ni se eluden los límites con encabezados falsos. Una pantalla de «demasiados intentos» en una corrida es un error del arnés (ingresos repetidos), no un permiso para relajar la protección.
+
+Los controles que requieren JavaScript quedan deshabilitados hasta hidratar (`createClientReadiness`). Las pruebas hacen un único clic, porque Playwright espera a que el control esté habilitado, y después verifican su efecto. No se usan reintentos `toPass` alrededor de un clic: con conmutadores pueden cerrar lo que acaban de abrir y además ocultarían un primer clic perdido. Las respuestas lentas se simulan con compuertas deterministas (una promesa liberada después de verificar el estado de carga), nunca con esperas fijas.

@@ -331,12 +331,12 @@
 						{@const timeStatus = scheduleBlockTimeStatus(block)}
 						{@const intervalStatus = scheduleBlockIntervalStatus(block)}
 						<div class={`ux-soft-card p-4 ${scheduleBlockCardClass(block)}`}>
-							<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-								<div>
+							<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+								<div class="min-w-0 flex-1">
 									<h3 class="text-base font-black text-white">Bloque {blockIndex + 1}</h3>
 									<p class="mt-1 text-sm text-white/55">Días que comparten la misma franja habitual.</p><div class="mt-4"><label class="ux-label">Prestaciones de esta franja<select use:styledSelect={block.serviceScope??'all'} class="ux-input mt-2" value={block.serviceScope??'all'} onchange={event=>updateScheduleBlock(block.id,{serviceScope:event.currentTarget.value as 'all'|'restricted',allowedServiceIds:block.allowedServiceIds??[]})}><option value="all">Todas las habilitadas</option><option value="restricted">Sólo las seleccionadas</option></select></label>{#if block.serviceScope==='restricted'}<fieldset class="mt-3"><legend class="ux-label">Prestaciones permitidas</legend>{#if dirtyFields.services}<p class="mt-2 text-sm text-white/75">Usá Guardar todo para aplicar juntos los cambios de prestaciones y horarios.</p>{/if}{#each data.services.filter((service:Service)=>draft.serviceIds.includes(service.id)||defaultServiceIdSet.has(service.id)) as service}<label class="mt-2 flex min-h-11 items-center gap-3 text-sm text-white/80"><input type="checkbox" checked={block.allowedServiceIds?.includes(service.id)??false} onchange={event=>updateScheduleBlock(block.id,{allowedServiceIds:event.currentTarget.checked?[...(block.allowedServiceIds??[]),service.id]:(block.allowedServiceIds??[]).filter(id=>id!==service.id)})}/>{service.name}</label>{/each}{#if !block.allowedServiceIds?.length}<p class="mt-2 text-sm text-white/80">La franja está cerrada hasta que elijas una prestación.</p>{/if}</fieldset>{/if}</div>
 								</div>
-								<button type="button" class="ux-btn-secondary text-sm" disabled={!canOperate} onclick={() => removeScheduleBlock(block.id)}>
+								<button type="button" class="ux-btn-secondary shrink-0 text-sm" disabled={!canOperate} onclick={() => removeScheduleBlock(block.id)}>
 									Quitar bloque
 								</button>
 							</div>
