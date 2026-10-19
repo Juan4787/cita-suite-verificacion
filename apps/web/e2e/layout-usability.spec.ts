@@ -18,7 +18,9 @@ test('layout usability detector reports squeezed ordinary words and accepts legi
 			section > div { width: 320px; display: flex; gap: 16px; margin-bottom: 24px; }
 			h1, h2, p { margin: 0; }
 			.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-		</style></head><body><main>
+		</style></head><body>
+		<header id="chrome"><p style="width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Consultorio sintético de auditoría</p></header>
+		<main>
 		<section>
 			<div id="history" style="flex-wrap: wrap; gap: 12px">
 				<button style="flex: 1 1 0%; min-width: 0; text-align: left">Consulta octubre</button>
@@ -59,6 +61,7 @@ test('layout usability detector reports squeezed ordinary words and accepts legi
 			<button style="width: 150px">Confirmar la reserva del turno de control anual</button>
 			<p style="width: 70px">30&nbsp;min</p>
 			<div class="ux-choice" style="width: 120px"><span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Corto</span></div>
+			<p data-truncation="allowed" style="width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Excepción revisada y documentada</p>
 		</section>
 	</main></body></html>`);
 	const words = async (scope: string) => (await brokenOrdinaryWords(page, scope)).map(({ word }) => word);
@@ -76,6 +79,7 @@ test('layout usability detector reports squeezed ordinary words and accepts legi
 	expect((await textIssues(page, '#split-amount')).map(({ check }) => check)).toEqual(['split-quantity']);
 	expect((await textIssues(page, '#truncated-choice')).map(({ check }) => check)).toEqual(['truncated-value']);
 	expect(await textIssues(page, '#legitimate')).toEqual([]);
+	expect(await textIssues(page, '#chrome')).toEqual([]);
 	expect(await layoutIssues(page, '#legitimate p', '#legitimate')).toEqual([]);
 
 	// The remaining checks of the shared contract must also report real failures.

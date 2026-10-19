@@ -214,7 +214,7 @@
 	<div class="ux-soft-card flex items-center justify-between gap-3 px-4 py-3">
 		<div class="min-w-0">
 			<p class="text-[11px] font-bold uppercase tracking-wider text-white/40">{label}</p>
-			<p class="truncate text-base font-bold text-white">{value}</p>
+			<p class="break-words text-base font-bold text-white">{value}</p>
 		</div>
 		<a data-sveltekit-noscroll href={changeHref} class="shrink-0 text-sm font-bold text-[#a78bfa] hover:underline">
 			Cambiar

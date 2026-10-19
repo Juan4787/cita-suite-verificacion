@@ -28,8 +28,9 @@ export type LayoutIssue =
  *   (≤ 200 px of text) is rendered on more than one line.
  * - split-quantity: a number and its unit (minutes, hours, years, %, $ amount) on
  *   different lines.
- * - truncated-value: the selected value of a custom select or the text of a choice
- *   option cut with an ellipsis, which hides what was chosen.
+ * - truncated-value: text inside the page content (`main` or a dialog) cut with an
+ *   ellipsis, which hides what was chosen or who is involved. Header/navigation
+ *   names and reviewed exceptions (`data-truncation="allowed"`) are not reported.
  * Hidden, sr-only and transparent text, native options and textareas are ignored.
  */
 export async function textIssues(page: Page, scope = 'body'): Promise<TextIssue[]> {
@@ -124,17 +125,18 @@ export async function textIssues(page: Page, scope = 'body'): Promise<TextIssue[
 							width: Math.round(control.getBoundingClientRect().width)
 						});
 				}
-				for (const element of root.querySelectorAll(
-					'.ux-control-trigger *, .ux-choice *'
-				)) {
-					if (!(element instanceof HTMLElement) || !visible(element)) continue;
-					if (getComputedStyle(element).textOverflow !== 'ellipsis') continue;
-					if (element.scrollWidth > element.clientWidth + 1)
-						issues.push({
-							check: 'truncated-value',
-							tag: element.tagName.toLowerCase(),
-							width: Math.round(element.getBoundingClientRect().width)
-						});
+				// Task content must not hide text behind an ellipsis. Header and navigation may
+				// shorten names shown in full on the page; an explicit, reviewed exception
+				// uses data-truncation="allowed".
+				for (const element of root.querySelectorAll('*')) {
+					if (!(element instanceof HTMLElement) || element.scrollWidth <= element.clientWidth + 1) continue;
+					if (!element.closest('main, [role="dialog"]') || element.closest('[data-truncation="allowed"]')) continue;
+					if (getComputedStyle(element).textOverflow !== 'ellipsis' || !visible(element)) continue;
+					issues.push({
+						check: 'truncated-value',
+						tag: element.tagName.toLowerCase(),
+						width: Math.round(element.getBoundingClientRect().width)
+					});
 				}
 			}
 			return issues;

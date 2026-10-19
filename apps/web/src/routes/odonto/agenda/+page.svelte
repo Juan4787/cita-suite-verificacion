@@ -536,8 +536,8 @@
 			<p class="mt-0.5 text-xs text-white/40">{timeOnly(appointment.ends_at)}</p>
 		</div>
 		<div class="min-w-0 flex-1">
-			<p class="truncate text-base font-bold text-white sm:text-lg">{appointment.patients?.full_name ?? 'Paciente'}</p>
-			<p class="mt-0.5 truncate text-sm text-white/55">
+			<p class="break-words text-base font-bold text-white sm:text-lg">{appointment.patients?.full_name ?? 'Paciente'}</p>
+			<p class="mt-0.5 break-words text-sm text-white/55">
 				{appointment.service_name_snapshot} · {appointment.professional_name_snapshot}
 			</p>
 			<div class="mt-2 flex flex-wrap gap-2">
@@ -603,7 +603,7 @@
 			>
 				{showSearch ? 'Ocultar búsqueda' : 'Buscar'}
 			</button>
-			<a href={weekHref} class="ux-btn-secondary">Ver turnos de la semana</a>
+			<a href={weekHref} class="ux-btn-secondary w-full sm:w-auto">Ver turnos de la semana</a>
 		</div>
 	</div>
 
@@ -749,9 +749,9 @@
 					{liveActive ? 'Resultado del buscador' : hasActiveSearch ? 'Resultado de búsqueda' : 'Turnos del día'}
 				</h2>
 				{#if liveActive}
-					<p class="mt-1 truncate text-sm font-semibold text-white/50">“{liveQuery}”</p>
+					<p class="mt-1 break-words text-sm font-semibold text-white/50">“{liveQuery}”</p>
 				{:else if searchSummary}
-					<p class="mt-1 truncate text-sm font-semibold text-white/50">{searchSummary}</p>
+					<p class="mt-1 break-words text-sm font-semibold text-white/50">{searchSummary}</p>
 				{/if}
 			</div>
 			<span class="ux-badge shrink-0">{resultLabel}</span>

@@ -829,8 +829,8 @@
 								{initialsFor(professional.name)}
 							</span>
 							<span class="min-w-0 flex-1">
-								<span class="block truncate text-lg font-bold text-white">{professional.name}</span>
-								<span class="mt-1 block truncate text-base text-white/55">
+								<span class="block break-words text-lg font-bold text-white">{professional.name}</span>
+								<span class="mt-1 block break-words text-base text-white/55">
 									{professional.specialty ?? 'Profesional'}
 								</span>
 							</span>
@@ -852,8 +852,8 @@
 								{initialsFor(professional.name)}
 							</span>
 							<span class="min-w-0 flex-1">
-								<span class="block truncate text-lg font-bold text-white">{professional.name}</span>
-								<span class="mt-1 block truncate text-base text-white/55">
+								<span class="block break-words text-lg font-bold text-white">{professional.name}</span>
+								<span class="mt-1 block break-words text-base text-white/55">
 									{professional.specialty ?? 'Profesional'}
 								</span>
 							</span>

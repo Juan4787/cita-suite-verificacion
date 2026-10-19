@@ -148,7 +148,7 @@
 				<div class="mt-4 grid gap-2">
 					{#each attendingActive as m (m.id)}
 						<div class="ux-choice flex min-w-0 items-center justify-between gap-3 p-4">
-							<span class="min-w-0 truncate font-bold text-white">{m.email}</span>
+							<span class="min-w-0 break-all font-bold text-white">{m.email}</span>
 							<a href={`/odonto/profesionales/${m.professional_id}`} class="ux-btn-secondary shrink-0 text-sm">
 								Ver profesional
 							</a>
@@ -256,7 +256,7 @@
 								<div class="flex flex-col gap-4 min-w-0 lg:flex-row lg:items-center lg:justify-between">
 									<div class="min-w-0 flex-1">
 										<div class="flex min-w-0 flex-wrap items-center gap-2">
-											<h3 class="min-w-0 max-w-full break-all text-lg font-bold text-white sm:truncate">{member.email}</h3>
+											<h3 class="min-w-0 max-w-full break-all text-lg font-bold text-white">{member.email}</h3>
 											{#if member.user_id === data.currentUserId}
 												<span class="ux-badge shrink-0">Vos</span>
 											{/if}
