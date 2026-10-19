@@ -419,8 +419,11 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 		const referencesHeld = new Promise<void>((resolve) => {
 			releaseReferences = resolve;
 		});
+		// Only the target day: the login landing agenda (today) may still be loading its own
+		// references, and navigating away legitimately aborts that earlier request.
+		const { bookingDate } = fixture;
 		const isReferences = (url: URL) =>
-			url.pathname === '/odonto/agenda/referencias' && url.searchParams.has('from');
+			url.pathname === '/odonto/agenda/referencias' && url.searchParams.get('from') === bookingDate;
 		const holdReferences = async (route: Route) => {
 			await referencesHeld;
 			await route.continue();
