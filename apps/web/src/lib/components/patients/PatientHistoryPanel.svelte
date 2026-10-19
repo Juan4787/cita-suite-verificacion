@@ -218,7 +218,7 @@
 												</span>
 												{#if entry.description && !isDuplicateDescription(entry)}<span class="mt-1 block text-[13px] font-medium text-neutral-700 line-clamp-1 dark:text-neutral-200">{entry.description}</span>{/if}
 												<span class="mt-3 flex flex-wrap items-center gap-2 text-xs text-neutral-500 dark:text-neutral-300">
-													<span>{formatDate(entry.created_at, businessTimeZone)}</span><span class="whitespace-nowrap"><span aria-hidden="true">·</span> {fmtTime(entry.created_at)}</span>
+													<span>{formatDate(entry.created_at, businessTimeZone)}</span><span class="whitespace-nowrap"><span aria-hidden="true">·</span> <span>{fmtTime(entry.created_at)}</span></span>
 													{#if entry.teeth}<span class="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-600 dark:bg-white/10 dark:text-neutral-200">Zona {entry.teeth}</span>{/if}
 												</span>
 												{#if hasDistinctNote(entry)}<span class="mt-2 block text-xs text-neutral-500 line-clamp-1 dark:text-neutral-300">Nota: {entry.internal_note}</span>{/if}
