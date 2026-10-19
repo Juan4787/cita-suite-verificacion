@@ -325,10 +325,8 @@ test.describe('Ayuda para configurar', () => {
 			await expect(masterPage.getByRole('button', { name: `Quitar aviso: ${label}` })).toBeVisible();
 		}
 
-		await expect(async () => {
-			await masterPage.getByRole('button', { name: 'Configurar', exact: true }).click();
-			await expect(masterPage.getByLabel('Persona del equipo')).toBeVisible({ timeout: 1_000 });
-		}).toPass({ timeout: 10_000 });
+		await masterPage.getByRole('button', { name: 'Configurar', exact: true }).click();
+		await expect(masterPage.getByLabel('Persona del equipo')).toBeVisible();
 		const memberSelect = masterPage.getByLabel('Persona del equipo');
 		await expect(memberSelect.getByRole('option', { name: `${fixture.email} · Dueño` })).toHaveCount(1);
 		await expect(

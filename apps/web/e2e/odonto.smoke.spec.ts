@@ -22,10 +22,8 @@ test.describe('Odontologia - flujo base', () => {
 		await expect(page.getByRole('link', { name: 'Pacientes' })).toBeVisible();
 		const configMenu = page.getByRole('button', { name: 'Configuración' });
 		await expect(configMenu).toBeVisible();
-		await expect(async () => {
-			await configMenu.click();
-			await expect(configMenu).toHaveAttribute('aria-expanded', 'true', { timeout: 1000 });
-		}).toPass();
+		await configMenu.click();
+		await expect(configMenu).toHaveAttribute('aria-expanded', 'true');
 		await expect(page.getByRole('menuitem', { name: 'Equipo' })).toBeVisible();
 		await expect(page.getByRole('menuitem', { name: 'Reseña de Google' })).toBeVisible();
 

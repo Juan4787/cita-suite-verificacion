@@ -231,6 +231,7 @@
 					type="button"
 					class="flex w-full items-center justify-between gap-4 px-4 py-4 text-left sm:px-6 sm:py-5"
 					onclick={() => toggleCategory(category.id)}
+					disabled={!client.ready}
 					aria-expanded={Boolean(openCategories[category.id])}
 				>
 					<span class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">

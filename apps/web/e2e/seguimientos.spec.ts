@@ -96,10 +96,8 @@ const openFollowUpDialog = async (page: Page) => {
 	if (await dialogTitle.isVisible({ timeout: 1000 }).catch(() => false)) return;
 	const button = page.getByRole('button', { name: 'Agregar seguimiento' });
 	await expect(button).toBeVisible();
-	await expect(async () => {
-		await button.click();
-		await expect(dialogTitle).toBeVisible({ timeout: 1000 });
-	}).toPass({ timeout: 10_000 });
+	await button.click();
+	await expect(dialogTitle).toBeVisible();
 };
 
 test.describe.configure({ mode: 'serial' });

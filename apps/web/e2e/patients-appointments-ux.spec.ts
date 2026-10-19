@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page, type Route } from '@playwright/test';
 import { signInWithPassword } from './helpers/shared-auth';
 import { createFixtureClient, must, write, type FixtureClient } from './helpers/fixture-db';
 
@@ -290,11 +290,10 @@ const boxesDoNotOverlap = async (left: Locator, right: Locator) => {
 const openWizardAt = async (page: Page, fixture: Fixture, time: string) => {
 	await page.goto(`/odonto/agenda?date=${fixture.bookingDate}`);
 	const wizard = page.locator('form').filter({ has: page.locator('input[name="booking_mode"]') });
-	const openButton = page.getByRole('button', { name: '+ Nuevo turno', exact: true });
-	await expect(async () => {
-		await openButton.click();
-		await expect(wizard).toBeVisible({ timeout: 1_500 });
-	}).toPass({ timeout: 10_000 });
+	// The control is enabled only once hydrated, so its first click must open the wizard.
+	// Retrying a toggle would close what it just opened while references load.
+	await page.getByRole('button', { name: '+ Nuevo turno', exact: true }).click();
+	await expect(wizard).toBeVisible({ timeout: 15_000 });
 	await wizard.getByRole('button').filter({ hasText: fixture.serviceName }).click();
 	await wizard.getByRole('button').filter({ hasText: fixture.professionalName }).click();
 	await expect(wizard.getByRole('heading', { name: 'Elegí un día' })).toBeVisible();
@@ -408,6 +407,39 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 		);
 		await expect(upcoming.locator(`a[href*="${fixture.pastAppointmentId}"]`)).toHaveCount(0);
 		await expect(upcoming.locator(`a[href*="${fixture.cancelledAppointmentId}"]`)).toHaveCount(0);
+	});
+
+	test('abre un turno nuevo con un solo clic aunque profesionales y servicios tarden en cargar', async ({
+		page
+	}) => {
+		if (!fixture) throw new Error('Fixture no inicializado.');
+		await login(page, fixture);
+		// Deterministic slow response: references are held until the loading state is verified.
+		let releaseReferences!: () => void;
+		const referencesHeld = new Promise<void>((resolve) => {
+			releaseReferences = resolve;
+		});
+		const isReferences = (url: URL) =>
+			url.pathname === '/odonto/agenda/referencias' && url.searchParams.has('from');
+		const holdReferences = async (route: Route) => {
+			await referencesHeld;
+			await route.continue();
+		};
+		await page.route(isReferences, holdReferences);
+		try {
+			await page.goto(`/odonto/agenda?date=${fixture.bookingDate}`);
+			await page.getByRole('button', { name: '+ Nuevo turno', exact: true }).click();
+			await expect(page.getByText('Cargando profesionales y servicios…', { exact: true })).toBeVisible();
+			await expect(page.getByRole('button', { name: 'Cerrar', exact: true })).toBeVisible();
+		} finally {
+			releaseReferences();
+		}
+		await page.unroute(isReferences, holdReferences);
+		const wizard = page.locator('form').filter({ has: page.locator('input[name="booking_mode"]') });
+		await expect(wizard).toBeVisible({ timeout: 15_000 });
+		await wizard.getByRole('button').filter({ hasText: fixture.serviceName }).click();
+		await wizard.getByRole('button').filter({ hasText: fixture.professionalName }).click();
+		await expect(wizard.getByRole('heading', { name: 'Elegí un día' })).toBeVisible();
 	});
 
 	test('corrige un número inválido sin salir del formulario y conserva el turno', async ({ page }) => {

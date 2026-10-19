@@ -3,6 +3,7 @@
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import FollowUpComposer from '$lib/components/seguimientos/FollowUpComposer.svelte';
+	import { createClientReadiness } from '$lib/client/readiness.svelte';
 
 	type Item = {
 		id: string;
@@ -17,6 +18,7 @@
 	let { data }: {
 		data: { programmed: Item[]; canAssign: boolean; todayISO: string; demo: boolean };
 	} = $props();
+	const client = createClientReadiness();
 
 	let showComposer = $state(false);
 	let editingItem = $state<Item | null>(null);
@@ -46,7 +48,7 @@
 	</div>
 
 	<div class="flex justify-end">
-		<button type="button" onclick={() => (showComposer = true)} disabled={data.demo} class="ux-btn-primary disabled:opacity-50">
+		<button type="button" onclick={() => (showComposer = true)} disabled={data.demo || !client.ready} class="ux-btn-primary disabled:opacity-50">
 			Agregar seguimiento
 		</button>
 	</div>

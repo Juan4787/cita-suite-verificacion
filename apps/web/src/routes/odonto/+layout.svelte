@@ -9,10 +9,13 @@
 	import OdontoRouteSkeleton from '$lib/components/skeleton/OdontoRouteSkeleton.svelte';
 	import FollowUpsNotice from '$lib/components/seguimientos/FollowUpsNotice.svelte';
 	import { createStalledNavigationRecovery } from '$lib/client/stalled-navigation-recovery';
+	import { createClientReadiness } from '$lib/client/readiness.svelte';
 	import { formatAccessRemaining, formatDateTime } from '$lib/utils/format';
 	import { allowsRestrictedClinicalRead } from '$lib/utils/restricted-clinical-read';
 
 	let { data, children }: LayoutProps = $props();
+	// Shell menus need their handlers: inert until hydrated so a first tap is never silently lost.
+	const client = createClientReadiness();
 	let mobileMenuOpen = $state(false);
 	let showReportHelp = $state(false);
 	let configMenuOpen = $state(false);
@@ -614,6 +617,7 @@
 					type="button"
 					class="flex h-11 w-11 items-center justify-center rounded-full text-neutral-700 transition hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-[#13243d]"
 					aria-label="Abrir menú"
+					disabled={!client.ready}
 					onclick={() => (mobileMenuOpen = true)}
 				>
 					<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -629,6 +633,7 @@
 					type="button"
 					class="flex h-11 w-11 items-center justify-center rounded-full text-neutral-700 transition hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-[#13243d]"
 					aria-label="Abrir menú"
+					disabled={!client.ready}
 					onclick={() => (mobileMenuOpen = true)}
 				>
 					<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -836,6 +841,7 @@
 								}`}
 								aria-haspopup="menu"
 								aria-expanded={configMenuOpen}
+								disabled={!client.ready}
 								onclick={() => {
 									configMenuOpen = !configMenuOpen;
 									userMenuOpen = false;
@@ -903,6 +909,7 @@
 					class="flex max-w-64 items-center gap-3 rounded-2xl border border-neutral-200 bg-white/70 px-3 py-2 text-left shadow-sm transition hover:border-[#7c3aed]/40 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.07]"
 					aria-haspopup="menu"
 					aria-expanded={userMenuOpen}
+					disabled={!client.ready}
 					onclick={() => {
 						userMenuOpen = !userMenuOpen;
 						configMenuOpen = false;
@@ -1263,6 +1270,7 @@
 				<button
 					type="button"
 					onclick={() => (mobileMenuOpen = true)}
+					disabled={!client.ready}
 					class="flex min-w-0 flex-1 flex-col items-center gap-1 px-1 py-2 text-[11px] font-bold text-white/70 transition"
 					aria-label="Abrir menú"
 				>

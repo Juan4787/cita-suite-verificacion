@@ -361,20 +361,15 @@ const ensureCategoryOpen = async (page: Page, name: RegExp) => {
 	const button = page.getByRole('button', { name });
 	await expect(button).toBeVisible();
 	if ((await button.getAttribute('aria-expanded')) === 'true') return;
-	await expect(async () => {
-		await button.click();
-		await expect(button).toHaveAttribute('aria-expanded', 'true', { timeout: 1000 });
-	}).toPass({ timeout: 10_000 });
+	// Enabled once hydrated: one click must expand it; a retried toggle could collapse it again.
+	await button.click();
+	await expect(button).toHaveAttribute('aria-expanded', 'true');
 };
 
 const openAddMemberModal = async (page: Page) => {
 	const addMemberButton = page.getByRole('button', { name: 'Agregar integrante' });
-	await expect(async () => {
-		await addMemberButton.click();
-		await expect(page.getByRole('heading', { name: 'Agregar integrante' })).toBeVisible({
-			timeout: 1000
-		});
-	}).toPass({ timeout: 10_000 });
+	await addMemberButton.click();
+	await expect(page.getByRole('heading', { name: 'Agregar integrante' })).toBeVisible();
 };
 
 const replaceNumberLikeAUser = async (input: Locator, value: string) => {
@@ -726,12 +721,8 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await expect(page).toHaveURL(/\/odonto\/agenda\?date=/);
 		await page.waitForLoadState('networkidle');
 		const openCreateButton = page.getByRole('button', { name: '+ Nuevo turno', exact: true });
-		await expect(async () => {
-			if (await openCreateButton.isVisible().catch(() => false)) await openCreateButton.click();
-			await expect(page.getByRole('button', { name: 'Cerrar', exact: true })).toBeVisible({
-				timeout: 1500
-			});
-		}).toPass({ timeout: 10_000 });
+		await openCreateButton.click();
+		await expect(page.getByRole('button', { name: 'Cerrar', exact: true })).toBeVisible();
 		const wizardHeading = page.getByRole('heading', {
 			name: '¿Qué necesita el paciente?',
 			exact: true
