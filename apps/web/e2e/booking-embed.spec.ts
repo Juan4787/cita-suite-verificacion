@@ -701,6 +701,20 @@ test.describe('isolated booking integration', () => {
 			await page.getByRole('button', { name: /Consulta de prueba/ }).click();
 			await page.getByRole('button', { name: /Profesional de prueba/ }).click();
 			await expect(page.getByRole('heading', { name: 'Elegí un día', exact: true })).toBeVisible();
+
+            const manualCoverage:{width:number;theme:string}[]=[];
+            for(const width of [320,390,768,1280,1600]) for(const theme of ['light','dark']){
+                await page.setViewportSize({width,height:900});
+                await page.evaluate(theme=>{localStorage.setItem('theme',theme);document.documentElement.classList.toggle('dark',theme==='dark');},theme);
+                expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+                expect(await page.locator('input:visible,select:visible,textarea:visible').evaluateAll(nodes=>nodes.some(node=>{const r=node.getBoundingClientRect();return r.left< -1||r.right>innerWidth+1||r.width<10;}))).toBe(false);
+                await page.screenshot({path:test.info().outputPath(`manual-appointment-${width}-${theme}.jpg`),type:'jpeg',quality:60,animations:'disabled'});
+                manualCoverage.push({width,theme});
+            }
+            expect(manualCoverage).toHaveLength(10);
+            await test.info().attach('manual-appointment-responsive-coverage',{body:JSON.stringify(manualCoverage),contentType:'application/json'});
+            await page.setViewportSize({width:1280,height:900});
+            await page.evaluate(()=>{localStorage.setItem('theme','light');document.documentElement.classList.remove('dark');});
 			await page.getByRole('button', { name: 'Semana siguiente', exact: true }).click();
 			fail = true;
 			const failed = page.waitForResponse((response) =>

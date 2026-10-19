@@ -58,3 +58,12 @@ Los nombres anteriores son entradas reales, sin barrel masivo. La [guía de nuev
 - `delete_professional_safely`: permisos vigentes, preservación de historial y limpieza atómica. Conflicto de bloqueo inmediato se informa para revisión, sin retry ciego.
 
 Los tipos de estas funciones provienen del generador fijado sobre la reconstrucción completa; consultar firmas exactas en `packages/shared/src/database.types.ts` y migraciones nuevas, no inventar un consumidor a partir de esta descripción. Las migraciones y verificación alojadas corresponden al release posterior.
+
+### Equipo y registro manual consolidados
+
+- `access/public/team-access.ts`: listado íntegro validado y concesión de acceso autenticada; no escaneo del directorio Auth ni escrituras administrativas separadas. `upsert_business_role_access` conserva firma/ACL; autorización bloqueada y perfiles atendibles preservados.
+- `team/public/member-profile.ts`: preparación del wizard y operaciones `create_team_member_profile`/`make_team_member_attending`. Perfil/defaults/prestaciones/horarios/invitación/auditoría forman una transacción; pendiente conserva perfil oculto. Fallo intermedio revierte todos los efectos.
+- `patients/public/patient-registration.ts`: `register_patient_safely` confirma ficha/vínculo juntos; el DNI existente se recupera sin sobrescribir demografía y nombres/teléfonos siguen compartibles. Retorno incompleto no informa éxito ni dispara compensación administrativa.
+- El parser y mapping horario único viven en `lib/team/professional-form.ts`. Los helpers de sincronización HTTP de asignaciones y el fallback horario sin consumidores se retiraron, sin alterar RPC públicos aplicados.
+
+Estos consumidores y su descomposición son parte de la matriz de cierre de etapa5, cuyo estado/evidencia vigente está en `evidencia-etapa5-estructura.md`. No deducir publicación de estas firmas ni capacidad alojada de su aprobación en base descartable.
