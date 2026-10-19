@@ -726,12 +726,10 @@ test.describe('isolated booking integration', () => {
 					manualCoverage.push({ width, theme });
 				}
 			expect(manualCoverage).toHaveLength(10);
-			await test
-				.info()
-				.attach('manual-appointment-responsive-coverage', {
-					body: JSON.stringify(manualCoverage),
-					contentType: 'application/json'
-				});
+			await test.info().attach('manual-appointment-responsive-coverage', {
+				body: JSON.stringify(manualCoverage),
+				contentType: 'application/json'
+			});
 			await page.setViewportSize({ width: 1280, height: 900 });
 			await page.emulateMedia({ colorScheme: 'light' });
 			await page.getByRole('button', { name: 'Semana siguiente', exact: true }).click();
@@ -849,7 +847,17 @@ test.describe('isolated booking integration', () => {
 		const coverage: { width: number; theme: string; tasks: string[] }[] = [];
 		const errors: string[] = [];
 		const must = async (operation: PromiseLike<{ error: unknown }>) => {
-			if ((await operation).error) throw new Error('Owned team UX fixture operation failed.');
+			const { error } = await operation;
+			if (error) {
+				const code =
+					typeof error === 'object' &&
+					'code' in error &&
+					typeof error.code === 'string' &&
+					/^[A-Z0-9]{5}$/.test(error.code)
+						? error.code
+						: 'unknown';
+				throw new Error(`Owned team UX fixture operation failed (${code}).`);
+			}
 		};
 		const geometry = async (page: import('@playwright/test').Page) => {
 			expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -885,26 +893,34 @@ test.describe('isolated booking integration', () => {
 					service_id: fixture.serviceId
 				})
 			);
-			const ruleId = randomUUID();
+			// Restriction tables deliberately grant SELECT only, including service_role.
+			// Prepare through the actual owner's transactional public command, not a bypass grant.
+			const revision = await db
+				.from('businesses')
+				.select('booking_availability_revision')
+				.eq('id', fixture.businessId)
+				.single();
+			expect(revision.error).toBeNull();
+			if (!revision.data) throw new Error('Owned team revision is missing');
+			const owner = createClient<CitaDatabase>(fixture.apiOrigin, fixture.anon, {
+				auth: { persistSession: false, autoRefreshToken: false },
+				global: { headers: { Authorization: 'Bearer ' + fixture.ownerToken } }
+			});
 			await must(
-				db.from('availability_rules').insert({
-					id: ruleId,
-					business_id: fixture.businessId,
-					professional_id: professionalId,
-					weekday: 1,
-					start_time: '09:00',
-					end_time: '12:00',
-					slot_interval_minutes: 15,
-					break_minutes: 15,
-					service_scope: 'restricted',
-					is_active: true
-				})
-			);
-			await must(
-				db.from('availability_rule_services').insert({
-					business_id: fixture.businessId,
-					rule_id: ruleId,
-					service_id: fixture.serviceId
+				owner.rpc('replace_professional_schedule_blocks', {
+					p_business_id: fixture.businessId,
+					p_professional_id: professionalId,
+					p_expected_revision: revision.data.booking_availability_revision,
+					p_blocks: [
+						{
+							weekdays: [1],
+							ranges: [{ start: '09:00', end: '12:00' }],
+							slot_interval_minutes: 15,
+							break_minutes: 15,
+							service_scope: 'restricted',
+							service_ids: [fixture.serviceId]
+						}
+					]
 				})
 			);
 			await context.addCookies([

@@ -59,7 +59,9 @@ test('patient structure preserves role scope, keyboard access and long content a
 		}
 	}
 	async function geometry() {
-        expect(await page.locator('meta[name="viewport"]').getAttribute('content')).not.toMatch(/user-scalable\s*=\s*no|maximum-scale\s*=\s*1(?:[,\s]|$)/);
+		expect(await page.locator('meta[name="viewport"]').getAttribute('content')).not.toMatch(
+			/user-scalable\s*=\s*no|maximum-scale\s*=\s*1(?:[,\s]|$)/
+		);
 		expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
 			true
 		);
