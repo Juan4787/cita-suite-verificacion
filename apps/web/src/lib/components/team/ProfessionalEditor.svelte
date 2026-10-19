@@ -72,6 +72,7 @@
 		return validateScheduleBlocks(schedule.blocks).ok;
 	};
 
+	let draftReady = $state(false);
 	const canOperate = $derived(data.context.canManage && !data.demo && draftReady);
 	const canManage = $derived(data.context.canManage && !data.demo);
 	const accountLinkPending = $derived(Boolean(data.pendingAccountEmail));
@@ -92,7 +93,6 @@
 	let baseline = $state<ProfessionalDraft>(buildServerDraft(data));
 	// svelte-ignore state_referenced_locally
 	let draft = $state<ProfessionalDraft>(cloneDraft(baseline));
-	let draftReady = $state(false);
 	let draftRestored = $state(false);
 	// svelte-ignore state_referenced_locally
 	let activeTab = $state<TabId>(

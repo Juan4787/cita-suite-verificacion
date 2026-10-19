@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { isRecord } from '$lib/contracts/json';
 	import type { BusinessRoleAccess as RoleAccess } from '$lib/access/team-contracts';
 	import type { BusinessContext, BusinessRole } from '$lib/access/contracts';
 	import {
@@ -64,9 +65,9 @@
 
 	const weekdayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-	const members = $derived(data.members as RoleAccess[]);
-	const roles = $derived(data.roles as readonly BusinessRole[]);
-	const services = $derived(data.services as Service[]);
+	const members = $derived(data.members);
+	const roles = $derived(data.roles);
+	const services = $derived(data.services);
 	const customServices = $derived(services.filter((service) => !service.is_default));
 	const canManage = $derived(data.context.canManage && !data.demo);
 	const isAssisting = $derived(Boolean(data.context.assistance));
@@ -168,58 +169,56 @@
 	const currentStep = $derived(steps[Math.min(stepIndex, steps.length - 1)]);
 
 	$effect(() => {
-		if (!form?.values) return;
+		const values = form?.values;
+		if (!values) return;
 		showWizard = true;
-		if (form.values.email) email = String(form.values.email);
-		const restoredRole = roles.find(candidate => candidate === String(form.values.role ?? ''));
+		if (values.email) email = String(values.email);
+		const restoredRole = roles.find(candidate => candidate === String(values.role ?? ''));
   if (restoredRole) role = restoredRole;
-		professionalProfileRequested = form.values.has_professional_profile === 'true';
-		if (form.values.professional_name) professionalName = String(form.values.professional_name);
-		if (form.values.professional_specialty) professionalSpecialty = String(form.values.professional_specialty);
-		if (form.values.schedule_blocks) {
-			const restoredBlocks = parseScheduleBlocksJson(String(form.values.schedule_blocks));
+		professionalProfileRequested = values.has_professional_profile === 'true';
+		if (values.professional_name) professionalName = String(values.professional_name);
+		if (values.professional_specialty) professionalSpecialty = String(values.professional_specialty);
+		if (values.schedule_blocks) {
+			const restoredBlocks = parseScheduleBlocksJson(String(values.schedule_blocks));
    scheduleBlocks = restoredBlocks?.map((block,index) => ({...block,id:`restored-wizard-block-${index+1}`})) ?? [{...createEmptyScheduleBlock('wizard-block-1')}];
-		} else if (form.values.time_ranges || form.values.weekdays_csv) {
+		} else if (values.time_ranges || values.weekdays_csv) {
 			scheduleBlocks = [
 				{
 					id: 'restored-wizard-block-1',
-					weekdays: String(form.values.weekdays_csv ?? '')
+					weekdays: String(values.weekdays_csv ?? '')
 						.split(',')
 						.map((value) => Number(value))
 						.filter((value) => Number.isInteger(value) && value >= 0 && value <= 6),
-					timeRanges: String(form.values.time_ranges ?? ''),
-					slotInterval: String(form.values.break_minutes ?? '15'),
-					gridInterval: String(form.values.slot_interval_minutes ?? '15')
+					timeRanges: String(values.time_ranges ?? ''),
+					slotInterval: String(values.break_minutes ?? '15'),
+					gridInterval: String(values.slot_interval_minutes ?? '15')
 				}
 			];
 		}
-		if (form.values.service_ids_csv) {
-			selectedServiceIds = String(form.values.service_ids_csv).split(',').filter(Boolean);
+		if (values.service_ids_csv) {
+			selectedServiceIds = String(values.service_ids_csv).split(',').filter(Boolean);
 		}
-		if (form.values.new_services) {
+		if (values.new_services) {
 			try {
-				const parsed = JSON.parse(String(form.values.new_services));
-				if (Array.isArray(parsed)) {
-					newServices = parsed.map((item: any) => ({
-						name: String(item?.name ?? ''),
-						duration_minutes: Number(item?.duration_minutes ?? 30),
-						price_label: String(item?.price_label ?? '')
-					}));
-				}
+                const parsed: unknown = JSON.parse(String(values.new_services));
+                if (Array.isArray(parsed)) {
+                    const rows: unknown[] = parsed;
+                    if (rows.every((item): item is NewService => isRecord(item) && typeof item.name === 'string' && typeof item.duration_minutes === 'number' && Number.isFinite(item.duration_minutes) && typeof item.price_label === 'string')) newServices = rows;
+                }
 			} catch {
 				newServices = [];
 			}
 		}
-		if (form.values.exception_applies_to === 'business') exceptionAppliesTo = 'business';
-		if (form.values.exception_type === 'extra_available') exceptionType = 'extra_available';
-		if (form.values.exception_period_mode === 'range' && exceptionType === 'blocked') {
+		if (values.exception_applies_to === 'business') exceptionAppliesTo = 'business';
+		if (values.exception_type === 'extra_available') exceptionType = 'extra_available';
+		if (values.exception_period_mode === 'range' && exceptionType === 'blocked') {
 			exceptionPeriodMode = 'range';
 		}
-		if (form.values.exception_date) exceptionDate = String(form.values.exception_date);
-		if (form.values.exception_date_from) exceptionDateFrom = String(form.values.exception_date_from);
-		if (form.values.exception_date_to) exceptionDateTo = String(form.values.exception_date_to);
-		if (form.values.exception_time_range) exceptionTimeRange = String(form.values.exception_time_range);
-		if (form.values.exception_reason) exceptionReason = String(form.values.exception_reason);
+		if (values.exception_date) exceptionDate = String(values.exception_date);
+		if (values.exception_date_from) exceptionDateFrom = String(values.exception_date_from);
+		if (values.exception_date_to) exceptionDateTo = String(values.exception_date_to);
+		if (values.exception_time_range) exceptionTimeRange = String(values.exception_time_range);
+		if (values.exception_reason) exceptionReason = String(values.exception_reason);
 	});
 
 	$effect(() => {

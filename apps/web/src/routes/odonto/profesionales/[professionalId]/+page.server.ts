@@ -25,7 +25,6 @@ import { demoBusinessContext } from '$lib/server/access/public/business';
 import { writeAuditLog } from '$lib/server/platform/audit';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import {
-	ensureDefaultServices,
 	isDefaultServiceName
 } from '$lib/server/team/public/default-services';
 import {

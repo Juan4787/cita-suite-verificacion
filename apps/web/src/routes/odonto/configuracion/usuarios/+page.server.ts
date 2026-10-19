@@ -1,3 +1,7 @@
+import {
+	roleSupportsProfessionalProfile,
+	shouldConfigureProfessionalProfile
+} from '$lib/utils/team-permissions';
 import { readBoundedBookingForm } from '$lib/server/platform/form-data';
 import {
 	prepareTeamMemberProfile,

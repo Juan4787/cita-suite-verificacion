@@ -4722,6 +4722,18 @@ export type Database = {
         Args: { recover_time?: string }
         Returns: number
       }
+      register_patient_safely: {
+        Args: {
+          p_business_id: string
+          p_dni: string
+          p_full_name: string
+          p_patient_id: string
+          p_phone: string
+          p_phone_e164: string
+          p_phone_raw: string
+        }
+        Returns: Json
+      }
       release_google_review_request: {
         Args: {
           release_time?: string

@@ -35,9 +35,9 @@ function form() {
 		JSON.stringify([
 			{
 				weekdays: [1],
-				ranges: [{ start: '09:00', end: '12:00' }],
-				slotIntervalMinutes: 15,
-				breakMinutes: 0,
+				timeRanges: '9 a 12',
+				slotInterval: '0',
+				gridInterval: '15',
 				serviceScope: 'restricted',
 				allowedServiceIds: []
 			}

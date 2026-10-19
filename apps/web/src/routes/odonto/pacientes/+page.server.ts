@@ -1,72 +1,19 @@
 import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
-import { resolveActiveBusiness } from '$lib/server/access/public/business';
 import { newId, readDemoDb, updateDemoDb } from '$lib/server/platform/demo-store';
-import { normalizePhoneE164, normalizePhoneRaw } from '$lib/utils/phone';
+import { getOdontoContext } from '$lib/server/access/public/odonto-context';
+import { readBoundedBookingForm } from '$lib/server/platform/form-data';
 import {
-	createSupabaseAdminClient,
-	createSupabaseServerClient,
-	getAuthUserId,
-	isJwtExpired
-} from '$lib/server/platform/supabase';
-import { normalizePhone } from '$lib/utils/format';
+	preparePatientRegistration,
+	registerPatient,
+	patientRegistrationFailure
+} from '$lib/server/patients/public/patient-registration';
 import {
-	getPatientUniqueConflictField,
-	getPatientWriteConflictMessage,
-	isLegacyPatientNameConflict,
 	PATIENT_UNIQUE_CONFLICT_MESSAGES,
 	type PatientUniqueField
 } from '$lib/server/patients/public/patient-identity';
 import { fail, redirect } from '@sveltejs/kit';
-import { dev } from '$app/environment';
 import type { Actions } from './$types';
-
-type PatientDatabaseError = {
-	code?: string | null;
-	message?: string | null;
-	details?: string | null;
-	hint?: string | null;
-};
-
-const getCreatePatientErrorMessage = (error: PatientDatabaseError) => {
-	const message = (error?.message ?? '').toLowerCase();
-	if (error?.code === '42501' || message.includes('row-level security')) {
-		return 'No se pudo crear el paciente porque tu sesión no tiene permisos. Cerrá sesión y volvé a ingresar.';
-	}
-	if (error?.code === 'PGRST303' || message.includes('jwt expired')) {
-		return 'Tu sesión expiró. Volvé a iniciar sesión.';
-	}
-	const conflictMessage = getPatientWriteConflictMessage(error);
-	if (conflictMessage) return conflictMessage;
-	if (error?.code === '23502') {
-		return 'Faltan datos obligatorios para crear el paciente.';
-	}
-	if (error?.code === '22P02') {
-		return 'El DNI o el teléfono tienen un formato inválido.';
-	}
-	return 'No se pudo crear el paciente. Intentá de nuevo.';
-};
-
-const getCreatePatientStatus = (error: PatientDatabaseError) => {
-	const message = (error?.message ?? '').toLowerCase();
-	if (error?.code === '42501' || message.includes('row-level security')) return 403;
-	if (error?.code === 'PGRST303' || message.includes('jwt expired')) return 401;
-	if (
-		error?.code === '23505' ||
-		getPatientUniqueConflictField(error) ||
-		isLegacyPatientNameConflict(error)
-	) {
-		return 409;
-	}
-	if (error?.code === '23502' || error?.code === '22P02') return 400;
-	return 500;
-};
-
-const isJwtExpiredError = (error: { code?: string | null; message?: string | null }) => {
-	const message = (error?.message ?? '').toLowerCase();
-	return error?.code === 'PGRST303' || message.includes('jwt expired');
-};
-
 
 const duplicatePatientResult = ({
 	field,
@@ -90,144 +37,19 @@ const duplicatePatientResult = ({
 	phone
 });
 
-const findExistingPatientByDni = async ({
-	admin,
-	businessId,
-	dni
-}: {
-	admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>;
-	businessId: string;
-	dni: string;
-}): Promise<{ id: string; field: PatientUniqueField } | null> => {
-	if (dni) {
-		const { data, error } = await admin
-			.from('patients')
-			.select('id')
-			.eq('business_id', businessId)
-			.eq('dni', dni)
-			.limit(1)
-			.maybeSingle();
-		if (error) throw error;
-		if (data?.id) return { id: String(data.id), field: 'dni' };
-	}
-
-	return null;
-};
-
-const ensureProfessionalPatientLink = async ({
-	fetch,
-	businessId,
-	userId,
-	patientId
-}: {
-	fetch: typeof globalThis.fetch;
-	businessId: string;
-	userId: string;
-	patientId: string;
-}) => {
-	const admin = await createSupabaseAdminClient('odonto', fetch);
-	const { data: professionalUser, error: professionalUserError } = await admin
-		.from('professional_users')
-		.select('professional_id')
-		.eq('business_id', businessId)
-		.eq('user_id', userId)
-		.order('created_at', { ascending: true })
-		.limit(1)
-		.maybeSingle();
-
-	if (professionalUserError) throw professionalUserError;
-	const professionalId = professionalUser?.professional_id ? String(professionalUser.professional_id) : null;
-	if (!professionalId) throw new Error('PROFESSIONAL_LINK_REQUIRED');
-
-	const { data: existingLink, error: existingLinkError } = await admin
-		.from('professional_patient_links')
-		.select('id, is_active')
-		.eq('business_id', businessId)
-		.eq('professional_id', professionalId)
-		.eq('patient_id', patientId)
-		.order('is_active', { ascending: false })
-		.order('created_at', { ascending: true })
-		.limit(1)
-		.maybeSingle();
-
-	if (existingLinkError) throw existingLinkError;
-
-	if (existingLink?.id) {
-		const { data: updatedLink, error } = await admin
-			.from('professional_patient_links')
-			.update({
-				is_active: true,
-				source: 'manual',
-				disabled_by: null,
-				disabled_at: null,
-				disabled_reason: null,
-				updated_at: new Date().toISOString()
-			})
-			.eq('id', existingLink.id)
-			.select('id')
-			.maybeSingle();
-		if (error) throw error;
-		if (!updatedLink) throw new Error('PROFESSIONAL_PATIENT_LINK_NOT_FOUND');
-		return;
-	}
-
-	const { error: insertError } = await admin.from('professional_patient_links').insert({
-		business_id: businessId,
-		professional_id: professionalId,
-		patient_id: patientId,
-		source: 'manual',
-		created_by: userId
-	});
-
-	if (!insertError) return;
-	if (insertError.code !== '23505') throw insertError;
-
-	const { data: activatedLink, error: activateError } = await admin
-		.from('professional_patient_links')
-		.update({
-			is_active: true,
-			source: 'manual',
-			disabled_by: null,
-			disabled_at: null,
-			disabled_reason: null,
-			updated_at: new Date().toISOString()
-		})
-		.eq('business_id', businessId)
-		.eq('professional_id', professionalId)
-		.eq('patient_id', patientId)
-		.select('id')
-		.maybeSingle();
-	if (activateError) throw activateError;
-	if (!activatedLink) throw new Error('PROFESSIONAL_PATIENT_LINK_NOT_FOUND');
-};
-
-const handleCreatePatient = async ({
-	request,
-	locals,
-	fetch,
-	cookies
-}: {
-	request: Request;
-	locals: App.Locals;
-	fetch: typeof globalThis.fetch;
-	cookies: import('@sveltejs/kit').Cookies;
-}) => {
-	try {
-		if (!locals.auth) {
-			return fail(401, { message: 'Sesión inválida. Volvé a iniciar sesión.' });
+export const actions: Actions = {
+	create_patient: async ({ request, locals, fetch, cookies }) => {
+		if (!locals.auth) return fail(401, { message: 'Sesión inválida. Volvé a iniciar sesión.' });
+		let form: FormData;
+		try {
+			form = await readBoundedBookingForm(request);
+		} catch {
+			return fail(400, { message: 'Revisá los datos del paciente antes de guardar.' });
 		}
-		const form = await request.formData();
-		const full_name = String(form.get('full_name') ?? '').trim();
-		const dni = String(form.get('dni') ?? '').trim();
-		const phoneInput = String(form.get('phone') ?? '');
-		const phone = normalizePhone(phoneInput).trim();
-		const phone_raw = normalizePhoneRaw(phoneInput);
-		const phone_e164 = normalizePhoneE164(phoneInput);
-
-		if (!full_name) {
-			return fail(400, { message: 'Nombre y apellido son obligatorios' });
-		}
-
+		const input = preparePatientRegistration(form);
+		const { full_name, dni, phone } = input;
+		if (!full_name)
+			return fail(400, { message: 'Nombre y apellido son obligatorios', full_name, dni, phone });
 		if (env.DEMO_MODE === 'true') {
 			const demoPatients = readDemoDb().patients;
 			const existingByDni = dni ? demoPatients.find((patient) => patient.dni === dni) : null;
@@ -279,233 +101,31 @@ const handleCreatePatient = async ({
 			throw redirect(303, `/odonto/pacientes/${createdId}`);
 		}
 
-		let supabase;
-		try {
-			supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);
-		} catch (err) {
-			logServerFailure('Error creando cliente Supabase:', err);
-			return fail(500, {
-				message: 'Error de conexión con la base de datos. Intentá de nuevo.',
-				full_name,
-				dni,
-				phone
-			});
-		}
-
-		const refreshSessionIfNeeded = async () => {
-			if (!locals.auth) return false;
-			if (!isJwtExpired(locals.auth.access_token)) return true;
-			const { data, error } = await supabase.auth.refreshSession({
-				refresh_token: locals.auth.refresh_token
-			});
-			if (error || !data.session) {
-				return false;
-			}
-			const session = data.session;
-			const cookieOptions = {
-				path: '/',
-				httpOnly: true,
-				secure: !dev,
-				sameSite: 'lax' as const,
-				maxAge: 60 * 60 * 24 * 7
-			};
-			cookies.set('sb-module', locals.auth.module, cookieOptions);
-			cookies.set('sb-access-token', session.access_token, cookieOptions);
-			cookies.set('sb-refresh-token', session.refresh_token, cookieOptions);
-			locals.auth = {
-				module: locals.auth.module,
-				access_token: session.access_token,
-				refresh_token: session.refresh_token
-			};
-			return true;
-		};
-
-		const refreshed = await refreshSessionIfNeeded();
-		if (!refreshed) {
-			return fail(401, {
-				message: 'Tu sesión expiró. Volvé a iniciar sesión.',
-				full_name,
-				dni,
-				phone
-			});
-		}
-
-		const ownerId = await getAuthUserId(supabase, locals.auth.access_token);
-		if (!ownerId) {
-			return fail(401, { message: 'Sesión inválida. Volvé a iniciar sesión.' });
-		}
-		const context = await resolveActiveBusiness({
-			supabase,
-			accessToken: locals.auth.access_token,
-			cookies,
-			membershipCache: 'fresh'
-		});
-		if (!context) {
-			return fail(500, { message: 'No se pudo resolver el negocio activo.', full_name, dni, phone });
-		}
-		if (!context.access.allowedCapabilities.canCreatePatient) {
+		const { supabase, business: context } = await getOdontoContext({ locals, fetch, cookies });
+		if (!context.access.allowedCapabilities.canCreatePatient)
 			return fail(403, {
-				message: 'Tu acceso a Cita Suite venció. Activá tu suscripción para volver a usar la plataforma.',
-				full_name,
-				dni,
-				phone
-			});
-		}
-
-		let admin;
-		const returnDuplicatePatient = async (existingPatient: { id: string; field: PatientUniqueField }) => {
-			if (context.role === 'professional') {
-				try {
-					await ensureProfessionalPatientLink({
-						fetch,
-						businessId: context.business.id,
-						userId: ownerId,
-						patientId: existingPatient.id
-					});
-				} catch (linkError) {
-					logServerFailure('Error vinculando paciente duplicado al profesional', linkError);
-					return fail(500, {
-						message: `${PATIENT_UNIQUE_CONFLICT_MESSAGES[existingPatient.field]} No pudimos mostrar esa ficha en tu lista profesional; intentá de nuevo.`,
-						existingId: existingPatient.id,
-						full_name,
-						dni,
-						phone
-					});
-				}
-			}
-
-			return duplicatePatientResult({
-				field: existingPatient.field,
-				existingId: existingPatient.id,
-				full_name,
-				dni,
-				phone
-			});
-		};
-
-		try {
-			admin = await createSupabaseAdminClient('odonto', fetch);
-			const existingPatient = await findExistingPatientByDni({
-				admin,
-				businessId: context.business.id,
-				dni
-			});
-			if (existingPatient) {
-				return returnDuplicatePatient(existingPatient);
-			}
-		} catch (duplicateLookupError) {
-			logServerFailure('Error verificando duplicados de paciente', duplicateLookupError);
-			return fail(500, {
 				message:
-					'No pudimos comprobar si el DNI ya está asociado a otra ficha. Intentá de nuevo antes de crear el paciente.',
+					'Tu acceso a Cita Suite venció. Activá tu suscripción para volver a usar la plataforma.',
 				full_name,
 				dni,
 				phone
 			});
+		let result: Awaited<ReturnType<typeof registerPatient>>;
+		try {
+			result = await registerPatient(supabase, context.business.id, input);
+		} catch (error) {
+			logServerFailure('Error registrando paciente', error);
+			const failure = patientRegistrationFailure(error);
+			return fail(failure.status, { message: failure.message, full_name, dni, phone });
 		}
-
-		const patientId = crypto.randomUUID();
-		let { error } = await supabase
-			.from('patients')
-			.insert({
-				id: patientId,
-				owner_id: ownerId,
-				business_id: context.business.id,
-				full_name,
-				dni: dni || null,
-				phone: phone || null,
-				phone_raw,
-				phone_e164
-			});
-
-		if (error && isJwtExpiredError(error)) {
-			const refreshed = await refreshSessionIfNeeded();
-			if (refreshed) {
-				const retry = await supabase
-					.from('patients')
-					.insert({
-						id: patientId,
-						owner_id: ownerId,
-						business_id: context.business.id,
-						full_name,
-						dni: dni || null,
-						phone: phone || null,
-						phone_raw,
-						phone_e164
-					});
-				error = retry.error;
-			}
-		}
-
-		if (error) {
-			const conflictField = getPatientUniqueConflictField(error ?? {});
-			if (conflictField) {
-				try {
-					const existingPatient = await findExistingPatientByDni({
-						admin,
-						businessId: context.business.id,
-						dni
-					});
-					if (existingPatient) {
-						return returnDuplicatePatient(existingPatient);
-					}
-				} catch (conflictLookupError) {
-					logServerFailure('Error recuperando ficha en conflicto', conflictLookupError);
-				}
-			}
-			logServerFailure('Error creando paciente:', error);
-			return fail(getCreatePatientStatus(error ?? {}), {
-				message: getCreatePatientErrorMessage(error ?? {}),
+		if (result.duplicate)
+			return duplicatePatientResult({
+				field: 'dni',
+				existingId: result.patientId,
 				full_name,
 				dni,
 				phone
 			});
-		}
-
-		if (context.role === 'professional') {
-			try {
-				await ensureProfessionalPatientLink({
-					fetch,
-					businessId: context.business.id,
-					userId: ownerId,
-					patientId
-				});
-			} catch (linkError) {
-				logServerFailure('Error vinculando paciente al profesional', linkError);
-				try {
-					await admin
-						.from('patients')
-						.delete()
-						.eq('business_id', context.business.id)
-						.eq('id', patientId);
-				} catch (cleanupError) {
-					logServerFailure('Error limpiando paciente sin vinculo profesional', cleanupError);
-				}
-				return fail(500, {
-					message: 'No se pudo vincular el paciente al profesional. Intentá de nuevo.',
-					full_name,
-					dni,
-					phone
-				});
-			}
-		}
-
-		throw redirect(303, `/odonto/pacientes/${patientId}`);
-	} catch (err) {
-		// Re-throw redirects (they use throw in SvelteKit)
-		if (err && typeof err === 'object' && 'status' in err && 'location' in err) {
-			throw err;
-		}
-		logServerFailure('Error inesperado en create_patient:', err);
-		return fail(500, {
-			message: 'Error interno del servidor. Intentá de nuevo.',
-			full_name: '',
-			dni: '',
-			phone: ''
-		});
+		throw redirect(303, `/odonto/pacientes/${result.patientId}`);
 	}
-};
-
-export const actions: Actions = {
-	create_patient: handleCreatePatient
 };
