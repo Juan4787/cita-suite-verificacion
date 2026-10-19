@@ -180,8 +180,9 @@
 
 <div class="flex flex-col gap-5">
 	<div class="ux-card">
-		<div class="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
-			<div class="flex min-w-0 items-start justify-between gap-3">
+		<!-- The name keeps a 24rem basis: actions sit beside it only when both fit, otherwise they wrap below. -->
+		<div class="flex min-w-0 flex-wrap items-start justify-between gap-4">
+			<div class="flex min-w-0 flex-[1_1_24rem] items-start justify-between gap-3">
 				<div class="min-w-0 space-y-1">
 					<h1 class="break-words text-[28px] font-semibold text-neutral-900 dark:text-white sm:text-[30px]">
 						{data.patient.full_name}
@@ -200,7 +201,7 @@
 					</svg>
 				</button>
 			</div>
-			<div class="hidden min-w-0 md:flex md:flex-wrap md:items-center md:gap-2 xl:justify-end [&_.ux-btn-secondary]:shrink-0 [&_.ux-btn-primary]:shrink-0 [&_.ux-btn-danger]:shrink-0">
+			<div class="hidden min-w-0 md:flex md:flex-wrap md:items-center md:gap-2 [&_.ux-btn-secondary]:shrink-0 [&_.ux-btn-primary]:shrink-0 [&_.ux-btn-danger]:shrink-0">
 				{#if permissions.canArchivePatient}
 					<form method="post" action="?/archive_patient" class="contents" bind:this={archiveForm}>
 						<button disabled={!client.ready}

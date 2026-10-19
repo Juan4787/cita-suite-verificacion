@@ -234,7 +234,7 @@
 					aria-expanded={Boolean(openCategories[category.id])}
 				>
 					<span class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-						<span class="text-xl font-black text-white">{category.title}</span>
+						<span class="text-lg font-black text-white sm:text-xl">{category.title}</span>
 						<span class="ux-badge">{categoryMembers.length}</span>
 					</span>
 					<svg

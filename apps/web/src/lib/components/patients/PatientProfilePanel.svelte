@@ -193,7 +193,7 @@
 								Alergias
 							</div>
 							<p
-								class={`min-w-0 flex-[1_1_10rem] break-words text-right text-[15px] font-semibold ${
+								class={`min-w-0 flex-[1_1_10rem] break-words text-left text-[15px] font-semibold sm:text-right ${
 									patient.allergies ? 'text-amber-900 dark:text-amber-100' : 'text-amber-700/70 dark:text-amber-200/70'
 								}`}
 							>
