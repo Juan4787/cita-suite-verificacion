@@ -129,3 +129,8 @@ describe('professional service task state', () => {
 		expect(pending.update).toHaveBeenCalledWith({ reset: false });
 	});
 });
+
+it('does not advertise service creation while client operations are unavailable', () => {
+	render(ProfessionalServicesPanel, { ...props(), canManage: false });
+	expect(screen.getByRole('button', { name: 'Crear servicio nuevo' })).toBeDisabled();
+});

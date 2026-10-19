@@ -40,7 +40,7 @@
 		form
 	}: {
 		active: boolean;
-		availabilityRevision:number;
+		availabilityRevision: number;
 		data: ProfessionalEditorData;
 		draft: ProfessionalDraft;
 		baseline: ProfessionalDraft;

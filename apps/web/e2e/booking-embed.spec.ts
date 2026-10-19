@@ -1022,6 +1022,75 @@ test.describe('isolated booking integration', () => {
 				.single();
 			expect(saved.error).toBeNull();
 			expect(saved.data?.description).toBe('Edición confirmada sintética');
+			// A dirty local profile must not silently borrow a token from changed remote hours.
+			await page.getByRole('button', { name: 'Perfil', exact: true }).click();
+			const localName = 'Borrador local que debe conservarse';
+			await page.getByRole('textbox', { name: 'Nombre', exact: true }).fill(localName);
+			const openingRevision = await page
+				.locator('form[action="?/save_all"] [name="availability_revision"]')
+				.inputValue();
+			const beforeRemote = await db
+				.from('businesses')
+				.select('booking_availability_revision')
+				.eq('id', fixture.businessId)
+				.single();
+			expect(beforeRemote.error).toBeNull();
+			if (!beforeRemote.data) throw new Error('Missing owned revision');
+			await must(
+				owner.rpc('replace_professional_schedule_blocks', {
+					p_business_id: fixture.businessId,
+					p_professional_id: professionalId,
+					p_expected_revision: beforeRemote.data.booking_availability_revision,
+					p_blocks: [
+						{
+							weekdays: [1],
+							ranges: [{ start: '10:00', end: '12:00' }],
+							slot_interval_minutes: 15,
+							break_minutes: 15,
+							service_scope: 'restricted',
+							service_ids: [fixture.serviceId]
+						}
+					]
+				})
+			);
+			// A real independent service edit invalidates the route while the name stays dirty.
+			await page.getByRole('button', { name: 'Servicios y aranceles', exact: true }).click();
+			await page
+				.locator('.ux-choice')
+				.filter({ hasText: serviceName })
+				.getByRole('button', { name: 'Editar', exact: true })
+				.click();
+			await dialog.locator('[name="description"]').fill('Edición que refresca la configuración');
+			await dialog.getByRole('button', { name: 'Guardar cambios', exact: true }).click();
+			await expect(dialog).not.toBeVisible();
+			await expect(
+				page.locator('form[action="?/save_all"] [name="availability_revision"]')
+			).toHaveValue(openingRevision);
+			await page.getByRole('button', { name: 'Guardar todo', exact: true }).click();
+			await expect(
+				page.getByText(
+					'La configuración cambió. Recargá la página antes de guardar; no se aplicó ningún cambio.',
+					{ exact: true }
+				)
+			).toBeVisible();
+			const unchanged = await db
+				.from('professionals')
+				.select('name')
+				.eq('business_id', fixture.businessId)
+				.eq('id', professionalId)
+				.single();
+			expect(unchanged.error).toBeNull();
+			expect(unchanged.data?.name).toBe(professionalName);
+			await page.getByRole('button', { name: 'Perfil', exact: true }).click();
+			await expect(page.getByRole('textbox', { name: 'Nombre', exact: true })).toHaveValue(
+				localName
+			);
+			await page.getByRole('link', { name: 'Volver', exact: true }).click();
+			await page.getByRole('button', { name: 'Salir sin guardar', exact: true }).click();
+			await expect(page).toHaveURL(/\/odonto\/configuracion\/usuarios/);
+			await page.goto(editorURL);
+			await expect(page.locator('[data-editor-ready="true"]')).toBeVisible();
+
 			for (const width of [320, 390, 768, 1280, 1600])
 				for (const theme of ['light', 'dark']) {
 					await page.setViewportSize({ width, height: 900 });

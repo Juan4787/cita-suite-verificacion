@@ -253,7 +253,7 @@
 						<h2 class="ux-section-title">¿No encontrás el servicio?</h2>
 						<p class="mt-1 text-sm text-white/55">Crealo una vez y queda asignado a {professional?.name ?? 'este profesional'}.</p>
 					</div>
-					<button type="button" class="ux-btn-secondary" disabled={saving === 'service-create'} onclick={() => (showNewService = !showNewService)}>
+					<button type="button" class="ux-btn-secondary" disabled={!canManage || saving === 'service-create'} onclick={() => (showNewService = !showNewService)}>
 						{showNewService ? 'Cerrar' : 'Crear servicio nuevo'}
 					</button>
 				</div>

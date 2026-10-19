@@ -74,7 +74,7 @@
 	};
 
 	// svelte-ignore state_referenced_locally
-	let availabilityRevision=$state(data.availabilityRevision??0);
+	let availabilityRevision = $state(data.availabilityRevision ?? 0);
 	let draftReady = $state(false);
 	const canOperate = $derived(data.context.canManage && !data.demo && draftReady);
 	const canManage = $derived(data.context.canManage && !data.demo);
@@ -366,13 +366,15 @@
 	$effect(() => {
 		// A shorthand like 09:00-20 is equivalent to 09:00-20:00, but must stay raw while editing.
 		if (!draftReady || scheduleTimeEditing) return;
-        const serverDraft = buildServerDraft(data);
-        if(!hasUnsavedChanges){
-            baseline=cloneDraft(serverDraft);draft=cloneDraft(serverDraft);availabilityRevision=data.availabilityRevision??0;
-        } else if(professionalBaselineMatches(serverDraft,baseline)) {
-            // Safe rebase after an own partial save or an unrelated clinic edit.
-            availabilityRevision=data.availabilityRevision??0;
-        }
+		const serverDraft = buildServerDraft(data);
+		if (!hasUnsavedChanges) {
+			baseline = cloneDraft(serverDraft);
+			draft = cloneDraft(serverDraft);
+			availabilityRevision = data.availabilityRevision ?? 0;
+		} else if (professionalBaselineMatches(serverDraft, baseline)) {
+			// Safe rebase after an own partial save or an unrelated clinic edit.
+			availabilityRevision = data.availabilityRevision ?? 0;
+		}
 	});
 
 	onMount(() => {
