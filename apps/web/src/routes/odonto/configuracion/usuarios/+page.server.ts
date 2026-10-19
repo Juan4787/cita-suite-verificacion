@@ -204,7 +204,7 @@ export const actions: Actions = {
 
 		let form: FormData;
 		try {
-			form = await readBoundedBookingForm(request, ['service_ids']);
+			form = await readBoundedBookingForm(request, ['service_ids', 'weekdays']);
 		} catch {
 			return fail(400, { message: 'Revisá los datos del integrante antes de guardar.' });
 		}
