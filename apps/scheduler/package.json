@@ -1,0 +1,19 @@
+{
+	"name": "scheduler",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"check": "tsc --noEmit",
+		"test": "node --test --test-concurrency=1 src/*.test.ts"
+	},
+	"dependencies": {
+		"@cita-suite/shared": "workspace:*"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "4.20260702.1",
+		"@types/node": "25.9.3",
+		"typescript": "5.9.3",
+		"wrangler": "4.86.0"
+	}
+}

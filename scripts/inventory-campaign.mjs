@@ -15,7 +15,7 @@ function visit(directory) {
 		}
 	}
 }
-for (const directory of ['apps/web/src', 'apps/web/e2e', 'apps/natalia/src', 'packages/shared/src', 'supabase/migrations', 'supabase/tests']) visit(join(root, directory));
+for (const directory of ['apps/web/src', 'apps/web/e2e', 'apps/natalia/src', 'apps/scheduler/src', 'packages/shared/src', 'supabase/migrations', 'supabase/tests']) visit(join(root, directory));
 files.sort((a, b) => a.path.localeCompare(b.path));
 const inventory = {
 	scope: 'Local working tree. File counts do not certify active SQL functions, deployed versions, coverage or runtime behavior.',

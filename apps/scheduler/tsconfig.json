@@ -1,0 +1,13 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"lib": ["ES2022"],
+		"types": ["@cloudflare/workers-types", "node"],
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		// Tests run on Node's native type stripping: only erasable syntax is allowed.
+		"erasableSyntaxOnly": true,
+		"verbatimModuleSyntax": true
+	},
+	"include": ["src/**/*.ts"]
+}

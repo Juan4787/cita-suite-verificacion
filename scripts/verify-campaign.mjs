@@ -20,7 +20,9 @@ const steps = [
 	// svelte-check covers src only; browser specs and their fixtures are type-checked separately.
 	['browser-test-types', 'pnpm', ['--filter', 'web', 'check:e2e']],
 	['natalia-types', 'pnpm', ['--filter', 'natalia', 'check']],
+	['scheduler-types', 'pnpm', ['--filter', 'scheduler', 'check']],
 	['verification-runner-tests', 'node', ['scripts/run-campaign-node-tests.mjs']],
+	['scheduler-tests', 'node', ['scripts/run-campaign-node-tests.mjs', 'scheduler']],
 	['evidence-recovery-tests', 'python3', ['scripts/test-verification-evidence.py']],
 	['architecture', 'pnpm', ['check:architecture']],
 	['server-tests', 'node', ['scripts/run-campaign-unit-tests.mjs', 'server']],

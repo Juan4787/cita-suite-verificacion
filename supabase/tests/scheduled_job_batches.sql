@@ -572,7 +572,7 @@ select extensions.pass('abandoned uploads of every practice are cleaned fairly a
 
 -- 5. Push telemetry retention --------------------------------------------------
 do $$
-declare v_push record; v_old uuid; v_recent uuid;
+declare v_push record; v_old uuid; v_recent uuid; v_removed integer;
 begin
  select * into strict v_push from batch_push where label='A5';
  insert into public.push_delivery_attempts(business_id,appointment_id,subscription_id,kind,receipt_token_hash,expires_at,created_at,updated_at)
@@ -583,7 +583,9 @@ begin
  values(v_push.business,v_push.appointment,v_push.subscription,'test',repeat('8',64),clock_timestamp()-interval '89 days'+interval '5 minutes',
   clock_timestamp()-interval '89 days',clock_timestamp()-interval '89 days')
  returning id into v_recent;
- if coalesce(private.prune_push_delivery_telemetry()<1 or exists(select 1 from public.push_delivery_attempts where id=v_old)
+ -- Its own statement: the checks below must see the rows after the deletion.
+ v_removed:=private.prune_push_delivery_telemetry();
+ if coalesce(v_removed<1 or exists(select 1 from public.push_delivery_attempts where id=v_old)
   or not exists(select 1 from public.push_delivery_attempts where id=v_recent),true) then
   raise exception 'TEST_PUSH_TELEMETRY_RETENTION';
  end if;
