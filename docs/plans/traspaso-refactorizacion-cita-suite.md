@@ -90,7 +90,7 @@ Alta manual: `patient-registration.ts` y `register_patient_safely` guardan ficha
 
 ### Agenda/reservas
 
-Un calculador TS y ventanas SQL acotadas; precio confirmado por SQL y preview exacto por TS. Se conservan intervalos base/márgenes/descansos, idempotencia, exclusión y aceptación de cotización actualizada. La UI manual y pública reutiliza esas reglas; marca y tema son sólo presentación. Cada etapa tiene su evidencia propia de paridad/carreras.
+Un calculador TS y ventanas SQL acotadas; precio confirmado por SQL y preview exacto por TS. Se conservan intervalos base/márgenes/descansos, idempotencia, exclusión y aceptación de cotización actualizada. La UI manual y pública reutiliza esas reglas; marca y tema son sólo presentación. Cita Suite conserva su diseño oscuro único (también ante preferencia clara del navegador); Natalia tiene dos modos reales. No habilitar un tema privado inexistente manipulando clases en el arnés ni llamarlo cobertura de una función implementada. Cada etapa tiene su evidencia propia de paridad/carreras.
 
 ### Sitios
 

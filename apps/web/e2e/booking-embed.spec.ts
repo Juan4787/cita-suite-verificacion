@@ -162,13 +162,11 @@ test.describe('isolated booking integration', () => {
 				{ waitUntil: 'commit' }
 			);
 			await expect(documents).toBeVisible();
-			await documents
-				.getByLabel('Documento', { exact: true })
-				.setInputFiles({
-					name: 'estudio-del-paciente.pdf',
-					mimeType: 'application/pdf',
-					buffer: patientPdf
-				});
+			await documents.getByLabel('Documento', { exact: true }).setInputFiles({
+				name: 'estudio-del-paciente.pdf',
+				mimeType: 'application/pdf',
+				buffer: patientPdf
+			});
 			await documents
 				.getByLabel('Descripción (opcional)', { exact: true })
 				.fill('PDF adjuntado por Ana');
@@ -515,17 +513,15 @@ test.describe('isolated booking integration', () => {
 			return date.toISOString().slice(0, 10);
 		};
 		const exceptionId = randomUUID();
-		const blocked = await db
-			.from('availability_exceptions')
-			.insert({
-				id: exceptionId,
-				business_id: fixture.businessId,
-				professional_id: null,
-				type: 'blocked',
-				starts_at: today + 'T03:00:00Z',
-				ends_at: addDays(15) + 'T03:00:00Z',
-				reason: 'Synthetic bounded-window proof'
-			});
+		const blocked = await db.from('availability_exceptions').insert({
+			id: exceptionId,
+			business_id: fixture.businessId,
+			professional_id: null,
+			type: 'blocked',
+			starts_at: today + 'T03:00:00Z',
+			ends_at: addDays(15) + 'T03:00:00Z',
+			reason: 'Synthetic bounded-window proof'
+		});
 		expect(blocked.error).toBeNull();
 		try {
 			for (const variant of [
@@ -617,14 +613,12 @@ test.describe('isolated booking integration', () => {
 						)
 					).toBe(addDays(30));
 					if (variant.width === 320) {
-						for (const box of await navigation
-							.getByRole('link')
-							.evaluateAll((links) =>
-								links.map((link) => ({
-									width: link.getBoundingClientRect().width,
-									height: link.getBoundingClientRect().height
-								}))
-							)) {
+						for (const box of await navigation.getByRole('link').evaluateAll((links) =>
+							links.map((link) => ({
+								width: link.getBoundingClientRect().width,
+								height: link.getBoundingClientRect().height
+							}))
+						)) {
 							expect(box.width).toBeGreaterThan(200);
 							expect(box.height).toBeLessThanOrEqual(64);
 						}
@@ -702,19 +696,44 @@ test.describe('isolated booking integration', () => {
 			await page.getByRole('button', { name: /Profesional de prueba/ }).click();
 			await expect(page.getByRole('heading', { name: 'Elegí un día', exact: true })).toBeVisible();
 
-            const manualCoverage:{width:number;theme:string}[]=[];
-            for(const width of [320,390,768,1280,1600]) for(const theme of ['light','dark']){
-                await page.setViewportSize({width,height:900});
-                await page.evaluate(theme=>{localStorage.setItem('theme',theme);document.documentElement.classList.toggle('dark',theme==='dark');},theme);
-                expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-                expect(await page.locator('input:visible,select:visible,textarea:visible').evaluateAll(nodes=>nodes.some(node=>{const r=node.getBoundingClientRect();return r.left< -1||r.right>innerWidth+1||r.width<10;}))).toBe(false);
-                await page.screenshot({path:test.info().outputPath(`manual-appointment-${width}-${theme}.jpg`),type:'jpeg',quality:60,animations:'disabled'});
-                manualCoverage.push({width,theme});
-            }
-            expect(manualCoverage).toHaveLength(10);
-            await test.info().attach('manual-appointment-responsive-coverage',{body:JSON.stringify(manualCoverage),contentType:'application/json'});
-            await page.setViewportSize({width:1280,height:900});
-            await page.evaluate(()=>{localStorage.setItem('theme','light');document.documentElement.classList.remove('dark');});
+			const manualCoverage: { width: number; theme: string }[] = [];
+			for (const width of [320, 390, 768, 1280, 1600])
+				for (const theme of ['light', 'dark']) {
+					await page.setViewportSize({ width, height: 900 });
+					await page.emulateMedia({ colorScheme: theme === 'dark' ? 'dark' : 'light' });
+					expect(
+						await page.evaluate(() => document.documentElement.classList.contains('dark'))
+					).toBe(true);
+					expect(
+						await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
+					).toBe(true);
+					expect(
+						await page
+							.locator('input:visible,select:visible,textarea:visible')
+							.evaluateAll((nodes) =>
+								nodes.some((node) => {
+									const r = node.getBoundingClientRect();
+									return r.left < -1 || r.right > innerWidth + 1 || r.width < 10;
+								})
+							)
+					).toBe(false);
+					await page.screenshot({
+						path: test.info().outputPath(`manual-appointment-${width}-${theme}.jpg`),
+						type: 'jpeg',
+						quality: 60,
+						animations: 'disabled'
+					});
+					manualCoverage.push({ width, theme });
+				}
+			expect(manualCoverage).toHaveLength(10);
+			await test
+				.info()
+				.attach('manual-appointment-responsive-coverage', {
+					body: JSON.stringify(manualCoverage),
+					contentType: 'application/json'
+				});
+			await page.setViewportSize({ width: 1280, height: 900 });
+			await page.emulateMedia({ colorScheme: 'light' });
 			await page.getByRole('button', { name: 'Semana siguiente', exact: true }).click();
 			fail = true;
 			const failed = page.waitForResponse((response) =>
@@ -851,50 +870,42 @@ test.describe('isolated booking integration', () => {
 		};
 		try {
 			await must(
-				db
-					.from('professionals')
-					.insert({
-						id: professionalId,
-						business_id: fixture.businessId,
-						name: professionalName,
-						is_active: true,
-						is_public: true
-					})
+				db.from('professionals').insert({
+					id: professionalId,
+					business_id: fixture.businessId,
+					name: professionalName,
+					is_active: true,
+					is_public: true
+				})
 			);
 			await must(
-				db
-					.from('professional_services')
-					.insert({
-						business_id: fixture.businessId,
-						professional_id: professionalId,
-						service_id: fixture.serviceId
-					})
+				db.from('professional_services').insert({
+					business_id: fixture.businessId,
+					professional_id: professionalId,
+					service_id: fixture.serviceId
+				})
 			);
 			const ruleId = randomUUID();
 			await must(
-				db
-					.from('availability_rules')
-					.insert({
-						id: ruleId,
-						business_id: fixture.businessId,
-						professional_id: professionalId,
-						weekday: 1,
-						start_time: '09:00',
-						end_time: '12:00',
-						slot_interval_minutes: 15,
-						break_minutes: 15,
-						service_scope: 'restricted',
-						is_active: true
-					})
+				db.from('availability_rules').insert({
+					id: ruleId,
+					business_id: fixture.businessId,
+					professional_id: professionalId,
+					weekday: 1,
+					start_time: '09:00',
+					end_time: '12:00',
+					slot_interval_minutes: 15,
+					break_minutes: 15,
+					service_scope: 'restricted',
+					is_active: true
+				})
 			);
 			await must(
-				db
-					.from('availability_rule_services')
-					.insert({
-						business_id: fixture.businessId,
-						rule_id: ruleId,
-						service_id: fixture.serviceId
-					})
+				db.from('availability_rule_services').insert({
+					business_id: fixture.businessId,
+					rule_id: ruleId,
+					service_id: fixture.serviceId
+				})
 			);
 			await context.addCookies([
 				{ name: 'sb-module', value: 'odonto', url: fixture.appOrigin },
@@ -906,19 +917,25 @@ test.describe('isolated booking integration', () => {
 			page.on('pageerror', (e) => errors.push(e.message));
 			const editorURL = fixture.appOrigin + '/odonto/profesionales/' + professionalId;
 			let releaseEditorScripts!: () => void;
-   const editorScriptsReady = new Promise<void>(resolve => { releaseEditorScripts = resolve; });
-   const holdEditorScripts = async (route: import('@playwright/test').Route) => {
-    if (route.request().resourceType() === 'script') await editorScriptsReady;
-    await route.continue();
-   };
-   await page.route('**/*',holdEditorScripts);
-   try {
-    await page.goto(editorURL+'?tab=servicios',{waitUntil:'commit'});
-    await expect(page.getByRole('button',{name:/^Servicios y aranceles/})).toBeDisabled();
-    await expect(page.getByRole('button',{name:'Crear servicio nuevo',exact:true})).toBeDisabled();
-   } finally { releaseEditorScripts(); }
-   await expect(page.getByRole('button',{name:/^Servicios y aranceles/})).toBeEnabled();
-   await page.unroute('**/*',holdEditorScripts);
+			const editorScriptsReady = new Promise<void>((resolve) => {
+				releaseEditorScripts = resolve;
+			});
+			const holdEditorScripts = async (route: import('@playwright/test').Route) => {
+				if (route.request().resourceType() === 'script') await editorScriptsReady;
+				await route.continue();
+			};
+			await page.route('**/*', holdEditorScripts);
+			try {
+				await page.goto(editorURL + '?tab=servicios', { waitUntil: 'commit' });
+				await expect(page.getByRole('button', { name: /^Servicios y aranceles/ })).toBeDisabled();
+				await expect(
+					page.getByRole('button', { name: 'Crear servicio nuevo', exact: true })
+				).toBeDisabled();
+			} finally {
+				releaseEditorScripts();
+			}
+			await expect(page.getByRole('button', { name: /^Servicios y aranceles/ })).toBeEnabled();
+			await page.unroute('**/*', holdEditorScripts);
 			await expect(page.locator('[data-editor-ready="true"]')).toBeVisible();
 			await page.getByRole('button', { name: 'Crear servicio nuevo', exact: true }).click();
 			const creation = page.locator('form[action="?/create_service"]');
@@ -992,12 +1009,13 @@ test.describe('isolated booking integration', () => {
 			for (const width of [320, 390, 768, 1280, 1600])
 				for (const theme of ['light', 'dark']) {
 					await page.setViewportSize({ width, height: 900 });
+					await page.emulateMedia({ colorScheme: theme === 'dark' ? 'dark' : 'light' });
 					await page.evaluate((theme) => localStorage.setItem('theme', theme), theme);
 					await page.goto(editorURL);
 					await expect(page.locator('[data-editor-ready="true"]')).toBeVisible();
 					await expect
 						.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark')))
-						.toBe(theme === 'dark');
+						.toBe(true);
 					await geometry(page);
 					await page.screenshot({
 						path: testInfo.outputPath(`team-${width}-${theme}-profile.jpg`),
@@ -1102,7 +1120,7 @@ test.describe('isolated booking integration', () => {
 			viewport: { width: 1280, height: 900 },
 			colorScheme: 'light'
 		});
-		const coverage: { brand: string; width: number; theme: string }[] = [];
+		const coverage: { brand: string; width: number; theme: string; renderedTheme: string }[] = [];
 		const errors: string[] = [];
 		let writes = 0;
 		try {
@@ -1135,6 +1153,7 @@ test.describe('isolated booking integration', () => {
 				for (const width of [320, 390, 768, 1280, 1600])
 					for (const theme of ['light', 'dark']) {
 						await page.setViewportSize({ width, height: 900 });
+						await page.emulateMedia({ colorScheme: theme === 'dark' ? 'dark' : 'light' });
 						await page.evaluate((theme) => localStorage.setItem('theme', theme), theme);
 						const url = new URL(selectedURL);
 						url.pathname =
@@ -1188,7 +1207,7 @@ test.describe('isolated booking integration', () => {
 								.poll(() =>
 									page.evaluate(() => document.documentElement.classList.contains('dark'))
 								)
-								.toBe(theme === 'dark');
+								.toBe(true);
 						await page.evaluate(() => window.scrollTo(0, 0));
 						await page.screenshot({
 							path: testInfo.outputPath(`public-${brand}-${width}-${theme}-final.jpg`),
@@ -1201,7 +1220,12 @@ test.describe('isolated booking integration', () => {
 							await page.getByRole('button', { name: 'Confirmar reserva', exact: true }).click();
 							await expect(page.getByLabel('Nombre y apellido', { exact: true })).toBeFocused();
 						}
-						coverage.push({ brand, width, theme });
+						coverage.push({
+							brand,
+							width,
+							theme,
+							renderedTheme: brand === 'natalia' ? theme : 'dark'
+						});
 					}
 			expect(coverage).toHaveLength(20);
 			expect(writes).toBe(0);

@@ -7,7 +7,7 @@ import { loginWithSharedSession } from './helpers/shared-auth';
 
 test.use({ timezoneId: 'America/Argentina/Buenos_Aires' });
 
-test('patient structure preserves role scope, keyboard access and long content across five widths and both themes', async ({
+test('patient structure preserves role scope, keyboard access and long content across five widths and both browser color preferences (the private design remains dark)', async ({
 	page
 }, testInfo) => {
 	test.setTimeout(180_000);
@@ -35,7 +35,13 @@ test('patient structure preserves role scope, keyboard access and long content a
 	const description = `Descripción clínica sintética\n${'Contenido largo de auditoría. '.repeat(70)}\n${'ReferenciaExtensa'.repeat(20)}`;
 	let actorId: string | undefined, ownerId: string | undefined, businessId: string | undefined;
 	const errors: string[] = [],
-		coverage: { role: string; width: number; theme: string; checks: string[] }[] = [];
+		coverage: {
+			role: string;
+			width: number;
+			theme: string;
+			renderedTheme: 'dark';
+			checks: string[];
+		}[] = [];
 	page.on('pageerror', (error) => errors.push(error.message));
 	async function must<T>(
 		operation: PromiseLike<{ data: T; error: unknown }>
@@ -218,6 +224,7 @@ test('patient structure preserves role scope, keyboard access and long content a
 			for (const width of [320, 390, 768, 1280, 1600])
 				for (const theme of ['light', 'dark']) {
 					await page.setViewportSize({ width, height: 900 });
+					await page.emulateMedia({ colorScheme: theme === 'dark' ? 'dark' : 'light' });
 					await page.evaluate((theme) => localStorage.setItem('theme', theme), theme);
 					await page.goto(`/odonto/pacientes/${patient.id}`);
 					await expect(
@@ -225,8 +232,11 @@ test('patient structure preserves role scope, keyboard access and long content a
 					).toBeVisible();
 					await expect
 						.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark')))
-						.toBe(theme === 'dark');
-					const checks = ['identity', 'theme', 'geometry'];
+						.toBe(true);
+					expect(
+						await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)
+					).toBe('dark');
+					const checks = ['identity', 'fixed-dark-theme', 'system-preference-' + theme, 'geometry'];
 					// All fifty combinations are asserted; captures retain owner at every width/theme
 					// plus each other role on mobile/light and desktop/dark within the evidence budget.
 					const capture =
@@ -351,7 +361,7 @@ test('patient structure preserves role scope, keyboard access and long content a
 						await expect(edit).toBeFocused();
 						checks.push('edit-scope-focus');
 					}
-					coverage.push({ role, width, theme, checks });
+					coverage.push({ role, width, theme, renderedTheme: 'dark', checks });
 				}
 		}
 		expect(coverage).toHaveLength(50);

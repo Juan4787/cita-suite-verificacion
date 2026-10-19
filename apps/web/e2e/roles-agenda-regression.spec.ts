@@ -62,7 +62,8 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 		password,
 		email_confirm: true
 	});
-	if (authResult.error || !authResult.data.user?.id) throw authResult.error ?? new Error('No se creó usuario owner.');
+	if (authResult.error || !authResult.data.user?.id)
+		throw authResult.error ?? new Error('No se creó usuario owner.');
 	const ownerUserId = authResult.data.user.id;
 
 	const business = await must(
@@ -84,19 +85,22 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 	);
 
 	await must(
-		admin.from('business_subscriptions').upsert({
-			business_id: business.id,
-			commercial_access_enabled: true,
-			is_permanent: true,
-			subscription_status: 'active',
-			access_starts_at: new Date().toISOString(),
-			paid_until: null,
-			grace_until: null,
-			restricted_until: null,
-			archived_at: null
-		}, {
-			onConflict: 'business_id'
-		})
+		admin.from('business_subscriptions').upsert(
+			{
+				business_id: business.id,
+				commercial_access_enabled: true,
+				is_permanent: true,
+				subscription_status: 'active',
+				access_starts_at: new Date().toISOString(),
+				paid_until: null,
+				grace_until: null,
+				restricted_until: null,
+				archived_at: null
+			},
+			{
+				onConflict: 'business_id'
+			}
+		)
 	);
 	await must(
 		admin.from('allowed_emails').upsert({
@@ -234,10 +238,14 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 const cleanupFixture = async (admin: SupabaseClient, fixture: Partial<Fixture> | null) => {
 	if (!fixture) return;
 	const operations: Array<PromiseLike<{ error: unknown }>> = [];
-	if (fixture.businessId) operations.push(admin.from('businesses').delete().eq('id', fixture.businessId));
-	if (fixture.ownerEmail) operations.push(admin.from('allowed_emails').delete().eq('email', fixture.ownerEmail));
+	if (fixture.businessId)
+		operations.push(admin.from('businesses').delete().eq('id', fixture.businessId));
+	if (fixture.ownerEmail)
+		operations.push(admin.from('allowed_emails').delete().eq('email', fixture.ownerEmail));
 	if (fixture.suffix) {
-		operations.push(admin.from('allowed_emails').delete().like('email', `e2e-prof-${fixture.suffix}%@example.com`));
+		operations.push(
+			admin.from('allowed_emails').delete().like('email', `e2e-prof-${fixture.suffix}%@example.com`)
+		);
 	}
 
 	for (const operation of operations) {
@@ -250,7 +258,10 @@ const cleanupFixture = async (admin: SupabaseClient, fixture: Partial<Fixture> |
 	]);
 	for (const userId of authUserIds) {
 		const { error } = await admin.auth.admin.deleteUser(userId);
-		if (error && !String((error as { message?: string }).message ?? '').includes('User not found')) {
+		if (
+			error &&
+			!String((error as { message?: string }).message ?? '').includes('User not found')
+		) {
 			throw error;
 		}
 	}
@@ -262,15 +273,26 @@ const login = async (page: Page, fixture: Fixture) => {
 };
 
 const assertOwnerIdentity = async (page: Page, admin: SupabaseClient, fixture: Fixture) => {
-	const token = (await page.context().cookies()).find(cookie => cookie.name === 'sb-access-token');
+	const token = (await page.context().cookies()).find(
+		(cookie) => cookie.name === 'sb-access-token'
+	);
 	if (!token) throw new Error('La sesión dueña no conservó su cookie de acceso.');
 	const { data, error } = await admin.auth.getUser(token.value);
 	expect(error).toBeNull();
-	expect(data.user?.id, 'Auth debe conservar la identidad dueña al registrar otro integrante').toBe(fixture.ownerUserId);
-	const { data: membership, error: membershipError } = await admin.from('business_users')
-		.select('role,status').eq('business_id', fixture.businessId).eq('user_id', fixture.ownerUserId).single();
+	expect(data.user?.id, 'Auth debe conservar la identidad dueña al registrar otro integrante').toBe(
+		fixture.ownerUserId
+	);
+	const { data: membership, error: membershipError } = await admin
+		.from('business_users')
+		.select('role,status')
+		.eq('business_id', fixture.businessId)
+		.eq('user_id', fixture.ownerUserId)
+		.single();
 	expect(membershipError).toBeNull();
-	expect(membership, 'el alta de un integrante no debe modificar el rol del dueño').toMatchObject({ role: 'owner', status: 'active' });
+	expect(membership, 'el alta de un integrante no debe modificar el rol del dueño').toMatchObject({
+		role: 'owner',
+		status: 'active'
+	});
 };
 
 const postAction = async (
@@ -318,7 +340,13 @@ const expectAppointmentCreated = (result: { status: number; text: string; url: s
 
 const openDayAppointmentsPanel = async (page: Page) => {
 	const heading = page.getByRole('heading', { name: /Turnos del día|Resultado de búsqueda/ });
-	if (await heading.first().isVisible({ timeout: 1000 }).catch(() => false)) return;
+	if (
+		await heading
+			.first()
+			.isVisible({ timeout: 1000 })
+			.catch(() => false)
+	)
+		return;
 	const button = page.getByRole('button', { name: 'Ver turnos del día' });
 	await expect(button).toBeVisible();
 	await button.click();
@@ -327,7 +355,9 @@ const openDayAppointmentsPanel = async (page: Page) => {
 
 const openReprogramPanel = async (page: Page) => {
 	const panel = page.locator('details#reprogramar');
-	const isOpen = await panel.evaluate((node) => (node as HTMLDetailsElement).open).catch(() => false);
+	const isOpen = await panel
+		.evaluate((node) => (node as HTMLDetailsElement).open)
+		.catch(() => false);
 	if (!isOpen) await panel.locator('summary').click();
 	await expect(panel.getByRole('heading', { name: 'Reprogramar' })).toBeVisible();
 	return panel;
@@ -360,7 +390,10 @@ const replaceNumberLikeAUser = async (input: Locator, value: string) => {
 };
 
 test.describe('roles, profesionales y agenda - regresiones críticas', () => {
-	test.skip(!allowDestructive || !supabaseUrl || !serviceRoleKey, 'Requiere E2E_ALLOW_DESTRUCTIVE=true y ODONTO_SUPABASE_* local/staging.');
+	test.skip(
+		!allowDestructive || !supabaseUrl || !serviceRoleKey,
+		'Requiere E2E_ALLOW_DESTRUCTIVE=true y ODONTO_SUPABASE_* local/staging.'
+	);
 
 	let admin: SupabaseClient;
 	let fixture: Fixture | null = null;
@@ -374,7 +407,10 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await cleanupFixture(admin, fixture);
 	});
 
-	test('crea rol profesional pendiente sin duplicar perfiles y mantiene agenda coherente', async ({ page, browser }) => {
+	test('crea rol profesional pendiente sin duplicar perfiles y mantiene agenda coherente', async ({
+		page,
+		browser
+	}) => {
 		test.setTimeout(240_000);
 		if (!fixture) throw new Error('Fixture no inicializado.');
 		await login(page, fixture);
@@ -388,27 +424,56 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await openAddMemberModal(page);
 		await page.getByLabel('Email').fill(pendingProfessionalEmail);
 		await page.getByRole('button', { name: 'Siguiente' }).click();
-		await page.getByRole('button', { name: 'Profesional Atiende turnos y accede a sus pacientes.' }).click();
+		await page
+			.getByRole('button', { name: 'Profesional Atiende turnos y accede a sus pacientes.' })
+			.click();
 		await page.getByRole('button', { name: 'Siguiente' }).click();
 		await page.getByPlaceholder('Nombre y apellido').fill(pendingProfessionalName);
 		await page.getByRole('button', { name: 'Siguiente' }).click();
 		// Paso Servicios: Consulta y Otro servicio vienen incluidos.
 		await expect(page.getByText('Servicios que ofrece')).toBeVisible();
-        // Render the same in-progress task through the complete planned width/theme matrix.
-        // Theme fixture changes only presentation; the eventual saved profile is read back below.
-        const wizardCoverage: {width:number;theme:string}[]=[];
-        for(const width of [320,390,768,1280,1600]) for(const theme of ['light','dark']){
-            await page.setViewportSize({width,height:900});
-            await page.evaluate(theme=>{localStorage.setItem('theme',theme);document.documentElement.classList.toggle('dark',theme==='dark');},theme);
-            expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-            expect(await page.locator('form[action="?/add_user"] input:visible,form[action="?/add_user"] button:visible').evaluateAll(nodes=>nodes.some(node=>{const r=node.getBoundingClientRect();return r.left< -1||r.right>innerWidth+1||r.width<10;}))).toBe(false);
-            await page.screenshot({path:test.info().outputPath(`team-wizard-${width}-${theme}.jpg`),type:'jpeg',quality:60,animations:'disabled'});
-            wizardCoverage.push({width,theme});
-        }
-        expect(wizardCoverage).toHaveLength(10);
-        await test.info().attach('team-wizard-responsive-coverage',{body:JSON.stringify(wizardCoverage),contentType:'application/json'});
-        await page.setViewportSize({width:1280,height:900});
-        await page.evaluate(()=>{localStorage.setItem('theme','light');document.documentElement.classList.remove('dark');});
+		// Render the same in-progress task through the complete planned width/theme matrix.
+		// Theme fixture changes only presentation; the eventual saved profile is read back below.
+		const wizardCoverage: { width: number; theme: string }[] = [];
+		for (const width of [320, 390, 768, 1280, 1600])
+			for (const theme of ['light', 'dark']) {
+				await page.setViewportSize({ width, height: 900 });
+				await page.emulateMedia({ colorScheme: theme === 'dark' ? 'dark' : 'light' });
+				expect(await page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(
+					true
+				);
+				expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+					true
+				);
+				expect(
+					await page
+						.locator(
+							'form[action="?/add_user"] input:visible,form[action="?/add_user"] button:visible'
+						)
+						.evaluateAll((nodes) =>
+							nodes.some((node) => {
+								const r = node.getBoundingClientRect();
+								return r.left < -1 || r.right > innerWidth + 1 || r.width < 10;
+							})
+						)
+				).toBe(false);
+				await page.screenshot({
+					path: test.info().outputPath(`team-wizard-${width}-${theme}.jpg`),
+					type: 'jpeg',
+					quality: 60,
+					animations: 'disabled'
+				});
+				wizardCoverage.push({ width, theme });
+			}
+		expect(wizardCoverage).toHaveLength(10);
+		await test
+			.info()
+			.attach('team-wizard-responsive-coverage', {
+				body: JSON.stringify(wizardCoverage),
+				contentType: 'application/json'
+			});
+		await page.setViewportSize({ width: 1280, height: 900 });
+		await page.emulateMedia({ colorScheme: 'light' });
 
 		await expect(page.getByText('Consulta', { exact: true })).toBeVisible();
 		await expect(page.getByText('Otro servicio', { exact: true })).toBeVisible();
@@ -419,7 +484,9 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await page.getByRole('button', { name: 'Siguiente' }).click();
 		await expect(page.getByText('Servicios incluidos')).toBeVisible();
 		await page.getByRole('button', { name: 'Guardar rol' }).click();
-		await expect(page.getByText('Perfil profesional configurado con rol Profesional.')).toBeVisible();
+		await expect(
+			page.getByText('Perfil profesional configurado con rol Profesional.')
+		).toBeVisible();
 
 		await ensureCategoryOpen(page, /^Profesionales/);
 		await expect(
@@ -458,7 +525,10 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await pendingPage.locator('input[name="password"]').fill(password);
 		await pendingPage.locator('input[name="confirm_password"]').fill(password);
 		await pendingPage.getByLabel(/Leí y acepto/).check();
-		await pendingPage.locator('form').getByRole('button', { name: 'Crear cuenta', exact: true }).click();
+		await pendingPage
+			.locator('form')
+			.getByRole('button', { name: 'Crear cuenta', exact: true })
+			.click();
 		await expect(pendingPage).toHaveURL(/\/odonto\/mis-turnos/);
 		await expect(pendingPage.getByRole('link', { name: 'Mis turnos' })).toBeVisible();
 		await expect(pendingPage.getByRole('link', { name: 'Pacientes' })).toBeVisible();
@@ -478,7 +548,8 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		expect(acceptedInvite?.status).toBe('accepted');
 		expect(acceptedInvite?.accepted_user_id).toBeTruthy();
 		expect(acceptedInvite?.accepted_user_id).not.toBe(fixture.ownerUserId);
-		if (acceptedInvite?.accepted_user_id) fixture.authUserIds.push(String(acceptedInvite.accepted_user_id));
+		if (acceptedInvite?.accepted_user_id)
+			fixture.authUserIds.push(String(acceptedInvite.accepted_user_id));
 
 		const { data: acceptedMembership } = await admin
 			.from('business_users')
@@ -523,15 +594,19 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		});
 		expect(duplicateAttempt.text).toContain('ya está asignado al rol Profesional');
 
-		const createOtherProfessionalAppointment = await postAction(page, '/odonto/agenda?/create_appointment', {
-			service_id: fixture.serviceId,
-			professional_id: fixture.otherProfessionalId,
-			date: fixture.date,
-			time: '10:30',
-			patient_mode: 'existing',
-			idempotency_key: randomUUID(),
-			patient_id: fixture.secondPatientId
-		});
+		const createOtherProfessionalAppointment = await postAction(
+			page,
+			'/odonto/agenda?/create_appointment',
+			{
+				service_id: fixture.serviceId,
+				professional_id: fixture.otherProfessionalId,
+				date: fixture.date,
+				time: '10:30',
+				patient_mode: 'existing',
+				idempotency_key: randomUUID(),
+				patient_id: fixture.secondPatientId
+			}
+		);
 		expectAppointmentCreated(createOtherProfessionalAppointment);
 
 		const createAppointment = await postAction(page, '/odonto/agenda?/create_appointment', {
@@ -572,9 +647,13 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await expect(page.getByRole('button', { name: 'Marcar asistió' })).toHaveCount(0);
 		await expect(page.getByRole('button', { name: 'Marcar no asistió' })).toHaveCount(0);
 
-		const confirmAttempt = await postAction(page, `/odonto/turnos/${appointment?.id}?/update_status`, {
-			status: 'confirmed'
-		});
+		const confirmAttempt = await postAction(
+			page,
+			`/odonto/turnos/${appointment?.id}?/update_status`,
+			{
+				status: 'confirmed'
+			}
+		);
 		expect(confirmAttempt.text).toContain('La confirmación queda reservada al paciente');
 
 		await admin.from('audit_logs').insert([
@@ -601,22 +680,30 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await expect(page.getByText('appointment.public_confirmed')).toHaveCount(0);
 
 		const reprogramPanel = await openReprogramPanel(page);
-		await expect(reprogramPanel.locator('input[type="hidden"][name="reprogram_date"]')).toHaveValue(fixture.date);
+		await expect(reprogramPanel.locator('input[type="hidden"][name="reprogram_date"]')).toHaveValue(
+			fixture.date
+		);
 		await expect(reprogramPanel.getByRole('button', { name: '10:30' })).toHaveCount(1);
 
-		const createSameProfessionalBlock = await postAction(page, '/odonto/agenda?/create_appointment', {
-			service_id: fixture.serviceId,
-			professional_id: fixture.professionalId,
-			date: fixture.date,
-			time: '10:30',
-			patient_mode: 'new',
-			idempotency_key: randomUUID(),
-			patient_name: `E2E Bloqueo ${fixture.suffix}`,
-			patient_phone: `+54911${Math.floor(10000000 + Math.random() * 90000000)}`
-		});
+		const createSameProfessionalBlock = await postAction(
+			page,
+			'/odonto/agenda?/create_appointment',
+			{
+				service_id: fixture.serviceId,
+				professional_id: fixture.professionalId,
+				date: fixture.date,
+				time: '10:30',
+				patient_mode: 'new',
+				idempotency_key: randomUUID(),
+				patient_name: `E2E Bloqueo ${fixture.suffix}`,
+				patient_phone: `+54911${Math.floor(10000000 + Math.random() * 90000000)}`
+			}
+		);
 		expectAppointmentCreated(createSameProfessionalBlock);
 
-		await page.goto(`/odonto/turnos/${appointment?.id}?from_date=${fixture.date}&reprogram_date=${fixture.date}`);
+		await page.goto(
+			`/odonto/turnos/${appointment?.id}?from_date=${fixture.date}&reprogram_date=${fixture.date}`
+		);
 		const reprogramPanelAfterBlock = await openReprogramPanel(page);
 		await expect(reprogramPanelAfterBlock.getByRole('button', { name: '10:30' })).toHaveCount(0);
 
@@ -677,7 +764,9 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		});
 		await targetDayButton.click();
 		await liveDaySlots;
-		await expect(wizard.getByRole('heading', { name: 'Elegí un horario', exact: true })).toBeVisible();
+		await expect(
+			wizard.getByRole('heading', { name: 'Elegí un horario', exact: true })
+		).toBeVisible();
 		await wizard.getByRole('button', { name: '09:45', exact: true }).first().click();
 		const searchPatientButton = wizard.getByRole('button', {
 			name: /^Buscar paciente/
@@ -693,8 +782,12 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		const jointId = page.url().match(/\/odonto\/turnos\/([0-9a-f-]+)/)?.[1];
 		if (!jointId) throw new Error('La interfaz no abrió el detalle del turno conjunto creado.');
 		await expect(page.getByText('Turno conjunto · 2 profesionales', { exact: true })).toBeVisible();
-		await expect(page.getByText(`E2E Profesional Base ${fixture.suffix}`, { exact: true })).toBeVisible();
-		await expect(page.getByText(`E2E Profesional Otro ${fixture.suffix}`, { exact: true })).toBeVisible();
+		await expect(
+			page.getByText(`E2E Profesional Base ${fixture.suffix}`, { exact: true })
+		).toBeVisible();
+		await expect(
+			page.getByText(`E2E Profesional Otro ${fixture.suffix}`, { exact: true })
+		).toBeVisible();
 
 		const { data: jointAppointment, error: jointAppointmentError } = await admin
 			.from('appointments')
@@ -741,15 +834,11 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		// asignaciones en una sola operación.
 		const jointNextDate = addIsoDays(fixture.date, 1);
 		const jointNextStart = `${jointNextDate}T12:00:00.000Z`; // 09:00 en Córdoba.
-		const jointReschedule = await postAction(
-			page,
-			`/odonto/turnos/${jointId}?/reschedule`,
-			{
-				slot_starts_at: jointNextStart,
-				reprogram_date: jointNextDate,
-				ignore_break: 'false'
-			}
-		);
+		const jointReschedule = await postAction(page, `/odonto/turnos/${jointId}?/reschedule`, {
+			slot_starts_at: jointNextStart,
+			reprogram_date: jointNextDate,
+			ignore_break: 'false'
+		});
 		expect(jointReschedule.status).toBeLessThan(500);
 
 		const { data: movedAllocations, error: movedAllocationsError } = await admin
@@ -823,7 +912,9 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await page.getByRole('button', { name: 'Siguiente' }).click();
 		await expect(page.getByText('También atiende pacientes', { exact: true })).toBeVisible();
 		await page.getByRole('button', { name: 'Guardar rol' }).click();
-		await expect(page.getByText('Perfil profesional configurado con rol Administrador.')).toBeVisible();
+		await expect(
+			page.getByText('Perfil profesional configurado con rol Administrador.')
+		).toBeVisible();
 
 		await ensureCategoryOpen(page, /^Administradores/);
 		await expect(page.getByRole('heading', { name: adminEmail, exact: true })).toBeVisible();
@@ -857,7 +948,10 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await adminPage.locator('input[name="password"]').fill(password);
 		await adminPage.locator('input[name="confirm_password"]').fill(password);
 		await adminPage.getByLabel(/Leí y acepto/).check();
-		await adminPage.locator('form').getByRole('button', { name: 'Crear cuenta', exact: true }).click();
+		await adminPage
+			.locator('form')
+			.getByRole('button', { name: 'Crear cuenta', exact: true })
+			.click();
 		await expect(adminPage).toHaveURL(/\/odonto\/agenda/);
 
 		const { data: acceptedInvite, error: acceptedInviteError } = await admin
@@ -867,7 +961,8 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 			.single();
 		if (acceptedInviteError) throw acceptedInviteError;
 		expect(acceptedInvite?.status).toBe('accepted');
-		if (acceptedInvite?.accepted_user_id) fixture.authUserIds.push(String(acceptedInvite.accepted_user_id));
+		if (acceptedInvite?.accepted_user_id)
+			fixture.authUserIds.push(String(acceptedInvite.accepted_user_id));
 
 		const { data: adminMembership } = await admin
 			.from('business_users')
