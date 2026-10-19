@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page, type Route } from '@playwright/test';
-import { signInWithPassword } from './helpers/shared-auth';
+import { loginWithSharedSession } from './helpers/shared-auth';
 import { createFixtureClient, must, write, type FixtureClient } from './helpers/fixture-db';
 
 const supabaseUrl = process.env.ODONTO_SUPABASE_URL;
@@ -275,9 +275,14 @@ const cleanupPartialFixture = async (admin: FixtureClient) => {
 	partialFixture.businessId = '';
 };
 
+// Reuse one real session across the cases: each password sign-in counts toward the
+// per-email login limit, which stays enabled.
 const login = async (page: Page, fixture: Fixture) => {
-	await signInWithPassword(page, fixture.ownerEmail, password);
-	await expect(page.getByRole('link', { name: 'Agenda' })).toBeVisible({ timeout: 15_000 });
+	await loginWithSharedSession(page, {
+		email: fixture.ownerEmail,
+		password,
+		readyLinkNames: ['Agenda']
+	});
 };
 
 const boxesDoNotOverlap = async (left: Locator, right: Locator) => {
