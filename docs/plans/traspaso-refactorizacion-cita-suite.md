@@ -2,9 +2,63 @@
 
 ## Estado de este documento
 
-**En preparación durante el cierre de etapa 5. La etapa 5 continúa abierta hasta que su matriz de aceptación y su revisión visual tengan evidencia positiva.** Este aviso deberá sustituirse por el recibo exacto de cierre; no interpretar la existencia de este archivo como certificación. La campaña completa no está terminada.
+**RELEVO INMEDIATO SOLICITADO POR EL USUARIO — 19 de octubre de 2026, alrededor de 06:02 UTC. La etapa 5 sigue ABIERTA.** El usuario indicó: «actualiza traspado que ya se acaba la cuota, sigue opus ahora mismo». Se entrega el estado actual sin dar por terminada la etapa ni continuar hacia la 6. La campaña completa no está terminada.
 
 La instrucción vigente de esta intervención es cerrar la fase 5, avisar inmediatamente al usuario y detenerse antes de fase 6, dejando el resto listo para continuidad. No reduce el plan ni sus garantías.
+
+## Punto exacto del relevo: leer antes de ejecutar
+
+### Corrida que quedó trabajando
+
+- **Full `39207125504`**, en `Juan4787/cita-suite-verificacion`, fuente **`09dec4ebca98afbfcdde7f025cd648c584eee535`**, digest **`fc2a07b9245dceb386fd1ece6e600bb53ea666d396ac8bede338a1bdef40d127`**. Última consulta: `in_progress`, paso `Verify sequentially`, 19-oct 06:01:44 UTC. No se canceló ni se lanzó otra corrida pesada. Consultar su resultado y recuperar sus logs antes de repetir.
+- Esa fuente **NO contiene las cuatro correcciones visuales posteriores ni el nuevo helper de captura** descritos debajo. Aunque full apruebe, no certifica esos cambios posteriores. Sí puede dar evidencia válida de sus propios tipos, SQL, carreras, backend y medición de Natalia.
+- El snapshot de relevo posterior preserva archivos y documentación en el auxiliar, pero **no se lanzó verificación nueva sobre él**. Obtener su SHA/digest de `.verification/ci-source.json` y de la referencia `refs/verification/maintainability-20261015`. El HEAD de trabajo permanece `80268e2a501198243996e1bdb0048ce066434727`; no confundirlo con el snapshot probado.
+
+### Últimos resultados comprobados
+
+- Fast `39186305257`, fuente `87e79eec1e7d21c34ad8981c932258f9046ea0f2`: tipos, fronteras, 59 guardas, **1.264 servidor y 167 cliente**, todos aprobados. Paquete recuperado `.verification/remote-39186305257/`, SHA256 `495caf3a75e4f106d6db02b1bd9fcdbfb9274b9cf11516628f2361536d02fee8`.
+- SQL `39183067318` aprobado sobre `7c6a4034b9ef2059bb598ddd11c8fd8061225bcd`: todas las suites/carreras, incluidos 20 controles de registro, dos carreras de revocación de registro y auditoría de Equipo. **La variante posterior `FOR NO KEY UPDATE` del registro necesita la repetición del full actual.** Tipos oficiales reproducibles: SHA256 `497ee1245ed0f7c4ab1d1660caed3470e4ea1071cf869b9d496c1104698cfe1d`.
+- Diagnóstico de navegador **`39206541967`**, fuente **`af5a2b630a7c4150a9f5a97da0caa1e64a550c90`**, digest `d91a1c31e09924d684b91ea188b7a99f03fb888a9864c4a00350032e292f3407`: **7 casos aprobados, 1 fallido en afterEach, 0 omitidos**. Matrices efectivamente recorridas: ficha 50 combinaciones; profesional 10; wizard 10; manual 10; público 20. No es full positivo ni cierre visual.
+- La octava prueba también realizó alta/aceptación/perfil/horario de administrador, pero falló limpiando Auth: `SQLSTATE23503`. Faltaba eliminar el correo `e2e-admin-prof-*` creado por esa fixture; `allowed_emails.created_by/updated_by` conserva FK hacia el creador. En `09dec4e` se sustituyó el wildcard anterior por `IN` de los **dos correos sintéticos exactos** de la suite, antes de borrar las cuentas. No se alteró ninguna FK ni se ignoró el error. Full actual debe comprobar la reparación y ausencia de errores Auth/deadlocks.
+- Evidencia del diagnóstico: `.verification/remote-39206541967/`, paquete SHA256 **`bb218fa3957dd7843035bb72b28d05a68ac860a17037f518907b27e92d14bfdc`**. Recibo/runId de integración **`2e2fb014-cabf-428a-b42e-81b0f49d1e59`**; plataforma con deadlocks 0 y el único error Auth de limpieza identificado.
+
+### Qué encontró la inspección visual propia y qué quedó editado SIN VERIFICAR
+
+Se abrió una ronda propia de **61 capturas**, todos los anchos del plan y estados representativos. Un intento de visualización `detail=low` fue rechazado por la herramienta; esas imágenes se volvieron a abrir con detalle admitido. La inspección real encontró defectos que la geometría de «no desbordar el documento» no detectaba:
+
+1. **Historia clínica en 320/390:** el botón de detalles comparte una fila flexible con costo/Editar y puede comprimirse a una columna casi ilegible. El detalle completo queda debajo de una cabecera extremadamente alta. Se editó `apps/web/src/lib/components/patients/PatientHistoryPanel.svelte`: cabecera de entrada en grid de una columna, dos sólo desde `sm`, botón de detalle `w-full min-w-0`. **No probado después de editar.**
+2. **Cabecera de paciente en 768 con nombre largo:** nombre y acciones compiten por el ancho; «Archivar paciente» y otras acciones quedan con letras casi verticales. En `apps/web/src/routes/odonto/pacientes/[id]/+page.svelte` se pasó a grid, columnas separadas recién en `xl`, acciones con wrap y sin encogerse, botón móvil de acciones `shrink-0`. Nombre completo y permisos preservados. **No probado.**
+3. **Estado de profesional en escritorio:** nombre largo encoge el badge «Visible en reservas» hasta romperlo por letras. En `ProfessionalEditor.svelte`, el bloque del nombre ahora es `min-w-0 flex-1` y el de estado/guardar `shrink-0`. **No probado.**
+4. **Wizard en 320:** progreso de seis pasos aprieta «Agregar integrante» hasta partir la palabra. En `TeamMemberWizard.svelte`, encabezado apila título y progreso en móvil; fila desde `sm`; progreso sin encoger. **No probado.**
+5. **Capturas que no muestran su tarea:** manual muestra avisos/agenda por encima del selector; perfil de paciente muestra la cabecera larga; carga/error no deja ver el mensaje; formulario público muestra resúmenes anteriores y casi ningún campo. Son capturas inválidas para certificar esas tareas, aunque la interacción/DOM haya aprobado. **No enviarlas al revisor ni declarar aprobación visual.**
+
+Se creó **`apps/web/e2e/helpers/task-capture.ts`**, exporta `alignTaskForCapture(anchor: Locator)`: desplaza la tarea debajo del header sticky/fixed y exige que esté en viewport. **Todavía no tiene consumidores ni verificación de tipos/navegador.** El trabajo se interrumpió inmediatamente después de escribir este helper y las cuatro correcciones visuales; no se llegaron a modificar los tres specs para usarlo.
+
+### Siguiente trabajo concreto, sin reconstruir el plan
+
+1. Releer el plan íntegro y contrastar este relevo/registro. Consultar full39207125504 y recuperar evidencia con el colector. Investigar primero cualquier fallo real; no atribuir suites no ejecutadas.
+2. Completar la misma tanda visual ya identificada, sin abrir un rediseño nuevo. Conectar `alignTaskForCapture` en:
+   - `apps/web/e2e/booking-embed.spec.ts`: selector manual anclado al h2 «Elegí un día»; perfil profesional al heading «Perfil»; horario al heading «Horarios de atención»; formulario público a `.patient-booking-summary` o al formulario real `.patient-booking-form`, para ver los campos y su orden. Se pueden agregar capturas de la región completa del formulario cuando sean necesarias, identificándolas como región y sin simular viewport.
+   - `apps/web/e2e/patient-structure-ux.spec.ts`: historial anclado al botón de detalles; Datos al heading «Datos del paciente»; espera/error al mensaje correspondiente. Los dialogs ya capturan la tarea correcta. Conservar foco y las 50 combinaciones.
+   - `apps/web/e2e/roles-agenda-regression.spec.ts`: alta anclada al encabezado/paso del wizard.
+3. Añadir comprobaciones proporcionadas para los fallos reales: ancho legible del botón de detalles de historia (la ausencia de overflow no basta), acciones de cabecera sin altura de letras verticales, badge profesional no comprimido y heading de alta sin palabra partida por el progreso. No comparar sólo clases CSS ni debilitar las condiciones existentes.
+4. Crear snapshot con la allowlist, empujar **sólo al auxiliar** y verificar secuencialmente. Puede usarse `level=browser` con `browser_grep=isolated booking integration|patient structure|roles, profesionales` para diagnóstico; no sustituye full. Los diagnósticos actuales usan `--max-failures=1`; si se quiere reunir fallos independientes, puede adaptarse sólo ese modo sin permitir que informe éxito con fallos. No ejecutar pruebas locales pesadas.
+5. Recuperar las nuevas capturas, reemplazar el paquete de revisión con evidencia válida del código actual y completar la **segunda ronda propia** de confirmación de esta tanda. No reutilizar las imágenes actuales como si mostraran el código recién corregido. Si una puerta de implementación/captura sigue abierta, resolverla; el límite de pulido no autoriza certificar una falla.
+6. Ejecutar detector Impeccable **una sola vez** sobre los targets cambiados, después de inspección válida. **Todavía NO se ejecutó**; sólo se consultó `detect --help`. Abrir revisión fresca `impeccable_finish_reviewer` sin historial (`fork_turns: none`), con todos los anchos/capturas requeridos, dirección, PRODUCT/DESIGN/craft-floor, hallazgos y alcance. No leer definiciones de agentes ni usar agentes anteriores con contexto heredado. Después, documenter fresco con frontera de escritura documental. **Ninguno de ambos se ejecutó para este cierre.**
+7. Full final positivo de la revisión exacta, incluyendo todas las suites SQL/carreras, 35 casos locales de navegador previstos, demo y medición de Natalia. Confirmar los recuentos efectivos, cero omitidos/retries y diagnósticos de plataforma. La medición de Natalia aún no tenía resultado positivo cuando se pidió el relevo; revisar si full39207125504 llegó a ella.
+8. Actualizar matriz de aceptación punto por punto, mapa, informe UI, registro, manifiesto y este traspaso. Sólo entonces avisar inmediatamente «fase5 terminada» y **detenerse antes de6**. No anunciar campaña terminada ni ausencia total de deuda.
+
+### Capturas y diagnósticos que recibe el siguiente agente
+
+- Dirección: `.impeccable/review/structure-20261018/direction.md`. Revisión Operate que preserva el sistema existente, sin comp ni identidad nueva.
+- 61 originales copiados sin editar a `.impeccable/review/structure-20261018/`, manifiesto `captures.json`; copia versionable **`docs/architecture/etapa5-capturas.json`** con SHA/dimensiones/ruta del archivo dentro del paquete remoto. **Ronda1, hallazgos abiertos, NO listo para review.** Incluye dos alias desktop/mobile que provienen del harness iframe histórico: sustituirlos por capturas nativas pertinentes antes de presentar el paquete como revisión de la reserva nativa.
+- Los árboles de aplicación/SQL de af5a2b6 y09dec4e eran idénticos al seleccionar las capturas; se verificó con diff **entre los dos commits de snapshot**. Las correcciones visuales posteriores hacen que ya no representen el árbol de trabajo actual.
+- **Cuidado con Git y los archivos nuevos:** muchos archivos de la campaña siguen sin seguimiento en el índice real. `git diff <snapshot> -- ...` contra el árbol de trabajo puede presentarlos falsamente como eliminados aunque existan. Comparar el manifiesto de `.verification/ci-source.json` y los blobs mediante `git hash-object --stdin-paths`, o crear snapshot aislado. Nunca restaurar/borrar archivos para «corregir» ese falso diff. No se borraron esos archivos.
+- Observador `apps/web/e2e/helpers/render-health.ts`: conserva categorías/paths sin valores ni URLs/query. Realtime no corre en fixture; acepta sólo handshake404 contra el origen loopback exacto y en `disposable`. Último diagnóstico: manual3, profesional15, ficha51 y wizard2 mensajes de esa categoría; público0. Ficha exactamente un HTTP500 inyectado en GET `/datos`; ningún otro fallo de red/HTTP ni mensaje desconocido. Esto no prueba transporte Realtime alojado.
+- Los dos conflictos de profesional son sobres **HTTP200 / ActionResult failure / status409**, comprobados en las acciones concretas `update_service` y `save_all` con readback SQL. No volver a esperar HTTP409 ni crear excepciones globales 4xx para hacer pasar el observador. Esta precisión se verificó contra el código primario fijado de SvelteKit.
+- Aranceles ya corrigió el main anidado: región principal en layout, sección interior rotulada. Native sources `.ux-native-source` son campos invisibles de1px con aria-hidden/tabindex-1; geometría mide `.ux-control-trigger` visible, no el auxiliar. No cambiar el control personalizado para arreglar un falso positivo del arnés.
+
+El relevo inmediato modifica el momento de entrega, **no reduce ninguna garantía ni criterio de cierre**. Se conservaron todos los cambios y no se desplegó, migró ni renombró producción.
 
 ## Autoridad, orden de lectura y conservación
 

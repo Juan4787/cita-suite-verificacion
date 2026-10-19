@@ -1,0 +1,438 @@
+{
+  "status": "Own inspection round1 completed; material defects and invalid task framing found; NOT review-ready.",
+  "run": 39206541967,
+  "source": "af5a2b630a7c4150a9f5a97da0caa1e64a550c90",
+  "packageSha256": "bb218fa3957dd7843035bb72b28d05a68ac860a17037f518907b27e92d14bfdc",
+  "scope": "Screens from seven independently passed diagnostic cases. Eighth case failed only fixture Auth cleanup. Product/UI/SQL trees identical to full candidate09dec4e; no hosted evidence. Preference dark does not imply a private light theme.",
+  "captures": [
+    {
+      "file": ".impeccable/review/structure-20261018/manual-appointment-320-dark.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-96bc1-ses-with-a-working-recovery/manual-appointment-320-dark.jpg",
+      "sha256": "a0c5942189e8fa72eb47f13d8af9fad2b14d807a75747aaf82a2ad323f205b49",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-320-dark-profile.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-eb3ca-five-widths-and-both-themes/team-320-dark-profile.jpg",
+      "sha256": "22c5337640ada180ca787977ec8ad1447499b0fba639e0858539ab4cab7ce9cb",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-320-dark-schedule.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-eb3ca-five-widths-and-both-themes/team-320-dark-schedule.jpg",
+      "sha256": "f1f95e5c84b173215acdd878b2e514f833b037823991db8a222c8e531c99a3fc",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-wizard-320-dark.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/roles-agenda-regression-ro-2d7b0-y-mantiene-agenda-coherente/team-wizard-320-dark.jpg",
+      "sha256": "35e3a6ac096d22f292b62e016c7d18fdac140af03d2d22a13b68a9b7b9dc4f3f",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/owner-320-dark-profile.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/owner-320-dark-profile.jpg",
+      "sha256": "1d2460615ef9a68343d6808af8d2066d907195cf2d393df35fc6c064ddd01438",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/owner-320-dark-history.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/owner-320-dark-history.jpg",
+      "sha256": "deafc96ba1c62a4ef2546ff7736851ae41a866ff87e2d66bffb9a7db667622c7",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/public-cita-suite-320-dark-final.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-f7f7a-sive-at-every-planned-width/public-cita-suite-320-dark-final.jpg",
+      "sha256": "031fadec400637c007d14691c9161abfc7d79ea28bcb209a38e0f1baeeaecb40",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/public-natalia-320-light-final.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-f7f7a-sive-at-every-planned-width/public-natalia-320-light-final.jpg",
+      "sha256": "68c80d1a5307a09f3c93198ea11c02f425fd1193622efc74a2791a105b0f544a",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/public-natalia-320-dark-final.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-f7f7a-sive-at-every-planned-width/public-natalia-320-dark-final.jpg",
+      "sha256": "24eef4f04bd5c616b77ff2581ae3111647638d093fb41bb467e056f4e3099537",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/manual-appointment-390-dark.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-96bc1-ses-with-a-working-recovery/manual-appointment-390-dark.jpg",
+      "sha256": "14fdfe3319e13370701dbcaa6f4c73a0bb7824b125e72177322295790a3b85eb",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-390-dark-profile.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-eb3ca-five-widths-and-both-themes/team-390-dark-profile.jpg",
+      "sha256": "d3a67735339731273b5d9fddfc2c1f426874d4ed04252600b4e916b762ea8d73",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-390-dark-schedule.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-eb3ca-five-widths-and-both-themes/team-390-dark-schedule.jpg",
+      "sha256": "a3a858610a4b19f9650a072b05f62c7a5e6f2a0d29fbb6b37876dd627835b9d1",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-wizard-390-dark.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/roles-agenda-regression-ro-2d7b0-y-mantiene-agenda-coherente/team-wizard-390-dark.jpg",
+      "sha256": "6a2089761d232bf3fbf7de03b3f007e6a7af46d4acb20ab002c56ed7faf6611b",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/owner-390-dark-profile.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/owner-390-dark-profile.jpg",
+      "sha256": "4b50b3556b8cbe410e5d12379c853070b925392275d314b37b47a9b73baa6156",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/owner-390-dark-history.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/owner-390-dark-history.jpg",
+      "sha256": "8ce7ca631be87eab10c79d815a3f64d2916b4a0bea84a1b843a4e15350e56dcf",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/public-cita-suite-390-dark-final.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-f7f7a-sive-at-every-planned-width/public-cita-suite-390-dark-final.jpg",
+      "sha256": "c29f0745548d26a4f2548a70c05dbb2e1102a8a25edca20cfe7603e065b36f98",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/public-natalia-390-light-final.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-f7f7a-sive-at-every-planned-width/public-natalia-390-light-final.jpg",
+      "sha256": "fa1a66bbb9899b1f84d6519206c7f619b4519b9df715d3f7d2640621f783c565",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/public-natalia-390-dark-final.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-f7f7a-sive-at-every-planned-width/public-natalia-390-dark-final.jpg",
+      "sha256": "34c76b658981070186d3accd48a8b432086773cb45b880ff2dd7fad294da295b",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/manual-appointment-768-dark.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-96bc1-ses-with-a-working-recovery/manual-appointment-768-dark.jpg",
+      "sha256": "765c0b47782b394ea2b38d6bb4f962089e366354853f0ac4eadaa7f08fdcbd3f",
+      "width": 768,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-768-dark-profile.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-eb3ca-five-widths-and-both-themes/team-768-dark-profile.jpg",
+      "sha256": "b9e551f6ae0ca4c0f71923aa9b1d0f694d91fa068c7c1ec13945bffbca4fd29e",
+      "width": 768,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-768-dark-schedule.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-eb3ca-five-widths-and-both-themes/team-768-dark-schedule.jpg",
+      "sha256": "6ab4922c5f7068ae9eba311d24ce71ba7b88b4d7de0747a0fd403a8f0831dfff",
+      "width": 768,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-wizard-768-dark.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/roles-agenda-regression-ro-2d7b0-y-mantiene-agenda-coherente/team-wizard-768-dark.jpg",
+      "sha256": "e0ae7c0984c4bf5aeaa59734a8469face336991c769607a9e1a25da475e7825e",
+      "width": 768,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/owner-768-dark-profile.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/owner-768-dark-profile.jpg",
+      "sha256": "12509590b1ba6945a2d1893eef6232062ef9fc802278f635c3f780fcab9e6a22",
+      "width": 768,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/owner-768-dark-history.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/owner-768-dark-history.jpg",
+      "sha256": "6896801f7f25142e4aa6cd92d5634a329b4a272a417c6f4949b46fdd841b3cc6",
+      "width": 768,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/public-cita-suite-768-dark-final.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-f7f7a-sive-at-every-planned-width/public-cita-suite-768-dark-final.jpg",
+      "sha256": "612c04d1a978db08b3c9cf96daf29493e36fa62847091ecfd1067ea22a8078aa",
+      "width": 768,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/public-natalia-768-light-final.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-f7f7a-sive-at-every-planned-width/public-natalia-768-light-final.jpg",
+      "sha256": "823147f08bdeb128ed7f4552f27e4f8f08cc6be73a6c9e0289879e0a661b88df",
+      "width": 768,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/public-natalia-768-dark-final.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-f7f7a-sive-at-every-planned-width/public-natalia-768-dark-final.jpg",
+      "sha256": "847c3a31d8418865683a4c7218f8b10ccfa1b2e2f73c55aeb10a00e7acfa81b8",
+      "width": 768,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/manual-appointment-1280-dark.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-96bc1-ses-with-a-working-recovery/manual-appointment-1280-dark.jpg",
+      "sha256": "028c3f55862fe4ccebfa9bb78cdb2e9a5f2d020a28ded4135d90b70dcb00e522",
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-1280-dark-profile.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-eb3ca-five-widths-and-both-themes/team-1280-dark-profile.jpg",
+      "sha256": "507830e0861c5d37bc87142119fb031ea3f79198fc6e231488b660e93d7a0739",
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-1280-dark-schedule.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-eb3ca-five-widths-and-both-themes/team-1280-dark-schedule.jpg",
+      "sha256": "26a04972443419f60948a6593785fcdcbedfbe26db670cda1fc582d5492dfeda",
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-wizard-1280-dark.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/roles-agenda-regression-ro-2d7b0-y-mantiene-agenda-coherente/team-wizard-1280-dark.jpg",
+      "sha256": "88416275c7c4e4b7bacbb2f5d575461779172fa353f86fa4a7d3474028b867dd",
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/owner-1280-dark-profile.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/owner-1280-dark-profile.jpg",
+      "sha256": "26618a6560ed77d5c8a8d8bdafb21165a060dd0ea412844763a30027f0a07845",
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/owner-1280-dark-history.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/owner-1280-dark-history.jpg",
+      "sha256": "2adfc87f47491e44704b79539b78b42caf7bc87959b0f017975024267119257e",
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/public-cita-suite-1280-dark-final.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-f7f7a-sive-at-every-planned-width/public-cita-suite-1280-dark-final.jpg",
+      "sha256": "d8fcd638165c2b6bc473807beee7861e51e8ebef8e36d8d8fabf3f04768762ec",
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/public-natalia-1280-light-final.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-f7f7a-sive-at-every-planned-width/public-natalia-1280-light-final.jpg",
+      "sha256": "7489be85a2aa40074c2695fed5225e2d4703d04ecd056a347cde2039726d63ba",
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/public-natalia-1280-dark-final.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-f7f7a-sive-at-every-planned-width/public-natalia-1280-dark-final.jpg",
+      "sha256": "92226e1d30bbeed7728c7ccf0db210db4fd4479665b3f3321a3b1fdf83eda054",
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/manual-appointment-1600-dark.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-96bc1-ses-with-a-working-recovery/manual-appointment-1600-dark.jpg",
+      "sha256": "547b15d0631c4fdaceff8c97257da2414dcb4f5d090be7b19ebf26647633206f",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-1600-dark-profile.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-eb3ca-five-widths-and-both-themes/team-1600-dark-profile.jpg",
+      "sha256": "62a5afeefe2dc451a74dfc32f4a3aa49881ef418643a0c29fd821cbd48fabb9b",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-1600-dark-schedule.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-eb3ca-five-widths-and-both-themes/team-1600-dark-schedule.jpg",
+      "sha256": "0c0d9af9c124b29940f3a26a960323229235c77d633441d2c23417b1f257deaa",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-wizard-1600-dark.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/roles-agenda-regression-ro-2d7b0-y-mantiene-agenda-coherente/team-wizard-1600-dark.jpg",
+      "sha256": "af182e777e77506b9c7e19da9dd7b079b03b0acbcc4b4b9a186b1c0691ffb813",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/owner-1600-dark-profile.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/owner-1600-dark-profile.jpg",
+      "sha256": "2752dbff43951e33781fb61e44f957a7d9906cca05324f54e83061ba06f81554",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/owner-1600-dark-history.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/owner-1600-dark-history.jpg",
+      "sha256": "bc7f77bd3b0c27aa5335bc414d71c5b0e35bf17a47fb49ebf9e74d7168c66a6a",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/public-cita-suite-1600-dark-final.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-f7f7a-sive-at-every-planned-width/public-cita-suite-1600-dark-final.jpg",
+      "sha256": "82ad523700881d0e28dc4df22a842bafa61aa70b234abf40106207b8fafbca35",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/public-natalia-1600-light-final.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-f7f7a-sive-at-every-planned-width/public-natalia-1600-light-final.jpg",
+      "sha256": "e4dfa0d88bc16027604b70461df47a46c461baa50d90662663b807fbd105930f",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/public-natalia-1600-dark-final.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-f7f7a-sive-at-every-planned-width/public-natalia-1600-dark-final.jpg",
+      "sha256": "999e3c582ba126a78efa40ce0d0a794e47b190eb361009f9417c1a9907064740",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-390-light-service-dialog.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-eb3ca-five-widths-and-both-themes/team-390-light-service-dialog.jpg",
+      "sha256": "203a7d0a1b8e7f9ac3f649c9661c1e437013708cc04421ee975a58f9573c05c8",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/team-1280-dark-service-dialog.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-eb3ca-five-widths-and-both-themes/team-1280-dark-service-dialog.jpg",
+      "sha256": "224dba1fd5e9c90e655131215cf7137cf548409624fafe810630ad221c4fc77f",
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/owner-390-dark-edit.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/owner-390-dark-edit.jpg",
+      "sha256": "cf1852fc96a13baf7762241fa791998c60322c87c8dba1e236fa2749a4acbdee",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/owner-1280-dark-edit.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/owner-1280-dark-edit.jpg",
+      "sha256": "e6f545a64fd264529107f01acf78588762e237da8e2fda99fbd8ecf79323a734",
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/admin-390-light-profile.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/admin-390-light-profile.jpg",
+      "sha256": "d0cbfeac4d467e6cb90f98657f9ef1c69ff8a2da2ac3bb08295c27e51729cabb",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/professional-390-light-profile.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/professional-390-light-profile.jpg",
+      "sha256": "94f9253f2d8ae0a6ed5c19f3bc5fa78095a5dbe89c383166159fa35acaf15bb4",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/readonly-390-light-profile.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/readonly-390-light-profile.jpg",
+      "sha256": "b359d398583f85626b02e565dc5e869f37aee4b4e3a71df9b17609027db8ef6f",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/reception-390-light-profile.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/reception-390-light-profile.jpg",
+      "sha256": "41c14bbe89f72820d73cb76aa016bcbb781f513bf12b79e71111cc0356146c4a",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/simulated-profile-loading.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/simulated-profile-loading.jpg",
+      "sha256": "e0234c66994e83469764767f3cf09dad33a1da713eb995efb79aaa39ada18e25",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/simulated-profile-error.jpg",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/patient-structure-ux-patie-fb692-rivate-design-remains-dark-/simulated-profile-error.jpg",
+      "sha256": "c02e8c0971a05668d6328a40517ac4a54c084e1077fdb894d464f1b4e17e84bd",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/availability-empty-natalia-320.png",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-50548--keyboard-and-mobile-layout/availability-empty-natalia-320.png",
+      "sha256": "92c8620c4e7990848f7df3b58ddfd50af9f20aede9ea54e42737316f2277a0dc",
+      "width": 320,
+      "height": 1011
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/availability-empty-natalia-1280.png",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-50548--keyboard-and-mobile-layout/availability-empty-natalia-1280.png",
+      "sha256": "1072d1acc7ec56cd6b9ba82e1a747bb0cc89cfb545f602d4b2b088a0e007bbf7",
+      "width": 1280,
+      "height": 934
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/availability-internal-error-mobile.png",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-96bc1-ses-with-a-working-recovery/availability-internal-error-mobile.png",
+      "sha256": "8818a6c26d720ae208e5424cb5ac947fc7ad6e33548e5255427ca101c874233e",
+      "width": 320,
+      "height": 2112
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/availability-internal-error-desktop.png",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-96bc1-ses-with-a-working-recovery/availability-internal-error-desktop.png",
+      "sha256": "a4437e7259cf93cf0a12b2d1cf27c61a81c90b23bf9c15facdea2c3e1597b448",
+      "width": 1280,
+      "height": 1435
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/desktop.png",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-84571-policy-with-the-native-page/cita-booking-desktop.png",
+      "sha256": "bfd10288ec6fd9ba8632e12642bdf1c63c1660eebb8c01504dc761965b4e0094",
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "file": ".impeccable/review/structure-20261018/mobile.png",
+      "archivePath": ".verification/runs/2e2fb014-cabf-428a-b42e-81b0f49d1e59/diagnostic-2e2fb014-cabf-428a-b42e-81b0f49d1e59/browser-artifacts/booking-embed-isolated-boo-84571-policy-with-the-native-page/cita-booking-mobile.png",
+      "sha256": "d48facdfe514a0d678c4c901d64d7df063695783bd16c135e1d5a1133924fad6",
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "reviewReady": false,
+  "workingTreeHasUnverifiedVisualCorrections": true
+}

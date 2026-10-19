@@ -30,3 +30,9 @@ Los dos conflictos del editor se comprueban como `ActionResult` de tipo `failure
 ## Resultado y cierre pendientes
 
 Faltan el recibo de navegador completo sobre revisión final, la comparación medida de JavaScript/hidratación de Natalia, la inspección propia de capturas válidas, el detector y la revisión/documentación independientes exigidos por Impeccable. Los resultados rápidos anteriores no sustituyen esas puertas. Cursos y noticias permanecen intactos. Esta revisión no incluye fase 6, capacidad alojada, release ni auditoría final de toda la campaña.
+
+## Relevo inmediato y primera inspección visual — 19 de octubre
+
+El usuario solicitó el relevo inmediato antes del cierre. La inspección propia de61 capturas encontró cuatro defectos reales: cabecera de historia comprimida en320/390; acciones del paciente casi verticales en768 con nombre largo; badge del profesional comprimido en escritorio; título del alta apretado por el progreso en320. Hay correcciones de layout preparadas pero **sin verificar**. Además, varias imágenes no muestran la tarea nombrada: es necesario alinear el selector manual, perfil, estados de carga/error y formulario final antes de capturar. `task-capture.ts` fue creado para ello y todavía no tiene consumidores.
+
+El manifiesto [etapa5-capturas.json](etapa5-capturas.json) conserva los originales/hashes como evidencia negativa de ronda1; no es un paquete apto para aprobar. Detector, segunda inspección, revisión fresca y documenter continúan pendientes. Consultar primero el [punto exacto de relevo](../plans/traspaso-refactorizacion-cita-suite.md). Full39207125504 sigue sobre09dec4e y no contiene estas correcciones posteriores. No se certifica la fase5.

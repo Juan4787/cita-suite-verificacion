@@ -402,7 +402,7 @@
 		<div class="ux-hero">
 			<BackLink href="/odonto/configuracion/usuarios" label="Volver" class="mb-5" />
 			<div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-				<div>
+				<div class="min-w-0 flex-1">
 					<p class="text-xs font-bold uppercase text-white/42">Profesional</p>
 					<h1 class="ux-title mt-3">{visibleName}</h1>
 					<p class="ux-subtitle">{visibleSubtitle}</p>
@@ -413,7 +413,7 @@
 						<p class="mt-2 text-sm font-bold text-amber-100">Cambios sin guardar</p>
 					{/if}
 				</div>
-				<div class="flex flex-wrap items-center gap-2">
+				<div class="flex shrink-0 flex-wrap items-center gap-2">
 					<span class={bookingStatusClass}>{bookingStatusLabel}</span>
 					{#if hasUnsavedChanges}
 						<button type="button" disabled={!canOperate || saving !== null} class="ux-btn-primary" onclick={requestSaveAll}>
