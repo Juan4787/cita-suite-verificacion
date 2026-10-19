@@ -62,6 +62,7 @@ test('layout usability detector reports squeezed ordinary words and accepts legi
 			<p style="width: 70px">30&nbsp;min</p>
 			<div class="ux-choice" style="width: 120px"><span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Corto</span></div>
 			<p data-truncation="allowed" style="width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Excepción revisada y documentada</p>
+			<button class="ux-control-trigger" style="width: 150px"><span>Sólo las seleccionadas</span></button>
 		</section>
 	</main></body></html>`);
 	const words = async (scope: string) => (await brokenOrdinaryWords(page, scope)).map(({ word }) => word);

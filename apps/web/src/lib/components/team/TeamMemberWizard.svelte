@@ -690,7 +690,7 @@
 								<div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
 									<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 										<h4 class="font-black text-white">Bloque {blockIndex + 1}</h4>
-										<button type="button" class="ux-btn-secondary text-sm" disabled={!canManage} onclick={() => removeScheduleBlock(block.id)}>
+										<button type="button" class="ux-btn-secondary shrink-0 text-sm" disabled={!canManage} onclick={() => removeScheduleBlock(block.id)}>
 											Quitar bloque
 										</button>
 									</div>

@@ -31,7 +31,7 @@
 </script>
 		<form method="POST" action="?/update_profile" class={`ux-card ${sectionStateClass(shouldSaveProfile, missingItems.includes('Nombre visible'))}`} use:enhance={onSave}>
 			<div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-				<div>
+				<div class="min-w-0 flex-1">
 					<h2 class="ux-section-title">Perfil</h2>
 					<p class="mt-1 text-sm text-white/55">Datos básicos del profesional.</p>
 					{#if missingItems.includes('Nombre visible')}
@@ -40,7 +40,7 @@
 						<p class="ux-section-meta ux-section-meta-warning">Cambios sin guardar</p>
 					{/if}
 				</div>
-				<button type="submit" disabled={!canOperate || saving !== null || !shouldSaveProfile} class="ux-btn-secondary">
+				<button type="submit" disabled={!canOperate || saving !== null || !shouldSaveProfile} class="ux-btn-secondary shrink-0">
 					{saving === 'profile' ? 'Guardando...' : 'Guardar sólo perfil'}
 				</button>
 			</div>

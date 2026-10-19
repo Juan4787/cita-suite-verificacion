@@ -77,7 +77,7 @@
 </script>
 		{#if canManage}
 			<div class="ux-card flex flex-col gap-4 border-red-400/15 sm:flex-row sm:items-center sm:justify-between">
-				<div class="min-w-0">
+				<div class="min-w-0 flex-1">
 					<p class="font-bold text-white">{professional?.is_active ? 'Archivar profesional' : 'Restaurar profesional'}</p>
 					<p class="mt-1 text-sm text-white/55">
 						{professional?.is_active

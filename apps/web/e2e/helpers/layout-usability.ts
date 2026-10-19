@@ -25,7 +25,8 @@ export type LayoutIssue =
  * - broken-word: an ordinary word (≤ 20 characters) split across lines. Breaks at
  *   hyphens/slashes are normal wrap opportunities and are not reported.
  * - wrapped-control: a button, button-styled link or badge whose single-line label
- *   (≤ 200 px of text) is rendered on more than one line.
+ *   (≤ 200 px of text) is rendered on more than one line. Custom select triggers
+ *   display a chosen value and may wrap it instead of truncating it.
  * - split-quantity: a number and its unit (minutes, hours, years, %, $ amount) on
  *   different lines.
  * - truncated-value: text inside the page content (`main` or a dialog) cut with an
@@ -105,7 +106,8 @@ export async function textIssues(page: Page, scope = 'body'): Promise<TextIssue[
 					'button, [role="button"], a[class*="ux-btn"], [class*="ux-badge"]'
 				);
 				for (const control of controls) {
-					if (!(control instanceof HTMLElement) || !visible(control)) continue;
+					// A custom select trigger shows a value, not an action label: values wrap rather than truncate.
+					if (!(control instanceof HTMLElement) || control.matches('.ux-control-trigger') || !visible(control)) continue;
 					const label = control.innerText.trim();
 					// Cards rendered as buttons hold several blocks of text; they are not labels.
 					if (!label || label.includes('\n')) continue;

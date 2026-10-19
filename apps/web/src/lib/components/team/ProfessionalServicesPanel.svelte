@@ -198,14 +198,14 @@
 			<form method="POST" action="?/save_services" class={`ux-card ${dirty ? 'ux-state-unsaved' : ''}`} use:enhance={saveAssignment}>
 				<input type="hidden" name="availability_revision" value={availabilityRevision} />
 				<div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-					<div>
+					<div class="min-w-0 flex-1">
 						<h2 class="ux-section-title">Servicios que ofrece</h2>
 						<p class="mt-1 text-sm text-white/55">Estos servicios estarán disponibles para reservar con este profesional.</p>
 						{#if dirty}
 							<p class="ux-section-meta ux-section-meta-warning">{serviceChangeSummary}</p>
 						{/if}
 					</div>
-					<button type="submit" disabled={!canManage || saving !== null || !dirty} class="ux-btn-secondary">
+					<button type="submit" disabled={!canManage || saving !== null || !dirty} class="ux-btn-secondary shrink-0">
 						{saving === 'services' ? 'Guardando...' : 'Guardar sólo servicios'}
 					</button>
 				</div>
