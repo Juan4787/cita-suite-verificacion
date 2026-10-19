@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { signInWithPassword } from './helpers/shared-auth';
+import { observeRenderHealth } from './helpers/render-health';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
@@ -417,6 +418,7 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 
 		const pendingProfessionalEmail = `e2e-prof-${fixture.suffix}@example.com`;
 		const pendingProfessionalName = `E2E Profesional Nuevo ${fixture.suffix}`;
+		const wizardHealth = observeRenderHealth(page);
 
 		await page.goto('/odonto/configuracion/usuarios');
 		await expect(page.getByRole('heading', { name: 'Equipo' })).toBeVisible();
@@ -494,6 +496,7 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		).toBeVisible();
 		await expect(page.getByText('Pendiente', { exact: true })).toBeVisible();
 		await expect(page.getByRole('link', { name: 'Ver profesional' })).toBeVisible();
+		await wizardHealth.assertAndAttach(test.info(), 'team-wizard-render-health');
 
 		const { data: pendingInvite } = await admin
 			.from('business_user_invites')

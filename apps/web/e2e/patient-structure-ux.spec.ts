@@ -336,7 +336,9 @@ test('patient structure preserves role scope, keyboard access and long content a
 							0
 						);
 					} else
-						await expect(page.getByText('ALERTA_CLINICA_SINTETICA', { exact: true })).toBeVisible();
+						await expect(
+							page.getByRole('paragraph').filter({ hasText: /^ALERTA_CLINICA_SINTETICA$/ })
+						).toBeVisible();
 					await geometry();
 					checks.push('profile-role-scope');
 					if (capture)
