@@ -112,4 +112,7 @@ export const formatAccessRemaining = (
 export const formatDuration = (minutes: number) =>
 	`${minutes}\u00a0${minutes === 1 ? 'minuto' : 'minutos'}`;
 
+/** Wizard progress such as "Paso 3 de 5". Non-breaking spaces keep the counter on one line. */
+export const formatStepCounter = (step: number, total: number) => `Paso\u00a0${step}\u00a0de\u00a0${total}`;
+
 export const normalizePhone = (phone: string) => phone.replace(/\D/g, '');

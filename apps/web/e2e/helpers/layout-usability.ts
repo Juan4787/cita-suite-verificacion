@@ -28,8 +28,8 @@ export type LayoutIssue =
  * - wrapped-control: a button, button-styled link or badge whose single-line label
  *   (≤ 200 px of text) is rendered on more than one line. Custom select triggers
  *   display a chosen value and may wrap it instead of truncating it.
- * - split-quantity: a number and its unit (minutes, hours, years, %, $ amount) on
- *   different lines.
+ * - split-quantity: a number and its unit (minutes, hours, years, %, $ amount), or
+ *   the two numbers of a counter ("Paso 3 de 5"), on different lines.
  * - dangling-separator: an inline separator (·) left at the end of a line, apart
  *   from the group it introduces.
  * - truncated-value: text inside the page content (`main` or a dialog) cut with an
@@ -73,8 +73,9 @@ export async function textIssues(page: Page, scope = 'body'): Promise<TextIssue[
 					}
 				return lines;
 			};
+			// Number before a unit, currency sign before an amount, first number of a counter.
 			const quantity =
-				/(\d+(?:[.,]\d+)?)\s+(?=(minutos?|min|hs?|horas?|años?|%)(?![\p{L}\d]))|(\$)\s+(?=\d)/gu;
+				/(\d+(?:[.,]\d+)?)\s+(?=(?:minutos?|min|hs?|horas?|años?|%)(?![\p{L}\d]))|(\$)\s+(?=\d)|(\d+)\s+de\s+(?=\d)/gu;
 			const roots = [...document.querySelectorAll(scope)];
 			const seen = new Set<Text>();
 			for (const root of roots) {
@@ -98,9 +99,10 @@ export async function textIssues(page: Page, scope = 'body'): Promise<TextIssue[
 						}
 					}
 					for (const match of text.data.matchAll(quantity)) {
+						const headEnd = match.index + (match[1] ?? match[2] ?? match[3]).length;
 						const end = match.index + match[0].length;
-						// Last character before the space and first character after it.
-						const before = rectsOf(text, end - match[0].length + (match[1] ?? match[3]).length - 1, end - match[0].length + (match[1] ?? match[3]).length);
+						// Last character of the leading number or sign and first character after the match.
+						const before = rectsOf(text, headEnd - 1, headEnd);
 						const after = rectsOf(text, end, Math.min(end + 1, text.data.length));
 						if (before.length && after.length && Math.abs(before[0].top - after[0].top) > before[0].height / 2)
 							issues.push({ check: 'split-quantity', text: text.data.slice(match.index, Math.min(end + 8, text.data.length)) });

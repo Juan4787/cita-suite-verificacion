@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { formatAccessRemaining, formatDate, formatDateTime, formatInTimeZone } from './format';
+import {
+	formatAccessRemaining,
+	formatDate,
+	formatDateTime,
+	formatDuration,
+	formatInTimeZone,
+	formatStepCounter
+} from './format';
 
 // Caso que rompía sin timezone: 21:30 ART = 00:30 UTC del día SIGUIENTE.
 // En SSR, cuando el runtime usa UTC, la fecha aparecía corrida un día.
@@ -63,5 +70,14 @@ describe('formatAccessRemaining', () => {
 		expect(formatAccessRemaining('2026-07-10T11:59:59.000Z', now)).toBe('Vencido');
 		expect(formatAccessRemaining(null, now)).toBeNull();
 		expect(formatAccessRemaining('fecha-inválida', now)).toBeNull();
+	});
+});
+
+describe('etiquetas inseparables', () => {
+	it('mantiene cada duración y cada contador de pasos en una sola línea', () => {
+		expect(formatDuration(1)).toBe('1\u00a0minuto');
+		expect(formatDuration(30)).toBe('30\u00a0minutos');
+		expect(formatStepCounter(3, 5)).toBe('Paso\u00a03\u00a0de\u00a05');
+		expect(formatStepCounter(3, 5)).not.toMatch(/ /);
 	});
 });

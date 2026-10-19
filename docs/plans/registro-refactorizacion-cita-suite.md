@@ -742,3 +742,4 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
   - El enlace de la agenda pasa a «Ver semana».
   - Barrera: nueva clase `dangling-separator`, con caso defectuoso y legítimo en la prueba de sensibilidad.
   - Local: tipos e2e limpios y 27/27 pruebas de cliente de los cinco componentes tocados.
+- **Full 39271310470 sobre `bfba6deecd01dda9de0bcf884f3ff295ab24bb86` aprobado** (recibo `3abaf89f-53cf-44ba-8ffd-a3b56c9c621b`, paquete SHA-256 `84f1f6f60a2a1018bd8f07988588161d671018ec96bd36d7bff77202819c27a9`). Todas las etapas obligatorias, 37/37 navegador con la clase `dangling-separator`, 2/2 demo, 1.264/167/1 unidades, SQL y carreras, deadlocks 0, sin errores Auth y Natalia idéntica. Ronda 2 recapturada desde esa corrida (137 capturas, más la de página completa de la agenda a 320 como evidencia de «Ver semana»). `inspection-round-2.md` suma la sección de la fuente final. Se pidió un segundo puntaje al mismo revisor.
