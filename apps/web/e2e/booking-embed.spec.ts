@@ -1027,7 +1027,7 @@ test.describe('isolated booking integration', () => {
 			// A dirty local profile must not silently borrow a token from changed remote hours.
 			await page.getByRole('button', { name: 'Perfil', exact: true }).click();
 			const localName = 'Borrador local que debe conservarse';
-			await page.getByRole('textbox', { name: 'Nombre', exact: true }).fill(localName);
+			await page.getByRole('textbox', { name: /^Nombre(?:\s|$)/ }).fill(localName);
 			const openingRevision = await page
 				.locator('form[action="?/save_all"] [name="availability_revision"]')
 				.inputValue();
@@ -1088,9 +1088,7 @@ test.describe('isolated booking integration', () => {
 			expect(unchanged.error).toBeNull();
 			expect(unchanged.data?.name).toBe(professionalName);
 			await page.getByRole('button', { name: 'Perfil', exact: true }).click();
-			await expect(page.getByRole('textbox', { name: 'Nombre', exact: true })).toHaveValue(
-				localName
-			);
+			await expect(page.getByRole('textbox', { name: /^Nombre(?:\s|$)/ })).toHaveValue(localName);
 			await page.getByRole('link', { name: 'Volver', exact: true }).click();
 			await page.getByRole('button', { name: 'Salir sin guardar', exact: true }).click();
 			await expect(page).toHaveURL(/\/odonto\/configuracion\/usuarios/);

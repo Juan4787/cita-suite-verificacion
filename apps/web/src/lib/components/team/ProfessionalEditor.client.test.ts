@@ -85,7 +85,7 @@ describe('availability revision belongs to the persisted draft base', () => {
 	it('does not replace a dirty draft token with the token of remotely changed rules', async () => {
 		const initial = professionalEditorData();
 		const view = render(ProfessionalEditor, { data: initial });
-		await fireEvent.input(screen.getByRole('textbox', { name: 'Nombre' }), {
+		await fireEvent.input(screen.getByRole('textbox', { name: /^Nombre(?:\s|$)/ }), {
 			target: { value: 'Borrador local' }
 		});
 		await view.rerender({
@@ -98,18 +98,18 @@ describe('availability revision belongs to the persisted draft base', () => {
 		const form = document.querySelector<HTMLFormElement>('form[action="?/save_all"]');
 		if (!form) throw new Error('Missing atomic form');
 		expect(new FormData(form).getAll('availability_revision')).toEqual(['42']);
-		expect(screen.getByRole('textbox', { name: 'Nombre' })).toHaveValue('Borrador local');
+		expect(screen.getByRole('textbox', { name: /^Nombre(?:\s|$)/ })).toHaveValue('Borrador local');
 	});
 	it('can accept a fresh revision when the same persisted base is still displayed', async () => {
 		const initial = professionalEditorData();
 		const view = render(ProfessionalEditor, { data: initial });
-		await fireEvent.input(screen.getByRole('textbox', { name: 'Nombre' }), {
+		await fireEvent.input(screen.getByRole('textbox', { name: /^Nombre(?:\s|$)/ }), {
 			target: { value: 'Borrador local' }
 		});
 		await view.rerender({ data: { ...initial, availabilityRevision: 43 } });
 		const form = document.querySelector<HTMLFormElement>('form[action="?/save_all"]');
 		if (!form) throw new Error('Missing atomic form');
 		expect(new FormData(form).getAll('availability_revision')).toEqual(['43']);
-		expect(screen.getByRole('textbox', { name: 'Nombre' })).toHaveValue('Borrador local');
+		expect(screen.getByRole('textbox', { name: /^Nombre(?:\s|$)/ })).toHaveValue('Borrador local');
 	});
 });
