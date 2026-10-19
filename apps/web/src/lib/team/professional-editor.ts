@@ -329,7 +329,7 @@ export function professionalBaselineMatches(
 	const a = validateScheduleBlocks(server.schedule.blocks),
 		b = validateScheduleBlocks(baseline.schedule.blocks);
 	return a.ok && b.ok
-		? canonicalScheduleBlocks(a.blocks) === canonicalScheduleBlocks(b.blocks)
+		? canonicalScheduleBlocks(server.schedule.blocks) === canonicalScheduleBlocks(baseline.schedule.blocks)
 		: serializeScheduleBlocks(server.schedule.blocks) ===
 				serializeScheduleBlocks(baseline.schedule.blocks);
 }
