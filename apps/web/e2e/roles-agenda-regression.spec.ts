@@ -394,6 +394,22 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await page.getByRole('button', { name: 'Siguiente' }).click();
 		// Paso Servicios: Consulta y Otro servicio vienen incluidos.
 		await expect(page.getByText('Servicios que ofrece')).toBeVisible();
+        // Render the same in-progress task through the complete planned width/theme matrix.
+        // Theme fixture changes only presentation; the eventual saved profile is read back below.
+        const wizardCoverage: {width:number;theme:string}[]=[];
+        for(const width of [320,390,768,1280,1600]) for(const theme of ['light','dark']){
+            await page.setViewportSize({width,height:900});
+            await page.evaluate(theme=>{localStorage.setItem('theme',theme);document.documentElement.classList.toggle('dark',theme==='dark');},theme);
+            expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+            expect(await page.locator('form[action="?/add_user"] input:visible,form[action="?/add_user"] button:visible').evaluateAll(nodes=>nodes.some(node=>{const r=node.getBoundingClientRect();return r.left< -1||r.right>innerWidth+1||r.width<10;}))).toBe(false);
+            await page.screenshot({path:test.info().outputPath(`team-wizard-${width}-${theme}.jpg`),type:'jpeg',quality:60,animations:'disabled'});
+            wizardCoverage.push({width,theme});
+        }
+        expect(wizardCoverage).toHaveLength(10);
+        await test.info().attach('team-wizard-responsive-coverage',{body:JSON.stringify(wizardCoverage),contentType:'application/json'});
+        await page.setViewportSize({width:1280,height:900});
+        await page.evaluate(()=>{localStorage.setItem('theme','light');document.documentElement.classList.remove('dark');});
+
 		await expect(page.getByText('Consulta', { exact: true })).toBeVisible();
 		await expect(page.getByText('Otro servicio', { exact: true })).toBeVisible();
 		await page.getByRole('button', { name: 'Siguiente' }).click();

@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(18);
+select extensions.plan(20);
 create temp table register_fixture(a uuid,b uuid,owner_id uuid,pro_user uuid,rec uuid,ro uuid,professional uuid,patient uuid,created uuid);
 grant select on register_fixture to authenticated;
 do $$
@@ -28,6 +28,15 @@ select extensions.is((select (public.register_patient_safely(a,gen_random_uuid()
 reset role;
 select extensions.is((select full_name from public.patients where id=(select patient from register_fixture)),'Existing synthetic patient','duplicate does not overwrite demographic data');
 select extensions.ok((select exists(select 1 from public.professional_patient_links l where l.patient_id=f.patient and l.professional_id=f.professional and l.is_active) from register_fixture f),'duplicate gains caller link');
+set local role authenticated;
+reset role;
+update public.professional_patient_links set is_active=false where patient_id=(select patient from register_fixture);
+insert into public.professional_patient_links(business_id,professional_id,patient_id,is_active) select a,professional,patient,false from register_fixture;
+set local role authenticated;
+select set_config('request.jwt.claim.sub',(select pro_user::text from register_fixture),true);
+select extensions.lives_ok($$select public.register_patient_safely(a,gen_random_uuid(),'Duplicate','83000001',null,null,null) from register_fixture$$,'multiple inactive historical links do not break restoration');
+reset role;
+select extensions.is((select count(*) from public.professional_patient_links where patient_id=(select patient from register_fixture) and is_active),1::bigint,'only one historical link reactivated');
 set local role authenticated;
 select set_config('request.jwt.claim.sub',(select rec::text from register_fixture),true);
 select extensions.lives_ok($$select public.register_patient_safely(a,gen_random_uuid(),'New synthetic patient',null,'123','123','+54123') from register_fixture$$,'reception can create same name and phone');

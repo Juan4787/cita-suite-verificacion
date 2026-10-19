@@ -5,7 +5,7 @@ set local lock_timeout='5s';
 set local statement_timeout='120s';
 create function public.register_patient_safely(p_business_id uuid,p_patient_id uuid,p_full_name text,p_dni text,p_phone text,p_phone_raw text,p_phone_e164 text)
 returns jsonb language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
-declare v_actor uuid:=auth.uid();v_role text;v_support uuid;v_professional uuid;v_patient uuid;v_duplicate boolean:=false;
+declare v_actor uuid:=auth.uid();v_role text;v_support uuid;v_professional uuid;v_patient uuid;v_duplicate boolean:=false;v_link uuid;
  v_name text:=regexp_replace(trim(coalesce(p_full_name,'')),'\s+',' ','g');v_dni text:=nullif(trim(coalesce(p_dni,'')),'');
 begin
  if v_actor is null then raise exception 'AUTH_REQUIRED'; end if;
@@ -34,7 +34,14 @@ begin
   v_patient:=p_patient_id;
  end if;
  if v_professional is not null then
-  perform public.create_or_restore_professional_patient_link(p_business_id,v_professional,v_patient,'manual',null,v_actor);
+  select l.id into v_link from public.professional_patient_links l where l.business_id=p_business_id and l.professional_id=v_professional and l.patient_id=v_patient
+   order by l.is_active desc,l.created_at,l.id limit 1 for update;
+  if v_link is null then
+   insert into public.professional_patient_links(business_id,professional_id,patient_id,source,created_by)
+   values(p_business_id,v_professional,v_patient,'manual',v_actor);
+  else
+   update public.professional_patient_links set is_active=true,source='manual',disabled_by=null,disabled_at=null,disabled_reason=null,updated_at=clock_timestamp() where id=v_link;
+  end if;
  end if;
  return jsonb_build_object('patientId',v_patient,'duplicate',v_duplicate);
 end $$;

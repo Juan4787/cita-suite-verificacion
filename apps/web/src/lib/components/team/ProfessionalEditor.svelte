@@ -30,15 +30,15 @@
 		type ProfessionalDirtyFields as DirtyFields
 	} from '$lib/team/professional-editor';
 	import Modal from '$lib/components/Modal.svelte';
-
+	
 	const tabs = [
 		{ id: 'perfil', label: 'Perfil' },
 		{ id: 'servicios', label: 'Servicios y aranceles' },
 		{ id: 'horarios', label: 'Horarios' }
 	] as const;
-
+	
 	type TabId = (typeof tabs)[number]['id'];
-
+	
 	let {
 		data,
 		form
@@ -46,17 +46,17 @@
 		data: PageData;
 		form?: { success?: boolean; message?: string; exceptionConflict?: boolean } | null;
 	} = $props();
-
+	
 	const normalizedText = (value: string) => value.trim();
 	const uniqueSortedStrings = (items: string[]) =>
 		[...new Set(items)].sort((a, b) => a.localeCompare(b));
 	const sameStringList = (left: string[], right: string[]) =>
 		uniqueSortedStrings(left).join('|') === uniqueSortedStrings(right).join('|');
-
+	
 	const scheduleFromRules = (rules: Rule[]): ProfessionalDraft['schedule'] => ({
 		blocks: scheduleBlocksFromRules(rules, 'saved-block')
 	});
-
+	
 	const buildServerDraft = (source: PageData): ProfessionalDraft => ({
 		name: source.professional?.name ?? '',
 		specialty: source.professional?.specialty ?? '',
@@ -67,11 +67,11 @@
 		schedule: scheduleFromRules(source.rules),
 		exception: emptyExceptionDraft()
 	});
-
+	
 	const hasValidSchedule = (schedule: ProfessionalDraft['schedule']) => {
 		return validateScheduleBlocks(schedule.blocks).ok;
 	};
-
+	
 	let draftReady = $state(false);
 	const canOperate = $derived(data.context.canManage && !data.demo && draftReady);
 	const canManage = $derived(data.context.canManage && !data.demo);
@@ -88,7 +88,7 @@
 	const draftStorageKey = $derived(
 		`cita-suite:draft:professional-profile:${businessId}:${userId}:${professionalId}`
 	);
-
+	
 	// svelte-ignore state_referenced_locally
 	let baseline = $state<ProfessionalDraft>(buildServerDraft(data));
 	// svelte-ignore state_referenced_locally
@@ -102,24 +102,24 @@
 	let showExitGuard = $state(false);
 	let pendingNavigationHref = $state<string | null>(null);
 	let guardError = $state('');
-
+	
 	let acknowledgedAppointments = $state(false);
 	$effect(() => {
 		JSON.stringify(draft.exception);
 		acknowledgedAppointments = false;
 	});
-
+	
 	let saveAllForm = $state<HTMLFormElement | null>(null);
 	let schedulePanel: ProfessionalSchedulePanel | undefined = $state();
 	let scheduleTimeEditing = $state(false);
 	let allowNavigation = false;
-
+	
 	$effect(() => {
 		if (draft.exception.type === 'extra_available' && draft.exception.periodMode === 'range') {
 			draft.exception.periodMode = 'single';
 		}
 	});
-
+	
 	const calculateDirtyFields = (
 		current: ProfessionalDraft,
 		saved: ProfessionalDraft
@@ -202,7 +202,7 @@
 		return 'Faltan datos para recibir turnos';
 	});
 	const scheduleBlocksJson = $derived(serializeScheduleBlocks(draft.schedule.blocks));
-
+	
 	const toggleService = (serviceId: string) => {
 		if (draft.serviceIds.includes(serviceId)) {
 			draft.schedule.blocks = draft.schedule.blocks.map((block) => ({
@@ -218,7 +218,7 @@
 			? draft.serviceIds.filter((id) => id !== serviceId)
 			: [...draft.serviceIds, serviceId];
 	};
-
+	
 	const fieldStateClass = (dirty: boolean, missing = false) =>
 		missing ? 'ux-state-required' : dirty ? 'ux-state-unsaved' : '';
 	const sectionStateClass = fieldStateClass;
@@ -246,7 +246,7 @@
 		isRecord(result) && isRecord(result.data) && typeof result.data.message === 'string'
 			? result.data.message
 			: fallback;
-
+	
 	const sectionEnhance =
 		(section: 'profile' | 'services' | 'schedule' | 'exception'): SubmitFunction =>
 		({ cancel }) => {
@@ -272,14 +272,14 @@
 				}
 			};
 		};
-
+	
 	const refreshEnhance: SubmitFunction = () => {
 		return async ({ update }) => {
 			await update({ reset: false, invalidateAll: false });
 			await invalidate(professionalDependencyKey);
 		};
 	};
-
+	
 	const continuePendingNavigation = () => {
 		const href = pendingNavigationHref;
 		showExitGuard = false;
@@ -289,7 +289,7 @@
 		allowNavigation = true;
 		goto(href);
 	};
-
+	
 	const stayEditing = () => {
 		showExitGuard = false;
 		pendingNavigationHref = null;
@@ -297,14 +297,14 @@
 		if (missingItems.includes('Nombre visible')) activeTab = 'perfil';
 		else if (missingItems.includes('Horarios de atención')) activeTab = 'horarios';
 	};
-
+	
 	const discardAndLeave = () => {
 		draft = cloneDraft(baseline);
 		clearTtlDraft(draftStorageKey);
 		draftRestored = false;
 		continuePendingNavigation();
 	};
-
+	
 	const saveAllEnhance: SubmitFunction = ({ cancel }) => {
 		if (saving) {
 			cancel();
@@ -328,7 +328,7 @@
 			await update({ reset: false });
 		};
 	};
-
+	
 	const requestSaveAll = () => {
 		if (dirtyFields.schedule && !schedulePanel?.normalizeScheduleBeforeSubmit()) {
 			activeTab = 'horarios';
@@ -340,9 +340,9 @@
 		}
 		saveAllForm?.requestSubmit();
 	};
-
+	
 	const shouldGuardExit = () => hasUnsavedChanges || hasMissingMinimum;
-
+	
 	beforeNavigate((navigation) => {
 		const target = navigation.to?.url;
 		if (!target || allowNavigation) return;
@@ -353,13 +353,13 @@
 		guardError = '';
 		showExitGuard = true;
 	});
-
+	
 	$effect(() => {
 		if (!draftReady) return;
 		if (hasUnsavedChanges) saveTtlDraft(draftStorageKey, cloneDraft(draft));
 		else clearTtlDraft(draftStorageKey);
 	});
-
+	
 	$effect(() => {
 		// A shorthand like 09:00-20 is equivalent to 09:00-20:00, but must stay raw while editing.
 		if (!draftReady || hasUnsavedChanges || scheduleTimeEditing) return;
@@ -367,7 +367,7 @@
 		baseline = cloneDraft(serverDraft);
 		draft = cloneDraft(serverDraft);
 	});
-
+	
 	onMount(() => {
 		const savedDraft = loadTtlDraft<unknown>(draftStorageKey);
 		if (savedDraft) {
@@ -378,7 +378,7 @@
 			}
 		}
 		draftReady = true;
-
+	
 		const handleBeforeUnload = (event: BeforeUnloadEvent) => {
 			if (!shouldGuardExit()) return;
 			event.preventDefault();
