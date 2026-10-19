@@ -3,7 +3,8 @@ type Failure = { status: number; method: string; path: string };
 /** Diagnostic metadata only: never serialize console text, tokens, query strings or clinical values. */
 export function observeRenderHealth(
 	page: Page,
-	allowResponse: (failure: Failure) => boolean = () => false
+	allowResponse: (failure: Failure) => boolean = () => false,
+	expectedFailureCount = 0
 ) {
 	const messages: { type: string; category: string; source: string; line: number }[] = [];
 	const failedResponses: Failure[] = [],
@@ -81,6 +82,7 @@ export function observeRenderHealth(
 			expect(overflow).toBe(false);
 			expect(networkFailures).toEqual([]);
 			expect(failedResponses.filter((failure) => !allowResponse(failure))).toEqual([]);
+			expect(failedResponses.filter(allowResponse)).toHaveLength(expectedFailureCount);
 			expect(messages.filter((message) => message.category === 'unclassified')).toEqual([]);
 			// Every resource error must have a response already checked above; connection failures have their own channel.
 			expect(

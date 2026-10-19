@@ -15,7 +15,8 @@ test('patient structure preserves role scope, keyboard access and long content a
 	const health = observeRenderHealth(
 		page,
 		(failure) =>
-			failure.status === 503 && failure.method === 'GET' && failure.path.endsWith('/auditoria')
+			failure.status === 500 && failure.method === 'GET' && failure.path.endsWith('/datos'),
+		1
 	);
 	const api = process.env.ODONTO_SUPABASE_URL,
 		key = process.env.ODONTO_SUPABASE_SERVICE_ROLE_KEY;

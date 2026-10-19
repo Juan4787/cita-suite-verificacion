@@ -938,7 +938,8 @@ test.describe('isolated booking integration', () => {
 				(failure) =>
 					failure.status === 409 &&
 					failure.method === 'POST' &&
-					failure.path.startsWith('/odonto/profesionales/')
+					failure.path.startsWith('/odonto/profesionales/'),
+				2
 			);
 			page.on('pageerror', (e) => errors.push(e.message));
 			const editorURL = fixture.appOrigin + '/odonto/profesionales/' + professionalId;
@@ -1035,7 +1036,7 @@ test.describe('isolated booking integration', () => {
 			expect(saved.error).toBeNull();
 			expect(saved.data?.description).toBe('Edición confirmada sintética');
 			// A dirty local profile must not silently borrow a token from changed remote hours.
-			await page.getByRole('button', { name: 'Perfil', exact: true }).click();
+			await page.getByRole('button', { name: /^Perfil(?:\s|$)/ }).click();
 			const localName = 'Borrador local que debe conservarse';
 			await page.getByRole('textbox', { name: /^Nombre(?:\s|$)/ }).fill(localName);
 			const openingRevision = await page
@@ -1066,7 +1067,7 @@ test.describe('isolated booking integration', () => {
 				})
 			);
 			// A real independent service edit invalidates the route while the name stays dirty.
-			await page.getByRole('button', { name: 'Servicios y aranceles', exact: true }).click();
+			await page.getByRole('button', { name: /^Servicios y aranceles(?:\s|$)/ }).click();
 			await page
 				.locator('.ux-choice')
 				.filter({ hasText: serviceName })
@@ -1097,7 +1098,7 @@ test.describe('isolated booking integration', () => {
 				.single();
 			expect(unchanged.error).toBeNull();
 			expect(unchanged.data?.name).toBe(professionalName);
-			await page.getByRole('button', { name: 'Perfil', exact: true }).click();
+			await page.getByRole('button', { name: /^Perfil(?:\s|$)/ }).click();
 			await expect(page.getByRole('textbox', { name: /^Nombre(?:\s|$)/ })).toHaveValue(localName);
 			await page.getByRole('link', { name: 'Volver', exact: true }).click();
 			await page.getByRole('button', { name: 'Salir sin guardar', exact: true }).click();
@@ -1169,7 +1170,6 @@ test.describe('isolated booking integration', () => {
 					});
 				}
 			expect(coverage).toHaveLength(10);
-			await health.assertAndAttach(testInfo, 'team-render-health');
 			expect(errors).toEqual([]);
 			await testInfo.attach('team-structure-coverage', {
 				body: JSON.stringify({
@@ -1192,6 +1192,7 @@ test.describe('isolated booking integration', () => {
 				.eq('id', professionalId);
 			expect(absent.error).toBeNull();
 			expect(absent.data).toEqual([]);
+			await health.assertAndAttach(testInfo, 'team-render-health');
 		} finally {
 			await context.close();
 			await must(
