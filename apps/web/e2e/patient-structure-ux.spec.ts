@@ -74,7 +74,7 @@ test('patient structure preserves role scope, keyboard access and long content a
 		);
 		const clipped = await page
 			.locator(
-				'main input:visible, [role="dialog"] input:visible, [role="dialog"] textarea:visible, [role="dialog"] select:visible'
+				'main input:not(.ux-native-source):not([type="checkbox"]):not([type="radio"]):visible, main .ux-control-trigger:visible, [role="dialog"] input:not(.ux-native-source):not([type="checkbox"]):not([type="radio"]):visible, [role="dialog"] .ux-control-trigger:visible, [role="dialog"] textarea:visible, [role="dialog"] select:not(.ux-native-source):visible'
 			)
 			.evaluateAll((elements) =>
 				elements.some((element) => {

@@ -869,15 +869,17 @@ test.describe('isolated booking integration', () => {
 			expect(
 				await page
 					.locator(
-						'main input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]):visible, [role="dialog"] input:not([type="hidden"]):visible, [role="dialog"] textarea:visible'
+						'main input:not(.ux-native-source):not([type="hidden"]):not([type="radio"]):not([type="checkbox"]):visible, main .ux-control-trigger:visible, [role="dialog"] input:not(.ux-native-source):not([type="hidden"]):not([type="radio"]):not([type="checkbox"]):visible, [role="dialog"] .ux-control-trigger:visible, [role="dialog"] textarea:visible'
 					)
 					.evaluateAll((elements) =>
-						elements.some((element) => {
+						elements.flatMap((element) => {
 							const r = element.getBoundingClientRect();
-							return r.left < -1 || r.right > innerWidth + 1 || r.width < 20;
+							return r.left < -1 || r.right > innerWidth + 1 || r.width < 20
+								? [{ tag: element.tagName, name: element.getAttribute('name'), left: r.left, right: r.right, width: r.width }]
+								: [];
 						})
 					)
-			).toBe(false);
+			).toEqual([]);
 		};
 		try {
 			await must(
@@ -1292,7 +1294,7 @@ test.describe('isolated booking integration', () => {
 							await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
 						).toBe(true);
 						expect(
-							await page.locator('.patient-control:visible').evaluateAll((elements) =>
+							await page.locator('.patient-control:not(.ux-native-source):visible, .ux-control-trigger:visible').evaluateAll((elements) =>
 								elements.some((element) => {
 									const r = element.getBoundingClientRect();
 									return r.left < -1 || r.right > innerWidth + 1 || r.width < 20;
