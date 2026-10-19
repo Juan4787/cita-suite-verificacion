@@ -7,6 +7,7 @@
 </script>
 
 <svelte:head>
+	<title>Cita Suite</title>
 	<link rel="icon" type="image/png" href="/logo-cita-suite.png" />
 </svelte:head>
 

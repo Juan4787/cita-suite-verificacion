@@ -45,9 +45,9 @@ git push github-secundaria:Juan4787/cita-suite-verificacion.git refs/verificatio
 gh workflow run 386107045 --repo Juan4787/cita-suite-verificacion --ref refactor/maintainability-20261015 -f level=full
 ```
 
-La preparación usa índice aislado, conserva HEAD/índice de usuario y publica commit/tree/digest exactos. Incluye nuevas entradas mediante allowlist explícita; si se añade un script invocado por verificación, comprobar que el snapshot lo contiene. No deducirlo de `git diff` cuando el archivo sigue sin seguimiento.
+La preparación usa índice aislado, conserva HEAD/índice de usuario y publica commit/tree/digest exactos. Incluye nuevas entradas mediante allowlist explícita; si se añade un script invocado por verificación, comprobar que el snapshot lo contiene. No deducirlo de `git diff` cuando el archivo sigue sin seguimiento. El manifiesto local está en `.verification/ci-source.json`; la ref Git de verificación conserva el árbol exacto y el auxiliar permite recuperarlo. El HEAD de la rama de trabajo no identifica por sí solo el código probado de su árbol sucio.
 
-Niveles `fast`, `full`, `sql`, `types`: los dos últimos reconstruyen la base y recuperan tipos oficiales; `sql` además ejecuta todas las suites/carreras descubiertas. `verify:release` tiene puertas adicionales de artefactos/staging, no equivale a `full` ni se satisface llamándolo sobre producción.
+Niveles `fast`, `full`, `sql`, `types` (y diagnóstico separado `browser` con `browser_grep`): los dos últimos reconstruyen la base y recuperan tipos oficiales; `sql` además ejecuta todas las suites/carreras descubiertas. `verify:release` tiene puertas adicionales de artefactos/staging, no equivale a `full` ni se satisface llamándolo sobre producción.
 
 ### Recuperar evidencia sin perder binarios
 
@@ -78,7 +78,7 @@ Eliminación: autoridad bloqueada, dependencias revalidadas y limpieza atómica;
 
 Alta desde Equipo: `member-profile.ts` prepara/valida y delega a `create_team_member_profile` o `make_team_member_attending`. SQL guarda perfil, defaults reales, servicios, horarios, excepción opcional, vínculo/invitación y auditoría juntos. No hay rollback HTTP administrativo ni éxito parcial cuando fallan los defaults. La invitación pendiente mantiene el perfil oculto hasta registro.
 
-`TeamMemberWizard.svelte` es dueño de pasos, borrador, errores y envío; listado de accesos permanece en su coordinador. El componente se identifica por consultorio/actor y descarta respuestas posteriores a desmontaje. Los controles JS esperan inicialización. Las mutaciones alternativas sin consumidores y el fallback de borrado/reinserción horario se retiraron; no restaurarlos para compatibilidad silenciosa.
+`TeamMemberWizard.svelte` es dueño de pasos, borrador, errores y envío; listado de accesos permanece en su coordinador. El componente se identifica por consultorio/actor y descarta respuestas posteriores a desmontaje. Los controles JS esperan inicialización. El editor conserva la lista administrativa acotada de80 excepciones ordenada por inicio descendente; no usarla como fuente de disponibilidad ni suponer que es el historial completo. El contrato SQL de disponibilidad obtiene su ventana completa independientemente de esa lista. La auditoría transversal de paginación/listados del plan conserva su alcance propio. Las mutaciones alternativas sin consumidores y el fallback de borrado/reinserción horario se retiraron; no restaurarlos para compatibilidad silenciosa.
 
 ### Pacientes y clínica
 

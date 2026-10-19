@@ -43,6 +43,12 @@ export function parseBusinessRoleAccesses(
 			!Number.isFinite(Date.parse(created))
 		)
 			throw new InvalidDataContractError('team.access.scope');
+		const status = readChoice(row.status, ['active', 'pending'], 'team.access.status');
+		if (!('user_id' in row) || !('professional_id' in row))
+			throw new InvalidDataContractError('team.access.identity.fields');
+		const userId = readNullableText(row.user_id, 'team.access.user');
+		const professionalId = readNullableText(row.professional_id, 'team.access.professional');
+		if (status === 'active' && !userId) throw new InvalidDataContractError('team.access.identity');
 		seen.add(id);
 		return {
 			id,
@@ -50,9 +56,9 @@ export function parseBusinessRoleAccesses(
 			email,
 			created_at: created,
 			role: readChoice(row.role, BUSINESS_ROLES, 'team.access.role'),
-			status: readChoice(row.status, ['active', 'pending'], 'team.access.status'),
-			user_id: readNullableText(row.user_id, 'team.access.user'),
-			professional_id: readNullableText(row.professional_id, 'team.access.professional')
+			status,
+			user_id: userId,
+			professional_id: professionalId
 		};
 	});
 }

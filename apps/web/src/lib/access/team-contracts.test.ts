@@ -21,7 +21,19 @@ describe('team access boundary', () => {
 			[member(), member()],
 			[{ ...member(), business_id: 'business-two' }],
 			[{ ...member(), id: { unexpected: true } }],
-			[{ ...member(), created_at: 'invalid' }]
+			[{ ...member(), created_at: 'invalid' }],
+			[{ ...member(), user_id: null }],
+			[{ ...member(), professional_id: undefined, user_id: undefined }],
+			[
+				{
+					id: 'missing',
+					business_id: 'business-one',
+					email: 'synthetic@example.test',
+					role: 'owner',
+					status: 'pending',
+					created_at: '2026-10-18T10:00:00Z'
+				}
+			]
 		])
 			expect(() => parseBusinessRoleAccesses(rows, 'business-one')).toThrow();
 	});

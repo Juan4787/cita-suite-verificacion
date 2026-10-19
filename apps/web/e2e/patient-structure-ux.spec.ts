@@ -1,3 +1,4 @@
+import { observeRenderHealth } from './helpers/render-health';
 import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
@@ -11,6 +12,11 @@ test('patient structure preserves role scope, keyboard access and long content a
 	page
 }, testInfo) => {
 	test.setTimeout(180_000);
+	const health = observeRenderHealth(
+		page,
+		(failure) =>
+			failure.status === 503 && failure.method === 'GET' && failure.path.endsWith('/auditoria')
+	);
 	const api = process.env.ODONTO_SUPABASE_URL,
 		key = process.env.ODONTO_SUPABASE_SERVICE_ROLE_KEY;
 	const parentBusiness = process.env.CITA_SUITE_TEST_BUSINESS_ID;
@@ -368,6 +374,7 @@ test('patient structure preserves role scope, keyboard access and long content a
 				}
 		}
 		expect(coverage).toHaveLength(50);
+		await health.assertAndAttach(testInfo, 'patient-render-health');
 		expect(errors).toEqual([]);
 		await testInfo.attach('patient-ux-coverage', {
 			body: JSON.stringify({

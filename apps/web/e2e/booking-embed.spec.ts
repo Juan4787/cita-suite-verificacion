@@ -1,3 +1,4 @@
+import { observeRenderHealth } from './helpers/render-health';
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
@@ -664,6 +665,7 @@ test.describe('isolated booking integration', () => {
 				{ name: 'active-business-id', value: fixture.businessId, url: fixture.appOrigin }
 			]);
 			const page = await context.newPage();
+			const health = observeRenderHealth(page);
 			let fail = false;
 			const requests: URL[] = [];
 			await page.route('**/odonto/disponibilidad/slots?**', async (route) => {
@@ -825,6 +827,7 @@ test.describe('isolated booking integration', () => {
 				editor.getByRole('button', { name: 'Guardar aranceles', exact: true })
 			).toBeEnabled();
 			expect(priceWrites).toBe(0);
+			await health.assertAndAttach(test.info(), 'manual-render-health');
 		} finally {
 			await context.close();
 		}
@@ -930,6 +933,13 @@ test.describe('isolated booking integration', () => {
 				{ name: 'active-business-id', value: fixture.businessId, url: fixture.appOrigin }
 			]);
 			const page = await context.newPage();
+			const health = observeRenderHealth(
+				page,
+				(failure) =>
+					failure.status === 409 &&
+					failure.method === 'POST' &&
+					failure.path.startsWith('/odonto/profesionales/')
+			);
 			page.on('pageerror', (e) => errors.push(e.message));
 			const editorURL = fixture.appOrigin + '/odonto/profesionales/' + professionalId;
 			let releaseEditorScripts!: () => void;
@@ -1159,6 +1169,7 @@ test.describe('isolated booking integration', () => {
 					});
 				}
 			expect(coverage).toHaveLength(10);
+			await health.assertAndAttach(testInfo, 'team-render-health');
 			expect(errors).toEqual([]);
 			await testInfo.attach('team-structure-coverage', {
 				body: JSON.stringify({
@@ -1214,6 +1225,7 @@ test.describe('isolated booking integration', () => {
 		let writes = 0;
 		try {
 			const page = await context.newPage();
+			const health = observeRenderHealth(page);
 			page.on('pageerror', (error) => errors.push(error.message));
 			page.on('request', (request) => {
 				if (request.method() === 'POST' && new URL(request.url()).origin === fixture.appOrigin)
@@ -1317,6 +1329,7 @@ test.describe('isolated booking integration', () => {
 						});
 					}
 			expect(coverage).toHaveLength(20);
+			await health.assertAndAttach(testInfo, 'public-render-health');
 			expect(writes).toBe(0);
 			expect(errors).toEqual([]);
 			await testInfo.attach('public-structure-coverage', {
