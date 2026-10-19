@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-14T22:05:34.623354+00:00",
+  "generatedAt": "2026-10-19T15:42:34.331413+00:00",
   "title": "Design System: Cita Suite",
   "extensions": {
     "colorMeta": {
@@ -571,59 +571,59 @@
     ],
     "sources": {
       "designMd": "DESIGN.md",
-      "designMdSha256": "6ca7b3c6e061fdf88317b07fc0be8be20e6614967f205ee9cde1fec7038a599d",
+      "designMdSha256": "56220493c1edd76396e2e0b13531aa954d66f554422e49e8bcc7a4daa14aa8ae",
       "files": [
         {
           "path": "src/app.css",
-          "sha256": "4f9e371ba7f974d21028c09d6e68bc7b3442ffee11150870961d32b0e05fc2c1"
+          "sha256": "f32e6cd592e248d8cc49e7013e9ab1f02476bd541d4db92e3c8bf4b5d82c45a7"
         },
         {
           "path": "src/routes/odonto/configuracion/+page.svelte",
-          "sha256": "d4f7fc4f8ef697757acc4addd22d389a1783d94fb175c95e65acd27fd419e0c0"
+          "sha256": "09be5dfc0653301567fd7f3bc1f9f06f65d6e314e1ed37dd0ec37088806dd7fd"
         },
         {
           "path": "src/routes/odonto/configuracion/reserva-online/+page.svelte",
-          "sha256": "bb2cca97a9fe147c9752d8720e2aa28703dcbd03426209fabccd7a79498d3841"
+          "sha256": "27458b760e79da902b96c15c4165828366a95358cd8d59e37378a0634586c49b"
         },
         {
           "path": "src/routes/odonto/configuracion/reserva-online/webs/+page.svelte",
-          "sha256": "bce9c03d3346143dccf18c2f426a5248a150522d3907848c778b63362d1b42d9"
+          "sha256": "1eed693ae11c37f8f4f5ed855252065597f54765ea68a9d2db62eed4a9d493ec"
         },
         {
           "path": "src/routes/odonto/configuracion/reserva-online/webs/+page.server.ts",
-          "sha256": "01f1f7fa99edcbd66e1afb34cf75280db4b5e7a8a80b3feb160a4119d26fa9e2"
+          "sha256": "713d7dc7b42d78bde417c8deb4a1b0c0a029a1016a0a2de6f7130b400a5eae23"
         },
         {
           "path": "src/routes/odonto/configuracion/negocio/+page.svelte",
-          "sha256": "732573e3d5f6787fd235d059ff2c19a37a437839e9fc40c4177291a8d43be63a"
+          "sha256": "cce76f9e6f3aa7709e1618c666a7b0893e3be9f1f61b76ddeb89f1a5cf19d0cf"
         },
         {
           "path": "src/routes/odonto/profesionales/[professionalId]/+page.svelte",
-          "sha256": "a621d3b6456c648355aa624aecfcac86c2c26c9be3ea49e64365b4e386feb56d"
+          "sha256": "6c2470aaf240f75a1c6f286bdcc29fd0e4f031263b759f96f0479c4515e22931"
         },
         {
           "path": "src/routes/odonto/profesionales/[professionalId]/preguntas/+page.svelte",
-          "sha256": "e99af4a015929ab86d245bd397b34837f9a59140af9d637d61c94e65b5be8a9a"
+          "sha256": "b39e141781604a8827c82e7720282325ca69156bd71989fa6e51796a9ab0fcfc"
         },
         {
           "path": "src/routes/odonto/profesionales/[professionalId]/aranceles/+page.svelte",
-          "sha256": "468a5c9a42dbc87f40fc4e295ccd585250c58a5cdaa00dfcbd1f9756238eb087"
+          "sha256": "dcc1e78f476111f75ed62f6bc5a4df5f184f618476e73c6220c3acc72c5a963a"
         },
         {
           "path": "src/lib/booking/BookingShareLink.svelte",
-          "sha256": "71b59318996349f5d2240e7a1631b52c2b57b9deb591ca3212ee87df9c81c750"
+          "sha256": "0e6101b2780ad3f4b79448fcca43edb9f134e6afce81c53a112ae2c8f137a5bd"
         },
         {
           "path": "src/lib/booking/ProfessionalBookingFormEditor.svelte",
-          "sha256": "bf68932251ca97e3fef6bea0d33bd1de8cd0b53354c7ae0763b8866b1f5517ca"
+          "sha256": "94d0dfde9f72eb306092e10fc16ec239480f18355b3e163fb0a9eb9f1671a236"
         },
         {
           "path": "src/lib/booking/BookingQuestionDetails.svelte",
-          "sha256": "5599c95cbf8dd5f93229bfc3ab4c3f01b99fc1ad8e6c0ce14c93483cc5a43e86"
+          "sha256": "fc9fbc997509ec5f1bb838d33c01b616501352ebe1b5f0265f09ecb4b0b4fe6e"
         },
         {
           "path": "src/lib/booking/PricePolicyEditor.svelte",
-          "sha256": "aaada0fc7baa908dd7ba3c51ddaacc9ab7515bb1bc61a6311490add0eb7a11f3"
+          "sha256": "1252d1853f27d5f5e9fc134c27e9c4c25d316068efbaa87112526663dbda346d"
         },
         {
           "path": "src/lib/ui/styled-controls.ts",
@@ -634,20 +634,20 @@
           "sha256": "a27093d2245190c5b55346966b96f147ed7ef12759740bf7a2a0cc3689380c95"
         },
         {
-          "path": "src/lib/server/booking-profile-config.ts",
-          "sha256": "d34fc2c46221cc64c50c50f331b7b8ce938fa6265d69314038fa21b4e9f00aec"
+          "path": "src/lib/server/sites/public/booking-profile-config.ts",
+          "sha256": "4fa8aabb741ee020bae2c04a903e0d850fdd0de8bca8fcc7e8badb056005c809"
         },
         {
           "path": "src/lib/booking/BookingAppearance.svelte",
-          "sha256": "083d9530ee9c08fea79d3ba58535708a454968dbb4c19f5457667170ccb863f2"
+          "sha256": "d3578db83b16650aa5d1d9e42325fe9692db7b22c7a1806496397e9eef0ac191"
         },
         {
           "path": "src/lib/booking/PublicBookingFlow.svelte",
-          "sha256": "958459148ad043371a19544eaebbdcc48104e98233a5d16e24d98f45a13783d9"
+          "sha256": "99e735bebdc79694b46c48c43c0069daee71823c9ebd3ede285e8807343c1013"
         },
         {
           "path": "src/lib/booking/PublicBookingIntakeField.svelte",
-          "sha256": "be1dd53325e6236dcde8a30a0d2c2529a75d78af98d3a49f6221c3540d428daf"
+          "sha256": "699928b725f930f861403e5f18a39ef7977ae833cbfd7f9f738c24446eadb893"
         },
         {
           "path": "src/lib/booking/BookingBirthDateInput.svelte",
@@ -663,11 +663,11 @@
         },
         {
           "path": "src/lib/booking/booking-installation.ts",
-          "sha256": "f2a1f61411870eb8d454e3aa7a19b44f6404a4cfe32384f2ad73cc5988b41b1a"
+          "sha256": "12f3d60c39d01e595a772b3a137b3a3038d180a8fd1fe0a0ee36bdb5b2b087bb"
         },
         {
           "path": "src/routes/odonto/configuracion/reserva-online/+page.server.ts",
-          "sha256": "67296f72d4fc29478c5d53d82fd858df53ab92b000856488b299444ebe743606"
+          "sha256": "f56bdb2caed67a2990d0ccb15745771f39dbff2ca123063aa98acb40b00c3f99"
         },
         {
           "path": "static/booking/embed-v1.js",
@@ -676,6 +676,54 @@
         {
           "path": "static/booking/embed-v1.css",
           "sha256": "b1e34abf3b46f15e9cd85fad8304b0577d5017ecb5c3d054408bf6315a9ea165"
+        },
+        {
+          "path": "src/app.html",
+          "sha256": "16eba74750f74645d02e8d32034529ddbbe574fd2956b3da31adc53369cace2e"
+        },
+        {
+          "path": "tailwind.config.js",
+          "sha256": "e90d1a9251bf6315c42459d0f820004461f85200ef9c0a23e594c9159c91f181"
+        },
+        {
+          "path": "src/lib/utils/format.ts",
+          "sha256": "a88451afbbb2d884f1ef1179201fbc8b743d9ccb61205e37649ed7fa7abe2d0f"
+        },
+        {
+          "path": "src/lib/client/readiness.svelte.ts",
+          "sha256": "42e474af8702ec60acf101a7780da0afc7ff07fd6a0836d0ed644717941ea1b0"
+        },
+        {
+          "path": "src/lib/booking/PublicBookingConfirmation.svelte",
+          "sha256": "ae5940d041814615e03d26b7b73ffc8b805b9d06f8b045f81bc61475d71f5643"
+        },
+        {
+          "path": "src/lib/components/agenda/ManualAppointmentWizard.svelte",
+          "sha256": "4237ebbb9b0656c2ee150f3400dc9d3fdf1d914fb0d3da69f28af9789bbf861f"
+        },
+        {
+          "path": "src/lib/components/team/ProfessionalEditor.svelte",
+          "sha256": "71ca02ebd4c118d6b1fe453763cdeee92b1271d62a2b6298e4e14f3209d7551e"
+        },
+        {
+          "path": "src/lib/components/team/ProfessionalServicesPanel.svelte",
+          "sha256": "e8f959860d32b94f0da73cf9acdc1e442beb6ed3605a195a5bc66cb0f5e211f9"
+        },
+        {
+          "path": "src/lib/components/patients/PatientProfilePanel.svelte",
+          "sha256": "b63ff36d9d83c90168d84b2a990c93feee736b46ec476ab3847e799ca07071ff"
+        },
+        {
+          "path": "src/routes/odonto/pacientes/[id]/+page.svelte",
+          "sha256": "c2375029acb4c6b479de5636e9a9fe2fb00466dfde1ed87c075922d0b8d40bc9"
+        },
+        {
+          "path": "src/routes/+layout.server.ts",
+          "sha256": "017dd71901fd6fc7834dbc84e356d05b9b252062bfa07091e866ececd8a6940c"
+        },
+        {
+          "path": "e2e/helpers/layout-usability.ts",
+          "sha256": "350c33dbb296cf3803768cbae77b8037330c8718c0b7669e58a24d3ca29456f3"
         }
       ],
       "rampNote": "Las rampas OKLCH son previsualizaciones sintéticas de oscuro a claro; no sustituyen los colores normativos del frontmatter.",
@@ -742,9 +790,9 @@
       "name": "Selector progresivo",
       "kind": "custom",
       "refersTo": "control-menu",
-      "description": "Vista del trigger y de su menú; la acción Svelte conserva el select original y su validación.",
+      "description": "Vista del trigger y de su menú; el valor elegido se ajusta en varias líneas en vez de truncarse. La acción Svelte conserva el select original y su validación.",
       "html": "<div class=\"ds-select\"><button type=\"button\" class=\"ds-select-trigger\" role=\"combobox\" aria-expanded=\"true\" aria-controls=\"ds-select-options\" aria-label=\"¿Hasta cuándo pueden reservar?\"><span>Próximos 30 días</span><span class=\"ds-select-icon\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m7 10 5 5 5-5\"/></svg></span></button><div class=\"ds-select-menu\" id=\"ds-select-options\" role=\"listbox\" aria-label=\"¿Hasta cuándo pueden reservar?\"><div class=\"ds-select-option\" role=\"option\" aria-selected=\"false\">Próximos 15 días</div><div class=\"ds-select-option\" role=\"option\" aria-selected=\"true\">Próximos 30 días</div></div></div>",
-      "css": ".ds-select{color:var(--text,#eaf1ff);font-family:Inter,system-ui,-apple-system,sans-serif;}.ds-select-trigger{width:100%;min-height:var(--tap,2.75rem);border-radius:var(--radius,1rem);border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.045);padding:.75rem 1rem;color:var(--text,#eaf1ff);font-size:1rem;transition:border-color 160ms ease,box-shadow 160ms ease,background-color 160ms ease;font-family:Inter,system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:space-between;gap:.75rem;text-align:left;cursor:pointer;font-weight:400}.ds-select-trigger[aria-expanded=\"true\"]{border-color:var(--accent,#8b5cf6)}.ds-select-trigger:focus-visible{outline:2px solid var(--accent-text,#c4b5fd);outline-offset:3px;}.ds-select-trigger:disabled{opacity:.55;cursor:not-allowed}.ds-select-icon{width:1.1rem;height:1.1rem;color:var(--text-muted,rgba(234,241,255,.64));flex-shrink:0}.ds-select-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.ds-select-menu{margin-top:6px;padding:.4rem;border:1px solid var(--border-strong,#244062);border-radius:.75rem;background:var(--surface-raised,#102842);color:var(--text,#eaf1ff);box-shadow:0 12px 28px #0005;font-size:1rem}.ds-select-option{padding:.65rem .75rem;min-height:var(--tap,2.75rem);border-radius:.45rem;cursor:pointer;overflow-wrap:anywhere}.ds-select-option:hover{background:#213c5b}.ds-select-option[aria-selected=\"true\"]{background:var(--accent-soft,rgba(124,58,237,.18));color:#e2d6ff;font-weight:600}.ds-select-option[aria-disabled=\"true\"]{opacity:.45;cursor:not-allowed}"
+      "css": ".ds-select{color:var(--text,#eaf1ff);font-family:Inter,system-ui,-apple-system,sans-serif;}.ds-select-trigger{width:100%;min-height:var(--tap,2.75rem);border-radius:var(--radius,1rem);border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.045);padding:.75rem 1rem;color:var(--text,#eaf1ff);font-size:1rem;transition:border-color 160ms ease,box-shadow 160ms ease,background-color 160ms ease;font-family:Inter,system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:space-between;gap:.75rem;text-align:left;cursor:pointer;font-weight:400}.ds-select-trigger>span:first-child{min-width:0;overflow-wrap:anywhere}.ds-select-trigger[aria-expanded=\"true\"]{border-color:var(--accent,#8b5cf6)}.ds-select-trigger:focus-visible{outline:2px solid var(--accent-text,#c4b5fd);outline-offset:3px;}.ds-select-trigger:disabled{opacity:.55;cursor:not-allowed}.ds-select-icon{width:1.1rem;height:1.1rem;color:var(--text-muted,rgba(234,241,255,.64));flex-shrink:0}.ds-select-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.ds-select-menu{margin-top:6px;padding:.4rem;border:1px solid var(--border-strong,#244062);border-radius:.75rem;background:var(--surface-raised,#102842);color:var(--text,#eaf1ff);box-shadow:0 12px 28px #0005;font-size:1rem}.ds-select-option{padding:.65rem .75rem;min-height:var(--tap,2.75rem);border-radius:.45rem;cursor:pointer;overflow-wrap:anywhere}.ds-select-option:hover{background:#213c5b}.ds-select-option[aria-selected=\"true\"]{background:var(--accent-soft,rgba(124,58,237,.18));color:#e2d6ff;font-weight:600}.ds-select-option[aria-disabled=\"true\"]{opacity:.45;cursor:not-allowed}"
     },
     {
       "name": "Selección de mes",
@@ -767,24 +815,40 @@
       "kind": "custom",
       "refersTo": "patient-form",
       "description": "Variante final: resumen, campo amplio, respuesta explícita y confirmación. La muestra no incorpora datos del consultorio.",
-      "html": "<section class=\"ds-patient-form\" aria-label=\"Formulario final\"><section class=\"ds-patient-summary\"><div class=\"ds-patient-heading\"><p class=\"ds-patient-context\">Estás reservando</p><span class=\"ds-patient-price\">Arancel vigente</span><h2>Servicio y profesional seleccionados</h2></div></section><label class=\"ds-patient-label\" for=\"ds-patient-name\">Nombre y apellido<span class=\"ds-patient-required\" aria-hidden=\"true\">*</span></label><input id=\"ds-patient-name\" class=\"ds-patient-input\" aria-label=\"Nombre y apellido\" autocomplete=\"name\" required /><fieldset class=\"ds-patient-question\"><legend class=\"ds-patient-label\">Pregunta configurada<span class=\"ds-patient-required\" aria-hidden=\"true\">*</span></legend><div class=\"ds-patient-answers\"><label class=\"ds-patient-answer\"><input type=\"radio\" name=\"ds-patient-answer\" value=\"true\" required /><span>Sí</span></label><label class=\"ds-patient-answer\"><input type=\"radio\" name=\"ds-patient-answer\" value=\"false\" checked required /><span>No</span></label></div></fieldset><button type=\"button\" class=\"ds-patient-confirm\">Confirmar reserva</button></section>",
-      "css": ".ds-patient-form{padding:1.5rem;border:1px solid var(--border-strong,#244062);border-radius:1.5rem;background:var(--bg,#0b1626);color:var(--text,#eaf1ff);box-shadow:none;font-family:Inter,system-ui,-apple-system,sans-serif}.ds-patient-summary{padding:1.1rem 1.2rem;border:1px solid var(--patient-summary-border,#8056c9);border-radius:1rem;background:var(--patient-summary-bg,rgba(139,92,246,.06))}.ds-patient-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.6rem 1rem;align-items:center}.ds-patient-context{margin:0;color:var(--accent-text,#c4b5fd);font-size:.85rem;font-weight:650}.ds-patient-price{max-width:10rem;padding:.4rem .7rem;border-radius:.6rem;background:var(--patient-field-bg,rgba(234,241,255,.045));font-size:1.1rem;font-weight:650;line-height:1.35;font-variant-numeric:tabular-nums}.ds-patient-heading h2{grid-column:1/-1;margin:0;font-size:1.4rem;line-height:1.35;font-weight:650;overflow-wrap:anywhere}.ds-patient-label{display:flex;align-items:baseline;gap:.4rem;margin:1.7rem 0 .65rem;font-size:1rem;line-height:1.45;font-weight:600}.ds-patient-required{color:var(--accent-text,#c4b5fd);font-weight:750}.ds-patient-input{width:100%;min-height:3.1rem;padding:.75rem 1rem;border:1px solid var(--patient-field-border,#52637b);border-radius:1.8rem;background:var(--patient-field-bg,rgba(234,241,255,.045));color:inherit;font:inherit;font-size:1rem;line-height:1.45}.ds-patient-input:focus{border-color:var(--accent,#8b5cf6);box-shadow:0 0 0 3px var(--accent-soft,rgba(124,58,237,.18))}.ds-patient-input:focus-visible{outline:2px solid var(--accent,#8b5cf6);outline-offset:2px}.ds-patient-input:disabled{opacity:.6;cursor:not-allowed}.ds-patient-question{margin:1.4rem 0 0;padding:0;border:0;min-width:0}.ds-patient-question .ds-patient-label{width:100%;margin:0 0 .65rem}.ds-patient-answers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}.ds-patient-answer{position:relative;display:flex;align-items:center;justify-content:center;min-height:3.1rem;padding:.65rem .6rem;border:1px solid var(--patient-field-border,#52637b);border-radius:1.2rem;background:var(--patient-field-bg,rgba(234,241,255,.045));font-weight:600;cursor:pointer}.ds-patient-answer input{position:absolute;width:1px;height:1px;opacity:0;margin:0;padding:0}.ds-patient-answer:hover{border-color:var(--accent,#8b5cf6)}.ds-patient-answer:has(input:checked){border:2px solid var(--accent,#8b5cf6);padding:calc(.65rem - 1px) calc(.6rem - 1px);background:var(--accent-soft,rgba(124,58,237,.18))}.ds-patient-answer:has(input:focus-visible){outline:2px solid var(--accent,#8b5cf6);outline-offset:3px}.ds-patient-answer:has(input:disabled){opacity:.55;cursor:not-allowed}.ds-patient-confirm{display:flex;align-items:center;justify-content:center;width:100%;min-height:3.5rem;margin-top:1.9rem;padding:.7rem 1.25rem;border:0;border-radius:1.8rem;background:var(--accent-strong,#7c3aed);color:var(--on-accent,#fff);box-shadow:var(--shadow-accent,0 14px 30px rgba(124,58,237,.26));font:inherit;font-size:1.15rem;font-weight:700;line-height:1;cursor:pointer;transition:transform 140ms ease,background-color 160ms ease}.ds-patient-confirm:hover:not(:disabled){background:var(--accent-press,#6d28d9);transform:translateY(-1px)}.ds-patient-confirm:focus-visible{outline:2px solid var(--accent-text,#c4b5fd);outline-offset:3px}.ds-patient-confirm:active:not(:disabled){transform:translateY(0) scale(.99)}.ds-patient-confirm:disabled{opacity:.45;cursor:not-allowed;box-shadow:none;transform:none}@media(max-width:480px){.ds-patient-form{padding:1.1rem;border-radius:1.2rem}.ds-patient-summary{padding:.9rem}.ds-patient-heading{column-gap:.6rem}.ds-patient-heading h2{font-size:1.15rem}.ds-patient-price{max-width:7rem;padding:.35rem .5rem;font-size:1rem}}@media(prefers-reduced-motion:reduce){.ds-patient-confirm{transition:none}}"
+      "html": "<section class=\"ds-patient-form\" aria-label=\"Formulario final\"><section class=\"ds-patient-summary\"><div class=\"ds-patient-heading\"><span class=\"ds-patient-price\">Arancel vigente</span><h2>Servicio y profesional seleccionados</h2></div></section><label class=\"ds-patient-label\" for=\"ds-patient-name\">Nombre y apellido<span class=\"ds-patient-required\" aria-hidden=\"true\">*</span></label><input id=\"ds-patient-name\" class=\"ds-patient-input\" aria-label=\"Nombre y apellido\" autocomplete=\"name\" required /><fieldset class=\"ds-patient-question\"><legend class=\"ds-patient-label\">Pregunta configurada<span class=\"ds-patient-required\" aria-hidden=\"true\">*</span></legend><div class=\"ds-patient-answers\"><label class=\"ds-patient-answer\"><input type=\"radio\" name=\"ds-patient-answer\" value=\"true\" required /><span>Sí</span></label><label class=\"ds-patient-answer\"><input type=\"radio\" name=\"ds-patient-answer\" value=\"false\" checked required /><span>No</span></label></div></fieldset><button type=\"button\" class=\"ds-patient-confirm\">Confirmar reserva</button></section>",
+      "css": ".ds-patient-form{padding:1.5rem;border:1px solid var(--border-strong,#244062);border-radius:1.5rem;background:var(--bg,#0b1626);color:var(--text,#eaf1ff);box-shadow:none;font-family:Inter,system-ui,-apple-system,sans-serif}.ds-patient-summary{padding:1.1rem 1.2rem;border:1px solid var(--patient-summary-border,#8056c9);border-radius:1rem;background:var(--patient-summary-bg,rgba(139,92,246,.06))}.ds-patient-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.6rem 1rem;align-items:center}.ds-patient-price{grid-column:2;grid-row:1;max-width:10rem;padding:.4rem .7rem;border-radius:.6rem;background:var(--patient-field-bg,rgba(234,241,255,.045));font-size:1.1rem;font-weight:650;line-height:1.35;font-variant-numeric:tabular-nums}.ds-patient-heading h2{grid-column:1/-1;grid-row:2;margin:0;font-size:1.4rem;line-height:1.35;font-weight:650;overflow-wrap:anywhere}.ds-patient-label{display:flex;align-items:baseline;gap:.4rem;margin:1.7rem 0 .65rem;font-size:1rem;line-height:1.45;font-weight:600}.ds-patient-required{color:var(--accent-text,#c4b5fd);font-weight:750}.ds-patient-input{width:100%;min-height:3.1rem;padding:.75rem 1rem;border:1px solid var(--patient-field-border,#52637b);border-radius:1.8rem;background:var(--patient-field-bg,rgba(234,241,255,.045));color:inherit;font:inherit;font-size:1rem;line-height:1.45}.ds-patient-input:focus{border-color:var(--accent,#8b5cf6);box-shadow:0 0 0 3px var(--accent-soft,rgba(124,58,237,.18))}.ds-patient-input:focus-visible{outline:2px solid var(--accent,#8b5cf6);outline-offset:2px}.ds-patient-input:disabled{opacity:.6;cursor:not-allowed}.ds-patient-question{margin:1.4rem 0 0;padding:0;border:0;min-width:0}.ds-patient-question .ds-patient-label{width:100%;margin:0 0 .65rem}.ds-patient-answers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}.ds-patient-answer{position:relative;display:flex;align-items:center;justify-content:center;min-height:3.1rem;padding:.65rem .6rem;border:1px solid var(--patient-field-border,#52637b);border-radius:1.2rem;background:var(--patient-field-bg,rgba(234,241,255,.045));font-weight:600;cursor:pointer}.ds-patient-answer input{position:absolute;width:1px;height:1px;opacity:0;margin:0;padding:0}.ds-patient-answer:hover{border-color:var(--accent,#8b5cf6)}.ds-patient-answer:has(input:checked){border:2px solid var(--accent,#8b5cf6);padding:calc(.65rem - 1px) calc(.6rem - 1px);background:var(--accent-soft,rgba(124,58,237,.18))}.ds-patient-answer:has(input:focus-visible){outline:2px solid var(--accent,#8b5cf6);outline-offset:3px}.ds-patient-answer:has(input:disabled){opacity:.55;cursor:not-allowed}.ds-patient-confirm{display:flex;align-items:center;justify-content:center;width:100%;min-height:3.5rem;margin-top:1.9rem;padding:.7rem 1.25rem;border:0;border-radius:1.8rem;background:var(--accent-strong,#7c3aed);color:var(--on-accent,#fff);box-shadow:var(--shadow-accent,0 14px 30px rgba(124,58,237,.26));font:inherit;font-size:1.15rem;font-weight:700;line-height:1;cursor:pointer;transition:transform 140ms ease,background-color 160ms ease}.ds-patient-confirm:hover:not(:disabled){background:var(--accent-press,#6d28d9);transform:translateY(-1px)}.ds-patient-confirm:focus-visible{outline:2px solid var(--accent-text,#c4b5fd);outline-offset:3px}.ds-patient-confirm:active:not(:disabled){transform:translateY(0) scale(.99)}.ds-patient-confirm:disabled{opacity:.45;cursor:not-allowed;box-shadow:none;transform:none}@media(max-width:480px){.ds-patient-form{padding:1.1rem;border-radius:1.2rem}.ds-patient-summary{padding:.9rem}.ds-patient-heading{column-gap:.6rem}.ds-patient-heading h2{font-size:1.15rem}.ds-patient-price{max-width:7rem;padding:.35rem .5rem;font-size:1rem}}@media(prefers-reduced-motion:reduce){.ds-patient-confirm{transition:none}}"
     }
   ],
   "narrative": {
     "northStar": "Cita Suite: claridad para trabajar",
-    "overview": "Se conserva la identidad existente: Inter, fondos azul oscuro y acento violeta. La precisión de los controles, la jerarquía de texto y los estados hacen reconocible el sistema. Esta frase describe el trabajo del producto; no introduce una identidad comercial nueva.\n\nLa interfaz permite encontrar una tarea y completarla con campos visibles, agrupaciones cortas y opciones secundarias progresivas. Este documento registra los estilos compartidos y los patrones implementados en configuración de reservas y confirmación del paciente; no certifica una renovación de todas las páginas de la aplicación.",
+    "overview": "Se conserva la identidad existente: Inter, fondos azul oscuro y acento violeta. La precisión de los controles, la jerarquía de texto y los estados hacen reconocible el sistema. Esta frase describe el trabajo del producto; no introduce una identidad comercial nueva.\n\nLa interfaz permite encontrar una tarea y completarla con campos visibles, agrupaciones cortas y opciones secundarias progresivas. Este documento registra los estilos compartidos, los patrones implementados en configuración de reservas y confirmación del paciente, y las reglas de texto y composición verificadas también en la ficha clínica, Equipo y la reserva manual; no certifica una renovación de todas las páginas de la aplicación.",
     "keyCharacteristics": [
       "Una familia tipográfica para títulos, datos y controles.",
       "Superficies oscuras con diferencias de tono, bordes y elevación suave.",
       "Violeta para acciones principales, foco y selección; estados con texto propio.",
-      "Controles consistentes, nombres cotidianos y adaptación estructural al celular."
+      "Controles consistentes, nombres cotidianos y adaptación estructural al celular.",
+      "Texto completo: nombres, valores y mensajes se ajustan en más líneas en vez de cortarse con «…» o ensanchar la pantalla."
     ],
     "rules": [
       {
         "name": "Estado legible",
         "body": "La persona debe poder reconocer un estado por su texto, sin depender sólo del color.",
         "section": "colors"
+      },
+      {
+        "name": "Tema único",
+        "body": "Cita Suite tiene un solo tema oscuro (`color-scheme: dark`, con la variante `dark` siempre activa), también cuando el navegador prefiere el modo claro. Sólo la apariencia Natalia de la reserva pública alterna claro y oscuro, según el modo que indica su sitio (`color_mode` o el puente de la integración) y no según la preferencia del navegador.",
+        "section": "colors"
+      },
+      {
+        "name": "Texto inseparable",
+        "body": "Una cantidad no se separa de su unidad ni un contador se parte entre líneas: las duraciones usan `formatDuration` («30 minutos») y los pasos `formatStepCounter` («Paso 3 de 5»), ambos con espacios duros, y el separador «·» queda unido con espacio duro al grupo que introduce (`·&nbsp;`). Tampoco se parten las palabras comunes ni las etiquetas cortas de botones y estados.",
+        "section": "typography"
+      },
+      {
+        "name": "Texto completo",
+        "body": "Dentro de `main` y de los diálogos ningún texto de la tarea se corta con «…»: se ajusta en más líneas. La cabecera y la navegación pueden acortar nombres que la página muestra completos; una excepción revisada se marca con `data-truncation=\"allowed\"`.",
+        "section": "layout"
       },
       {
         "name": "Respuesta explícita",
@@ -802,12 +866,14 @@
       "**Do** usar etiquetas visibles, foco reconocible y texto para comunicar cada estado.",
       "**Do** agrupar por tarea y plegar opciones secundarias después de los campos principales.",
       "**Do** conservar la semántica, validación y datos del formulario al mejorar sus controles.",
-      "**Do** aplicar la variante `patient-*` dentro de la confirmación del paciente y conservar el tema de su integración."
+      "**Do** aplicar la variante `patient-*` dentro de la confirmación del paciente y conservar el tema de su integración.",
+      "**Do** dar a cada fila de texto con acciones o estados una columna de texto flexible y acciones de ancho propio, que pasan debajo cuando no entran."
     ],
     "donts": [
       "**Don't** inventar datos reales, tarifas, contactos ni promesas de marca.",
       "**Don't** compensar una estructura confusa con párrafos de instrucciones.",
       "**Don't** dejar menús, calendarios o confirmaciones interiores con acabado nativo cuando están mejorados con JavaScript.",
+      "**Don't** cortar con «…» el texto de la tarea dentro de `main` o de un diálogo, separar una cantidad de su unidad ni bloquear el zoom del navegador.",
       "**Don't** convertir patrones de esta entrega en afirmaciones sobre páginas que no se revisaron."
     ]
   }

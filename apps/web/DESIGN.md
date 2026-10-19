@@ -180,7 +180,7 @@ components:
 
 Se conserva la identidad existente: Inter, fondos azul oscuro y acento violeta. La precisión de los controles, la jerarquía de texto y los estados hacen reconocible el sistema. Esta frase describe el trabajo del producto; no introduce una identidad comercial nueva.
 
-La interfaz permite encontrar una tarea y completarla con campos visibles, agrupaciones cortas y opciones secundarias progresivas. Este documento registra los estilos compartidos y los patrones implementados en configuración de reservas y confirmación del paciente; no certifica una renovación de todas las páginas de la aplicación.
+La interfaz permite encontrar una tarea y completarla con campos visibles, agrupaciones cortas y opciones secundarias progresivas. Este documento registra los estilos compartidos, los patrones implementados en configuración de reservas y confirmación del paciente, y las reglas de texto y composición verificadas también en la ficha clínica, Equipo y la reserva manual; no certifica una renovación de todas las páginas de la aplicación.
 
 **Key Characteristics:**
 
@@ -188,6 +188,7 @@ La interfaz permite encontrar una tarea y completarla con campos visibles, agrup
 - Superficies oscuras con diferencias de tono, bordes y elevación suave.
 - Violeta para acciones principales, foco y selección; estados con texto propio.
 - Controles consistentes, nombres cotidianos y adaptación estructural al celular.
+- Texto completo: nombres, valores y mensajes se ajustan en más líneas en vez de cortarse con «…» o ensanchar la pantalla.
 
 ## Colors
 
@@ -205,6 +206,8 @@ Verde comunica éxito; ámbar, advertencia o cambios pendientes; rojo, error o a
 
 **The Estado legible Rule.** La persona debe poder reconocer un estado por su texto, sin depender sólo del color.
 
+**The Tema único Rule.** Cita Suite tiene un solo tema oscuro (`color-scheme: dark`, con la variante `dark` siempre activa), también cuando el navegador prefiere el modo claro. Sólo la apariencia Natalia de la reserva pública alterna claro y oscuro, según el modo que indica su sitio (`color_mode` o el puente de la integración) y no según la preferencia del navegador.
+
 ## Typography
 
 **Body Font:** Inter, con los fallbacks declarados en el frontmatter. La misma familia sostiene toda la jerarquía; no hay una fuente ornamental independiente.
@@ -213,13 +216,19 @@ Verde comunica éxito; ámbar, advertencia o cambios pendientes; rojo, error o a
 
 En el formulario final, `patient-service` nombra el servicio y profesional, `patient-label` hace legibles las preguntas y `patient-confirm` destaca el envío. El título del resumen pasa a (1.15rem) en la adaptación móvil. Estas funciones heredan Hanken Grotesk cuando el tema existente es Natalia; sus títulos de página conservan Newsreader.
 
+**The Texto inseparable Rule.** Una cantidad no se separa de su unidad ni un contador se parte entre líneas: las duraciones usan `formatDuration` («30 minutos») y los pasos `formatStepCounter` («Paso 3 de 5»), ambos con espacios duros, y el separador «·» queda unido con espacio duro al grupo que introduce (`·&nbsp;`). Tampoco se parten las palabras comunes ni las etiquetas cortas de botones y estados.
+
 ## Layout
 
 La página compartida apila sus grupos con una separación de `lg`. Los contenedores admiten columnas para campos relacionados y se apilan cuando falta espacio. Los valores de spacing registran medidas recurrentes del código, no una nueva escala de CSS.
 
 Reserva online y su editor de sitios se centran con un ancho máximo de 64rem; Configuración admite 72rem. Alrededor de 640px se reorganizan cabeceras, acciones y el bloque para compartir. La navegación de preguntas se convierte en dos columnas por debajo de 480px. Enlaces largos, nombres y mensajes deben partir líneas sin ensanchar la pantalla. Estas composiciones pertenecen a sus superficies, no son una plantilla obligatoria para toda la app.
 
-El formulario final del paciente usa una columna, con los grupos separados del resumen y entre sí. El espaciado de campos es `patient-fields`, que pasa a `lg` hasta (480px). En ese mismo tamaño, el contenedor reduce su padding a (1.1rem). Las respuestas binarias se presentan en dos columnas; la opción de no responder ocupa una fila completa en móvil. El resumen reserva una primera fila para contexto y arancel y una segunda fila completa para servicio y profesional. El orden concreto y los contenidos configurados se registran en [.impeccable/surfaces/confirmar-reserva.md](.impeccable/surfaces/confirmar-reserva.md).
+Todo el texto admite cortes en cualquier punto (`overflow-wrap: anywhere` en el documento, los botones y los estados): una columna sin ancho propio se comprimiría hasta letras sueltas. Por eso, en una fila con texto junto a acciones o estados, el texto es la columna que se encoge (`min-w-0`) y las acciones y estados conservan su ancho (`shrink-0`). Cuando varios elementos comparten una fila angosta, la fila se ajusta con una base explícita para el texto (entre 10 y 24rem, como `flex-[1_1_12rem]`) y la acción pasa debajo. Si a (320px) tampoco entran, la acción se apila bajo el texto hasta `sm` (640px), como en el encabezado de pasos de la reserva manual y de la reserva pública. El zoom del navegador permanece habilitado.
+
+**The Texto completo Rule.** Dentro de `main` y de los diálogos ningún texto de la tarea se corta con «…»: se ajusta en más líneas. La cabecera y la navegación pueden acortar nombres que la página muestra completos; una excepción revisada se marca con `data-truncation="allowed"`.
+
+El formulario final del paciente usa una columna, con los grupos separados del resumen y entre sí. El espaciado de campos es `patient-fields`, que pasa a `lg` hasta (480px). En ese mismo tamaño, el contenedor reduce su padding a (1.1rem). Las respuestas binarias se presentan en dos columnas; la opción de no responder ocupa una fila completa en móvil. El resumen ubica el arancel al final de la primera fila y reserva una segunda fila completa para servicio y profesional. El orden concreto y los contenidos configurados se registran en [.impeccable/surfaces/confirmar-reserva.md](.impeccable/surfaces/confirmar-reserva.md).
 
 ## Elevation & Depth
 
@@ -237,7 +246,7 @@ La variante del paciente tiene una geometría propia: `patient-control` para cam
 
 ### Buttons
 
-Una acción principal violeta; acciones secundarias sobre una superficie tenue; rojo para una acción destructiva. El alto mínimo compartido es 2.75rem. Hover modifica tono y desplaza ligeramente el botón; active reduce su escala; disabled baja la opacidad y elimina elevación. Las operaciones muestran texto como “Guardando…” y bloquean acciones incompatibles mientras están pendientes.
+Una acción principal violeta; acciones secundarias sobre una superficie tenue; rojo para una acción destructiva. El alto mínimo compartido es 2.75rem. Hover modifica tono y desplaza ligeramente el botón; active reduce su escala; disabled baja la opacidad y elimina elevación. Las operaciones muestran texto como “Guardando…” y bloquean acciones incompatibles mientras están pendientes. Los controles que sólo funcionan con JavaScript (abrir un diálogo, cambiar de pestaña, mostrar acciones) se muestran deshabilitados hasta que su componente hidrata (`createClientReadiness`); una vez habilitados, el primer clic funciona.
 
 ### Cards / Containers
 
@@ -245,11 +254,11 @@ Tarjetas para un grupo de trabajo completo; filas y separadores para listas de t
 
 ### Inputs / Fields
 
-Campos oscuros, etiquetas encima y foco visible. Error y cambios sin guardar tienen borde y mensajes propios. Selectores y fechas/meses mejoran progresivamente sus controles originales: el menú, calendario y trigger tienen acabado propio mientras la fuente conserva nombre, valor, validación y bindings. Las horas usan un campo de texto con entrada numérica y normalización al formato HH:mm, sin menú. Casillas y radios conservan su semántica nativa con dibujo propio. No ocultar la fuente hasta que su mejora esté montada.
+Campos oscuros, etiquetas encima y foco visible. Error y cambios sin guardar tienen borde y mensajes propios. Selectores y fechas/meses mejoran progresivamente sus controles originales: el menú, calendario y trigger tienen acabado propio mientras la fuente conserva nombre, valor, validación y bindings. El trigger muestra el valor elegido completo y lo ajusta en varias líneas en vez de truncarlo. Las horas usan un campo de texto con entrada numérica y normalización al formato HH:mm, sin menú. Casillas y radios conservan su semántica nativa con dibujo propio. No ocultar la fuente hasta que su mejora esté montada.
 
 ### Navigation
 
-Los enlaces de Configuración nombran tareas y ofrecen una línea corta de contexto. En un profesional, Perfil, Servicios y aranceles, Horarios y Preguntas al paciente mantienen una ubicación estable. La selección se distingue visualmente y, donde corresponda, con `aria-current`. El detalle de esta arquitectura pertenece a la nota de superficie.
+Los enlaces de Configuración nombran tareas y ofrecen una línea corta de contexto. En un profesional, Perfil, Servicios y aranceles, Horarios y Preguntas al paciente mantienen una ubicación estable. La selección se distingue visualmente y, donde corresponda, con `aria-current`. En el editor del profesional, la pestaña activa usa el violeta de acción; el hover sólo aparece con puntero y nunca cambia el aspecto de la pestaña activa. El detalle de esta arquitectura pertenece a la nota de superficie.
 
 ### Menus, calendars and dialogs
 
@@ -282,10 +291,12 @@ El diálogo del SDK v1 define su propio centrado y límite de ancho, sin depende
 - **Do** agrupar por tarea y plegar opciones secundarias después de los campos principales.
 - **Do** conservar la semántica, validación y datos del formulario al mejorar sus controles.
 - **Do** aplicar la variante `patient-*` dentro de la confirmación del paciente y conservar el tema de su integración.
+- **Do** dar a cada fila de texto con acciones o estados una columna de texto flexible y acciones de ancho propio, que pasan debajo cuando no entran.
 
 ### Don't:
 
 - **Don't** inventar datos reales, tarifas, contactos ni promesas de marca.
 - **Don't** compensar una estructura confusa con párrafos de instrucciones.
 - **Don't** dejar menús, calendarios o confirmaciones interiores con acabado nativo cuando están mejorados con JavaScript.
+- **Don't** cortar con «…» el texto de la tarea dentro de `main` o de un diálogo, separar una cantidad de su unidad ni bloquear el zoom del navegador.
 - **Don't** convertir patrones de esta entrega en afirmaciones sobre páginas que no se revisaron.

@@ -1,6 +1,6 @@
 # Revisión de interfaz de la etapa 5
 
-**Ronda 2 completa sobre la fuente final; dictamen independiente pendiente (ver al final).** El [plan original](../plans/refactorizacion-cita-suite.md) conserva su autoridad. La [matriz de aceptación](evidencia-etapa5-estructura.md), el [registro](../plans/registro-refactorizacion-cita-suite.md) y el [traspaso](../plans/traspaso-refactorizacion-cita-suite.md) identifican implementación, evidencias y continuidad.
+**Ronda 2 aprobada: dictamen independiente `ship` sobre `674649108bc2caa87e82c8bca25d93f82d584d51` (ver al final).** El [plan original](../plans/refactorizacion-cita-suite.md) conserva su autoridad. La [matriz de aceptación](evidencia-etapa5-estructura.md), el [registro](../plans/registro-refactorizacion-cita-suite.md) y el [traspaso](../plans/traspaso-refactorizacion-cita-suite.md) identifican implementación, evidencias y continuidad.
 
 ## Recorridos y entorno
 
@@ -29,11 +29,11 @@ Los dos conflictos del editor se comprueban como `ActionResult` de tipo `failure
 
 ## Resultado de la ronda 2 (fuente final)
 
-Fuente `a940f23cdd65a03b08d8f1d2e7f51117ca60b702`, full 39220668360. Las 136 capturas de `.impeccable/review/structure-20261018/round-2/` (manifiesto `captures.json` con origen, SHA-256, píxeles, ancho y preferencia) están alineadas a la tarea que nombran con `alignTaskForCapture`. Hay capturas propias de la cabecera del paciente, del encabezado del profesional, del panel de Servicios y de las categorías de Equipo, porque al alinear a la tarea esas regiones habrían quedado fuera de toda imagen. Para el formulario público se agregan capturas de región del orden completo de los campos.
+Fuente `674649108bc2caa87e82c8bca25d93f82d584d51`, full 39276578152. Las 139 capturas de `.impeccable/review/structure-20261018/round-2/` (manifiesto `captures.json` con origen, SHA-256, píxeles, ancho, preferencia y tipo) están alineadas a la tarea que nombran con `alignTaskForCapture`. Hay capturas propias de la cabecera del paciente, del encabezado del profesional, del panel de Servicios y de las categorías de Equipo, porque al alinear a la tarea esas regiones habrían quedado fuera de toda imagen. Para el formulario público se agregan capturas de región del orden completo de los campos. Tres capturas de página completa de la misma corrida muestran lo que las alineadas dejan fuera: la barra de la agenda y el encabezado de pasos de la reserva manual a 320, y el encabezado de pasos de la reserva pública a 320 en las dos marcas. `recapture_round2.py` regenera el paquete desde cualquier full aprobado y conserva en `reviewedRound` la ronda puntuada.
 
-La inspección propia (`round-2/inspection-round-2.md`) confirma los cuatro defectos de la ronda 1 corregidos y los tres defectos adicionales que encontró la detección automática: «Crear servicio nuevo» comprimido junto a un nombre largo, nombres de servicio partidos en 320, valores clínicos en una columna de 87 px y «Administradores» partido en 320. También confirma dos ajustes de terminación: acciones del paciente en una fila en vez de una escalera en ≥1280 y el contador de categorías en línea en 320. El detector (una corrida, `round-2/detector-notes.md`) devolvió cero hallazgos primarios y 14 recomendaciones preexistentes de tamaños tipográficos literales, que quedan para la auditoría transversal.
+La inspección propia (`round-2/inspection-round-2.md`) confirma los cuatro defectos de la ronda 1 corregidos y los tres defectos adicionales que encontró la detección automática: «Crear servicio nuevo» comprimido junto a un nombre largo, nombres de servicio partidos en 320, valores clínicos en una columna de 87 px y «Administradores» partido en 320. También confirma dos ajustes de terminación: acciones del paciente en una fila en vez de una escalera en ≥1280 y el contador de categorías en línea en 320. Sus secciones posteriores registran, para cada recaptura, lo verificado sobre la fuente puntuada. El detector (una corrida, `round-2/detector-notes.md`) devolvió cero hallazgos primarios y 14 recomendaciones preexistentes de tamaños tipográficos literales, que quedan para la auditoría transversal.
 
-Las capturas no son la única barrera: `layoutIssues` aprueba las cinco matrices en el mismo full, y su sensibilidad quedó demostrada reintroduciendo los defectos reales (diagnóstico 39213353905).
+Las capturas no son la única barrera: `layoutIssues` aprueba las cinco matrices en el mismo full. Su sensibilidad quedó demostrada reintroduciendo los defectos reales (diagnósticos 39213353905 y 39275879477).
 
 ## Antecedente: ronda 1 y relevo del 19 de octubre
 
@@ -41,4 +41,10 @@ La ronda 1 (61 capturas de `af5a2b6`/`09dec4e`) encontró historia comprimida en
 
 ## Dictamen independiente
 
-Pendiente: revisor fresco de Impeccable sobre la ronda 2 y, si corresponde, documentador de DESIGN.md. Esta revisión no incluye fase 6, capacidad alojada, release ni la auditoría final de la campaña.
+El revisor fresco de Impeccable (sin historial de la construcción, en sólo lectura) emitió el primer dictamen sobre `a940f23`: `fix`, con ocho correcciones materiales (`round-2/review-round-2.md`). Después puntuó cada recaptura (`round-2/verdict-passes.md`, texto literal):
+
+1. `34ceee9`: `fix`. Seis resueltas, dos parciales (medida de la historia a 320 y «·» colgado) y dos regresiones del lote (espacio alrededor de «· hora» y «Turnos de la semana» sin verbo).
+2. `bfba6de`: `fix`. Todo lo anterior resuelto; hallazgo nuevo anterior al lote (contador «Paso 3 de / 5 · Día» a 320) y el emoji 📋 como ícono de un aviso.
+3. **`6746491`: `ship`.** Los cuatro puntos resueltos, 139 capturas validadas contra una sola corrida y ninguna regresión visible.
+
+Cada hallazgo de legibilidad que la barrera automática no había detectado se convirtió en una clase nueva de `textIssues`, con sensibilidad demostrada. Observaciones no bloqueantes del dictamen final, asignadas a la auditoría transversal de interfaz junto con las recomendaciones tipográficas del detector: la píldora «Reserva online» sobre el nombre del consultorio en la reserva pública (kicker preexistente) y las fechas «Miércoles 4 de / noviembre» partidas a 320 en Cita Suite. Esta revisión no incluye fase 6, capacidad alojada, release ni la auditoría final de la campaña.
