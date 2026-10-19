@@ -37,7 +37,7 @@ test('access recovery HTML preserves cookies, works by keyboard and fits all req
 				'rgb(124, 58, 237)'
 			);
 			await page.screenshot({
-				path: test.info().outputPath(`access-recovery-${width}.png`),
+				type: 'jpeg', quality: 65, path: test.info().outputPath(`access-recovery-${width}.jpg`),
 				fullPage: true
 			});
 		}

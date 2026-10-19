@@ -166,7 +166,7 @@ test.describe('Acceso comercial bloqueado', () => {
 	test('en mobile mantiene salida disponible desde la pantalla de activación', async ({ page }) => {
 		await page.setViewportSize({ width: 390, height: 844 });
 		await loginBlockedAccount(page);
-		await page.screenshot({ path: test.info().outputPath('commercial-lock-mobile.png'), fullPage: false });
+		await page.screenshot({ type: 'jpeg', quality: 65, path: test.info().outputPath('commercial-lock-mobile.jpg'), fullPage: false });
 
 		const menuButton = page.getByRole('button', { name: 'Abrir menú' }).last();
 		await expect(menuButton).toBeVisible();
@@ -178,6 +178,6 @@ test.describe('Acceso comercial bloqueado', () => {
 		const logout = dialog.getByRole('button', { name: 'Salir', exact: true });
 		await expect(logout).toBeVisible();
 		await expect(logout).toBeInViewport();
-		await page.screenshot({ path: test.info().outputPath('commercial-lock-mobile-menu.png'), fullPage: false });
+		await page.screenshot({ type: 'jpeg', quality: 65, path: test.info().outputPath('commercial-lock-mobile-menu.jpg'), fullPage: false });
 	});
 });

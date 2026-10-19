@@ -33,7 +33,7 @@ test.describe('Odontología mobile - navegación', () => {
 		if (await bottomNav.isVisible().catch(() => false)) {
 			await expect(bottomNav.getByRole('button', { name: 'Abrir menú' })).toBeVisible();
 			await expect(bottomNav.locator('svg').first()).toBeVisible();
-			await page.screenshot({ path: test.info().outputPath('mobile-bottom-nav.png'), fullPage: false });
+			await page.screenshot({ type: 'jpeg', quality: 65, path: test.info().outputPath('mobile-bottom-nav.jpg'), fullPage: false });
 		}
 
 		await page.getByRole('button', { name: 'Abrir menú' }).last().click();
@@ -42,6 +42,6 @@ test.describe('Odontología mobile - navegación', () => {
 		await expect(dialog.getByText('Cuenta')).toBeVisible();
 		await expect(dialog.getByRole('button', { name: 'Salir', exact: true })).toBeVisible();
 		await expect(dialog.getByRole('button', { name: 'Salir', exact: true })).toBeInViewport();
-		await page.screenshot({ path: test.info().outputPath('mobile-menu-open.png'), fullPage: false });
+		await page.screenshot({ type: 'jpeg', quality: 65, path: test.info().outputPath('mobile-menu-open.jpg'), fullPage: false });
 	});
 });

@@ -78,7 +78,7 @@ test.describe('Auditoría UX sobre la cuenta de prueba real', () => {
 		const clear = page.getByRole('button', { name: 'Limpiar búsqueda' });
 		await expect(clear).toBeVisible();
 		await page.screenshot({
-			path: testInfo.outputPath('patients-desktop.png'),
+			type: 'jpeg', quality: 65, path: testInfo.outputPath('patients-desktop.jpg'),
 			fullPage: true
 		});
 		await clear.click();
@@ -102,7 +102,7 @@ test.describe('Auditoría UX sobre la cuenta de prueba real', () => {
 			await assertTwoLineTab(mobilePage.getByRole('link', { name: /^Activos/ }));
 			await assertTwoLineTab(mobilePage.getByRole('link', { name: /^Archivados/ }));
 			await mobilePage.screenshot({
-				path: testInfo.outputPath('patients-mobile.png'),
+				type: 'jpeg', quality: 65, path: testInfo.outputPath('patients-mobile.jpg'),
 				fullPage: true
 			});
 			const firstCard = mobilePage.locator('article').first();

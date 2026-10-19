@@ -277,12 +277,12 @@ test.describe('Ayuda para configurar', () => {
 			ownerPage.getByRole('button', { name: 'Quitar aviso: Ayuda de Cita Suite activa' })
 		).toBeVisible();
 		await ownerPage.screenshot({
-			path: screenshotPath('account-assistance-owner-desktop-active.png'),
+			type: 'jpeg', quality: 65, path: screenshotPath('account-assistance-owner-desktop-active.jpg'),
 			fullPage: false
 		});
 		await ownerPage.setViewportSize({ width: 390, height: 844 });
 		await ownerPage.screenshot({
-			path: screenshotPath('account-assistance-owner-mobile-active.png'),
+			type: 'jpeg', quality: 65, path: screenshotPath('account-assistance-owner-mobile-active.jpg'),
 			fullPage: false
 		});
 		await ownerPage.setViewportSize({ width: 1280, height: 720 });
@@ -336,7 +336,7 @@ test.describe('Ayuda para configurar', () => {
 		).toHaveCount(1);
 		await masterPage.getByRole('button', { name: 'Cancelar', exact: true }).click();
 		await masterPage.screenshot({
-			path: screenshotPath('account-assistance-master-configuring.png'),
+			type: 'jpeg', quality: 65, path: screenshotPath('account-assistance-master-configuring.jpg'),
 			fullPage: false
 		});
 		await masterPage

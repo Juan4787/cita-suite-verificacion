@@ -65,7 +65,7 @@ test.describe('isolated booking integration', () => {
 		const date = new URL(frame.url()).searchParams.get('date')!;
 		const slot = await booking.locator('[name="slot_starts_at"]').inputValue();
 		await page.screenshot({
-			path: test.info().outputPath('cita-booking-desktop.png'),
+			type: 'jpeg', quality: 65, path: test.info().outputPath('cita-booking-desktop.jpg'),
 			fullPage: true
 		});
 		let dropped = false;
@@ -199,7 +199,7 @@ test.describe('isolated booking integration', () => {
 		await expect(popup.getByText('Confirmo que quiero cancelar este turno.')).toBeVisible();
 		await popup.getByText('Confirmo que quiero cancelar este turno.').scrollIntoViewIfNeeded();
 		await popup.screenshot({
-			path: test.info().outputPath('cita-booking-manage-cancel-light.png'),
+			type: 'jpeg', quality: 65, path: test.info().outputPath('cita-booking-manage-cancel-light.jpg'),
 			fullPage: true
 		});
 		await popup.close();
@@ -310,7 +310,7 @@ test.describe('isolated booking integration', () => {
 			await phoneFrame.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
 		).toBe(true);
 		await phone.screenshot({
-			path: test.info().outputPath('cita-booking-mobile.png'),
+			type: 'jpeg', quality: 65, path: test.info().outputPath('cita-booking-mobile.jpg'),
 			fullPage: true
 		});
 		await virtual.getByRole('button', { name: 'Confirmar reserva', exact: true }).click();
@@ -331,7 +331,7 @@ test.describe('isolated booking integration', () => {
 		).toBeVisible();
 		await expect(virtualPopup.getByText('Dirección sintética 123')).toHaveCount(0);
 		await virtualPopup.screenshot({
-			path: test.info().outputPath('cita-booking-manage-virtual.png'),
+			type: 'jpeg', quality: 65, path: test.info().outputPath('cita-booking-manage-virtual.jpg'),
 			fullPage: true
 		});
 		await virtualPopup.close();
@@ -363,7 +363,7 @@ test.describe('isolated booking integration', () => {
 		await expect(
 			panel.getByText('Medicación sintética ampliada', { exact: true }).first()
 		).toBeVisible();
-		await panel.screenshot({ path: test.info().outputPath('patient-history.png'), fullPage: true });
+		await panel.screenshot({ type: 'jpeg', quality: 65, path: test.info().outputPath('patient-history.jpg'), fullPage: true });
 		await panel.goto(
 			fixture.appOrigin + '/odonto/pacientes/' + saved.data![0].patient_id + '?tab=radiografias'
 		);
@@ -404,7 +404,7 @@ test.describe('isolated booking integration', () => {
 			expect.arrayContaining([expect.objectContaining({ patientField: 'background', required: true })])
 		);
 		await panel.screenshot({
-			path: test.info().outputPath('professional-settings.png'),
+			type: 'jpeg', quality: 65, path: test.info().outputPath('professional-settings.jpg'),
 			fullPage: true
 		});
 		await panel.goto(
@@ -577,9 +577,9 @@ test.describe('isolated booking integration', () => {
 					).toBe(addDays(15));
 					await page.evaluate(() => window.scrollTo(0, 0));
 					await page.screenshot({
-						path: test
+						type: 'jpeg', quality: 65, path: test
 							.info()
-							.outputPath('availability-empty-' + variant.theme + '-' + variant.width + '.png'),
+							.outputPath('availability-empty-' + variant.theme + '-' + variant.width + '.jpg'),
 						fullPage: true
 					});
 					// Real keyboard activation, retaining the same service/professional/theme.
@@ -598,9 +598,9 @@ test.describe('isolated booking integration', () => {
 					await expect(previous).toBeVisible();
 					await page.evaluate(() => window.scrollTo(0, 0));
 					await page.screenshot({
-						path: test
+						type: 'jpeg', quality: 65, path: test
 							.info()
-							.outputPath('availability-dates-' + variant.theme + '-' + variant.width + '.png'),
+							.outputPath('availability-dates-' + variant.theme + '-' + variant.width + '.jpg'),
 						fullPage: true
 					});
 					expect(
@@ -755,10 +755,10 @@ test.describe('isolated booking integration', () => {
 				await page.setViewportSize({ width, height: 900 });
 				await page.evaluate(() => window.scrollTo(0, 0));
 				await page.screenshot({
-					path: test
+					type: 'jpeg', quality: 65, path: test
 						.info()
 						.outputPath(
-							'availability-internal-error-' + (width === 320 ? 'mobile' : 'desktop') + '.png'
+							'availability-internal-error-' + (width === 320 ? 'mobile' : 'desktop') + '.jpg'
 						),
 					fullPage: true
 				});
@@ -809,9 +809,9 @@ test.describe('isolated booking integration', () => {
 				await page.setViewportSize({ width, height: 900 });
 				await page.evaluate(() => window.scrollTo(0, 0));
 				await page.screenshot({
-					path: test
+					type: 'jpeg', quality: 65, path: test
 						.info()
-						.outputPath('price-preview-error-' + (width === 320 ? 'mobile' : 'desktop') + '.png'),
+						.outputPath('price-preview-error-' + (width === 320 ? 'mobile' : 'desktop') + '.jpg'),
 					fullPage: true
 				});
 				expect(

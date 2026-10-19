@@ -9,7 +9,7 @@ async function captureStorageSurface(page: Page, name: string) {
 		await page.setViewportSize({ width, height: 900 });
 		await page.evaluate(() => window.scrollTo(0, 0));
 		await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-		await page.screenshot({ path: test.info().outputPath(`${name}-${width}.png`), fullPage: true });
+		await page.screenshot({ type: 'jpeg', quality: 65, path: test.info().outputPath(`${name}-${width}.jpg`), fullPage: true });
 	}
 }
 
