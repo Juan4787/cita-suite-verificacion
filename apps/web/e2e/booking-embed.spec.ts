@@ -1063,6 +1063,7 @@ test.describe('isolated booking integration', () => {
 			await dialog.locator('[name="description"]').fill('Edición que refresca la configuración');
 			await dialog.getByRole('button', { name: 'Guardar cambios', exact: true }).click();
 			await expect(dialog).not.toBeVisible();
+            await expect(page.locator('[data-loaded-availability-revision]')).not.toHaveAttribute('data-loaded-availability-revision',openingRevision);
 			await expect(
 				page.locator('form[action="?/save_all"] [name="availability_revision"]')
 			).toHaveValue(openingRevision);

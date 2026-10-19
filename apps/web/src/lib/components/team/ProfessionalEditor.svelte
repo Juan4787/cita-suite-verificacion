@@ -398,7 +398,7 @@
 	});
 </script>
 
-<section class="ux-page" data-editor-ready={draftReady} aria-busy={!draftReady}>
+<section class="ux-page" data-editor-ready={draftReady} data-loaded-availability-revision={data.availabilityRevision} aria-busy={!draftReady}>
 		<div class="ux-hero">
 			<BackLink href="/odonto/configuracion/usuarios" label="Volver" class="mb-5" />
 			<div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
