@@ -245,7 +245,10 @@ const cleanupFixture = async (admin: SupabaseClient, fixture: Partial<Fixture> |
 		operations.push(admin.from('allowed_emails').delete().eq('email', fixture.ownerEmail));
 	if (fixture.suffix) {
 		operations.push(
-			admin.from('allowed_emails').delete().like('email', `e2e-prof-${fixture.suffix}%@example.com`)
+			admin.from('allowed_emails').delete().in('email', [
+				`e2e-prof-${fixture.suffix}@example.com`,
+				`e2e-admin-prof-${fixture.suffix}@example.com`
+			])
 		);
 	}
 
