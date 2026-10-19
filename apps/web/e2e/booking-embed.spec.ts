@@ -1,4 +1,6 @@
 import { observeRenderHealth } from './helpers/render-health';
+import { layoutIssues, type LayoutIssue } from './helpers/layout-usability';
+import { alignTaskForCapture } from './helpers/task-capture';
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
@@ -20,7 +22,7 @@ test.describe('isolated booking integration', () => {
 		test.setTimeout(120_000);
 		for (const origin of [fixture.appOrigin, fixture.apiOrigin])
 			expect(new URL(origin).hostname).toBe('127.0.0.1');
-		const db = createClient(fixture.apiOrigin, fixture.service, {
+		const db = createClient<CitaDatabase>(fixture.apiOrigin, fixture.service, {
 			auth: { persistSession: false, autoRefreshToken: false }
 		});
 		const desktop = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -80,7 +82,7 @@ test.describe('isolated booking integration', () => {
 		).toBeVisible();
 		await booking.getByRole('link', { name: 'Revisar resultado de la reserva' }).click();
 		await expect(booking.getByRole('heading', { name: 'Recuperamos tu reserva' })).toBeVisible();
-		await expect.poll(() => page.evaluate(() => (window as any).completions)).toEqual([[]]);
+		await expect.poll(() => page.evaluate(() => window.completions)).toEqual([[]]);
 		const saved = await db
 			.from('appointments')
 			.select('id,patient_id,confirmation_token,internal_note')
@@ -95,7 +97,7 @@ test.describe('isolated booking integration', () => {
 			.eq('appointment_id', saved.data![0].id)
 			.single();
 		expect(intake.error).toBeNull();
-		expect(intake.data!.answers.labs).toBe(false);
+		expect(intake.data?.answers).toMatchObject({ labs: false });
 		expect(intake.data!.free_comment).toBe('Comentario clínico sintético privado');
 		const popupPromise = page.waitForEvent('popup');
 		await booking.getByRole('link', { name: 'Ver y gestionar mi turno' }).click();
@@ -110,7 +112,7 @@ test.describe('isolated booking integration', () => {
 			.single();
 		expect(profile.error).toBeNull();
 		expect(profile.data!.medication).toBe('Medicación sintética inicial');
-		expect(profile.data!.custom_fields.booking_age.years).toBe(35);
+		expect(profile.data?.custom_fields).toMatchObject({ booking_age: { years: 35 } });
 		const patientRow = await db
 			.from('patients')
 			.select('insurance')
@@ -267,7 +269,10 @@ test.describe('isolated booking integration', () => {
 		const phone = await mobile.newPage();
 		phone.on('pageerror', (error) => exceptions.push(error.message));
 		await phone.goto(fixture.apiOrigin + '/harness');
-		await phone.evaluate(() => (window as any).widget.setTheme('dark'));
+		await phone.evaluate(() => {
+			if (!window.widget) throw new Error('The host page did not mount the booking widget.');
+			window.widget.setTheme('dark');
+		});
 		await phone.getByRole('button', { name: 'Reservar consulta', exact: true }).click();
 		const virtual = phone.frameLocator('iframe');
 		await virtual.getByRole('link', { name: 'Virtual', exact: true }).click();
@@ -314,7 +319,7 @@ test.describe('isolated booking integration', () => {
 			virtual.getByText('Instrucciones virtuales sintéticas: se coordina el acceso.')
 		).toBeVisible();
 		await expect(virtual.getByText('Dirección sintética 123')).toHaveCount(0);
-		await expect.poll(() => phone.evaluate(() => (window as any).completions)).toEqual([[]]);
+		await expect.poll(() => phone.evaluate(() => window.completions)).toEqual([[]]);
 		const virtualPopupPromise = phone.waitForEvent('popup');
 		await virtual.getByRole('link', { name: 'Ver y gestionar mi turno' }).click();
 		const virtualPopup = await virtualPopupPromise;
@@ -395,11 +400,9 @@ test.describe('isolated booking integration', () => {
 			.eq('professional_id', fixture.professionalId)
 			.single();
 		expect(ownForm.data!.fields).toHaveLength(4);
-		expect(
-			ownForm.data!.fields.some(
-				(field: any) => field.patientField === 'background' && field.required
-			)
-		).toBe(true);
+		expect(ownForm.data?.fields).toEqual(
+			expect.arrayContaining([expect.objectContaining({ patientField: 'background', required: true })])
+		);
 		await panel.screenshot({
 			path: test.info().outputPath('professional-settings.png'),
 			fullPage: true
@@ -699,6 +702,7 @@ test.describe('isolated booking integration', () => {
 			await expect(page.getByRole('heading', { name: 'Elegí un día', exact: true })).toBeVisible();
 
 			const manualCoverage: { width: number; theme: string }[] = [];
+			const manualLayout: (LayoutIssue & { width: number; theme: string })[] = [];
 			for (const width of [320, 390, 768, 1280, 1600])
 				for (const theme of ['light', 'dark']) {
 					await page.setViewportSize({ width, height: 900 });
@@ -706,19 +710,13 @@ test.describe('isolated booking integration', () => {
 					expect(
 						await page.evaluate(() => document.documentElement.classList.contains('dark'))
 					).toBe(true);
-					expect(
-						await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
-					).toBe(true);
-					expect(
-						await page
-							.locator('input:visible,select:visible,textarea:visible')
-							.evaluateAll((nodes) =>
-								nodes.some((node) => {
-									const r = node.getBoundingClientRect();
-									return r.left < -1 || r.right > innerWidth + 1 || r.width < 10;
-								})
-							)
-					).toBe(false);
+					for (const issue of await layoutIssues(
+						page,
+						'input:not(.ux-native-source):not([type="hidden"]):visible, select:not(.ux-native-source):visible, textarea:visible, .ux-control-trigger:visible'
+					))
+						manualLayout.push({ width, theme, ...issue });
+					// The capture certifies the day selector, not the notices/agenda above it.
+					await alignTaskForCapture(page.getByRole('heading', { name: 'Elegí un día', exact: true }));
 					await page.screenshot({
 						path: test.info().outputPath(`manual-appointment-${width}-${theme}.jpg`),
 						type: 'jpeg',
@@ -728,6 +726,7 @@ test.describe('isolated booking integration', () => {
 					manualCoverage.push({ width, theme });
 				}
 			expect(manualCoverage).toHaveLength(10);
+			expect(manualLayout).toEqual([]);
 			await test.info().attach('manual-appointment-responsive-coverage', {
 				body: JSON.stringify(manualCoverage),
 				contentType: 'application/json'
@@ -862,24 +861,17 @@ test.describe('isolated booking integration', () => {
 				throw new Error(`Owned team UX fixture operation failed (${code}).`);
 			}
 		};
-		const geometry = async (page: import('@playwright/test').Page) => {
-			expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-				true
-			);
-			expect(
-				await page
-					.locator(
-						'main input:not(.ux-native-source):not([type="hidden"]):not([type="radio"]):not([type="checkbox"]):visible, main .ux-control-trigger:visible, [role="dialog"] input:not(.ux-native-source):not([type="hidden"]):not([type="radio"]):not([type="checkbox"]):visible, [role="dialog"] .ux-control-trigger:visible, [role="dialog"] textarea:visible'
-					)
-					.evaluateAll((elements) =>
-						elements.flatMap((element) => {
-							const r = element.getBoundingClientRect();
-							return r.left < -1 || r.right > innerWidth + 1 || r.width < 20
-								? [{ tag: element.tagName, name: element.getAttribute('name'), left: r.left, right: r.right, width: r.width }]
-								: [];
-						})
-					)
-			).toEqual([]);
+		// Accumulated over the ten combinations and asserted once after the matrix.
+		const layoutProblems: (LayoutIssue & { width: number; theme: string; task: string })[] = [];
+		const geometry = async (
+			page: import('@playwright/test').Page,
+			where: { width: number; theme: string; task: string }
+		) => {
+			for (const issue of await layoutIssues(
+				page,
+				'main input:not(.ux-native-source):not([type="hidden"]):not([type="radio"]):not([type="checkbox"]):visible, main .ux-control-trigger:visible, [role="dialog"] input:not(.ux-native-source):not([type="hidden"]):not([type="radio"]):not([type="checkbox"]):visible, [role="dialog"] .ux-control-trigger:visible, [role="dialog"] textarea:visible'
+			))
+				layoutProblems.push({ ...where, ...issue });
 		};
 		try {
 			await must(
@@ -1128,7 +1120,19 @@ test.describe('isolated booking integration', () => {
 					await expect
 						.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark')))
 						.toBe(true);
-					await geometry(page);
+					await geometry(page, { width, theme, task: 'profile' });
+					// Name and booking status share the header; it is captured on its own because the
+					// profile task capture below starts at the form.
+					if (theme === 'dark') {
+						await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+						await page.screenshot({
+							path: testInfo.outputPath(`team-${width}-${theme}-header.jpg`),
+							type: 'jpeg',
+							quality: 60,
+							animations: 'disabled'
+						});
+					}
+					await alignTaskForCapture(page.getByRole('heading', { name: 'Perfil', exact: true }));
 					await page.screenshot({
 						path: testInfo.outputPath(`team-${width}-${theme}-profile.jpg`),
 						type: 'jpeg',
@@ -1139,7 +1143,7 @@ test.describe('isolated booking integration', () => {
 					await expect(
 						page.getByRole('heading', { name: 'Servicios que ofrece', exact: true })
 					).toBeVisible();
-					await geometry(page);
+					await geometry(page, { width, theme, task: 'services' });
 					await page
 						.locator('.ux-choice')
 						.filter({ hasText: serviceName })
@@ -1149,7 +1153,7 @@ test.describe('isolated booking integration', () => {
 					await expect
 						.poll(() => dialog.evaluate((element) => element.contains(document.activeElement)))
 						.toBe(true);
-					await geometry(page);
+					await geometry(page, { width, theme, task: 'service-dialog' });
 					if ((width === 390 && theme === 'light') || (width === 1280 && theme === 'dark'))
 						await page.screenshot({
 							path: testInfo.outputPath(`team-${width}-${theme}-service-dialog.jpg`),
@@ -1159,10 +1163,10 @@ test.describe('isolated booking integration', () => {
 						});
 					await dialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
 					await page.getByRole('button', { name: /^Horarios/ }).click();
-					await expect(
-						page.getByRole('heading', { name: 'Horarios de atención', exact: true })
-					).toBeVisible();
-					await geometry(page);
+					const scheduleHeading = page.getByRole('heading', { name: 'Horarios de atención', exact: true });
+					await expect(scheduleHeading).toBeVisible();
+					await geometry(page, { width, theme, task: 'schedule' });
+					await alignTaskForCapture(scheduleHeading);
 					await page.screenshot({
 						path: testInfo.outputPath(`team-${width}-${theme}-schedule.jpg`),
 						type: 'jpeg',
@@ -1182,6 +1186,7 @@ test.describe('isolated booking integration', () => {
 					});
 				}
 			expect(coverage).toHaveLength(10);
+			expect(layoutProblems).toEqual([]);
 			expect(errors).toEqual([]);
 			await testInfo.attach('team-structure-coverage', {
 				body: JSON.stringify({
@@ -1234,6 +1239,7 @@ test.describe('isolated booking integration', () => {
 			colorScheme: 'light'
 		});
 		const coverage: { brand: string; width: number; theme: string; renderedTheme: string }[] = [];
+		const publicLayout: (LayoutIssue & { brand: string; width: number; theme: string })[] = [];
 		const errors: string[] = [];
 		let writes = 0;
 		try {
@@ -1300,17 +1306,11 @@ test.describe('isolated booking integration', () => {
 						await page
 							.getByLabel('Comentario', { exact: true })
 							.fill('Comentario sintético ' + 'Contenido extenso de auditoría. '.repeat(20));
-						expect(
-							await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
-						).toBe(true);
-						expect(
-							await page.locator('.patient-control:not(.ux-native-source):visible, .ux-control-trigger:visible').evaluateAll((elements) =>
-								elements.some((element) => {
-									const r = element.getBoundingClientRect();
-									return r.left < -1 || r.right > innerWidth + 1 || r.width < 20;
-								})
-							)
-						).toBe(false);
+						for (const issue of await layoutIssues(
+							page,
+							'.patient-control:not(.ux-native-source):visible, .ux-control-trigger:visible'
+						))
+							publicLayout.push({ brand, width, theme, ...issue });
 						if (brand === 'natalia')
 							await expect(page.locator('[data-booking-theme="natalia"]')).toHaveAttribute(
 								'data-booking-color-mode',
@@ -1322,13 +1322,23 @@ test.describe('isolated booking integration', () => {
 									page.evaluate(() => document.documentElement.classList.contains('dark'))
 								)
 								.toBe(true);
-						await page.evaluate(() => window.scrollTo(0, 0));
+						// Certify the final form itself (summary, then required fields), not the steps above it.
+						const form = page.locator('.patient-booking-form');
+						await alignTaskForCapture(form);
 						await page.screenshot({
 							path: testInfo.outputPath(`public-${brand}-${width}-${theme}-final.jpg`),
 							type: 'jpeg',
 							quality: 60,
 							animations: 'disabled'
 						});
+						// Region capture (not a simulated viewport) of the complete field order.
+						if ((width === 390 && theme === 'light') || (width === 1280 && theme === 'dark'))
+							await form.screenshot({
+								path: testInfo.outputPath(`public-${brand}-${width}-${theme}-form-region.jpg`),
+								type: 'jpeg',
+								quality: 60,
+								animations: 'disabled'
+							});
 						if (width === 320) {
 							await page.getByLabel('Nombre y apellido', { exact: true }).fill('');
 							await page.getByRole('button', { name: 'Confirmar reserva', exact: true }).click();
@@ -1342,6 +1352,7 @@ test.describe('isolated booking integration', () => {
 						});
 					}
 			expect(coverage).toHaveLength(20);
+			expect(publicLayout).toEqual([]);
 			await health.assertAndAttach(testInfo, 'public-render-health');
 			expect(writes).toBe(0);
 			expect(errors).toEqual([]);

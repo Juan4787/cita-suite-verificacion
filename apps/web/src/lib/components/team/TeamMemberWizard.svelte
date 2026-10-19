@@ -480,9 +480,9 @@
             {#if wizardError}<p class="ux-alert" role="alert">{wizardError} <a href="/odonto/configuracion/usuarios" class="underline">Revisar equipo</a></p>{/if}
             <fieldset disabled={wizardSubmitting || wizardUncertain} class="m-0 min-w-0 border-0 p-0">
             <legend class="sr-only">Datos del integrante</legend>
-			<div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+			<div class="flex items-center justify-between gap-4">
 				<h2 class="ux-section-title">Agregar integrante</h2>
-				<div class="flex shrink-0 gap-2">
+				<div class="flex gap-2">
 					{#each steps as _, item}
 						<span class={`grid h-8 w-8 place-items-center rounded-full text-sm font-black ${stepIndex === item ? 'bg-[#7c3aed] text-white' : 'bg-white/10 text-white/45'}`}>
 							{item + 1}

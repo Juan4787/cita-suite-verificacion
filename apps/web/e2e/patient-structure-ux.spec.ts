@@ -1,7 +1,8 @@
 import { observeRenderHealth } from './helpers/render-health';
+import { layoutIssues, type LayoutIssue } from './helpers/layout-usability';
+import { alignTaskForCapture } from './helpers/task-capture';
 import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
-import WebSocket from 'ws';
 import { expect, test } from '@playwright/test';
 import type { CitaDatabase } from '../src/lib/types/database';
 import { loginWithSharedSession } from './helpers/shared-auth';
@@ -30,8 +31,7 @@ test('patient structure preserves role scope, keyboard access and long content a
 	)
 		throw new Error('Patient UX matrix requires the owned disposable environment.');
 	const admin = createClient<CitaDatabase>(api, key, {
-		auth: { persistSession: false, autoRefreshToken: false },
-		realtime: { transport: WebSocket }
+		auth: { persistSession: false, autoRefreshToken: false }
 	});
 	const suffix = randomUUID(),
 		slug = `e2e-patient-ux-${suffix}`;
@@ -65,25 +65,17 @@ test('patient structure preserves role scope, keyboard access and long content a
 			throw new Error(`Owned patient UX fixture write failed (${code}).`);
 		}
 	}
-	async function geometry() {
-		expect(await page.locator('meta[name="viewport"]').getAttribute('content')).not.toMatch(
-			/user-scalable\s*=\s*no|maximum-scale\s*=\s*1(?:[,\s]|$)/
-		);
-		expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-			true
-		);
-		const clipped = await page
-			.locator(
-				'main input:not(.ux-native-source):not([type="checkbox"]):not([type="radio"]):visible, main .ux-control-trigger:visible, [role="dialog"] input:not(.ux-native-source):not([type="checkbox"]):not([type="radio"]):visible, [role="dialog"] .ux-control-trigger:visible, [role="dialog"] textarea:visible, [role="dialog"] select:not(.ux-native-source):visible'
-			)
-			.evaluateAll((elements) =>
-				elements.some((element) => {
-					const box = element.getBoundingClientRect();
-					return box.left < -1 || box.right > innerWidth + 1 || box.width < 20;
-				})
-			);
-		expect(clipped).toBe(false);
-		expect(await page.locator('vite-error-overlay').count()).toBe(0);
+	// Accumulated across all fifty combinations and asserted once, so a failure names
+	// every affected role/width/preference instead of stopping at the first one.
+	const layoutProblems: (LayoutIssue & { role: string; width: number; theme: string; stage: string })[] =
+		[];
+	const narrowEntries: { role: string; width: number; theme: string; entry: number; summary: number }[] = [];
+	async function geometry(where: { role: string; width: number; theme: string; stage: string }) {
+		for (const issue of await layoutIssues(
+			page,
+			'main input:not(.ux-native-source):not([type="checkbox"]):not([type="radio"]):visible, main .ux-control-trigger:visible, [role="dialog"] input:not(.ux-native-source):not([type="checkbox"]):not([type="radio"]):visible, [role="dialog"] .ux-control-trigger:visible, [role="dialog"] textarea:visible, [role="dialog"] select:not(.ux-native-source):visible'
+		))
+			layoutProblems.push({ ...where, ...issue });
 	}
 	try {
 		const owner = await admin.auth.admin.createUser({
@@ -253,7 +245,7 @@ test('patient structure preserves role scope, keyboard access and long content a
 						role === 'owner' ||
 						(width === 390 && theme === 'light') ||
 						(width === 1280 && theme === 'dark');
-					await geometry();
+					await geometry({ role, width, theme, stage: 'page' });
 					if (role !== 'reception') {
 						const toggle = page.getByRole('button', { name: /^Detalles de Consulta/ });
 						await expect(toggle).toBeEnabled();
@@ -263,8 +255,16 @@ test('patient structure preserves role scope, keyboard access and long content a
 						await expect(
 							page.locator(`[id="clinical-entry-${patient.id}-${entry.id}"]`)
 						).toContainText('ReferenciaExtensa');
-						await geometry();
-						checks.push('keyboard-full-description');
+						await geometry({ role, width, theme, stage: 'history-expanded' });
+						// The entry summary is the primary reading column of the record: costs and
+						// editing must not squeeze it beside them (observed at 320/390).
+						const toggleBox = await toggle.boundingBox(),
+							entryBox = await page.locator('article').filter({ has: toggle }).boundingBox();
+						if (!toggleBox || !entryBox) throw new Error('Clinical entry is not rendered.');
+						if (toggleBox.width < entryBox.width * 0.5)
+							narrowEntries.push({ role, width, theme, entry: entryBox.width, summary: toggleBox.width });
+						checks.push('keyboard-full-description', 'readable-entry-column');
+						if (capture) await alignTaskForCapture(toggle);
 					} else {
 						await expect(page.getByRole('button', { name: 'Historial', exact: true })).toHaveCount(
 							0
@@ -272,6 +272,9 @@ test('patient structure preserves role scope, keyboard access and long content a
 						await expect(
 							page.getByText('Descripción clínica sintética', { exact: false })
 						).toHaveCount(0);
+						// Show the available sections, where the missing history would otherwise be.
+						if (capture)
+							await alignTaskForCapture(page.getByRole('button', { name: 'Datos', exact: true }));
 					}
 					if (capture)
 						await page.screenshot({
@@ -293,20 +296,20 @@ test('patient structure preserves role scope, keyboard access and long content a
 						await page.route(pattern, held);
 						try {
 							await page.getByRole('button', { name: 'Datos', exact: true }).click();
-							await expect(
-								page.getByText('Cargando últimos cambios…', { exact: true })
-							).toBeVisible();
+							const loading = page.getByText('Cargando últimos cambios…', { exact: true });
+							await expect(loading).toBeVisible();
+							await alignTaskForCapture(loading);
 							await page.screenshot({
 								path: testInfo.outputPath('simulated-profile-loading.jpg'),
 								type: 'jpeg',
 								quality: 65
 							});
 							release();
-							await expect(
-								page.getByText('No pudimos cargar los últimos cambios. Volvé a intentar.', {
-									exact: true
-								})
-							).toBeVisible();
+							const failure = page.getByText('No pudimos cargar los últimos cambios. Volvé a intentar.', {
+								exact: true
+							});
+							await expect(failure).toBeVisible();
+							await alignTaskForCapture(failure);
 							await page.screenshot({
 								path: testInfo.outputPath('simulated-profile-error.jpg'),
 								type: 'jpeg',
@@ -327,9 +330,8 @@ test('patient structure preserves role scope, keyboard access and long content a
 						);
 						checks.push('simulated-audit-load-error', 'real-audit-load-recovery');
 					} else await page.getByRole('button', { name: 'Datos', exact: true }).click();
-					await expect(
-						page.getByRole('heading', { name: 'Datos del paciente', exact: true })
-					).toBeVisible();
+					const profileHeading = page.getByRole('heading', { name: 'Datos del paciente', exact: true });
+					await expect(profileHeading).toBeVisible();
 					if (role === 'reception' || role === 'readonly') {
 						await expect(page.getByText('Alertas médicas', { exact: true })).toHaveCount(0);
 						await expect(page.getByText('ALERTA_CLINICA_SINTETICA', { exact: true })).toHaveCount(
@@ -339,8 +341,9 @@ test('patient structure preserves role scope, keyboard access and long content a
 						await expect(
 							page.getByRole('paragraph').filter({ hasText: /^ALERTA_CLINICA_SINTETICA$/ })
 						).toBeVisible();
-					await geometry();
+					await geometry({ role, width, theme, stage: 'profile' });
 					checks.push('profile-role-scope');
+					if (capture) await alignTaskForCapture(profileHeading);
 					if (capture)
 						await page.screenshot({
 							path: testInfo.outputPath(`${role}-${width}-${theme}-profile.jpg`),
@@ -360,7 +363,7 @@ test('patient structure preserves role scope, keyboard access and long content a
 						if (role === 'reception')
 							await expect(dialog.locator('[name="allergies"]')).toHaveCount(0);
 						else await expect(dialog.locator('[name="allergies"]')).toBeVisible();
-						await geometry();
+						await geometry({ role, width, theme, stage: 'edit-dialog' });
 						if (capture)
 							await page.screenshot({
 								path: testInfo.outputPath(`${role}-${width}-${theme}-edit.jpg`),
@@ -377,6 +380,8 @@ test('patient structure preserves role scope, keyboard access and long content a
 				}
 		}
 		expect(coverage).toHaveLength(50);
+		expect(layoutProblems).toEqual([]);
+		expect(narrowEntries).toEqual([]);
 		await health.assertAndAttach(testInfo, 'patient-render-health');
 		expect(errors).toEqual([]);
 		await testInfo.attach('patient-ux-coverage', {

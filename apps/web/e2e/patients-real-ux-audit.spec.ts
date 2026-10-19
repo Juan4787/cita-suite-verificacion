@@ -1,6 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
-import WebSocket from 'ws';
+import { createFixtureClient } from './helpers/fixture-db';
 import { loginWithSharedSession } from './helpers/shared-auth';
 
 const email = process.env.CITA_SUITE_TEST_EMAIL;
@@ -37,10 +36,9 @@ test.describe('Auditoría UX sobre la cuenta de prueba real', () => {
 		page,
 		browser
 	}, testInfo) => {
-		const admin = createClient(supabaseUrl ?? '', serviceRoleKey ?? '', {
-			auth: { autoRefreshToken: false, persistSession: false },
-			realtime: { transport: WebSocket }
-		});
+		if (!supabaseUrl || !serviceRoleKey || !businessId)
+			throw new Error('Requiere CITA_SUITE_TEST_* y ODONTO_SUPABASE_*.');
+		const admin = createFixtureClient(supabaseUrl, serviceRoleKey);
 		const { data: recentPatients, error } = await admin
 			.from('patients')
 			.select('id, full_name')
@@ -49,9 +47,7 @@ test.describe('Auditoría UX sobre la cuenta de prueba real', () => {
 			.order('activity_at', { ascending: false })
 			.limit(30);
 		if (error) throw error;
-		const target = (recentPatients ?? []).find((patient) =>
-			/^[jJ]/.test(String(patient.full_name ?? '').trim())
-		);
+		const target = (recentPatients ?? []).find((patient) => /^[jJ]/.test(patient.full_name.trim()));
 		test.skip(!target, 'La primera página actual no contiene un paciente cuyo nombre empiece con J.');
 
 		await login(page);

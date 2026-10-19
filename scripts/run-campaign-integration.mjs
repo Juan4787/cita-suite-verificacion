@@ -120,7 +120,9 @@ try {
 	};
 	// Local production-mode coverage. Demo and real external OAuth require distinct
 	// profiles; they must be reported separately, never counted as local passes.
-	await run('pnpm', ['exec', 'playwright', 'test', '--workers=1', '--max-failures=1', '--retries=0', '--forbid-only', '--reporter=line,json',
+	// A filtered diagnostic runs every selected case so independent failures are all
+	// reported; it still fails on any failure and never counts as full verification.
+	await run('pnpm', ['exec', 'playwright', 'test', '--workers=1', ...(diagnostic ? [] : ['--max-failures=1']), '--retries=0', '--forbid-only', '--reporter=line,json',
 		'--grep-invert', 'Reserva pública - modo demo|Google Auth', ...(diagnostic ? ['--grep', diagnostic] : [])],
 		{ cwd: join(root, 'apps/web'), env });
 	const report = JSON.parse(readFileSync(env.PLAYWRIGHT_JSON_OUTPUT_NAME, 'utf8'));

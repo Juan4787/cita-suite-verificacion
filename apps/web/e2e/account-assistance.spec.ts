@@ -1,9 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { signInWithPassword } from './helpers/shared-auth';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createFixtureClient, must, write, type FixtureClient } from './helpers/fixture-db';
 import fs from 'node:fs';
 import path from 'node:path';
-import WebSocket from 'ws';
 
 const readEnvFile = () => {
 	let current = process.cwd();
@@ -58,19 +57,10 @@ const adminClient = () => {
 	if (!supabaseUrl || !serviceRoleKey) {
 		throw new Error('Faltan ODONTO_SUPABASE_URL u ODONTO_SUPABASE_SERVICE_ROLE_KEY.');
 	}
-	return createClient(supabaseUrl, serviceRoleKey, {
-		auth: { autoRefreshToken: false, persistSession: false },
-		realtime: { transport: WebSocket }
-	});
+	return createFixtureClient(supabaseUrl, serviceRoleKey);
 };
 
-const must = async <T>(operation: PromiseLike<{ data: T; error: unknown }>) => {
-	const { data, error } = await operation;
-	if (error) throw error;
-	return data;
-};
-
-const findAuthUserByEmail = async (admin: SupabaseClient, email: string) => {
+const findAuthUserByEmail = async (admin: FixtureClient, email: string) => {
 	for (let page = 1; page <= 20; page += 1) {
 		const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
 		if (error) throw error;
@@ -81,7 +71,7 @@ const findAuthUserByEmail = async (admin: SupabaseClient, email: string) => {
 	return null;
 };
 
-const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
+const createFixture = async (admin: FixtureClient): Promise<Fixture> => {
 	const schemaProbe = await admin.from('account_assistance_grants').select('id').limit(1);
 	if (schemaProbe.error) throw schemaProbe.error;
 
@@ -139,7 +129,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 			.single()
 	);
 
-	await must(
+	await write(
 		admin.from('allowed_emails').upsert(
 			[
 				{ email, enabled: true },
@@ -148,7 +138,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 			{ onConflict: 'email' }
 		)
 	);
-	await must(
+	await write(
 		admin.from('business_users').insert({
 			business_id: business.id,
 			user_id: userId,
@@ -157,7 +147,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 			accepted_at: new Date().toISOString()
 		})
 	);
-	await must(
+	await write(
 		admin.from('business_users').insert({
 			business_id: business.id,
 			user_id: adminUserId,
@@ -166,7 +156,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 			accepted_at: new Date().toISOString()
 		})
 	);
-	await must(
+	await write(
 		admin.from('business_subscriptions').upsert(
 			{
 				business_id: business.id,
@@ -208,27 +198,25 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 	};
 };
 
-const cleanupFixture = async (admin: SupabaseClient, target: Fixture | null) => {
+const cleanupFixture = async (admin: FixtureClient, target: Fixture | null) => {
 	if (!target) return;
-	await admin.from('businesses').delete().eq('id', target.businessId);
-	await admin.from('allowed_emails').delete().in('email', [target.email, target.adminEmail]);
-	await admin.auth.admin.deleteUser(target.userId);
-	await admin.auth.admin.deleteUser(target.adminUserId);
+	await write(admin.from('businesses').delete().eq('id', target.businessId));
+	await write(admin.from('allowed_emails').delete().in('email', [target.email, target.adminEmail]));
+	for (const userId of [target.userId, target.adminUserId])
+		if ((await admin.auth.admin.deleteUser(userId)).error)
+			throw new Error('Owned account assistance user cleanup failed.');
 };
 
-const cleanupMasterFixture = async (admin: SupabaseClient) => {
+const cleanupMasterFixture = async (admin: FixtureClient) => {
 	if (!createdMasterUserId) return;
-	const { data: memberships } = await admin
-		.from('business_users')
-		.select('business_id')
-		.eq('user_id', createdMasterUserId);
-	const ownedBusinessIds = (memberships ?? [])
-		.map((row: any) => String(row.business_id ?? ''))
-		.filter(Boolean);
-	if (ownedBusinessIds.length > 0) {
-		await admin.from('businesses').delete().in('id', ownedBusinessIds);
-	}
-	await admin.auth.admin.deleteUser(createdMasterUserId);
+	const memberships = await must(
+		admin.from('business_users').select('business_id').eq('user_id', createdMasterUserId)
+	);
+	const ownedBusinessIds = memberships.map((row) => row.business_id);
+	if (ownedBusinessIds.length > 0)
+		await write(admin.from('businesses').delete().in('id', ownedBusinessIds));
+	if ((await admin.auth.admin.deleteUser(createdMasterUserId)).error)
+		throw new Error('Owned local master user cleanup failed.');
 	createdMasterUserId = null;
 };
 

@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
-import WebSocket from 'ws';
 import { expect, test, type Locator } from '@playwright/test';
 import type { CitaDatabase } from '../src/lib/types/database';
 import { loginWithSharedSession } from './helpers/shared-auth';
@@ -20,8 +19,7 @@ async function fixture() {
 	)
 		throw new Error('Clinical date audit requires the owned disposable environment.');
 	const admin = createClient<CitaDatabase>(api, key, {
-		auth: { persistSession: false, autoRefreshToken: false },
-		realtime: { transport: WebSocket }
+		auth: { persistSession: false, autoRefreshToken: false }
 	});
 	const { data: owner, error: ownerError } = await admin
 		.from('business_users')

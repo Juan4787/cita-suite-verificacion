@@ -1,7 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { signInWithPassword } from './helpers/shared-auth';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import WebSocket from 'ws';
+import { createFixtureClient, must, write, type FixtureClient } from './helpers/fixture-db';
 
 const supabaseUrl = process.env.ODONTO_SUPABASE_URL;
 const serviceRoleKey = process.env.ODONTO_SUPABASE_SERVICE_ROLE_KEY;
@@ -33,16 +32,7 @@ type Fixture = {
 
 const adminClient = () => {
 	if (!supabaseUrl || !serviceRoleKey) throw new Error('Faltan credenciales de Supabase.');
-	return createClient(supabaseUrl, serviceRoleKey, {
-		auth: { autoRefreshToken: false, persistSession: false },
-		realtime: { transport: WebSocket }
-	});
-};
-
-const must = async <T>(operation: PromiseLike<{ data: T; error: unknown }>) => {
-	const { data, error } = await operation;
-	if (error) throw error;
-	return data;
+	return createFixtureClient(supabaseUrl, serviceRoleKey);
 };
 
 const localDate = (date: Date) =>
@@ -62,8 +52,8 @@ const addDays = (date: string, days: number) => {
 const appointmentInstant = (date: string, time: string) => new Date(`${date}T${time}:00-03:00`);
 
 const createAppointmentRow = async (
-	admin: SupabaseClient,
-	fixture: Pick<Fixture, 'businessId' | 'serviceId' | 'professionalId' | 'patientId'>,
+	admin: FixtureClient,
+	fixture: Pick<Fixture, 'businessId' | 'serviceId' | 'professionalId' | 'patientId' | 'patientName'>,
 	input: { date: string; time: string; status: 'reserved' | 'cancelled' }
 ) => {
 	const startsAt = appointmentInstant(input.date, input.time);
@@ -82,6 +72,8 @@ const createAppointmentRow = async (
 				blocking_ends_at: endsAt.toISOString(),
 				status: input.status,
 				source: 'manual',
+				// The insert trigger replaces identity snapshots with the patient's current data.
+				patient_name_at_booking: fixture.patientName,
 				service_name_snapshot: 'Pendiente',
 				professional_name_snapshot: 'Pendiente',
 				duration_minutes_snapshot: 30,
@@ -92,7 +84,7 @@ const createAppointmentRow = async (
 	);
 };
 
-const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
+const createFixture = async (admin: FixtureClient): Promise<Fixture> => {
 	const ownerEmail = partialFixture.ownerEmail;
 	const authResult = await admin.auth.admin.createUser({
 		email: ownerEmail,
@@ -123,7 +115,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 	);
 	partialFixture.businessId = business.id;
 
-	await must(
+	await write(
 		admin.from('business_subscriptions').upsert(
 			{
 				business_id: business.id,
@@ -139,8 +131,8 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 			{ onConflict: 'business_id' }
 		)
 	);
-	await must(admin.from('allowed_emails').upsert({ email: ownerEmail, enabled: true }));
-	await must(
+	await write(admin.from('allowed_emails').upsert({ email: ownerEmail, enabled: true }));
+	await write(
 		admin.from('business_users').insert({
 			business_id: business.id,
 			user_id: ownerUserId,
@@ -179,7 +171,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 			.select('id')
 			.single()
 	);
-	await must(
+	await write(
 		admin.from('professional_services').insert({
 			business_id: business.id,
 			professional_id: professional.id,
@@ -187,7 +179,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 		})
 	);
 	for (const weekday of [0, 1, 2, 3, 4, 5, 6]) {
-		await must(
+		await write(
 			admin.from('availability_rules').insert({
 				business_id: business.id,
 				professional_id: professional.id,
@@ -255,26 +247,26 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 	};
 };
 
-const cleanupFixture = async (admin: SupabaseClient, fixture: Fixture | null) => {
+const cleanupFixture = async (admin: FixtureClient, fixture: Fixture | null) => {
 	if (!fixture) return;
 	const { error: businessError } = await admin
 		.from('businesses')
 		.delete()
 		.eq('id', fixture.businessId);
 	if (businessError) throw businessError;
-	await admin.from('allowed_emails').delete().eq('email', fixture.ownerEmail);
+	await write(admin.from('allowed_emails').delete().eq('email', fixture.ownerEmail));
 	const { error: userError } = await admin.auth.admin.deleteUser(fixture.ownerUserId);
 	if (userError && !userError.message.includes('User not found')) throw userError;
 	partialFixture.ownerUserId = '';
 	partialFixture.businessId = '';
 };
 
-const cleanupPartialFixture = async (admin: SupabaseClient) => {
+const cleanupPartialFixture = async (admin: FixtureClient) => {
 	if (partialFixture.businessId) {
 		const { error } = await admin.from('businesses').delete().eq('id', partialFixture.businessId);
 		if (error) throw error;
 	}
-	await admin.from('allowed_emails').delete().eq('email', partialFixture.ownerEmail);
+	await write(admin.from('allowed_emails').delete().eq('email', partialFixture.ownerEmail));
 	if (partialFixture.ownerUserId) {
 		const { error } = await admin.auth.admin.deleteUser(partialFixture.ownerUserId);
 		if (error && !error.message.includes('User not found')) throw error;
@@ -329,7 +321,7 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 		'Requiere E2E_ALLOW_DESTRUCTIVE=true y credenciales de Supabase.'
 	);
 
-	let admin: SupabaseClient;
+	let admin: FixtureClient;
 	let fixture: Fixture | null = null;
 
 	test.beforeAll(async () => {
@@ -456,7 +448,7 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 		await expect(page.getByRole('link', { name: 'Enviar enlace de activación' })).toBeVisible();
 
 		const createdAppointmentId = new URL(page.url()).pathname.split('/').at(-1);
-		expect(createdAppointmentId).toBeTruthy();
+		if (!createdAppointmentId) throw new Error('La confirmación no abrió el turno creado.');
 		const appointment = await must(
 			admin
 				.from('appointments')
@@ -522,7 +514,7 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 		);
 
 		const createdAppointmentId = new URL(page.url()).pathname.split('/').at(-1);
-		expect(createdAppointmentId).toBeTruthy();
+		if (!createdAppointmentId) throw new Error('La confirmación no abrió el turno creado.');
 		const appointment = await must(
 			admin
 				.from('appointments')
@@ -561,7 +553,7 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 		await expect(page.getByRole('link', { name: /WhatsApp|Enviar enlace/ })).toHaveCount(0);
 
 		const createdAppointmentId = new URL(page.url()).pathname.split('/').at(-1);
-		expect(createdAppointmentId).toBeTruthy();
+		if (!createdAppointmentId) throw new Error('La confirmación no abrió el turno creado.');
 		const appointment = await must(
 			admin
 				.from('appointments')
@@ -613,7 +605,7 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 		await expect(page.getByRole('link', { name: /WhatsApp|Enviar enlace/ })).toHaveCount(0);
 
 		const createdAppointmentId = new URL(page.url()).pathname.split('/').at(-1);
-		expect(createdAppointmentId).toBeTruthy();
+		if (!createdAppointmentId) throw new Error('La confirmación no abrió el turno creado.');
 		const appointment = await must(
 			admin
 				.from('appointments')

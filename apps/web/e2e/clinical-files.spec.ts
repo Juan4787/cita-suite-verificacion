@@ -1,7 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { signInWithPassword } from './helpers/shared-auth';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import WebSocket from 'ws';
+import { createFixtureClient, must, write, type FixtureClient } from './helpers/fixture-db';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { clinicalPdfFixture } from './helpers/clinical-pdf';
@@ -36,16 +35,7 @@ let fixture: Fixture | null = null;
 
 const adminClient = () => {
 	if (!supabaseUrl || !serviceRoleKey) throw new Error('Faltan credenciales Supabase locales.');
-	return createClient(supabaseUrl, serviceRoleKey, {
-		auth: { autoRefreshToken: false, persistSession: false },
-		realtime: { transport: WebSocket }
-	});
-};
-
-const must = async <T>(operation: PromiseLike<{ data: T; error: unknown }>) => {
-	const { data, error } = await operation;
-	if (error) throw error;
-	return data;
+	return createFixtureClient(supabaseUrl, serviceRoleKey);
 };
 
 const psqlEnvironment = (connectionString: string) => {
@@ -62,7 +52,7 @@ const psqlEnvironment = (connectionString: string) => {
 	};
 };
 
-const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
+const createFixture = async (admin: FixtureClient): Promise<Fixture> => {
 	const suffix = `${Date.now()}-${Math.floor(Math.random() * 100_000)}`;
 	const ownerEmail = `e2e-clinical-owner-${suffix}@example.com`;
 	const professionalEmail = `e2e-clinical-professional-${suffix}@example.com`;
@@ -117,7 +107,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 			.single()
 	);
 
-	await must(
+	await write(
 		admin.from('business_subscriptions').upsert(
 			{
 				business_id: business.id,
@@ -133,7 +123,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 			{ onConflict: 'business_id' }
 		)
 	);
-	await must(
+	await write(
 		admin.from('allowed_emails').upsert(
 			[
 				{ email: ownerEmail, enabled: true },
@@ -143,7 +133,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 			{ onConflict: 'email' }
 		)
 	);
-	await must(
+	await write(
 		admin.from('business_users').insert([
 			{
 				business_id: business.id,
@@ -182,7 +172,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 			.select('id')
 			.single()
 	);
-	await must(
+	await write(
 		admin.from('professional_users').insert({
 			business_id: business.id,
 			professional_id: professional.id,
@@ -202,7 +192,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 			.select('id')
 			.single()
 	);
-	await must(
+	await write(
 		admin.from('professional_patient_links').insert({
 			business_id: business.id,
 			professional_id: professional.id,
@@ -214,7 +204,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 	);
 
 	const activityBase = Date.now() - 60_000;
-	await must(
+	await write(
 		admin.from('patients').insert([
 			...Array.from({ length: 30 }, (_, index) => ({
 				business_id: business.id,
@@ -253,14 +243,17 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 	};
 };
 
-const cleanupFixture = async (admin: SupabaseClient, target: Fixture | null) => {
+const cleanupFixture = async (admin: FixtureClient, target: Fixture | null) => {
 	if (!target) return;
-	const { data: radiographs } = await admin
-		.from('patient_radiographs')
-		.select('storage_bucket, storage_path, thumbnail_path')
-		.eq('business_id', target.businessId)
-		.eq('storage_provider', 'supabase_storage');
-	for (const row of radiographs ?? []) {
+	// A failed listing must not leave Storage objects (and the clinical budget) behind silently.
+	const radiographs = await must(
+		admin
+			.from('patient_radiographs')
+			.select('storage_bucket, storage_path, thumbnail_path')
+			.eq('business_id', target.businessId)
+			.eq('storage_provider', 'supabase_storage')
+	);
+	for (const row of radiographs) {
 		const paths = [row.storage_path, row.thumbnail_path].filter((path): path is string => Boolean(path));
 		if (row.storage_bucket && paths.length > 0) {
 			const { error } = await admin.storage.from(row.storage_bucket).remove(paths);
@@ -315,11 +308,11 @@ commit;`;
 	if (result.status !== 0) {
 		throw new Error(`No se pudo limpiar el fixture en la base aislada: ${result.stderr || 'psql falló.'}`);
 	}
-	await must(admin
+	await write(admin
 		.from('allowed_emails')
 		.delete()
 		.in('email', [target.ownerEmail, target.professionalEmail]));
-	await must(admin.from('allowed_emails').delete().eq('email', target.receptionEmail));
+	await write(admin.from('allowed_emails').delete().eq('email', target.receptionEmail));
 	for (const userId of [target.ownerUserId, target.professionalUserId, target.receptionUserId]) {
 		const { error } = await admin.auth.admin.deleteUser(userId);
 		if (error) throw error;
@@ -629,7 +622,7 @@ test.describe('Archivos clínicos privados', () => {
 		await restrictedViewerDialog.getByRole('button', { name: 'Cerrar visor' }).click();
 		await page.goto('/odonto/pacientes/papelera');
 
-		await must(
+		await write(
 			admin
 				.from('business_subscriptions')
 				.update({
@@ -702,7 +695,7 @@ test.describe('Archivos clínicos privados', () => {
 
 		await login(page, fixture.ownerEmail);
 		const privateClinicalDescription = 'Historia clínica sintética reservada al equipo clínico';
-		await must(adminClient().from('clinical_entries').insert({
+		await write(adminClient().from('clinical_entries').insert({
 			business_id: fixture.businessId,
 			patient_id: fixture.patientId,
 			owner_id: fixture.ownerUserId,

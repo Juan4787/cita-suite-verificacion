@@ -1,9 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { signInWithPassword } from './helpers/shared-auth';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createFixtureClient, must, write, type FixtureClient } from './helpers/fixture-db';
 import fs from 'node:fs';
 import path from 'node:path';
-import WebSocket from 'ws';
 
 const expiredEmail = process.env.E2E_EXPIRED_EMAIL;
 const expiredPassword = process.env.E2E_EXPIRED_PASSWORD ?? 'E2eLocked!2026';
@@ -53,19 +52,10 @@ const adminClient = () => {
 	if (!supabaseUrl || !serviceRoleKey) {
 		throw new Error('Faltan ODONTO_SUPABASE_URL u ODONTO_SUPABASE_SERVICE_ROLE_KEY.');
 	}
-	return createClient(supabaseUrl, serviceRoleKey, {
-		auth: { autoRefreshToken: false, persistSession: false },
-		realtime: { transport: WebSocket }
-	});
+	return createFixtureClient(supabaseUrl, serviceRoleKey);
 };
 
-const must = async <T>(operation: PromiseLike<{ data: T; error: unknown }>) => {
-	const { data, error } = await operation;
-	if (error) throw error;
-	return data;
-};
-
-const createBlockedFixture = async (admin: SupabaseClient): Promise<Fixture> => {
+const createBlockedFixture = async (admin: FixtureClient): Promise<Fixture> => {
 	const suffix = unique();
 	const email = `e2e-commercial-lock-${suffix}@example.com`;
 	const password = expiredPassword;
@@ -94,8 +84,8 @@ const createBlockedFixture = async (admin: SupabaseClient): Promise<Fixture> => 
 			.single()
 	);
 
-	await must(admin.from('allowed_emails').upsert({ email, enabled: true }, { onConflict: 'email' }));
-	await must(
+	await write(admin.from('allowed_emails').upsert({ email, enabled: true }, { onConflict: 'email' }));
+	await write(
 		admin.from('business_users').insert({
 			business_id: business.id,
 			user_id: userId,
@@ -104,7 +94,7 @@ const createBlockedFixture = async (admin: SupabaseClient): Promise<Fixture> => 
 			accepted_at: new Date().toISOString()
 		})
 	);
-	await must(
+	await write(
 		admin.from('business_subscriptions').upsert(
 			{
 				business_id: business.id,
@@ -124,11 +114,12 @@ const createBlockedFixture = async (admin: SupabaseClient): Promise<Fixture> => 
 	return { email, password, userId, businessId: business.id };
 };
 
-const cleanupFixture = async (admin: SupabaseClient, target: Fixture | null) => {
+const cleanupFixture = async (admin: FixtureClient, target: Fixture | null) => {
 	if (!target) return;
-	await admin.from('businesses').delete().eq('id', target.businessId);
-	await admin.from('allowed_emails').delete().eq('email', target.email);
-	await admin.auth.admin.deleteUser(target.userId);
+	await write(admin.from('businesses').delete().eq('id', target.businessId));
+	await write(admin.from('allowed_emails').delete().eq('email', target.email));
+	const { error } = await admin.auth.admin.deleteUser(target.userId);
+	if (error) throw new Error('Owned commercial lock account cleanup failed.');
 };
 
 test.describe('Acceso comercial bloqueado', () => {

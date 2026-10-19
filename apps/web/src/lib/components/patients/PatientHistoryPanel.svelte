@@ -207,11 +207,11 @@
 									{@const expanded = expandedId === entry.id}
 									<article class="relative rounded-xl border border-neutral-100 bg-white p-4 shadow-sm dark:border-[#1f3554] dark:bg-[#0f1f36]">
 										<span class="absolute left-[-14px] top-5 h-3 w-3 rounded-full border-2 border-white bg-[#7c3aed] shadow dark:border-[#0f1f36]" aria-hidden="true"></span>
-										<div class="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+										<div class="flex flex-wrap items-start gap-3">
 											<button type="button" disabled={!client.ready} aria-expanded={expanded}
 												aria-controls={`clinical-entry-${patientId}-${entry.id}`} aria-label={`Detalles de ${entry.entry_type} del ${formatDate(entry.created_at, businessTimeZone)}`}
 												onclick={() => toggleEntry(entry.id)}
-												class="w-full min-w-0 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0f1f36]">
+												class="min-w-0 flex-1 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0f1f36]">
 												<span class="flex min-w-0 flex-wrap items-center gap-3">
 													<span class="rounded-full bg-[#7c3aed]/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#5b21b6] dark:bg-[#7c3aed]/20 dark:text-[#d9c5ff]">{entry.entry_type}</span>
 													<span class="min-w-0 break-words text-[16px] font-semibold text-neutral-900 line-clamp-1 dark:text-white">{mainTitle(entry)}</span>

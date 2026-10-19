@@ -1,9 +1,10 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { signInWithPassword } from './helpers/shared-auth';
 import { observeRenderHealth } from './helpers/render-health';
+import { layoutIssues, type LayoutIssue } from './helpers/layout-usability';
+import { alignTaskForCapture } from './helpers/task-capture';
 import { randomUUID } from 'node:crypto';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import WebSocket from 'ws';
+import { createFixtureClient, must, write, type FixtureClient } from './helpers/fixture-db';
 
 const allowDestructive = process.env.E2E_ALLOW_DESTRUCTIVE === 'true';
 const supabaseUrl = process.env.ODONTO_SUPABASE_URL;
@@ -41,19 +42,11 @@ const rest = () => {
 	if (!supabaseUrl || !serviceRoleKey) {
 		throw new Error('Faltan ODONTO_SUPABASE_URL u ODONTO_SUPABASE_SERVICE_ROLE_KEY.');
 	}
-	return createClient(supabaseUrl, serviceRoleKey, {
-		auth: { autoRefreshToken: false, persistSession: false },
-		realtime: { transport: WebSocket }
-	});
+	return createFixtureClient(supabaseUrl, serviceRoleKey);
 };
 
-const must = async <T>(operation: PromiseLike<{ data: T; error: unknown }>) => {
-	const { data, error } = await operation;
-	if (error) throw error;
-	return data;
-};
 
-const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
+const createFixture = async (admin: FixtureClient): Promise<Fixture> => {
 	const suffix = unique();
 	const ownerEmail = `e2e-owner-${suffix}@example.com`;
 	const businessSlug = `e2e-roles-agenda-${suffix}`;
@@ -85,7 +78,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 			.single()
 	);
 
-	await must(
+	await write(
 		admin.from('business_subscriptions').upsert(
 			{
 				business_id: business.id,
@@ -103,13 +96,13 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 			}
 		)
 	);
-	await must(
+	await write(
 		admin.from('allowed_emails').upsert({
 			email: ownerEmail,
 			enabled: true
 		})
 	);
-	await must(
+	await write(
 		admin.from('business_users').insert({
 			business_id: business.id,
 			user_id: ownerUserId,
@@ -165,7 +158,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 	]);
 
 	for (const professionalId of [professional.id, otherProfessional.id]) {
-		await must(
+		await write(
 			admin.from('professional_services').insert({
 				business_id: business.id,
 				professional_id: professionalId,
@@ -173,7 +166,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 			})
 		);
 		for (const weekday of [0, 1, 2, 3, 4, 5, 6]) {
-			await must(
+			await write(
 				admin.from('availability_rules').insert({
 					business_id: business.id,
 					professional_id: professionalId,
@@ -236,7 +229,7 @@ const createFixture = async (admin: SupabaseClient): Promise<Fixture> => {
 	};
 };
 
-const cleanupFixture = async (admin: SupabaseClient, fixture: Partial<Fixture> | null) => {
+const cleanupFixture = async (admin: FixtureClient, fixture: Partial<Fixture> | null) => {
 	if (!fixture) return;
 	const operations: Array<PromiseLike<{ error: unknown }>> = [];
 	if (fixture.businessId)
@@ -262,10 +255,7 @@ const cleanupFixture = async (admin: SupabaseClient, fixture: Partial<Fixture> |
 	]);
 	for (const userId of authUserIds) {
 		const { error } = await admin.auth.admin.deleteUser(userId);
-		if (
-			error &&
-			!String((error as { message?: string }).message ?? '').includes('User not found')
-		) {
+		if (error && !error.message.includes('User not found')) {
 			throw error;
 		}
 	}
@@ -276,7 +266,7 @@ const login = async (page: Page, fixture: Fixture) => {
 	await expect(page.getByRole('link', { name: 'Agenda' })).toBeVisible();
 };
 
-const assertOwnerIdentity = async (page: Page, admin: SupabaseClient, fixture: Fixture) => {
+const assertOwnerIdentity = async (page: Page, admin: FixtureClient, fixture: Fixture) => {
 	const token = (await page.context().cookies()).find(
 		(cookie) => cookie.name === 'sb-access-token'
 	);
@@ -399,7 +389,7 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		'Requiere E2E_ALLOW_DESTRUCTIVE=true y ODONTO_SUPABASE_* local/staging.'
 	);
 
-	let admin: SupabaseClient;
+	let admin: FixtureClient;
 	let fixture: Fixture | null = null;
 
 	test.beforeAll(async () => {
@@ -440,6 +430,7 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		// Render the same in-progress task through the complete planned width/theme matrix.
 		// Theme fixture changes only presentation; the eventual saved profile is read back below.
 		const wizardCoverage: { width: number; theme: string }[] = [];
+		const wizardLayout: (LayoutIssue & { width: number; theme: string })[] = [];
 		for (const width of [320, 390, 768, 1280, 1600])
 			for (const theme of ['light', 'dark']) {
 				await page.setViewportSize({ width, height: 900 });
@@ -447,21 +438,12 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 				expect(await page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(
 					true
 				);
-				expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-					true
-				);
-				expect(
-					await page
-						.locator(
-							'form[action="?/add_user"] input:visible,form[action="?/add_user"] button:visible'
-						)
-						.evaluateAll((nodes) =>
-							nodes.some((node) => {
-								const r = node.getBoundingClientRect();
-								return r.left < -1 || r.right > innerWidth + 1 || r.width < 10;
-							})
-						)
-				).toBe(false);
+				for (const issue of await layoutIssues(
+					page,
+					'form[action="?/add_user"] input:visible,form[action="?/add_user"] button:visible'
+				))
+					wizardLayout.push({ width, theme, ...issue });
+				await alignTaskForCapture(page.getByRole('heading', { name: 'Agregar integrante', exact: true }));
 				await page.screenshot({
 					path: test.info().outputPath(`team-wizard-${width}-${theme}.jpg`),
 					type: 'jpeg',
@@ -471,6 +453,7 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 				wizardCoverage.push({ width, theme });
 			}
 		expect(wizardCoverage).toHaveLength(10);
+		expect(wizardLayout).toEqual([]);
 		await test
 			.info()
 			.attach('team-wizard-responsive-coverage', {
@@ -501,23 +484,28 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await expect(page.getByRole('link', { name: 'Ver profesional' })).toBeVisible();
 		await wizardHealth.assertAndAttach(test.info(), 'team-wizard-render-health');
 
-		const { data: pendingInvite } = await admin
-			.from('business_user_invites')
-			.select('id, professional_id, role, status')
-			.eq('business_id', fixture.businessId)
-			.eq('email', pendingProfessionalEmail)
-			.single();
-		expect(pendingInvite?.role).toBe('professional');
-		expect(pendingInvite?.status).toBe('pending');
-		expect(pendingInvite?.professional_id).toBeTruthy();
-		const { data: hiddenPendingProfessional } = await admin
-			.from('professionals')
-			.select('is_active, is_public')
-			.eq('business_id', fixture.businessId)
-			.eq('id', pendingInvite?.professional_id)
-			.single();
-		expect(hiddenPendingProfessional?.is_active).toBe(true);
-		expect(hiddenPendingProfessional?.is_public).toBe(false);
+		const pendingInvite = await must(
+			admin
+				.from('business_user_invites')
+				.select('id, professional_id, role, status')
+				.eq('business_id', fixture.businessId)
+				.eq('email', pendingProfessionalEmail)
+				.single()
+		);
+		expect(pendingInvite.role).toBe('professional');
+		expect(pendingInvite.status).toBe('pending');
+		const pendingProfessionalId = pendingInvite.professional_id;
+		if (!pendingProfessionalId) throw new Error('La invitación profesional no conservó su perfil.');
+		const hiddenPendingProfessional = await must(
+			admin
+				.from('professionals')
+				.select('is_active, is_public')
+				.eq('business_id', fixture.businessId)
+				.eq('id', pendingProfessionalId)
+				.single()
+		);
+		expect(hiddenPendingProfessional.is_active).toBe(true);
+		expect(hiddenPendingProfessional.is_public).toBe(false);
 
 		const pendingContext = await browser.newContext();
 		const pendingPage = await pendingContext.newPage();
@@ -538,51 +526,60 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await expect(pendingPage).toHaveURL(/\/odonto\/mis-turnos/);
 		await expect(pendingPage.getByRole('link', { name: 'Mis turnos' })).toBeVisible();
 		await expect(pendingPage.getByRole('link', { name: 'Pacientes' })).toBeVisible();
-		await pendingPage.goto(`/odonto/profesionales/${pendingInvite?.professional_id}`);
+		await pendingPage.goto(`/odonto/profesionales/${pendingProfessionalId}`);
 		await expect(pendingPage).toHaveURL(/\/odonto\/mis-turnos/);
 		await pendingContext.close();
 		await assertOwnerIdentity(page, admin, fixture);
 		// Keep the original session: logging in again here could conceal a
 		// cross-context identity regression caused by accepting the invitation.
 
-		const { data: acceptedInvite } = await admin
-			.from('business_user_invites')
-			.select('status, accepted_user_id, professional_id')
-			.eq('business_id', fixture.businessId)
-			.eq('email', pendingProfessionalEmail)
-			.single();
-		expect(acceptedInvite?.status).toBe('accepted');
-		expect(acceptedInvite?.accepted_user_id).toBeTruthy();
-		expect(acceptedInvite?.accepted_user_id).not.toBe(fixture.ownerUserId);
-		if (acceptedInvite?.accepted_user_id)
-			fixture.authUserIds.push(String(acceptedInvite.accepted_user_id));
+		const acceptedInvite = await must(
+			admin
+				.from('business_user_invites')
+				.select('status, accepted_user_id, professional_id')
+				.eq('business_id', fixture.businessId)
+				.eq('email', pendingProfessionalEmail)
+				.single()
+		);
+		expect(acceptedInvite.status).toBe('accepted');
+		const acceptedUserId = acceptedInvite.accepted_user_id;
+		if (!acceptedUserId) throw new Error('La invitación aceptada no registró su cuenta.');
+		expect(acceptedUserId).not.toBe(fixture.ownerUserId);
+		fixture.authUserIds.push(acceptedUserId);
+		expect(acceptedInvite.professional_id).toBe(pendingProfessionalId);
 
-		const { data: acceptedMembership } = await admin
-			.from('business_users')
-			.select('role, status, accepted_at')
-			.eq('business_id', fixture.businessId)
-			.eq('user_id', acceptedInvite?.accepted_user_id)
-			.single();
-		expect(acceptedMembership?.role).toBe('professional');
-		expect(acceptedMembership?.status).toBe('active');
-		expect(acceptedMembership?.accepted_at).toBeTruthy();
+		const acceptedMembership = await must(
+			admin
+				.from('business_users')
+				.select('role, status, accepted_at')
+				.eq('business_id', fixture.businessId)
+				.eq('user_id', acceptedUserId)
+				.single()
+		);
+		expect(acceptedMembership.role).toBe('professional');
+		expect(acceptedMembership.status).toBe('active');
+		expect(acceptedMembership.accepted_at).toBeTruthy();
 
-		const { data: acceptedProfessionalLink } = await admin
-			.from('professional_users')
-			.select('id')
-			.eq('business_id', fixture.businessId)
-			.eq('professional_id', acceptedInvite?.professional_id)
-			.eq('user_id', acceptedInvite?.accepted_user_id)
-			.single();
-		expect(acceptedProfessionalLink?.id).toBeTruthy();
-		const { data: publishedProfessional } = await admin
-			.from('professionals')
-			.select('is_active, is_public')
-			.eq('business_id', fixture.businessId)
-			.eq('id', acceptedInvite?.professional_id)
-			.single();
-		expect(publishedProfessional?.is_active).toBe(true);
-		expect(publishedProfessional?.is_public).toBe(true);
+		const acceptedProfessionalLink = await must(
+			admin
+				.from('professional_users')
+				.select('id')
+				.eq('business_id', fixture.businessId)
+				.eq('professional_id', pendingProfessionalId)
+				.eq('user_id', acceptedUserId)
+				.single()
+		);
+		expect(acceptedProfessionalLink.id).toBeTruthy();
+		const publishedProfessional = await must(
+			admin
+				.from('professionals')
+				.select('is_active, is_public')
+				.eq('business_id', fixture.businessId)
+				.eq('id', pendingProfessionalId)
+				.single()
+		);
+		expect(publishedProfessional.is_active).toBe(true);
+		expect(publishedProfessional.is_public).toBe(true);
 
 		// La vista vieja de Profesionales redirige a Equipo.
 		await page.goto('/odonto/profesionales');
@@ -926,23 +923,27 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await expect(page.getByRole('heading', { name: adminEmail, exact: true })).toBeVisible();
 		await expect(page.getByText('Cuenta profesional pendiente', { exact: true })).toBeVisible();
 
-		const { data: pendingInvite, error: pendingInviteError } = await admin
-			.from('business_user_invites')
-			.select('id, professional_id, role, status')
-			.eq('business_id', fixture.businessId)
-			.eq('email', adminEmail)
-			.single();
-		if (pendingInviteError) throw pendingInviteError;
-		expect(pendingInvite?.role).toBe('admin');
-		expect(pendingInvite?.status).toBe('pending');
-		expect(pendingInvite?.professional_id).toBeTruthy();
+		const pendingInvite = await must(
+			admin
+				.from('business_user_invites')
+				.select('id, professional_id, role, status')
+				.eq('business_id', fixture.businessId)
+				.eq('email', adminEmail)
+				.single()
+		);
+		expect(pendingInvite.role).toBe('admin');
+		expect(pendingInvite.status).toBe('pending');
+		const adminProfessionalId = pendingInvite.professional_id;
+		if (!adminProfessionalId) throw new Error('La invitación de administrador no conservó su perfil.');
 
-		const { data: hiddenProfile } = await admin
-			.from('professionals')
-			.select('is_active, is_public')
-			.eq('business_id', fixture.businessId)
-			.eq('id', pendingInvite?.professional_id)
-			.single();
+		const hiddenProfile = await must(
+			admin
+				.from('professionals')
+				.select('is_active, is_public')
+				.eq('business_id', fixture.businessId)
+				.eq('id', adminProfessionalId)
+				.single()
+		);
 		expect(hiddenProfile).toMatchObject({ is_active: true, is_public: false });
 
 		const adminContext = await browser.newContext();
@@ -960,42 +961,51 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 			.click();
 		await expect(adminPage).toHaveURL(/\/odonto\/agenda/);
 
-		const { data: acceptedInvite, error: acceptedInviteError } = await admin
-			.from('business_user_invites')
-			.select('accepted_user_id, professional_id, status')
-			.eq('id', pendingInvite?.id)
-			.single();
-		if (acceptedInviteError) throw acceptedInviteError;
-		expect(acceptedInvite?.status).toBe('accepted');
-		if (acceptedInvite?.accepted_user_id)
-			fixture.authUserIds.push(String(acceptedInvite.accepted_user_id));
+		const acceptedInvite = await must(
+			admin
+				.from('business_user_invites')
+				.select('accepted_user_id, professional_id, status')
+				.eq('id', pendingInvite.id)
+				.single()
+		);
+		expect(acceptedInvite.status).toBe('accepted');
+		const adminUserId = acceptedInvite.accepted_user_id;
+		if (!adminUserId) throw new Error('La invitación de administrador aceptada no registró su cuenta.');
+		fixture.authUserIds.push(adminUserId);
+		expect(acceptedInvite.professional_id).toBe(adminProfessionalId);
 
-		const { data: adminMembership } = await admin
-			.from('business_users')
-			.select('role, status')
-			.eq('business_id', fixture.businessId)
-			.eq('user_id', acceptedInvite?.accepted_user_id)
-			.single();
+		const adminMembership = await must(
+			admin
+				.from('business_users')
+				.select('role, status')
+				.eq('business_id', fixture.businessId)
+				.eq('user_id', adminUserId)
+				.single()
+		);
 		expect(adminMembership).toMatchObject({ role: 'admin', status: 'active' });
 
-		const { data: linkedProfile } = await admin
-			.from('professional_users')
-			.select('id')
-			.eq('business_id', fixture.businessId)
-			.eq('professional_id', acceptedInvite?.professional_id)
-			.eq('user_id', acceptedInvite?.accepted_user_id)
-			.single();
-		expect(linkedProfile?.id).toBeTruthy();
+		const linkedProfile = await must(
+			admin
+				.from('professional_users')
+				.select('id')
+				.eq('business_id', fixture.businessId)
+				.eq('professional_id', adminProfessionalId)
+				.eq('user_id', adminUserId)
+				.single()
+		);
+		expect(linkedProfile.id).toBeTruthy();
 
-		const { data: publishedProfile } = await admin
-			.from('professionals')
-			.select('is_active, is_public')
-			.eq('business_id', fixture.businessId)
-			.eq('id', acceptedInvite?.professional_id)
-			.single();
+		const publishedProfile = await must(
+			admin
+				.from('professionals')
+				.select('is_active, is_public')
+				.eq('business_id', fixture.businessId)
+				.eq('id', adminProfessionalId)
+				.single()
+		);
 		expect(publishedProfile).toMatchObject({ is_active: true, is_public: true });
 
-		await adminPage.goto(`/odonto/profesionales/${acceptedInvite?.professional_id}?tab=horarios`);
+		await adminPage.goto(`/odonto/profesionales/${adminProfessionalId}?tab=horarios`);
 		await expect(adminPage.getByRole('heading', { name: adminProfessionalName })).toBeVisible();
 		await adminPage.waitForLoadState('networkidle');
 		const scheduleForm = adminPage.locator('form[action="?/save_weekly_rules"]');

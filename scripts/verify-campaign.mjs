@@ -17,6 +17,8 @@ const steps = [
 	['inventory', 'node', ['scripts/inventory-campaign.mjs']],
 	['shared-types', 'pnpm', ['--filter', '@cita-suite/shared', 'check']],
 	['web-types', 'pnpm', ['--filter', 'web', 'check']],
+	// svelte-check covers src only; browser specs and their fixtures are type-checked separately.
+	['browser-test-types', 'pnpm', ['--filter', 'web', 'check:e2e']],
 	['natalia-types', 'pnpm', ['--filter', 'natalia', 'check']],
 	['verification-runner-tests', 'node', ['scripts/run-campaign-node-tests.mjs']],
 	['evidence-recovery-tests', 'python3', ['scripts/test-verification-evidence.py']],
