@@ -44,6 +44,7 @@ test('layout usability detector reports squeezed ordinary words and accepts legi
 			</div>
 			<p id="split-duration" style="width: 70px">30 minutos</p>
 			<p id="split-amount" style="width: 70px">$ 20.000</p>
+			<p id="dangling-separator" style="width: 220px">Consulta de prueba · 30&nbsp;minutos</p>
 			<div class="ux-choice" id="truncated-choice" style="width: 120px">
 				<span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">E2E Consulta sintética larga</span>
 			</div>
@@ -60,6 +61,7 @@ test('layout usability detector reports squeezed ordinary words and accepts legi
 			<button style="white-space: nowrap">Guardar cambios</button>
 			<button style="width: 150px">Confirmar la reserva del turno de control anual</button>
 			<p style="width: 70px">30&nbsp;min</p>
+			<p style="width: 220px">Consulta de prueba ·&nbsp;30&nbsp;minutos</p>
 			<div class="ux-choice" style="width: 120px"><span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Corto</span></div>
 			<p data-truncation="allowed" style="width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Excepción revisada y documentada</p>
 			<button class="ux-control-trigger" style="width: 150px"><span>Sólo las seleccionadas</span></button>
@@ -78,6 +80,7 @@ test('layout usability detector reports squeezed ordinary words and accepts legi
 	]);
 	expect((await textIssues(page, '#split-duration')).map(({ check }) => check)).toEqual(['split-quantity']);
 	expect((await textIssues(page, '#split-amount')).map(({ check }) => check)).toEqual(['split-quantity']);
+	expect((await textIssues(page, '#dangling-separator')).map(({ check }) => check)).toEqual(['dangling-separator']);
 	expect((await textIssues(page, '#truncated-choice')).map(({ check }) => check)).toEqual(['truncated-value']);
 	expect(await textIssues(page, '#legitimate')).toEqual([]);
 	expect(await textIssues(page, '#chrome')).toEqual([]);

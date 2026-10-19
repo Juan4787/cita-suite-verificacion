@@ -782,7 +782,7 @@
 			<h2 class="text-xl font-bold tracking-tight text-white sm:text-2xl">¿Con quién?</h2>
 			{#if selectedService}
 				<p class="mt-2 text-base text-white/60">
-					{selectedService.name} · {formatDuration(selectedService.duration_minutes)}
+					{selectedService.name} ·&nbsp;{formatDuration(selectedService.duration_minutes)}
 				</p>
 			{/if}
 
@@ -940,7 +940,7 @@
 					<h2 class="text-xl font-bold tracking-tight text-white sm:text-2xl">Elegí un día</h2>
 					{#if selectedService}
 						<p class="mt-2 text-base text-white/60">
-							{selectedService.name} · {formatDuration(selectedService.duration_minutes)}
+							{selectedService.name} ·&nbsp;{formatDuration(selectedService.duration_minutes)}
 						</p>
 					{/if}
 				</div>

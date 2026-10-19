@@ -605,7 +605,7 @@
 									<span class="min-w-0 flex-1">
 										<span class="block break-words font-black text-white">{service.name}</span>
 										<span class="mt-1 block text-sm text-white/55">
-											{formatDuration(service.duration_minutes)}{service.price_label ? ` · ${service.price_label}` : ''}
+											{formatDuration(service.duration_minutes)}{service.price_label ? ` ·\u00a0${service.price_label}` : ''}
 										</span>
 									</span>
 								</div>
@@ -622,7 +622,7 @@
 									<span class="min-w-0 flex-1">
 										<span class="block break-words font-black text-white">{service.name}</span>
 										<span class="mt-1 block text-sm text-white/55">
-											{formatDuration(service.duration_minutes)}{service.price_label ? ` · ${service.price_label}` : ''}
+											{formatDuration(service.duration_minutes)}{service.price_label ? ` ·\u00a0${service.price_label}` : ''}
 										</span>
 									</span>
 								</label>
@@ -633,7 +633,7 @@
 									<span class="min-w-0 flex-1">
 										<span class="block break-words font-black text-white">{service.name}</span>
 										<span class="mt-1 block text-sm text-white/55">
-											{formatDuration(service.duration_minutes)}{service.price_label ? ` · ${service.price_label}` : ''}
+											{formatDuration(service.duration_minutes)}{service.price_label ? ` ·\u00a0${service.price_label}` : ''}
 										</span>
 									</span>
 									<span class="ux-badge shrink-0">Nuevo</span>

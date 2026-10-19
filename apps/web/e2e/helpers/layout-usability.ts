@@ -10,6 +10,7 @@ export type TextIssue =
 	| ({ check: 'broken-word' } & BrokenWord)
 	| { check: 'wrapped-control'; label: string; lines: number; width: number }
 	| { check: 'split-quantity'; text: string }
+	| { check: 'dangling-separator'; text: string }
 	| { check: 'truncated-value'; tag: string; width: number };
 export type LayoutIssue =
 	| { check: 'zoom-blocked' | 'document-overflow' | 'framework-overlay' }
@@ -29,6 +30,8 @@ export type LayoutIssue =
  *   display a chosen value and may wrap it instead of truncating it.
  * - split-quantity: a number and its unit (minutes, hours, years, %, $ amount) on
  *   different lines.
+ * - dangling-separator: an inline separator (·) left at the end of a line, apart
+ *   from the group it introduces.
  * - truncated-value: text inside the page content (`main` or a dialog) cut with an
  *   ellipsis, which hides what was chosen or who is involved. Header/navigation
  *   names and reviewed exceptions (`data-truncation="allowed"`) are not reported.
@@ -41,6 +44,7 @@ export async function textIssues(page: Page, scope = 'body'): Promise<TextIssue[
 				| { check: 'broken-word'; word: string; tag: string; lines: number; width: number }
 				| { check: 'wrapped-control'; label: string; lines: number; width: number }
 				| { check: 'split-quantity'; text: string }
+				| { check: 'dangling-separator'; text: string }
 				| { check: 'truncated-value'; tag: string; width: number };
 			const issues: Found[] = [];
 			const visible = (element: Element) => {
@@ -100,6 +104,12 @@ export async function textIssues(page: Page, scope = 'body'): Promise<TextIssue[
 						const after = rectsOf(text, end, Math.min(end + 1, text.data.length));
 						if (before.length && after.length && Math.abs(before[0].top - after[0].top) > before[0].height / 2)
 							issues.push({ check: 'split-quantity', text: text.data.slice(match.index, Math.min(end + 8, text.data.length)) });
+					}
+					for (const match of text.data.matchAll(/·\s+(?=\S)/g)) {
+						const separator = rectsOf(text, match.index, match.index + 1);
+						const next = rectsOf(text, match.index + match[0].length, match.index + match[0].length + 1);
+						if (separator.length && next.length && Math.abs(separator[0].top - next[0].top) > separator[0].height / 2)
+							issues.push({ check: 'dangling-separator', text: text.data.slice(Math.max(0, match.index - 12), match.index + match[0].length + 12) });
 					}
 				}
 				const controls = root.querySelectorAll(

@@ -538,7 +538,7 @@
 		<div class="min-w-0 flex-1">
 			<p class="break-words text-base font-bold text-white sm:text-lg">{appointment.patients?.full_name ?? 'Paciente'}</p>
 			<p class="mt-0.5 break-words text-sm text-white/55">
-				{appointment.service_name_snapshot} · {appointment.professional_name_snapshot}
+				{appointment.service_name_snapshot} ·&nbsp;{appointment.professional_name_snapshot}
 			</p>
 			<div class="mt-2 flex flex-wrap gap-2">
 				<span class={appointmentStatusTone(appointment)}>{appointmentStatusLabel(appointment)}</span>
@@ -603,7 +603,7 @@
 			>
 				{showSearch ? 'Ocultar búsqueda' : 'Buscar'}
 			</button>
-			<a href={weekHref} class="ux-btn-secondary w-full sm:w-auto">Turnos de la semana</a>
+			<a href={weekHref} class="ux-btn-secondary w-full sm:w-auto">Ver semana</a>
 		</div>
 	</div>
 

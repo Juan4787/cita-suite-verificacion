@@ -332,7 +332,7 @@
 									<p class="mt-1 text-sm text-white/55">{service.description}</p>
 								{/if}
 								<p class="mt-2 text-sm font-semibold text-white/55">
-									{formatDuration(service.duration_minutes)}{service.price_label ? ` · ${service.price_label}` : ''}
+									{formatDuration(service.duration_minutes)}{service.price_label ? ` ·\u00a0${service.price_label}` : ''}
 								</p>
 							</a>
 						{/each}
@@ -341,7 +341,7 @@
 			{:else if selectedService}
 				{@render doneStep(
 					'Servicio',
-					`${selectedService.name} · ${formatDuration(selectedService.duration_minutes)}`,
+					`${selectedService.name} ·\u00a0${formatDuration(selectedService.duration_minutes)}`,
 					queryFor({
 						service_id: '',
 						booking_mode: 'individual',
@@ -436,7 +436,7 @@
 					</section>
 				{/if}
 			{:else if step > 4 && selectedSlot}
-				{@render doneStep('Horario', `${selectedDay?.label ?? ''} · ${selectedSlot.time}\u00a0h`, queryFor({ slot: '' }))}
+				{@render doneStep('Horario', `${selectedDay?.label ?? ''} ·\u00a0${selectedSlot.time}\u00a0h`, queryFor({ slot: '' }))}
 			{/if}
 
 			<!-- Paso 5 · Datos del paciente -->
