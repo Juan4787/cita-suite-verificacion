@@ -185,7 +185,7 @@
                     {#if permissions.canReadClinicalProfile && patient.booking_age}<p class="mb-3 text-sm">Edad declarada: {patient.booking_age.years} años (al {patient.booking_age.as_of}).</p>{/if}
                     {#if permissions.canReadClinicalProfile && patient.booking_extra_fields?.length}<dl class="mb-4 space-y-2">{#each patient.booking_extra_fields as field}<div><dt class="text-xs text-neutral-600 dark:text-neutral-300">{field.label}</dt><dd class="text-sm whitespace-pre-wrap break-words">{typeof field.value === 'boolean' ? field.value ? 'Sí' : 'No' : String(field.value)}</dd></div>{/each}</dl>{/if}
                     <div class="space-y-3">
-                        <div class="flex min-w-0 items-start justify-between gap-3 rounded-lg bg-amber-100/30 px-3 py-2 dark:bg-amber-500/10">
+                        <div class="flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-1 rounded-lg bg-amber-100/30 px-3 py-2 dark:bg-amber-500/10">
 							<div class="flex items-center gap-2 text-xs font-semibold text-amber-700 dark:text-amber-200">
 								<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M4.93 19h14.14a1 1 0 0 0 .9-1.45L12.9 4.55a1 1 0 0 0-1.8 0L4.03 17.55A1 1 0 0 0 4.93 19Z" />
@@ -193,14 +193,14 @@
 								Alergias
 							</div>
 							<p
-								class={`min-w-0 flex-1 break-words text-right text-[15px] font-semibold ${
+								class={`min-w-0 flex-[1_1_10rem] break-words text-right text-[15px] font-semibold ${
 									patient.allergies ? 'text-amber-900 dark:text-amber-100' : 'text-amber-700/70 dark:text-amber-200/70'
 								}`}
 							>
 								{patient.allergies ?? 'Sin registrar'}
 							</p>
 						</div>
-						<div class="flex min-w-0 items-start justify-between gap-3">
+						<div class="flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-1">
 							<div class="flex items-center gap-2 text-xs font-semibold text-neutral-500 dark:text-neutral-300">
 								<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75 17.25 17.25M9 5.25 5.25 9 9 12.75 12.75 9 9 5.25Z" />
@@ -209,14 +209,14 @@
 								Medicación
 							</div>
 							<p
-								class={`min-w-0 flex-1 break-words text-left text-[15px] font-semibold ${
+								class={`min-w-0 flex-[1_1_10rem] break-words text-left text-[15px] font-semibold ${
 									patient.medication ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'
 								}`}
 							>
 								{patient.medication ?? 'Sin registrar'}
 							</p>
 						</div>
-						<div class="flex min-w-0 items-start justify-between gap-3">
+						<div class="flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-1">
 							<div class="flex items-center gap-2 text-xs font-semibold text-neutral-500 dark:text-neutral-300">
 								<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 4.5h10.5a1.5 1.5 0 0 1 1.5 1.5v12.75l-4.5-2.25L9.75 18.75 5.25 21V6A1.5 1.5 0 0 1 6.75 4.5Z" />
@@ -224,7 +224,7 @@
 								Antecedentes
 							</div>
 							<p
-								class={`min-w-0 flex-1 break-words text-left text-[15px] font-semibold whitespace-pre-wrap ${
+								class={`min-w-0 flex-[1_1_10rem] break-words text-left text-[15px] font-semibold whitespace-pre-wrap ${
 									patient.background ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'
 								}`}
 							>

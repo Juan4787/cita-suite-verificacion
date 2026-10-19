@@ -233,7 +233,7 @@
 					onclick={() => toggleCategory(category.id)}
 					aria-expanded={Boolean(openCategories[category.id])}
 				>
-					<span class="flex items-center gap-3">
+					<span class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
 						<span class="text-xl font-black text-white">{category.title}</span>
 						<span class="ux-badge">{categoryMembers.length}</span>
 					</span>

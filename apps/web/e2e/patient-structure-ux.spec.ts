@@ -67,10 +67,10 @@ test('patient structure preserves role scope, keyboard access and long content a
 	}
 	// Accumulated across all fifty combinations and asserted once, so a failure names
 	// every affected role/width/preference instead of stopping at the first one.
-	const layoutProblems: (LayoutIssue & { role: string; width: number; theme: string; stage: string })[] =
+	const layoutProblems: (LayoutIssue & { role: string; viewport: number; theme: string; stage: string })[] =
 		[];
-	const narrowEntries: { role: string; width: number; theme: string; entry: number; summary: number }[] = [];
-	async function geometry(where: { role: string; width: number; theme: string; stage: string }) {
+	const narrowEntries: { role: string; viewport: number; theme: string; entry: number; summary: number }[] = [];
+	async function geometry(where: { role: string; viewport: number; theme: string; stage: string }) {
 		for (const issue of await layoutIssues(
 			page,
 			'main input:not(.ux-native-source):not([type="checkbox"]):not([type="radio"]):visible, main .ux-control-trigger:visible, [role="dialog"] input:not(.ux-native-source):not([type="checkbox"]):not([type="radio"]):visible, [role="dialog"] .ux-control-trigger:visible, [role="dialog"] textarea:visible, [role="dialog"] select:not(.ux-native-source):visible'
@@ -245,7 +245,18 @@ test('patient structure preserves role scope, keyboard access and long content a
 						role === 'owner' ||
 						(width === 390 && theme === 'light') ||
 						(width === 1280 && theme === 'dark');
-					await geometry({ role, width, theme, stage: 'page' });
+					await geometry({ role, viewport: width, theme, stage: 'page' });
+					// The name and record actions share the header (long name observed at 768);
+					// later task captures start below it.
+					if (role === 'owner' && theme === 'dark') {
+						await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+						await page.screenshot({
+							path: testInfo.outputPath(`${role}-${width}-${theme}-header.jpg`),
+							type: 'jpeg',
+							quality: 65,
+							animations: 'disabled'
+						});
+					}
 					if (role !== 'reception') {
 						const toggle = page.getByRole('button', { name: /^Detalles de Consulta/ });
 						await expect(toggle).toBeEnabled();
@@ -255,14 +266,14 @@ test('patient structure preserves role scope, keyboard access and long content a
 						await expect(
 							page.locator(`[id="clinical-entry-${patient.id}-${entry.id}"]`)
 						).toContainText('ReferenciaExtensa');
-						await geometry({ role, width, theme, stage: 'history-expanded' });
+						await geometry({ role, viewport: width, theme, stage: 'history-expanded' });
 						// The entry summary is the primary reading column of the record: costs and
 						// editing must not squeeze it beside them (observed at 320/390).
 						const toggleBox = await toggle.boundingBox(),
 							entryBox = await page.locator('article').filter({ has: toggle }).boundingBox();
 						if (!toggleBox || !entryBox) throw new Error('Clinical entry is not rendered.');
 						if (toggleBox.width < entryBox.width * 0.5)
-							narrowEntries.push({ role, width, theme, entry: entryBox.width, summary: toggleBox.width });
+							narrowEntries.push({ role, viewport: width, theme, entry: entryBox.width, summary: toggleBox.width });
 						checks.push('keyboard-full-description', 'readable-entry-column');
 						if (capture) await alignTaskForCapture(toggle);
 					} else {
@@ -341,7 +352,7 @@ test('patient structure preserves role scope, keyboard access and long content a
 						await expect(
 							page.getByRole('paragraph').filter({ hasText: /^ALERTA_CLINICA_SINTETICA$/ })
 						).toBeVisible();
-					await geometry({ role, width, theme, stage: 'profile' });
+					await geometry({ role, viewport: width, theme, stage: 'profile' });
 					checks.push('profile-role-scope');
 					if (capture) await alignTaskForCapture(profileHeading);
 					if (capture)
@@ -363,7 +374,7 @@ test('patient structure preserves role scope, keyboard access and long content a
 						if (role === 'reception')
 							await expect(dialog.locator('[name="allergies"]')).toHaveCount(0);
 						else await expect(dialog.locator('[name="allergies"]')).toBeVisible();
-						await geometry({ role, width, theme, stage: 'edit-dialog' });
+						await geometry({ role, viewport: width, theme, stage: 'edit-dialog' });
 						if (capture)
 							await page.screenshot({
 								path: testInfo.outputPath(`${role}-${width}-${theme}-edit.jpg`),

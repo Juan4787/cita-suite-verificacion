@@ -39,10 +39,10 @@
 2. Matrices de navegador y recuperación/persistencia, sin retries ni omisiones; recuperar paquete íntegro con hashes.
 3. Medición real de Natalia y comparación con baseline, sin atribuir CPU0 a ausencia de framework.
 4. Inspección propia acotada, detector una vez, revisión fresca de finalización y documentación de Impeccable con capturas válidas.
-5. Contraste punto por punto de esta etapa contra documento original, actualización de mapa/registro/traspaso y aviso inmediato al usuario. Detenerse antes de6 por su último alcance.
+5. Contraste punto por punto de esta etapa contra documento original, actualización de mapa/registro/traspaso y aviso inmediato al usuario. Después continuar con la etapa 6 (alcance vigente del 19 de octubre; la detención antes de 6 de la intervención anterior quedó reemplazada).
 
 La separación de tareas de6, carga5/25, staging, artefactos de release, publicación y auditoría transversal siguen en el plan. Ninguna aprobación parcial de esta etapa certifica esos trabajos.
 
 ## Estado al relevo inmediato del19 de octubre
 
-Etapa5 abierta por pedido de relevo. El diagnóstico39206541967 acredita siete casos funcionales y las matrices previstas; el octavo falla limpiando la cuenta sintética de administrador, corregido en el candidato full09dec4e/39207125504 aún en curso al relevo. La inspección propia posterior detectó defectos visuales de legibilidad y capturas de tareas incorrectas: cuatro correcciones y helper de captura preparados **sin prueba posterior**. No dar por satisfecho el criterio visual aunque full09dec4e apruebe. Releer el [traspaso actualizado](../plans/traspaso-refactorizacion-cita-suite.md), completar esa tanda, segunda inspección, detector, revisión/documentación frescas y full final antes de avisar cierre. No iniciar6.
+Etapa5 abierta por pedido de relevo. El diagnóstico39206541967 acredita siete casos funcionales y las matrices previstas; el octavo falla limpiando la cuenta sintética de administrador, corregido en el candidato full09dec4e/39207125504 aún en curso al relevo. La inspección propia posterior detectó defectos visuales de legibilidad y capturas de tareas incorrectas: cuatro correcciones y helper de captura preparados **sin prueba posterior**. No dar por satisfecho el criterio visual aunque full09dec4e apruebe. Releer el [traspaso actualizado](../plans/traspaso-refactorizacion-cita-suite.md), completar esa tanda, segunda inspección, detector, revisión/documentación frescas y full final antes de avisar cierre; la etapa 6 comienza sólo después de ese cierre.

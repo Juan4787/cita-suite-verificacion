@@ -4,7 +4,9 @@
 
 **RELEVO INMEDIATO SOLICITADO POR EL USUARIO — 19 de octubre de 2026, alrededor de 06:02 UTC. La etapa 5 sigue ABIERTA.** El usuario indicó: «actualiza traspado que ya se acaba la cuota, sigue opus ahora mismo». Se entrega el estado actual sin dar por terminada la etapa ni continuar hacia la 6. La campaña completa no está terminada.
 
-La instrucción vigente de esta intervención es cerrar la fase 5, avisar inmediatamente al usuario y detenerse antes de fase 6, dejando el resto listo para continuidad. No reduce el plan ni sus garantías.
+**Alcance vigente (instrucción del usuario del 19 de octubre al retomar con Opus 5.5):** completar y verificar íntegramente la fase 5, avisar al usuario cuando esté realmente cerrada y **continuar automáticamente con la fase 6 y todas las etapas restantes** hasta terminar la campaña, incluida la auditoría transversal, release, publicación y comprobaciones posteriores según las autorizaciones vigentes. Esta instrucción sustituye la restricción anterior de «detenerse antes de fase 6» (conservada abajo sólo como antecedente histórico de la intervención de GPT-6.1 Sol). Cambia únicamente el punto de detención: no reduce requisitos, garantías, controles ni procedimientos de seguridad.
+
+*Antecedente reemplazado:* la intervención anterior tenía como instrucción cerrar la fase 5, avisar y detenerse antes de fase 6. Ya no está vigente.
 
 ## Punto exacto del relevo: leer antes de ejecutar
 
@@ -46,7 +48,7 @@ Se creó **`apps/web/e2e/helpers/task-capture.ts`**, exporta `alignTaskForCaptur
 5. Recuperar las nuevas capturas, reemplazar el paquete de revisión con evidencia válida del código actual y completar la **segunda ronda propia** de confirmación de esta tanda. No reutilizar las imágenes actuales como si mostraran el código recién corregido. Si una puerta de implementación/captura sigue abierta, resolverla; el límite de pulido no autoriza certificar una falla.
 6. Ejecutar detector Impeccable **una sola vez** sobre los targets cambiados, después de inspección válida. **Todavía NO se ejecutó**; sólo se consultó `detect --help`. Abrir revisión fresca `impeccable_finish_reviewer` sin historial (`fork_turns: none`), con todos los anchos/capturas requeridos, dirección, PRODUCT/DESIGN/craft-floor, hallazgos y alcance. No leer definiciones de agentes ni usar agentes anteriores con contexto heredado. Después, documenter fresco con frontera de escritura documental. **Ninguno de ambos se ejecutó para este cierre.**
 7. Full final positivo de la revisión exacta, incluyendo todas las suites SQL/carreras, 35 casos locales de navegador previstos, demo y medición de Natalia. Confirmar los recuentos efectivos, cero omitidos/retries y diagnósticos de plataforma. La medición de Natalia aún no tenía resultado positivo cuando se pidió el relevo; revisar si full39207125504 llegó a ella.
-8. Actualizar matriz de aceptación punto por punto, mapa, informe UI, registro, manifiesto y este traspaso. Sólo entonces avisar inmediatamente «fase5 terminada» y **detenerse antes de6**. No anunciar campaña terminada ni ausencia total de deuda.
+8. Actualizar matriz de aceptación punto por punto, mapa, informe UI, registro, manifiesto y este traspaso. Sólo entonces avisar inmediatamente «fase5 terminada» y **continuar con la fase 6** (alcance vigente arriba; la detención antes de 6 quedó reemplazada). No anunciar campaña terminada ni ausencia total de deuda.
 
 ### Capturas y diagnósticos que recibe el siguiente agente
 
@@ -220,4 +222,4 @@ Cursos y noticias de Natalia continúan intactos y pospuestos. No abrir su imple
 
 ## Entrega requerida al usuario
 
-Notificar fase5 en cuanto cierre realmente; identificar revisión/evidencia y documentación, y detenerse antes de6 conforme al último alcance. Quien continúe debe completar toda la campaña restante antes de presentarla como finalizada. Nunca asegurar “cero deuda” o “todo auditado” por un full positivo parcial, una captura o una migración no aplicada.
+Notificar fase5 en cuanto cierre realmente; identificar revisión/evidencia y documentación, y continuar sin detenerse con la fase 6 y las etapas restantes (alcance vigente del 19 de octubre). Quien continúe debe completar toda la campaña restante antes de presentarla como finalizada. Nunca asegurar “cero deuda” o “todo auditado” por un full positivo parcial, una captura o una migración no aplicada.

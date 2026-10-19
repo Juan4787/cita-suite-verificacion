@@ -6,7 +6,7 @@ El [plan aprobado](../plans/refactorizacion-cita-suite.md) fija los criterios; e
 
 | Comando | Alcance exigido |
 |---|---|
-| `pnpm verify:fast` | Integridad del plan, inventario, tipos compartidos/Svelte/Natalia, pruebas del propio verificador, dependencias y unidades de servidor/cliente. |
+| `pnpm verify:fast` | Integridad del plan, inventario, tipos compartidos/Svelte/Natalia, **tipos de las pruebas de navegador** (`browser-test-types`), pruebas del propio verificador, dependencias y unidades de servidor/cliente. |
 | `pnpm verify:full` | Lo anterior; reapertura nativa del Excel exportado en LibreOffice, compilación estática de Natalia, reconstrucción SQL, todas las suites SQL y carreras, GoTrue/PostgREST/Storage reales, navegador, reserva nativa de Natalia y perfil demo separado. |
 | `pnpm verify:release` | Exige primero un staging explícito y ajeno a producción. Ejecuta el nivel completo, construye los artefactos para ese staging y comprueba identidad/artefactos y navegador remoto. No despliega. |
 
@@ -111,4 +111,23 @@ El workflow manual aislado admite `level=browser` con `browser_grep`. Invoca el 
 gh workflow run 386107045 --repo Juan4787/cita-suite-verificacion --ref refactor/maintainability-20261015 -f level=browser -f 'browser_grep=isolated booking integration|patient structure|roles, profesionales'
 ```
 
+El diagnóstico ejecuta **todos** los casos seleccionados aunque uno falle (sin `--max-failures=1`), para reunir fallos independientes en una sola corrida; cualquier fallo sigue rechazándolo. Full, demo y staging conservan la detención en el primer fallo.
+
 Usarlo para diagnosticar un fallo ya localizado cuando tipos/unidades/SQL pertinentes tienen evidencia propia; después ejecutar full de la revisión final. El caso que depende de preparación de otra prueba requiere esa preparación explícita o seleccionar su grupo completo; no atribuir un fallo de fixture al producto ni convertir una suite vacía en éxito. Mismas restricciones de RAM/destinos/limpieza: exclusivamente CI externo, servicios propios, un trabajador, un proceso pesado por vez. La entrada no despliega, no recibe credenciales de producción ni introduce omisiones en fast/full/release.
+
+## Tipos de las pruebas de navegador
+
+`svelte-check` sólo incluye `src/`. Playwright transpila los specs sin comprobar tipos, de modo que un error de tipos en un fixture (columna inexistente, lectura que ignora `error`, id nulo enviado a un filtro) podía ejecutarse sin advertencia. `apps/web/e2e/tsconfig.json` y el script `pnpm --filter web check:e2e` tipan todos los specs y helpers; el paso `browser-test-types` lo exige en fast/full/release. Se comprobó que un error inyectado lo hace fallar.
+
+Los fixtures usan `e2e/helpers/fixture-db.ts`: cliente de servicio tipado con `CitaDatabase`, `must()` exige fila (un error o `null` fallan) y `write()` cubre escrituras y limpiezas, cuyos errores nunca se ignoran. Los mensajes sólo exponen SQLSTATE. No se usan `any`, `as unknown as` ni aserciones para silenciar el contrato: los JSON se comprueban con `toMatchObject` y los globales del host aislado están declarados en `e2e/helpers/booking-harness.d.ts`.
+
+## Contrato de usabilidad de layout
+
+La ausencia de desbordamiento no demuestra que una pantalla sea legible. `app.css` declara `overflow-wrap: anywhere` en `body`, `.ux-btn*` y `.ux-badge*` para que nombres largos nunca ensanchen la página. Esa regla reduce el ancho mínimo de cualquier texto a un carácter: una columna flex/grid puede comprimir un botón, un badge o un título hasta letras sueltas sin desbordar el documento. Así pasaron cuatro defectos de etapa 5 por un full aprobado.
+
+`e2e/helpers/layout-usability.ts` (`layoutIssues`/`expectUsableLayout`) es el contrato común de las matrices visuales: zoom permitido, sin desbordamiento horizontal, controles operables dentro del viewport con ancho útil (no las fuentes nativas invisibles `.ux-native-source`), sin overlay del framework y **ninguna palabra ordinaria (hasta 20 caracteres) partida entre líneas** en texto visible. Tokens más largos (correos, URLs, nombres sintéticos extremos), cortes en guiones o barras, texto oculto, sr-only u opacidad 0 y opciones nativas no se informan. Las matrices acumulan los problemas de todas las combinaciones y los afirman una vez, para que un fallo nombre todos los anchos, temas y roles afectados.
+
+`e2e/layout-usability.spec.ts` reproduce los cuatro mecanismos reales con la misma regla y casos legítimos: si el detector dejara de detectarlos, esa prueba falla. Al diseñar un layout nuevo con texto junto a acciones o estados, usar `min-w-0` en la columna flexible y `shrink-0` (o grid) en los grupos de acciones y estados, y cubrir la pantalla con `layoutIssues` en los anchos del plan.
+
+Las capturas de evidencia usan `alignTaskForCapture` (`e2e/helpers/task-capture.ts`): desplazan la tarea evaluada debajo del encabezado fijo y exigen que esté en pantalla. Una captura que muestra otra parte de la página no certifica la tarea, aunque las aserciones del caso hayan aprobado.
+

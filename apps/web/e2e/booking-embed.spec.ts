@@ -702,7 +702,7 @@ test.describe('isolated booking integration', () => {
 			await expect(page.getByRole('heading', { name: 'Elegí un día', exact: true })).toBeVisible();
 
 			const manualCoverage: { width: number; theme: string }[] = [];
-			const manualLayout: (LayoutIssue & { width: number; theme: string })[] = [];
+			const manualLayout: (LayoutIssue & { viewport: number; theme: string })[] = [];
 			for (const width of [320, 390, 768, 1280, 1600])
 				for (const theme of ['light', 'dark']) {
 					await page.setViewportSize({ width, height: 900 });
@@ -714,7 +714,7 @@ test.describe('isolated booking integration', () => {
 						page,
 						'input:not(.ux-native-source):not([type="hidden"]):visible, select:not(.ux-native-source):visible, textarea:visible, .ux-control-trigger:visible'
 					))
-						manualLayout.push({ width, theme, ...issue });
+						manualLayout.push({ viewport: width, theme, ...issue });
 					// The capture certifies the day selector, not the notices/agenda above it.
 					await alignTaskForCapture(page.getByRole('heading', { name: 'Elegí un día', exact: true }));
 					await page.screenshot({
@@ -862,10 +862,10 @@ test.describe('isolated booking integration', () => {
 			}
 		};
 		// Accumulated over the ten combinations and asserted once after the matrix.
-		const layoutProblems: (LayoutIssue & { width: number; theme: string; task: string })[] = [];
+		const layoutProblems: (LayoutIssue & { viewport: number; theme: string; task: string })[] = [];
 		const geometry = async (
 			page: import('@playwright/test').Page,
-			where: { width: number; theme: string; task: string }
+			where: { viewport: number; theme: string; task: string }
 		) => {
 			for (const issue of await layoutIssues(
 				page,
@@ -1120,7 +1120,7 @@ test.describe('isolated booking integration', () => {
 					await expect
 						.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark')))
 						.toBe(true);
-					await geometry(page, { width, theme, task: 'profile' });
+					await geometry(page, { viewport: width, theme, task: 'profile' });
 					// Name and booking status share the header; it is captured on its own because the
 					// profile task capture below starts at the form.
 					if (theme === 'dark') {
@@ -1143,7 +1143,18 @@ test.describe('isolated booking integration', () => {
 					await expect(
 						page.getByRole('heading', { name: 'Servicios que ofrece', exact: true })
 					).toBeVisible();
-					await geometry(page, { width, theme, task: 'services' });
+					await geometry(page, { viewport: width, theme, task: 'services' });
+					if (theme === 'dark') {
+						await alignTaskForCapture(
+							page.getByRole('heading', { name: 'Servicios que ofrece', exact: true })
+						);
+						await page.screenshot({
+							path: testInfo.outputPath(`team-${width}-${theme}-services.jpg`),
+							type: 'jpeg',
+							quality: 60,
+							animations: 'disabled'
+						});
+					}
 					await page
 						.locator('.ux-choice')
 						.filter({ hasText: serviceName })
@@ -1153,7 +1164,7 @@ test.describe('isolated booking integration', () => {
 					await expect
 						.poll(() => dialog.evaluate((element) => element.contains(document.activeElement)))
 						.toBe(true);
-					await geometry(page, { width, theme, task: 'service-dialog' });
+					await geometry(page, { viewport: width, theme, task: 'service-dialog' });
 					if ((width === 390 && theme === 'light') || (width === 1280 && theme === 'dark'))
 						await page.screenshot({
 							path: testInfo.outputPath(`team-${width}-${theme}-service-dialog.jpg`),
@@ -1165,7 +1176,7 @@ test.describe('isolated booking integration', () => {
 					await page.getByRole('button', { name: /^Horarios/ }).click();
 					const scheduleHeading = page.getByRole('heading', { name: 'Horarios de atención', exact: true });
 					await expect(scheduleHeading).toBeVisible();
-					await geometry(page, { width, theme, task: 'schedule' });
+					await geometry(page, { viewport: width, theme, task: 'schedule' });
 					await alignTaskForCapture(scheduleHeading);
 					await page.screenshot({
 						path: testInfo.outputPath(`team-${width}-${theme}-schedule.jpg`),
@@ -1239,7 +1250,7 @@ test.describe('isolated booking integration', () => {
 			colorScheme: 'light'
 		});
 		const coverage: { brand: string; width: number; theme: string; renderedTheme: string }[] = [];
-		const publicLayout: (LayoutIssue & { brand: string; width: number; theme: string })[] = [];
+		const publicLayout: (LayoutIssue & { brand: string; viewport: number; theme: string })[] = [];
 		const errors: string[] = [];
 		let writes = 0;
 		try {
@@ -1310,7 +1321,7 @@ test.describe('isolated booking integration', () => {
 							page,
 							'.patient-control:not(.ux-native-source):visible, .ux-control-trigger:visible'
 						))
-							publicLayout.push({ brand, width, theme, ...issue });
+							publicLayout.push({ brand, viewport: width, theme, ...issue });
 						if (brand === 'natalia')
 							await expect(page.locator('[data-booking-theme="natalia"]')).toHaveAttribute(
 								'data-booking-color-mode',

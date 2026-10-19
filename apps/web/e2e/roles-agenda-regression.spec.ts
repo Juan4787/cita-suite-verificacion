@@ -430,7 +430,7 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		// Render the same in-progress task through the complete planned width/theme matrix.
 		// Theme fixture changes only presentation; the eventual saved profile is read back below.
 		const wizardCoverage: { width: number; theme: string }[] = [];
-		const wizardLayout: (LayoutIssue & { width: number; theme: string })[] = [];
+		const wizardLayout: (LayoutIssue & { viewport: number; theme: string })[] = [];
 		for (const width of [320, 390, 768, 1280, 1600])
 			for (const theme of ['light', 'dark']) {
 				await page.setViewportSize({ width, height: 900 });
@@ -442,7 +442,17 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 					page,
 					'form[action="?/add_user"] input:visible,form[action="?/add_user"] button:visible'
 				))
-					wizardLayout.push({ width, theme, ...issue });
+					wizardLayout.push({ viewport: width, theme, ...issue });
+				// The team categories share the page; their headers must also stay legible at 320.
+				if (width === 320 && theme === 'dark') {
+					await alignTaskForCapture(page.getByRole('button', { name: /^Administradores/ }));
+					await page.screenshot({
+						path: test.info().outputPath(`team-categories-${width}-${theme}.jpg`),
+						type: 'jpeg',
+						quality: 60,
+						animations: 'disabled'
+					});
+				}
 				await alignTaskForCapture(page.getByRole('heading', { name: 'Agregar integrante', exact: true }));
 				await page.screenshot({
 					path: test.info().outputPath(`team-wizard-${width}-${theme}.jpg`),

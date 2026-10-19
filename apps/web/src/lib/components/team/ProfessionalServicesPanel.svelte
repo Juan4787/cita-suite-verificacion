@@ -213,8 +213,9 @@
 				<div class="mt-5 grid gap-3">
 					{#each services as service}
 						{@const isDefault = defaultServiceIdSet.has(service.id)}
-						<div class={`ux-choice flex items-center gap-3 p-4 ${isDefault || selectedIds.includes(service.id) ? 'ux-choice-active' : ''} ${serviceRowStateClass(service.id)}`}>
-							<label class="flex min-w-0 flex-1 cursor-pointer items-center gap-4">
+						<!-- The name keeps a 12rem basis: on a narrow row the edit action wraps below instead of squeezing it. -->
+						<div class={`ux-choice flex flex-wrap items-center gap-3 p-4 ${isDefault || selectedIds.includes(service.id) ? 'ux-choice-active' : ''} ${serviceRowStateClass(service.id)}`}>
+							<label class="flex min-w-0 flex-[1_1_12rem] cursor-pointer items-center gap-4">
 								<input
 									type="checkbox"
 									name="service_id"
@@ -234,7 +235,7 @@
 							<button
 								type="button"
 								disabled={!canManage}
-								class="ux-btn-secondary shrink-0 px-3 py-2 text-sm"
+								class="ux-btn-secondary ml-auto shrink-0 px-3 py-2 text-sm"
 								onclick={() => openServiceEditor(service.id)}
 							>
 								Editar
@@ -248,8 +249,8 @@
 			</form>
 
 			<div class="ux-soft-card p-5">
-				<div class="flex items-start justify-between gap-4">
-					<div>
+				<div class="flex flex-col items-start gap-4">
+					<div class="min-w-0">
 						<h2 class="ux-section-title">¿No encontrás el servicio?</h2>
 						<p class="mt-1 text-sm text-white/55">Crealo una vez y queda asignado a {professional?.name ?? 'este profesional'}.</p>
 					</div>
