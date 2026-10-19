@@ -956,17 +956,18 @@ test.describe('isolated booking integration', () => {
 			await page.getByRole('button', { name: 'Crear servicio nuevo', exact: true }).click();
 			const creation = page.locator('form[action="?/create_service"]');
 			await creation.locator('[name="name"]').fill(serviceName);
-			await creation.locator('[name="duration_minutes"]').fill('30');
+			await creation.locator('[name="duration_minutes"]').fill('23');
 			await creation.getByRole('button', { name: 'Crear y asignar', exact: true }).click();
 			await expect(page.getByText('Servicio creado y asignado.', { exact: true })).toBeVisible();
 			const created = await db
 				.from('services')
-				.select('id,updated_at')
+				.select('id,updated_at,duration_minutes')
 				.eq('business_id', fixture.businessId)
 				.eq('name', serviceName)
 				.single();
 			expect(created.error).toBeNull();
 			if (!created.data) throw new Error('Created service was not persisted.');
+			expect(created.data.duration_minutes).toBe(23);
 			createdServices.push(created.data.id);
 			const assignment = await db
 				.from('professional_services')
@@ -1012,6 +1013,7 @@ test.describe('isolated booking integration', () => {
 				.getByRole('button', { name: 'Editar', exact: true })
 				.click();
 			await dialog.locator('[name="description"]').fill('Edición confirmada sintética');
+			await dialog.locator('[name="buffer_before_minutes"]').fill('3');
 			await dialog.getByRole('button', { name: 'Guardar cambios', exact: true }).click();
 			await expect(dialog).not.toBeVisible();
 			const saved = await db
@@ -1063,7 +1065,10 @@ test.describe('isolated booking integration', () => {
 			await dialog.locator('[name="description"]').fill('Edición que refresca la configuración');
 			await dialog.getByRole('button', { name: 'Guardar cambios', exact: true }).click();
 			await expect(dialog).not.toBeVisible();
-            await expect(page.locator('[data-loaded-availability-revision]')).not.toHaveAttribute('data-loaded-availability-revision',openingRevision);
+			await expect(page.locator('[data-loaded-availability-revision]')).not.toHaveAttribute(
+				'data-loaded-availability-revision',
+				openingRevision
+			);
 			await expect(
 				page.locator('form[action="?/save_all"] [name="availability_revision"]')
 			).toHaveValue(openingRevision);

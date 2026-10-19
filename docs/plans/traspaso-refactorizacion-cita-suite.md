@@ -70,7 +70,7 @@ La firma de `upsert_business_role_access` se conserva; SQL mantiene el cambio de
 
 ### Equipo
 
-Editor individual: coordinador de borrador/guardado en `ProfessionalEditor.svelte`, perfil, servicios, horario y ciclo de vida separados por tarea. Contratos/copias/sanitización en `lib/team/professional-editor.ts`; normalización y payload horario en `professional-form.ts`. Reconocer el guardado usa la fotografía enviada, conservando cambios posteriores. Las franjas restringidas sin prestaciones quedan cerradas.
+Editor individual: coordinador de borrador/guardado en `ProfessionalEditor.svelte`, perfil, servicios, horario y ciclo de vida separados por tarea. Contratos/copias/sanitización en `lib/team/professional-editor.ts`; normalización y payload horario en `professional-form.ts`. Reconocer el guardado usa la fotografía enviada, conservando cambios posteriores. La revisión optimista pertenece a esa base: una invalidación sólo la renueva si la proyección persistida aún coincide en perfil, asignaciones y horarios canónicos. No enviar automáticamente el token nuevo de una base distinta con un borrador antiguo. Las franjas restringidas sin prestaciones quedan cerradas.
 
 Servicios: creación+asignación en una transacción autenticada; edición conserva token y campos de apertura aunque llegue invalidación de datos remotos. Un resultado incierto no se reintenta como si fuera una creación fallida segura. Conteos de dependencias son informativos: la eliminación vuelve a verificar permisos e historial en SQL. El conteo incluye cita principal y equipo sin duplicar.
 
@@ -126,7 +126,7 @@ Esta tabla no sustituye el manifiesto completo: obtener todos los archivos pendi
 
 ## Evidencia y limitaciones de entorno
 
-Consultar el recibo final de etapa 5 y el registro para la revisión exacta aceptada. Referencias parciales verificadas: full39137667238 (ficha/fecha/costo), SQL39138864309 (archivo y carreras), fast39160133360 (editor160 cliente), SQL39161858092 (Equipo/accesos/alta y carreras), SQL39162608709 (registro de paciente18 controles). Ninguna certifica cambios hechos después de su snapshot.
+Consultar el recibo final de etapa 5 y el registro para la revisión exacta aceptada. Referencias parciales verificadas: full39137667238 (ficha/fecha/costo), SQL39138864309 (archivo y carreras), fast39160133360 (editor160 cliente), SQL39161858092 (Equipo/accesos/alta y carreras), SQL39162608709 (registro de paciente18 controles), SQL39183067318 (20 controles, conservación de auditoría y dos carreras propias de registro). Ninguna certifica cambios hechos después de su snapshot.
 
 Toda la evidencia SQL de CI usa PostgreSQL real descartable con claims sintéticos; las suites E2E usan GoTrue/PostgREST/Storage reales descartables. Intercepciones de red prueban presentación/recuperación, no una caída real del proveedor. `full` no acredita capacidad alojada, despliegue en Cloudflare/Vercel ni entrega real con OAuth externo. Las dos suites OAuth preexistentes tienen requisitos de cuentas/proveedores y se deben tratar expresamente en release/auditoría, sin contarlas como aprobadas por CI.
 

@@ -266,7 +266,7 @@
 						</label>
 						<label>
 							<span class="ux-label">Duración en minutos</span>
-							<input name="duration_minutes" type="number" min="5" max="480" step="5" value="30" disabled={!canManage} class="ux-input" />
+							<input name="duration_minutes" type="number" min="5" max="480" step="1" value="30" disabled={!canManage} class="ux-input" />
 						</label>
 						<label>
 							<span class="ux-label">Arancel a mostrar (opcional)</span>
@@ -305,7 +305,7 @@
 					<div class="grid gap-4 sm:grid-cols-2">
 						<label>
 							<span class="ux-label">Duración en minutos</span>
-							<input name="duration_minutes" type="number" min="5" max="480" step="5" required value={editingService.duration_minutes} disabled={!canManage} class="ux-input" />
+							<input name="duration_minutes" type="number" min="5" max="480" step="1" required value={editingService.duration_minutes} disabled={!canManage} class="ux-input" />
 						</label>
 						<label>
 							<span class="ux-label">Arancel a mostrar (opcional)</span>
@@ -320,11 +320,11 @@
 					<div class="grid gap-4 sm:grid-cols-2">
 						<label>
 							<span class="ux-label">Margen antes (minutos)</span>
-							<input name="buffer_before_minutes" type="number" min="0" max="480" step="5" required value={editingService.buffer_before_minutes} disabled={!canManage} class="ux-input" />
+							<input name="buffer_before_minutes" type="number" min="0" max="480" step="1" required value={editingService.buffer_before_minutes} disabled={!canManage} class="ux-input" />
 						</label>
 						<label>
 							<span class="ux-label">Margen después (minutos)</span>
-							<input name="buffer_after_minutes" type="number" min="0" max="480" step="5" required value={editingService.buffer_after_minutes} disabled={!canManage} class="ux-input" />
+							<input name="buffer_after_minutes" type="number" min="0" max="480" step="1" required value={editingService.buffer_after_minutes} disabled={!canManage} class="ux-input" />
 						</label>
 					</div>
 					<fieldset class="space-y-4 border-t border-white/10 pt-4"><legend class="ux-section-title">Información para el paciente</legend><label class="block"><span class="ux-label">Indicaciones para la consulta <span class="text-white/65">(opcional)</span></span><textarea class="ux-textarea mt-2" name="patient_instructions" rows="2" maxlength="2000" disabled={!canManage}>{editingService.patient_instructions??''}</textarea></label><label class="block"><span class="ux-label">Texto del aviso del turno <span class="text-white/65">(opcional)</span></span><textarea class="ux-textarea mt-2" name="public_reminder_description" rows="2" maxlength="180" disabled={!canManage}>{editingService.public_reminder_description??''}</textarea><span class="mt-1 block text-sm text-white/75">Puede verse con el teléfono bloqueado. Evitá datos clínicos.</span></label></fieldset>

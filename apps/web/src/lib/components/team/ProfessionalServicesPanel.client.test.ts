@@ -134,3 +134,22 @@ it('does not advertise service creation while client operations are unavailable'
 	render(ProfessionalServicesPanel, { ...props(), canManage: false });
 	expect(screen.getByRole('button', { name: 'Crear servicio nuevo' })).toBeDisabled();
 });
+
+it('accepts exact integer durations and buffers supported by the server, without a five-minute step restriction', async () => {
+	render(ProfessionalServicesPanel, props());
+	await fireEvent.click(screen.getByRole('button', { name: 'Crear servicio nuevo' }));
+	const createDuration = document.querySelector<HTMLInputElement>(
+		'form[action="?/create_service"] [name="duration_minutes"]'
+	);
+	if (!createDuration) throw new Error('Missing duration');
+	await fireEvent.input(createDuration, { target: { value: '23' } });
+	expect(createDuration.checkValidity()).toBe(true);
+	await fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
+	await fireEvent.click(screen.getByRole('button', { name: 'Editar' }));
+	const buffer = document.querySelector<HTMLInputElement>(
+		'[role="dialog"] [name="buffer_before_minutes"]'
+	);
+	if (!buffer) throw new Error('Missing buffer');
+	await fireEvent.input(buffer, { target: { value: '3' } });
+	expect(buffer.checkValidity()).toBe(true);
+});

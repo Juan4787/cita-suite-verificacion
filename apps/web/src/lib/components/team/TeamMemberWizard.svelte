@@ -657,7 +657,7 @@
 							</label>
 							<label>
 								<span class="ux-label">Duración en minutos</span>
-								<input type="number" min="5" max="480" step="5" disabled={!canManage} class="ux-input" bind:value={newServiceDuration} />
+								<input type="number" min="5" max="480" step="1" disabled={!canManage} class="ux-input" bind:value={newServiceDuration} />
 							</label>
 							<label>
 								<span class="ux-label">Precio visible (opcional)</span>

@@ -30,7 +30,7 @@
 - Editor profesional: snapshot de envío, borrador posterior conservado, token de edición de apertura y JSON de conteos validado. Fast39160133360:160 cliente y resto de puertas rápidas aprobadas al alcance de esa fuente. Cambios posteriores necesitan su recibo.
 - Servicios/eliminación: SQL39158920021 y39161858092 prueban atomicidad, autoridad, historial, limpieza fallida y dos carreras nuevas controladas. Conteos no sustituyen la revisión definitiva dentro de delete.
 - Equipo/roles: SQL39161858092 prueba alta/defaults/horarios/acceso, rollback final, dueño/admin atendibles y último dueño. Invitaciones se consultan por RPC autorizado; SELECT directo está denegado por diseño. Readback privilegiado independiente acredita persistencia sin debilitar RLS.
-- Registro manual: SQL39162608709 prueba18 controles de ficha+vínculo, DNI sin sobrescribir demografía, repetición legítima de nombre/teléfono, permisos y rollback. Dos controles posteriores de múltiples vínculos inactivos preparados y consumidor nuevo requieren repetición.
+- Registro manual: SQL39162608709 prueba18 controles de ficha+vínculo, DNI sin sobrescribir demografía, repetición legítima de nombre/teléfono, permisos y rollback. Los20 controles y dos carreras propias (membresía/asignación con bloqueo observado) aprueban SQL39183067318; consumidor y navegador de revisión final requieren repetición.
 - Disponibilidad: el40P01 observado durante extracción se reprodujo con FKs/bloqueos reales y corrigió mediante bloqueo compatible `FOR NO KEY UPDATE`, conservando OID/ACL. Full39093599146 acredita dos commits/revisión+2 sin retry y deadlocks0; no volver a un bloqueo más fuerte por estética.
 
 ## Cierre todavía necesario
