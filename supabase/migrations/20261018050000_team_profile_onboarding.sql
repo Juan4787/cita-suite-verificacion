@@ -70,7 +70,12 @@ begin
  select access.status into v_status from public.upsert_business_role_access(p_business_id,v_email,v_role,v_professional) access;
  if coalesce(v_status,'') not in ('active','pending','already_active','already_pending') then raise exception 'TEAM_CONFIGURATION_INVALID'; end if;
  update public.professionals set is_public=v_status in ('active','already_active'),updated_at=clock_timestamp() where business_id=p_business_id and id=v_professional;
- insert into public.audit_logs(business_id,user_id,action,entity_type,entity_id) values(p_business_id,auth.uid(),'professional.created','professional',v_professional);
+ insert into public.audit_logs(business_id,user_id,action,entity_type,entity_id,metadata)
+ values(p_business_id,auth.uid(),'professional.created','professional',v_professional,jsonb_build_object(
+  'name',trim(p_configuration->>'name'),'email',v_email,
+  'schedule_blocks',(select jsonb_agg(jsonb_build_object('weekdays',block->'weekdays','ranges',block->'ranges',
+   'slotIntervalMinutes',block->'slot_interval_minutes','breakMinutes',block->'break_minutes','serviceScope',block->'service_scope','allowedServiceIds',block->'service_ids')) from jsonb_array_elements(p_configuration->'blocks') block),
+  'service_ids',(select coalesce(jsonb_agg(ps.service_id order by ps.service_id),'[]'::jsonb) from public.professional_services ps where ps.business_id=p_business_id and ps.professional_id=v_professional)));
  return jsonb_build_object('status',v_status,'professionalId',v_professional);
 end $$;
 revoke all on function public.create_team_member_profile(uuid,jsonb) from public,anon,authenticated,service_role;
@@ -78,17 +83,17 @@ grant execute on function public.create_team_member_profile(uuid,jsonb) to authe
 
 create function public.make_team_member_attending(p_business_id uuid,p_access_id uuid,p_name text)
 returns uuid language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
-declare v_role text;v_user uuid;v_profile uuid;v_actor_role text;v_pending boolean:=false;
+declare v_role text;v_user uuid;v_profile uuid;v_actor_role text;v_email text;v_pending boolean:=false;
 begin
  perform private.lock_team_manager_authority(p_business_id);
  if coalesce(length(trim(p_name)),0) not between 1 and 160 then raise exception 'SCHEDULE_PROFILE_INVALID'; end if;
  perform 1 from public.businesses where id=p_business_id for update;
- select bu.role,bu.user_id into v_role,v_user from public.business_users bu
- where bu.business_id=p_business_id and bu.id=p_access_id and bu.status='active' and bu.accepted_at is not null and bu.disabled_at is null for update nowait;
+ select bu.role,bu.user_id,u.email into v_role,v_user,v_email from public.business_users bu join auth.users u on u.id=bu.user_id
+ where bu.business_id=p_business_id and bu.id=p_access_id and bu.status='active' and bu.accepted_at is not null and bu.disabled_at is null for update of bu nowait;
  if found then
   if exists(select 1 from public.professional_users where business_id=p_business_id and user_id=v_user) then raise exception 'TEAM_PROFILE_ALREADY_EXISTS'; end if;
  else
-  select bi.role,bi.professional_id into v_role,v_profile from public.business_user_invites bi
+  select bi.role,bi.professional_id,bi.email into v_role,v_profile,v_email from public.business_user_invites bi
   where bi.business_id=p_business_id and bi.id=p_access_id and bi.status='pending' for update nowait;
   if not found then raise exception 'BUSINESS_USER_NOT_FOUND'; end if;
   if v_profile is not null then raise exception 'TEAM_PROFILE_ALREADY_EXISTS'; end if;
@@ -105,7 +110,7 @@ begin
   insert into public.professional_users(business_id,professional_id,user_id) values(p_business_id,v_profile,v_user);
  end if;
  perform private.assign_team_default_services(p_business_id,v_profile);
- insert into public.audit_logs(business_id,user_id,action,entity_type,entity_id) values(p_business_id,auth.uid(),'professional.created_attending','professional',v_profile);
+ insert into public.audit_logs(business_id,user_id,action,entity_type,entity_id,metadata) values(p_business_id,auth.uid(),'professional.created_attending','professional',v_profile,jsonb_build_object('user_id',v_user,'email',v_email,'account_status',case when v_pending then 'pending' else 'active' end,'role',v_role,'name',trim(p_name)));
  return v_profile;
 end $$;
 revoke all on function public.make_team_member_attending(uuid,uuid,text) from public,anon,authenticated,service_role;
