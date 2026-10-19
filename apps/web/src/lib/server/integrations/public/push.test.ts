@@ -829,6 +829,12 @@ describe('sendPushReminderBatch', () => {
 		expect(webpush.getVapidHeaders).toHaveBeenCalledTimes(1);
 	});
 
+	it('con el perfil Paid reclama el máximo que admite la base', async () => {
+		const database = batchDatabase([], []);
+		await sendPushReminderBatch({ supabase: database.supabase, budget: createJobBudget('paid'), providerFetch: fetch, now });
+		expect(database.calls[0]).toMatchObject({ name: 'claim_push_reminder_batch', args: { p_limit: 100 } });
+	});
+
 	it('envía el contenido neutral del turno y un recibo que corresponde al intento registrado', async () => {
 		const database = batchDatabase(claimed(1), [advanced([prepared(1)])]);
 		const service = pushService();

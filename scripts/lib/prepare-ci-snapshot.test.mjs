@@ -32,7 +32,7 @@ test('public source snapshots exclude tracked environment variants while preserv
 	const copied = ['scripts/prepare-ci-snapshot.mjs', 'scripts/lib/plan-integrity.mjs',
 		'docs/plans/refactorizacion-cita-suite.md', 'docs/plans/refactorizacion-cita-suite.integridad.json'];
 	const required = ['apps/web/src/hooks.server.ts', 'apps/web/src/lib/server/platform/supabase.ts',
-		'apps/natalia/src/pages/index.astro', 'packages/shared/src/database.types.ts', 'supabase/config.toml'];
+		'apps/natalia/src/pages/index.astro', 'apps/scheduler/wrangler.jsonc', 'packages/shared/src/database.types.ts', 'supabase/config.toml'];
 	const privateFiles = ['apps/web/.env', 'apps/web/.env.local', 'apps/web/.env.production.local',
 		'apps/web/.dev.vars', 'apps/web/.dev.vars.staging'];
 	const examples = ['.env.example', 'apps/web/.env.example', 'apps/web/.dev.vars.example'];

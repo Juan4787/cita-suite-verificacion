@@ -417,6 +417,13 @@ describe('sincronización programada por lotes', () => {
 		expect(budget.summary()).toMatchObject({ providerRequests: 6 });
 	});
 
+	it('con el perfil Paid reclama los eventos cuyos tramos entran en 300 llamadas', async () => {
+		const database = calendarDatabase({ claimed: [], appointments: [] });
+		await processGoogleCalendarSyncBatch({ supabase: database.supabase, budget: createJobBudget('paid'), providerFetch: fetch, now });
+		// 297 calls left: 21 chunks of four events at 14 calls each.
+		expect(database.rpcCalls[0]).toMatchObject({ name: 'claim_google_calendar_sync_batch', args: { p_limit: 84 } });
+	});
+
 	it('una cancelación posterior a la reclamación borra el evento en vez de actualizarlo', async () => {
 		const database = calendarDatabase({
 			claimed: [claimedEvent(1, { sync_status: 'pending_update', event_id: 'evt-1' }), claimedEvent(2, { sync_status: 'pending_update', event_id: 'evt-2' })],
