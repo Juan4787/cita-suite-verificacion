@@ -935,14 +935,7 @@ test.describe('isolated booking integration', () => {
 				{ name: 'active-business-id', value: fixture.businessId, url: fixture.appOrigin }
 			]);
 			const page = await context.newPage();
-			const health = observeRenderHealth(
-				page,
-				(failure) =>
-					failure.status === 409 &&
-					failure.method === 'POST' &&
-					failure.path.startsWith('/odonto/profesionales/'),
-				2
-			);
+			const health = observeRenderHealth(page);
 			page.on('pageerror', (e) => errors.push(e.message));
 			const editorURL = fixture.appOrigin + '/odonto/profesionales/' + professionalId;
 			let releaseEditorScripts!: () => void;
@@ -1007,7 +1000,16 @@ test.describe('isolated booking integration', () => {
 					.eq('business_id', fixture.businessId)
 					.eq('id', created.data.id)
 			);
+			const serviceConflict = page.waitForResponse((response) => {
+				const url = new URL(response.url());
+				return response.request().method() === 'POST' &&
+					url.origin + url.pathname === editorURL && url.search === '?/update_service';
+			});
 			await dialog.getByRole('button', { name: 'Guardar cambios', exact: true }).click();
+			// Enhanced actions encode fail(409) in an HTTP 200 ActionResult envelope.
+			const serviceConflictResponse = await serviceConflict;
+			expect(serviceConflictResponse.status()).toBe(200);
+			expect(await serviceConflictResponse.json()).toMatchObject({ type: 'failure', status: 409 });
 			await expect(
 				dialog.getByText('El servicio cambió. Cerrá el editor y recargá antes de guardar.', {
 					exact: true
@@ -1085,7 +1087,15 @@ test.describe('isolated booking integration', () => {
 			await expect(
 				page.locator('form[action="?/save_all"] [name="availability_revision"]')
 			).toHaveValue(openingRevision);
+			const profileConflict = page.waitForResponse((response) => {
+				const url = new URL(response.url());
+				return response.request().method() === 'POST' &&
+					url.origin + url.pathname === editorURL && url.search === '?/save_all';
+			});
 			await page.getByRole('button', { name: 'Guardar todo', exact: true }).click();
+			const profileConflictResponse = await profileConflict;
+			expect(profileConflictResponse.status()).toBe(200);
+			expect(await profileConflictResponse.json()).toMatchObject({ type: 'failure', status: 409 });
 			await expect(
 				page.getByText(
 					'La configuración cambió. Recargá la página antes de guardar; no se aplicó ningún cambio.',

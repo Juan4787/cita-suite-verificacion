@@ -40,6 +40,7 @@ const extras = [
 	'docs/architecture/disponibilidad-y-aranceles.md',
 	'docs/architecture/evidencia-etapa4-agenda.md',
 	'docs/architecture/revision-ui-agenda-aranceles.md',
+	'docs/architecture/revision-ui-estructura.md',
 	'docs/architecture/areas-y-fronteras.md', 'docs/architecture/guia-nuevas-funciones.md',
 	'docs/architecture/evidencia-etapa5-estructura.md', 'docs/plans/traspaso-refactorizacion-cita-suite.md',
 	'docs/architecture/module-relocations.json',
