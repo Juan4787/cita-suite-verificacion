@@ -603,7 +603,7 @@
 			>
 				{showSearch ? 'Ocultar búsqueda' : 'Buscar'}
 			</button>
-			<a href={weekHref} class="ux-btn-secondary w-full sm:w-auto">Ver turnos de la semana</a>
+			<a href={weekHref} class="ux-btn-secondary w-full sm:w-auto">Turnos de la semana</a>
 		</div>
 	</div>
 

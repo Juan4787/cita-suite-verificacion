@@ -643,7 +643,7 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await openDayAppointmentsPanel(page);
 		await expect(page.getByText('Reservado').first()).toBeVisible();
 		await expect(page.getByText('Confirmado')).toHaveCount(0);
-		await expect(page.getByRole('link', { name: 'Ver turnos de la semana' })).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Turnos de la semana' })).toBeVisible();
 
 		await page.goto(`/odonto/agenda/semana?date=${fixture.date}`);
 		await expect(page.getByRole('button', { name: 'Buscar' })).toBeVisible();
