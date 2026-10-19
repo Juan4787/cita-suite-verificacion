@@ -102,3 +102,13 @@ La apertura nativa de XLSX se clasifica como integración, no como unidad portab
 ### Controles del propio ejecutor
 
 El perfil Node descubre todos los archivos `scripts/lib/*.test.mjs` y usa un solo proceso de pruebas a la vez. Conserva eventos `test:summary` por archivo y el acumulado final, según la API de Node 22.23.2 fijada. Exige que cada archivo contenga pruebas efectivas y que el total coincida, sin omisiones, cancelaciones, pendientes ni fallos. Una terminación exitosa del proceso no sustituye ese recibo; una interrupción o reporte incompleto falla. El recibo no incorpora stdout ni detalles de error de las pruebas; TAP conserva el diagnóstico separado. El registro identifica sus ejecuciones reales y las adversarias añadidas posteriormente. Referencia: https://nodejs.org/download/release/v22.23.2/docs/api/test.html#event-testsummary .
+
+## Diagnóstico de navegador sin fabricar una verificación completa
+
+El workflow manual aislado admite `level=browser` con `browser_grep`. Invoca el diagnóstico ya existente `run-campaign-integration.mjs --grep`: reconstruye el entorno descartable con servicios reales y exige pruebas seleccionadas efectivas, sin retries, pero no certifica full, SQL completo, demo, Natalia ni release. Su recibo marca `diagnostic=true` y no sustituye `verify:full`.
+
+```bash
+gh workflow run 386107045 --repo Juan4787/cita-suite-verificacion --ref refactor/maintainability-20261015 -f level=browser -f 'browser_grep=isolated booking integration|patient structure|roles, profesionales'
+```
+
+Usarlo para diagnosticar un fallo ya localizado cuando tipos/unidades/SQL pertinentes tienen evidencia propia; después ejecutar full de la revisión final. El caso que depende de preparación de otra prueba requiere esa preparación explícita o seleccionar su grupo completo; no atribuir un fallo de fixture al producto ni convertir una suite vacía en éxito. Mismas restricciones de RAM/destinos/limpieza: exclusivamente CI externo, servicios propios, un trabajador, un proceso pesado por vez. La entrada no despliega, no recibe credenciales de producción ni introduce omisiones en fast/full/release.

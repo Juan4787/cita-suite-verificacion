@@ -9,7 +9,12 @@ on:
         type: choice
         required: true
         default: full
-        options: [fast, full, types, sql]
+        options: [fast, full, types, sql, browser]
+      browser_grep:
+        description: Diagnostic selection only; never certifies full verification
+        type: string
+        required: false
+        default: 'isolated booking integration|patient structure|roles, profesionales' 
 
 permissions:
   contents: read
@@ -52,7 +57,7 @@ jobs:
         run: |
           node scripts/prepare-ci-services.mjs
       - name: Prepare one browser
-        if: inputs.level == 'full'
+        if: inputs.level == 'full' || inputs.level == 'browser'
         run: pnpm --filter web exec playwright install --with-deps chromium
       - name: Prepare pinned native spreadsheet reader
         if: inputs.level == 'full'
@@ -66,11 +71,17 @@ jobs:
       - name: Verify sequentially
         env:
           VERIFICATION_LEVEL: ${{ inputs.level }}
+          BROWSER_GREP: ${{ inputs.browser_grep }}
         run: |
           case "$VERIFICATION_LEVEL" in
             fast|full) pnpm "verify:$VERIFICATION_LEVEL" ;;
             types) node scripts/run-campaign-type-generation.mjs ;;
             sql) node scripts/run-campaign-type-generation.mjs --verify-sql ;;
+            browser)
+              test -n "$BROWSER_GREP"
+              echo 'Diagnostic browser execution only; this is not full verification.'
+              node scripts/run-campaign-integration.mjs --grep "$BROWSER_GREP"
+              ;;
             *) exit 2 ;;
           esac
       - name: Retain verification evidence
