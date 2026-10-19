@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
 import type { CitaDatabase } from '$lib/types/database';
 import { findProfessionalByEmail } from './professionals';
@@ -26,16 +26,32 @@ describe('professional email identity lookup / actual SDK, simulated HTTP', () =
 		expect(urls[0].searchParams.has('limit')).toBe(false);
 		expect(urls[0].searchParams.has('offset')).toBe(false);
 	});
-	it('does not turn provider failure into absence of a duplicate', async () => {
-		const client = createClient<CitaDatabase>('https://supabase.example.test', 'synthetic-key', {
-			auth: { persistSession: false, autoRefreshToken: false },
-			global: {
-				fetch: async () =>
-					Response.json({ code: '53300', message: 'synthetic unavailable' }, { status: 503 })
-			}
-		});
-		await expect(
-			findProfessionalByEmail(client, 'clinic', 'ana@example.test')
-		).rejects.toMatchObject({ code: '53300' });
+	it('does not turn a provider failure into absence after bounded SDK retries', async () => {
+		// The pinned SDK retries GET 503 with backoff. Exercise those real
+		// attempts on a virtual clock; do not enlarge the suite timeout.
+		vi.useFakeTimers();
+		let attempts = 0;
+		try {
+			const client = createClient<CitaDatabase>('https://supabase.example.test', 'synthetic-key', {
+				auth: { persistSession: false, autoRefreshToken: false },
+				global: {
+					fetch: async () => {
+						attempts++;
+						return Response.json(
+							{ code: '53300', message: 'synthetic unavailable' },
+							{ status: 503 }
+						);
+					}
+				}
+			});
+			const assertion = expect(
+				findProfessionalByEmail(client, 'clinic', 'ana@example.test')
+			).rejects.toMatchObject({ code: '53300' });
+			await vi.runAllTimersAsync();
+			await assertion;
+			expect(attempts).toBeGreaterThan(1);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });

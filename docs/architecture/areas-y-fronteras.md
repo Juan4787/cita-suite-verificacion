@@ -31,3 +31,13 @@ La primera extracción elimina la separación artificial entre formas de UI y ti
 ## Trazabilidad de la extracción inicial
 
 [module-relocations.json](module-relocations.json) conserva ubicaciones anteriores/nuevas y el diff real entre snapshotsccb1398/e30daa4, incluyendo imports operativos, scripts y pruebas. El diff Git se usa como inventario completo; el log auxiliar del transformador no sustituye esa referencia. Las operaciones extraídas después tienen sus fuentes y verificaciones propias. Ningún movimiento equivale por sí solo al cierre de la etapa.
+
+## Cambios posteriores al mapa inicial de extracción
+
+`module-relocations.json` conserva evidencia histórica de la primera extracción, no un listado obligatorio de archivos que deban seguir existiendo. Después se retiraron `team/public/professional-services.ts` y su sincronización HTTP sin consumidores: normalización de IDs en `lib/team/professional-form.ts`, mutaciones en los RPC autenticados. El fallback semanal de borrar/reinsertar también desaparece; no restaurarlo como compatibilidad implícita.
+
+Recorridos adicionales reales: `access/public/team-access.ts` valida lista/resultado de acceso; `team/public/member-profile.ts` prepara el alta y delega transacciones completas; `patients/public/patient-registration.ts` confirma ficha y vínculo juntos. Las rutas siguen siendo adaptadores HTTP/contexto y errores humanos. SQL mantiene autoridad y rollback, sin clientes administrativos para compensar un resultado incierto.
+
+UI por tareas: `ProfessionalEditor` coordina base/borrador/versiones y paneles de perfil, servicios, horarios y ciclo de vida; `TeamMemberWizard` posee pasos y envío del alta; el listado de Equipo conserva accesos/perfil atendible/eliminación. Separar el wizard por intención evita convertir cada paso en una API de decenas de props sin estado propio. No hay un objetivo artificial de líneas por componente. Para ampliar, usar la guía de nuevas funciones y proteger los contratos con pruebas de estado y recorridos reales.
+
+Tema: Cita Suite conserva diseño oscuro único; se verifica bajo preferencias clara/oscura del navegador. Natalia sí ofrece ambos modos reales; sus tokens semánticos siguen separados de reglas/permisos. No confundir preferencia del sistema, marca y capacidades. Capturas y recibos finales deben nombrar esa diferencia explícitamente.
