@@ -10,7 +10,7 @@
 	import { enhance } from '$app/forms';
 	import { invalidate } from '$app/navigation';
 	import type { SubmitFunction } from '@sveltejs/kit';
-	
+
 	let {
 		data,
 		form
@@ -31,12 +31,12 @@
 			values?: Record<string, FormDataEntryValue>;
 		};
 	} = $props();
-	
+
 	const members = $derived(data.members);
 	const roles = $derived(data.roles);
 	const canManage = $derived(data.context.canManage && !data.demo && client.ready);
 	const isAssisting = $derived(Boolean(data.context.assistance));
-	
+
 	// ----- Configurar atendible (dueño/admin que también atiende pacientes) -----
 	let showAttendingForm = $state(false);
 	let attendingAccessId = $state('');
@@ -53,7 +53,7 @@
 	);
 	const attendingPending = $derived(attendingEligible.filter((m) => !m.professional_id));
 	const attendingActive = $derived(attendingEligible.filter((m) => m.professional_id));
-	
+
 	// Categorías desplegables de la pantalla Equipo.
 	type Category = { id: string; title: string; role: BusinessRole };
 	const baseCategories: Category[] = [
@@ -78,7 +78,7 @@
 		openCategories = { ...openCategories, [id]: !openCategories[id] };
 	};
 	const membersByRole = (role: BusinessRole) => members.filter((member) => member.role === role);
-	
+
 	const memberRoleOptions = (member: RoleAccess) =>
 		roles.includes(member.role) ? roles : [...roles, member.role];
 	const canEditMemberRole = (member: RoleAccess) =>
@@ -87,7 +87,7 @@
 		!(isAssisting && member.role === 'admin');
 	const canRemoveMember = (member: RoleAccess) =>
 		member.role !== 'owner' && !(isAssisting && member.role === 'admin');
-	
+
 	const formatDate = (value: string) =>
 		value
 			? new Intl.DateTimeFormat('es-AR', {
@@ -96,7 +96,7 @@
 					year: 'numeric'
 				}).format(new Date(value))
 			: 'Sin fecha';
-	
+
 	let showWizard = $state(false);
 	let attendingSubmitting = $state(false);
 	let teamActionBusy = $state('');

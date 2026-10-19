@@ -48,12 +48,12 @@
 		professional: 'Atiende turnos y accede a sus pacientes.',
 		readonly: 'Sólo consulta información.'
 	};
-	
+
 	const weekdayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-	
+
 	// ----- Wizard Agregar integrante -----
 	const EMAIL_FORMAT_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-	
+
 	let stepIndex = $state(0);
 	let email = $state('');
 	let role = $state<BusinessRole>('reception');
@@ -77,7 +77,7 @@
 	let exceptionDateTo = $state('');
 	let exceptionTimeRange = $state('');
 	let exceptionReason = $state('');
-	
+
 	let emailError = $state('');
 	let nameError = $state('');
 	let newServiceError = $state('');
@@ -90,7 +90,7 @@
 	onDestroy(() => {
 		disposed = true;
 	});
-	
+
 	const hasProfessionalProfile = $derived(
 		shouldConfigureProfessionalProfile({ role, requested: professionalProfileRequested })
 	);
@@ -100,7 +100,7 @@
 			: ['email', 'rol', 'resumen']
 	);
 	const currentStep = $derived(steps[Math.min(stepIndex, steps.length - 1)]);
-	
+
 	$effect(() => {
 		const values = form?.values;
 		if (!values) return;
@@ -165,13 +165,13 @@
 		if (values.exception_time_range) exceptionTimeRange = String(values.exception_time_range);
 		if (values.exception_reason) exceptionReason = String(values.exception_reason);
 	});
-	
+
 	$effect(() => {
 		if (exceptionType === 'extra_available' && exceptionPeriodMode === 'range') {
 			exceptionPeriodMode = 'single';
 		}
 	});
-	
+
 	const resetWizard = () => {
 		stepIndex = 0;
 		email = '';
@@ -199,19 +199,19 @@
 		scheduleError = '';
 		exceptionError = '';
 	};
-	
+
 	const usedWeekdays = (exceptBlockId = '') =>
 		new Set(
 			scheduleBlocks.filter((block) => block.id !== exceptBlockId).flatMap((block) => block.weekdays)
 		);
-	
+
 	const updateScheduleBlock = (blockId: string | undefined, patch: Partial<ScheduleBlockDraft>) => {
 		scheduleBlocks = scheduleBlocks.map((block) =>
 			block.id === blockId ? { ...block, ...patch } : block
 		);
 		scheduleError = '';
 	};
-	
+
 	const commitScheduleBlockTimeRanges = (blockId: string | undefined) => {
 		const block = scheduleBlocks.find((item) => item.id === blockId);
 		if (!block) return false;
@@ -223,7 +223,7 @@
 		updateScheduleBlock(block.id, { timeRanges: result.value });
 		return true;
 	};
-	
+
 	const validateCurrentStep = () => {
 		if (currentStep === 'email') {
 			if (!email.trim()) {
@@ -287,22 +287,22 @@
 		}
 		return true;
 	};
-	
+
 	const nextStep = () => {
 		if (!validateCurrentStep()) return;
 		if (stepIndex < steps.length - 1) stepIndex += 1;
 	};
-	
+
 	const previousStep = () => {
 		stepIndex = Math.max(Math.min(stepIndex, steps.length - 1) - 1, 0);
 	};
-	
+
 	const toggleService = (serviceId: string) => {
 		selectedServiceIds = selectedServiceIds.includes(serviceId)
 			? selectedServiceIds.filter((id) => id !== serviceId)
 			: [...selectedServiceIds, serviceId];
 	};
-	
+
 	const addNewService = () => {
 		const name = newServiceName.trim();
 		const duration = Number(newServiceDuration);
@@ -323,11 +323,11 @@
 		newServiceDuration = '30';
 		newServicePrice = '';
 	};
-	
+
 	const removeNewService = (index: number) => {
 		newServices = newServices.filter((_, itemIndex) => itemIndex !== index);
 	};
-	
+
 	const toggleBlockWeekday = (blockId: string | undefined, weekday: number) => {
 		const target = scheduleBlocks.find((block) => block.id === blockId);
 		if (!target) return;
@@ -347,7 +347,7 @@
 		});
 		scheduleError = '';
 	};
-	
+
 	const setBlockWeekdays = (blockId: string | undefined, items: number[]) => {
 		const normalized = [...new Set(items)].sort((a, b) => a - b);
 		scheduleBlocks = scheduleBlocks.map((block) => {
@@ -359,13 +359,13 @@
 		});
 		scheduleError = '';
 	};
-	
+
 	const addScheduleBlock = () => {
 		const next = createEmptyScheduleBlock(`wizard-block-${scheduleBlockSeq++}`);
 		scheduleBlocks = [...scheduleBlocks, next];
 		scheduleError = '';
 	};
-	
+
 	const removeScheduleBlock = (blockId: string | undefined) => {
 		if (scheduleBlocks.length <= 1) {
 			scheduleBlocks = [{ ...scheduleBlocks[0], weekdays: [], timeRanges: '', slotInterval: '15' }];
@@ -374,18 +374,18 @@
 		}
 		scheduleError = '';
 	};
-	
+
 	const handlePriceInput = (event: Event) => {
 		const input = event.currentTarget as HTMLInputElement;
 		input.value = formatPriceLabel(input.value);
 		newServicePrice = input.value;
 	};
-	
+
 	const normalizeExceptionTime = (event: Event) => {
 		const input = event.currentTarget as HTMLInputElement;
 		exceptionTimeRange = normalizeTimeRangesInput(input.value);
 	};
-	
+
 	const schedulePreview = (block: ScheduleBlockDraft) => parseTimeRanges(block.timeRanges) ?? [];
 	const selectedCustomServices = $derived(
 		customServices.filter((service) => selectedServiceIds.includes(service.id))
@@ -414,7 +414,7 @@
 	};
 	const newServicesJson = $derived(JSON.stringify(newServices));
 	const scheduleBlocksJson = $derived(serializeScheduleBlocks(scheduleBlocks));
-	
+
 	const defaultServiceRows = $derived(
 		defaultServiceNames.map((name) => {
 			const existing = services.find(
@@ -427,16 +427,16 @@
 			};
 		})
 	);
-	
+
 	const durationLabel = (minutes: number) => `${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`;
-	
+
 	const handleWizardSubmit = (event: SubmitEvent) => {
 		if (!hasProfessionalProfile) return;
 		if (validateCurrentStep()) return;
 		event.preventDefault();
 		stepIndex = steps.indexOf('horarios');
 	};
-	
+
 	const wizardEnhance: SubmitFunction = ({ cancel }) => {
 		if (wizardSubmitting || wizardUncertain) {
 			cancel();

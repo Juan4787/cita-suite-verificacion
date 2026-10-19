@@ -25,16 +25,16 @@ export const findProfessionalByEmail = async (
 		.from('professionals')
 		.select('id, name, email')
 		.eq('business_id', businessId)
-		.not('email', 'is', null)
-		.range(0, 9999);
+		.eq('email', normalizeProfessionalEmail(email) ?? '');
 
 	if (excludeProfessionalId) {
 		query = query.neq('id', excludeProfessionalId);
 	}
 
-	const { data, error } = await query;
+	// The existing database trigger normalizes stored email and enforces uniqueness.
+	// Query that identity directly; never scan a list that PostgREST may truncate.
+	const { data: existing, error } = await query.maybeSingle();
 	if (error) throw error;
-	const existing = (data ?? []).find((item) => String(item.email ?? '').trim().toLowerCase() === email);
 	if (!existing?.id || !existing.email) return null;
 
 	return {
@@ -75,4 +75,3 @@ export const getProfessionalForUser = async ({
 		name: String(professional?.name ?? '').trim() || 'Profesional'
 	};
 };
-
