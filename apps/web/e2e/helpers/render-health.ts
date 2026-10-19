@@ -17,6 +17,21 @@ export function observeRenderHealth(
 			return 'unknown';
 		}
 	};
+	// The disposable fixture deliberately runs Auth/Storage/PostgREST, not Realtime.
+	// Match only a failed 404 handshake against its exact configured loopback origin.
+	// Do not serialize the message: its WebSocket URL contains an API key.
+	const isMissingFixtureRealtime = (text: string) => {
+		const match = /^WebSocket connection to '(ws:\/\/[^']+)' failed: Error during WebSocket handshake: Unexpected response code: 404$/.exec(text);
+		if (!match || process.env.CITA_E2E_ENVIRONMENT !== 'disposable') return false;
+		try {
+			const socket = new URL(match[1]);
+			const api = new URL(process.env.PUBLIC_ODONTO_SUPABASE_URL ?? '');
+			return api.hostname === '127.0.0.1' && socket.host === api.host &&
+				api.protocol === 'http:' && socket.pathname === '/realtime/v1/websocket';
+		} catch {
+			return false;
+		}
+	};
 	page.on('console', (message) => {
 		const type = message.type();
 		if (type !== 'error' && type !== 'warning') return;
@@ -29,7 +44,9 @@ export function observeRenderHealth(
 			? 'resource-failure'
 			: text.includes('Avoid calling `fetch` eagerly during server side rendering')
 				? 'known-svelte-dev-fetch-warning'
-				: 'unclassified';
+				: isMissingFixtureRealtime(text)
+					? 'fixture-realtime-unavailable'
+					: 'unclassified';
 		messages.push({
 			type,
 			category,

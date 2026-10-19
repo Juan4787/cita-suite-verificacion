@@ -25,7 +25,7 @@ begin
  -- Match the existing identity trigger's lock. Names and phones stay non-unique.
  if v_dni is not null then
   perform pg_advisory_xact_lock(hashtextextended('patients:dni:'||p_business_id::text||':'||v_dni,0));
-  select p.id into v_patient from public.patients p where p.business_id=p_business_id and p.dni=v_dni for update;
+  select p.id into v_patient from public.patients p where p.business_id=p_business_id and p.dni=v_dni for no key update;
   v_duplicate:=v_patient is not null;
  end if;
  if v_patient is null then

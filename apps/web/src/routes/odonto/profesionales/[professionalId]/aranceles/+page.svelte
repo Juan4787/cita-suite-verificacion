@@ -7,12 +7,12 @@
 </script>
 
 <svelte:head><title>Aranceles · Cita Suite</title></svelte:head>
-<main class="mx-auto max-w-4xl space-y-5 p-5">
+<section aria-labelledby="professional-rates-title" class="mx-auto max-w-4xl space-y-5 p-5">
   <BackLink
     href={`/odonto/profesionales/${data.professional.id}?tab=servicios`}
     label="Servicios y aranceles"
   />
-  <h1 class="ux-title">Aranceles de {data.professional.name}</h1>
+  <h1 id="professional-rates-title" class="ux-title">Aranceles de {data.professional.name}</h1>
   {#if form?.message}<p
       class={form.saved ? "ux-success" : "ux-alert"}
       role={form.saved ? "status" : "alert"}
@@ -30,4 +30,4 @@
     canEdit={data.canEdit}
     canConfigureShared={data.canConfigureShared}
   />
-</main>
+</section>
