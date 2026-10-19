@@ -12,7 +12,7 @@ import {
 import { logServerFailure } from '$lib/server/platform/logging';
 import { readJson } from '$lib/contracts/json';
 import { parseAvailabilityExceptionInterval } from './availability-exceptions';
-import { idsFromForm } from './professional-services';
+import { idsFromForm } from '$lib/team/professional-form';
 import { replaceProfessionalScheduleBlocks } from './availability-rules';
 import {
 	findProfessionalByEmail,

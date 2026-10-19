@@ -130,7 +130,9 @@
 	{/if}
 
 	{#if showWizard}
+        {#key `${data.context.business.id}:${data.currentUserId}`}
         <TeamMemberWizard services={data.services} roles={data.roles} defaultServiceNames={data.defaultServiceNames} {canManage} {form} onclose={()=>showWizard=false} />
+        {/key}
     {/if}
 
 	{#if attendingEligible.length > 0}

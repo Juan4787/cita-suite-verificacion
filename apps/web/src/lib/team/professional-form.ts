@@ -54,3 +54,14 @@ export const professionalSchedulePayload = (blocks: NormalizedScheduleBlock[]) =
 		service_scope: block.serviceScope ?? 'all',
 		service_ids: block.allowedServiceIds ?? []
 	}));
+
+/** Normalization only; assignment mutations belong to the authenticated SQL commands. */
+export const idsFromForm = (form: FormData, key: string) => [
+	...new Set(
+		form
+			.getAll(key)
+			.map(String)
+			.map((value) => value.trim())
+			.filter(Boolean)
+	)
+];

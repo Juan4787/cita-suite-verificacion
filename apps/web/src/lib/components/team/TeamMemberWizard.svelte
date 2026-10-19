@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import type { BusinessRole } from '$lib/access/contracts';
 	import { isRecord } from '$lib/contracts/json';
 	import {
@@ -83,6 +84,12 @@
 	let scheduleError = $state('');
 	let exceptionError = $state('');
 	let wizardSubmitting = $state(false);
+	let wizardUncertain = $state(false);
+	let wizardError = $state('');
+	let disposed = false;
+	onDestroy(() => {
+		disposed = true;
+	});
 	
 	const hasProfessionalProfile = $derived(
 		shouldConfigureProfessionalProfile({ role, requested: professionalProfileRequested })
@@ -431,6 +438,11 @@
 	};
 	
 	const wizardEnhance: SubmitFunction = ({ cancel }) => {
+		if (wizardSubmitting || wizardUncertain) {
+			cancel();
+			return;
+		}
+		wizardError = '';
 		if (hasProfessionalProfile && !validateCurrentStep()) {
 			stepIndex = steps.indexOf('horarios');
 			cancel();
@@ -438,7 +450,13 @@
 		}
 		wizardSubmitting = true;
 		return async ({ result, update }) => {
+			if (disposed) return;
 			wizardSubmitting = false;
+			if (result.type === 'error' || (result.type === 'failure' && result.status >= 500)) {
+				wizardUncertain = true;
+				wizardError = 'No pudimos confirmar el cambio. Revisá Equipo antes de volver a intentarlo.';
+				return;
+			}
 			if (result.type === 'success') {
 				onclose();
 				resetWizard();
@@ -459,6 +477,9 @@
 			use:enhance={wizardEnhance}
 			aria-busy={wizardSubmitting}
 		>
+            {#if wizardError}<p class="ux-alert" role="alert">{wizardError} <a href="/odonto/configuracion/usuarios" class="underline">Revisar equipo</a></p>{/if}
+            <fieldset disabled={wizardSubmitting || wizardUncertain} class="m-0 min-w-0 border-0 p-0">
+            <legend class="sr-only">Datos del integrante</legend>
 			<div class="flex items-center justify-between gap-4">
 				<h2 class="ux-section-title">Agregar integrante</h2>
 				<div class="flex gap-2">
@@ -904,4 +925,5 @@
 					</button>
 				</div>
 			{/if}
+            </fieldset>
 		</form>
