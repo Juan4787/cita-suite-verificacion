@@ -435,9 +435,10 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 			await expect(page.getByText('Cargando profesionales y servicios…', { exact: true })).toBeVisible();
 			await expect(page.getByRole('button', { name: 'Cerrar', exact: true })).toBeVisible();
 		} finally {
+			// Released, the gate lets any later reference request through. It is not unrouted:
+			// unrouting while the held request is in flight lets Playwright settle it first.
 			releaseReferences();
 		}
-		await page.unroute(isReferences, holdReferences);
 		const wizard = page.locator('form').filter({ has: page.locator('input[name="booking_mode"]') });
 		await expect(wizard).toBeVisible({ timeout: 15_000 });
 		await wizard.getByRole('button').filter({ hasText: fixture.serviceName }).click();
