@@ -6,16 +6,41 @@ const envState = vi.hoisted(() => ({
 	publicEnv: {} as Record<string, string | undefined>
 }));
 
+// The real encryption is covered by web-push-sender.test.ts. Here the request carries
+// the plain payload so each test can read what the patient would receive.
 vi.mock('web-push', () => ({
 	default: {
-		setVapidDetails: vi.fn(),
-		sendNotification: vi.fn()
+		getVapidHeaders: vi.fn((audience: string) => ({ Authorization: `vapid t=jwt-for-${audience}, k=test-public-key` })),
+		generateRequestDetails: vi.fn(
+			(
+				subscription: { endpoint: string },
+				payload: string,
+				options: { TTL: number; urgency: string; topic: string; headers: Record<string, string> }
+			) => ({
+				method: 'POST',
+				endpoint: subscription.endpoint,
+				headers: {
+					TTL: options.TTL,
+					Urgency: options.urgency,
+					Topic: options.topic,
+					'Content-Length': payload.length,
+					...options.headers
+				},
+				body: Buffer.from(payload)
+			})
+		)
 	}
 }));
 vi.mock('$env/dynamic/private', () => ({ env: envState.privateEnv }));
 vi.mock('$env/dynamic/public', () => ({ env: envState.publicEnv }));
 
 import webpush from 'web-push';
+import { InvalidDataContractError } from '$lib/contracts/json';
+import {
+	JobBudgetExhaustedError,
+	WORK_DEADLINE_MS,
+	createJobBudget
+} from '$lib/server/integrations/internal/job-budget';
 import {
 	getPushDeliveryStatus,
 	isValidPushDeliveryId,
@@ -27,7 +52,7 @@ import {
 	recordPushTestFeedback,
 	resetPushRemindersForReschedule,
 	saveAppointmentPushSubscription,
-	sendDuePushReminders,
+	sendPushReminderBatch,
 	sendReschedulePushNotice,
 	sendTestPushNotification
 } from '$lib/server/integrations/public/push';
@@ -72,8 +97,9 @@ const createSupabaseMock = (queues: Record<string, Queued[]>, rpcResult: Queued)
 			return chain;
 		};
 		chain.delete = () => chain;
-		chain.maybeSingle = async () => result;
-		chain.single = async () => result;
+		chain.retry = () => chain;
+		chain.maybeSingle = () => chain;
+		chain.single = () => chain;
 		chain.then = (resolve: (value: Queued) => unknown) => Promise.resolve(result).then(resolve);
 		return chain;
 	};
@@ -98,15 +124,17 @@ const createSupabaseMock = (queues: Record<string, Queued[]>, rpcResult: Queued)
 	};
 };
 
-const claimedRow = {
-	subscription_id: 'sub-1',
-	appointment_id: 'apt-1',
-	business_id: 'biz-1',
-	endpoint: 'https://push.example/ep-1',
-	p256dh: 'p256dh-key',
-	auth: 'auth-key',
-	reminder_kind: '24h'
+// Push service double: records each request and answers with the given status.
+const pushService = (answer: (request: Request) => Response | Promise<Response> = () => new Response(null, { status: 201 })) => {
+	const requests: Request[] = [];
+	const fetchFn: typeof fetch = async (input, init) => {
+		const request = new Request(input, init);
+		requests.push(request);
+		return answer(request);
+	};
+	return { fetchFn, requests };
 };
+const payloadOf = async (request: Request) => JSON.parse(await request.text());
 
 const liveAppointment = {
 	public_reminder_description_snapshot: 'Descripción pública sintética',
@@ -120,7 +148,8 @@ const liveAppointment = {
 };
 
 beforeEach(() => {
-	vi.mocked(webpush.sendNotification).mockReset();
+	vi.mocked(webpush.getVapidHeaders).mockClear();
+	vi.mocked(webpush.generateRequestDetails).mockClear();
 	envState.privateEnv.VAPID_PUBLIC_KEY = 'test-public-key';
 	envState.privateEnv.VAPID_PRIVATE_KEY = 'test-private-key';
 	envState.privateEnv.VAPID_SUBJECT = 'mailto:test@example.com';
@@ -544,9 +573,20 @@ describe('telemetría de entrega', () => {
 });
 
 describe('sendTestPushNotification', () => {
+	const appointment = {
+		id: 'apt-1',
+		token: 'tok-1',
+		business: { id: 'biz-1', name: 'Clínica Sabrina' }
+	} as any;
+	const subscription = {
+		id: 'sub-1',
+		endpoint: 'https://push.example/ep-1',
+		p256dh: 'p256dh-key',
+		auth: 'auth-key'
+	};
+
 	it('envía una prueba rastreable sin guardar el secreto de recibo en claro', async () => {
 		const deliveryId = '8ccf23d7-5ae3-4b87-9268-d40a05d9a475';
-		vi.mocked(webpush.sendNotification).mockResolvedValue({ statusCode: 201 } as any);
 		const { supabase, inserts } = createSupabaseMock(
 			{
 				push_delivery_attempts: [
@@ -557,33 +597,28 @@ describe('sendTestPushNotification', () => {
 			},
 			{ data: null, error: null }
 		);
-		const appointment = {
-			id: 'apt-1',
-			token: 'tok-1',
-			business: { id: 'biz-1', name: 'Clínica Sabrina' }
-		} as any;
+		const service = pushService();
 
 		const requestKey = 'push:session-1234567890:initial';
-		const result = await sendTestPushNotification(supabase, {
+		const result = await sendTestPushNotification(supabase, service.fetchFn, {
 			appointment,
 			requestKey,
-			subscription: {
-				id: 'sub-1',
-				endpoint: 'https://push.example/ep-1',
-				p256dh: 'p256dh-key',
-				auth: 'auth-key'
-			},
+			subscription,
 			now
 		});
 
 		expect(result).toMatchObject({ accepted: true, deliveryId });
-		expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
-		const [, rawPayload, options] = vi.mocked(webpush.sendNotification).mock.calls[0];
-		const payload = JSON.parse(rawPayload as string);
-		expect(options).toMatchObject({
+		expect(service.requests).toHaveLength(1);
+		expect(service.requests[0].url).toBe('https://push.example/ep-1');
+		expect(vi.mocked(webpush.generateRequestDetails).mock.calls[0][2]).toMatchObject({
 			TTL: 300,
+			urgency: 'high',
 			topic: pushTopicForAppointment('apt-1', 'test')
 		});
+		// fetch sets the body length itself; the VAPID header travels as computed.
+		expect(service.requests[0].headers.get('content-length')).toBeNull();
+		expect(service.requests[0].headers.get('authorization')).toBe('vapid t=jwt-for-https://push.example, k=test-public-key');
+		const payload = await payloadOf(service.requests[0]);
 		expect(payload.delivery.id).toBe(deliveryId);
 		expect(payload.delivery.receiptUrl).toContain('/turno/tok-1/push/receipt');
 		expect(inserts[0].payload.receipt_token_hash).toBe(
@@ -607,26 +642,17 @@ describe('sendTestPushNotification', () => {
 			},
 			{ data: null, error: null }
 		);
-		const appointment = {
-			id: 'apt-1',
-			token: 'tok-1',
-			business: { id: 'biz-1', name: 'Clínica Sabrina' }
-		} as any;
+		const service = pushService();
 
-		const result = await sendTestPushNotification(supabase, {
+		const result = await sendTestPushNotification(supabase, service.fetchFn, {
 			appointment,
 			requestKey: 'push:session-1234567890:recovery',
-			subscription: {
-				id: 'sub-1',
-				endpoint: 'https://push.example/ep-1',
-				p256dh: 'p256dh-key',
-				auth: 'auth-key'
-			},
+			subscription,
 			now
 		});
 
 		expect(result).toMatchObject({ accepted: true, deliveryId });
-		expect(webpush.sendNotification).not.toHaveBeenCalled();
+		expect(service.requests).toHaveLength(0);
 	});
 
 	it('reutiliza una prueba reciente aunque otra pestaña llegue con otra clave', async () => {
@@ -654,27 +680,18 @@ describe('sendTestPushNotification', () => {
 			},
 			{ data: null, error: null }
 		);
-		const appointment = {
-			id: 'apt-1',
-			token: 'tok-1',
-			business: { id: 'biz-1', name: 'Clínica Sabrina' }
-		} as any;
+		const service = pushService();
 
-		const result = await sendTestPushNotification(supabase, {
+		const result = await sendTestPushNotification(supabase, service.fetchFn, {
 			appointment,
 			requestKey: 'push:other-tab-1234567890:initial',
-			subscription: {
-				id: 'sub-1',
-				endpoint: 'https://push.example/ep-1',
-				p256dh: 'p256dh-key',
-				auth: 'auth-key'
-			},
+			subscription,
 			now
 		});
 
 		expect(result).toMatchObject({ accepted: true, deliveryId });
 		expect(inserts).toHaveLength(0);
-		expect(webpush.sendNotification).not.toHaveBeenCalled();
+		expect(service.requests).toHaveLength(0);
 	});
 
 	it('no presenta como aceptada una prueba idempotente que ya había fallado', async () => {
@@ -697,164 +714,244 @@ describe('sendTestPushNotification', () => {
 			},
 			{ data: null, error: null }
 		);
-		const appointment = {
-			id: 'apt-1',
-			token: 'tok-1',
-			business: { id: 'biz-1', name: 'Clínica Sabrina' }
-		} as any;
+		const service = pushService();
 
-		const result = await sendTestPushNotification(supabase, {
+		const result = await sendTestPushNotification(supabase, service.fetchFn, {
 			appointment,
 			requestKey: 'push:session-1234567890:initial',
-			subscription: {
-				id: 'sub-1',
-				endpoint: 'https://push.example/ep-1',
-				p256dh: 'p256dh-key',
-				auth: 'auth-key'
-			},
+			subscription,
 			now
 		});
 
 		expect(result).toMatchObject({ accepted: false, deliveryId, gone: false });
-		expect(webpush.sendNotification).not.toHaveBeenCalled();
-	});
-});
-
-describe('sendDuePushReminders', () => {
-	it('envía el recordatorio y recién después marca sent_at del kind correcto', async () => {
-		vi.mocked(webpush.sendNotification).mockResolvedValue({} as any);
-		const { supabase, updates } = createSupabaseMock(
-			{
-				push_subscriptions: [{ data: [] }],
-				appointments: [{ data: liveAppointment, error: null }]
-			},
-			{ data: [claimedRow], error: null }
-		);
-
-		const result = await sendDuePushReminders(supabase, { now });
-		expect(result.sent).toBe(1);
-		expect(result.failed).toBe(0);
-
-		expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
-		const payload = JSON.parse(vi.mocked(webpush.sendNotification).mock.calls[0][1] as string);
-		expect(payload.title).toBe('Turno en Clínica Sabrina');
-		expect(payload.body).toContain('a las 08:00');
-		expect(payload.body).toContain('Descripción pública sintética');
-		expect(payload.body).not.toContain('Indicación clínica privada');
-		expect(payload.body).not.toContain('Nota interna privada');
-		expect(payload.url).toContain('/turno/tok-1');
-		expect(vi.mocked(webpush.sendNotification).mock.calls[0][2]).toMatchObject({
-			topic: pushTopicForAppointment('apt-1'),
-			TTL: 23 * 60 * 60
-		});
-
-		const sentUpdate = updates.find((u) => u.payload.push_24h_sent_at);
-		expect(sentUpdate).toBeTruthy();
+		expect(service.requests).toHaveLength(0);
 	});
 
-	it('marca el dispositivo como muerto solamente ante 410 del push service', async () => {
-		vi.mocked(webpush.sendNotification).mockRejectedValue({ statusCode: 410 });
-		const { supabase, updates, rpcCalls } = createSupabaseMock(
-			{
-				push_subscriptions: [{ data: [] }, { data: null }],
-				appointments: [{ data: liveAppointment, error: null }]
-			},
-			{ data: [claimedRow], error: null }
-		);
-
-		const result = await sendDuePushReminders(supabase, { now });
-		expect(result.failed).toBe(1);
-		expect(result.deadEndpoints).toBe(1);
-		expect(rpcCalls).toContainEqual({
-			name: 'mark_push_device_gone',
-			args: { target_endpoint: claimedRow.endpoint, gone_time: now.toISOString() }
-		});
-		expect(updates.some((u) => u.payload.push_24h_sent_at)).toBe(false);
-	});
-
-	it('error transitorio: libera el claim e incrementa failed_count (reintenta luego)', async () => {
-		vi.mocked(webpush.sendNotification).mockRejectedValue(new Error('timeout'));
-		const { supabase, updates, rpcCalls } = createSupabaseMock(
-			{
-				push_subscriptions: [{ data: [] }, { data: { failed_count: 0 } }, { data: null }],
-				appointments: [{ data: liveAppointment, error: null }]
-			},
-			{ data: [claimedRow], error: null }
-		);
-
-		await sendDuePushReminders(supabase, { now });
-		const release = updates.find((u) => u.payload.failed_count === 1);
-		expect(release).toBeTruthy();
-		expect(release?.payload.push_24h_claimed_at).toBeNull();
-		expect(updates.some((u) => u.payload.push_24h_sent_at)).toBe(false);
-		expect(rpcCalls.some((call) => call.name === 'mark_push_device_gone')).toBe(false);
-	});
-
-	it('no envía si una reasignación desvinculó el turno antes de crear la telemetría', async () => {
-		const { supabase } = createSupabaseMock(
+	it('marca muerto el dispositivo que el proveedor rechaza con 410', async () => {
+		const { supabase, rpcCalls } = createSupabaseMock(
 			{
 				push_delivery_attempts: [
 					{ data: null, error: null },
-					{ data: null, error: { message: 'PUSH_SUBSCRIPTION_DETACHED' } }
-				],
-				push_subscriptions: [
-					{ data: [] },
-					{ data: { failed_count: 0 }, error: null },
+					{ data: { id: '8ccf23d7-5ae3-4b87-9268-d40a05d9a475' }, error: null },
 					{ data: null, error: null }
-				],
-				appointments: [{ data: liveAppointment, error: null }]
-			},
-			{ data: [claimedRow], error: null }
-		);
-
-		const result = await sendDuePushReminders(supabase, { now });
-		expect(result).toMatchObject({ sent: 0, failed: 1 });
-		expect(webpush.sendNotification).not.toHaveBeenCalled();
-	});
-
-	it('turno cancelado tras el claim: no envía y libera el claim', async () => {
-		const { supabase, updates } = createSupabaseMock(
-			{
-				push_subscriptions: [{ data: [] }, { data: null }],
-				appointments: [{ data: { ...liveAppointment, status: 'cancelled' }, error: null }]
-			},
-			{ data: [claimedRow], error: null }
-		);
-
-		const result = await sendDuePushReminders(supabase, { now });
-		expect(webpush.sendNotification).not.toHaveBeenCalled();
-		expect(result.sent).toBe(0);
-		expect(updates.some((u) => u.payload.push_24h_claimed_at === null)).toBe(true);
-	});
-
-	it('reprogramado fuera de la ventana tras el claim: libera el claim sin enviar', async () => {
-		// Carrera claim→reschedule→send: el claim se tomó con el horario viejo (en
-		// ventana), pero el turno vivo quedó a 5 días. Enviar consumiría el sent_at de
-		// 24h con días de anticipación y el recordatorio real nunca saldría.
-		const { supabase, updates } = createSupabaseMock(
-			{
-				push_subscriptions: [{ data: [] }, { data: null }],
-				appointments: [
-					{ data: { ...liveAppointment, starts_at: '2026-06-16T11:00:00.000Z' }, error: null }
 				]
 			},
-			{ data: [claimedRow], error: null }
+			{ data: null, error: null }
 		);
+		const service = pushService(() => new Response(null, { status: 410 }));
 
-		const result = await sendDuePushReminders(supabase, { now });
-		expect(webpush.sendNotification).not.toHaveBeenCalled();
-		expect(result.sent).toBe(0);
-		expect(updates.some((u) => u.payload.push_24h_claimed_at === null)).toBe(true);
-		expect(updates.some((u) => u.payload.push_24h_sent_at)).toBe(false);
+		const result = await sendTestPushNotification(supabase, service.fetchFn, { appointment, subscription, now });
+
+		expect(result).toMatchObject({ accepted: false, gone: true });
+		expect(rpcCalls).toContainEqual({
+			name: 'mark_push_device_gone',
+			args: { target_endpoint: subscription.endpoint, gone_time: now.toISOString() }
+		});
+	});
+});
+
+describe('sendPushReminderBatch', () => {
+	const prepared = (index: number, overrides: Record<string, unknown> = {}) => ({
+		subscription_id: `sub-${index}`,
+		kind: '24h',
+		business_id: 'biz-1',
+		appointment_id: `apt-${index}`,
+		delivery_id: `delivery-${index}`,
+		endpoint: `https://push.example/ep-${index}`,
+		p256dh: 'p256dh-key',
+		auth: 'auth-key',
+		ttl_seconds: 23 * 60 * 60,
+		starts_at: '2026-06-12T11:00:00.000Z',
+		confirmation_token: `tok-${index}`,
+		reminder_description: 'Descripción pública sintética',
+		business_name: 'Clínica Sabrina',
+		business_timezone: 'America/Argentina/Cordoba',
+		...overrides
+	});
+	const advanced = (items: unknown[], extra: Record<string, unknown> = {}) => ({
+		completed: 0,
+		released: 0,
+		prepared: items,
+		invalidated: [],
+		...extra
+	});
+	const batchDatabase = (claimed: unknown[], advances: unknown[]) => {
+		const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
+		const supabase = {
+			rpc: async (name: string, args: Record<string, unknown>) => {
+				calls.push({ name, args });
+				if (name === 'claim_push_reminder_batch') return { data: claimed, error: null };
+				if (name === 'advance_push_reminder_batch') return { data: advances.shift() ?? advanced([]), error: null };
+				return { data: null, error: { message: `unexpected ${name}` } };
+			}
+		} as any;
+		return { supabase, calls, advances: () => calls.filter((call) => call.name === 'advance_push_reminder_batch') };
+	};
+	const claimed = (count: number) =>
+		Array.from({ length: count }, (_, index) => ({
+			subscription_id: `sub-${index + 1}`,
+			reminder_kind: '24h',
+			business_id: 'biz-1',
+			business_turn: index + 1
+		}));
+
+	it('reclama según el presupuesto, envía de a cuatro y registra cada tramo en el viaje siguiente', async () => {
+		const database = batchDatabase(claimed(6), [
+			advanced([1, 2, 3, 4].map((index) => prepared(index))),
+			advanced([5, 6].map((index) => prepared(index))),
+			advanced([], { completed: 2 })
+		]);
+		const service = pushService();
+		const budget = createJobBudget('free');
+
+		const summary = await sendPushReminderBatch({
+			supabase: database.supabase,
+			budget,
+			providerFetch: budget.fetchFor('provider', service.fetchFn),
+			now
+		});
+
+		expect(summary).toEqual({ configured: true, claimed: 6, sent: 6, failed: 0, gone: 0, invalidated: 0, released: 0 });
+		// Free: 39 calls after the Service Binding, two fixed, five per chunk of four.
+		expect(database.calls[0]).toMatchObject({ name: 'claim_push_reminder_batch', args: { p_limit: 28, p_now: now.toISOString() } });
+		const [first, second, last] = database.advances();
+		expect(first.args).toMatchObject({ p_results: [], p_finish: false });
+		expect(second.args.p_results).toEqual(
+			[1, 2, 3, 4].map((index) => ({ subscription_id: `sub-${index}`, kind: '24h', delivery_id: `delivery-${index}`, outcome: 'accepted', status_code: 201 }))
+		);
+		expect(last.args).toMatchObject({ p_next: [], p_finish: true });
+		expect(last.args.p_results).toHaveLength(2);
+		expect(database.advances()).toHaveLength(3);
+		expect(new Set(database.advances().map((call) => call.args.p_claim_token)).size).toBe(1);
+		expect(service.requests).toHaveLength(6);
+		expect(budget.summary()).toMatchObject({ providerRequests: 6 });
+		// One VAPID signature for the push service origin, not one per message.
+		expect(webpush.getVapidHeaders).toHaveBeenCalledTimes(1);
 	});
 
-	it('sin VAPID configurado no hace nada', async () => {
+	it('envía el contenido neutral del turno y un recibo que corresponde al intento registrado', async () => {
+		const database = batchDatabase(claimed(1), [advanced([prepared(1)])]);
+		const service = pushService();
+
+		await sendPushReminderBatch({ supabase: database.supabase, budget: createJobBudget('free'), providerFetch: service.fetchFn, now });
+
+		const payload = await payloadOf(service.requests[0]);
+		expect(payload).toMatchObject({
+			title: 'Turno en Clínica Sabrina',
+			url: '/turno/tok-1',
+			tag: 'turno-apt-1-24h',
+			group: 'turno-apt-1',
+			delivery: { id: 'delivery-1', receiptUrl: '/turno/tok-1/push/receipt' }
+		});
+		expect(payload.body).toContain('a las 08:00');
+		expect(payload.body).toContain('Descripción pública sintética');
+		const hash = crypto.createHash('sha256').update(payload.delivery.token).digest('hex');
+		expect(database.advances()[0].args.p_next).toEqual([{ subscription_id: 'sub-1', kind: '24h', receipt_token_hash: hash }]);
+		expect(vi.mocked(webpush.generateRequestDetails).mock.calls[0][2]).toMatchObject({
+			TTL: 23 * 60 * 60,
+			urgency: 'high',
+			topic: pushTopicForAppointment('apt-1'),
+			contentEncoding: 'aes128gcm'
+		});
+	});
+
+	it('clasifica cada respuesta del proveedor y una respuesta perdida como transitoria', async () => {
+		const statuses = [410, 404, 400, 429, 503];
+		const database = batchDatabase(claimed(6), [
+			advanced([1, 2, 3, 4].map((index) => prepared(index))),
+			advanced([5, 6].map((index) => prepared(index)))
+		]);
+		const service = pushService((request) => {
+			const index = Number(new URL(request.url).pathname.split('-').pop());
+			if (index === 6) throw new TypeError('fetch failed');
+			return new Response(null, { status: statuses[index - 1] });
+		});
+
+		const summary = await sendPushReminderBatch({ supabase: database.supabase, budget: createJobBudget('free'), providerFetch: service.fetchFn, now });
+
+		const results = [...(database.advances()[1].args.p_results as unknown[]), ...(database.advances()[2].args.p_results as unknown[])];
+		expect(results).toEqual([
+			{ subscription_id: 'sub-1', kind: '24h', delivery_id: 'delivery-1', outcome: 'gone', status_code: 410 },
+			{ subscription_id: 'sub-2', kind: '24h', delivery_id: 'delivery-2', outcome: 'gone', status_code: 404 },
+			{ subscription_id: 'sub-3', kind: '24h', delivery_id: 'delivery-3', outcome: 'rejected', status_code: 400 },
+			{ subscription_id: 'sub-4', kind: '24h', delivery_id: 'delivery-4', outcome: 'transient', status_code: 429 },
+			{ subscription_id: 'sub-5', kind: '24h', delivery_id: 'delivery-5', outcome: 'transient', status_code: 503 },
+			{ subscription_id: 'sub-6', kind: '24h', delivery_id: 'delivery-6', outcome: 'transient', status_code: null }
+		]);
+		expect(summary).toMatchObject({ sent: 0, gone: 2, failed: 4 });
+	});
+
+	it('no envía lo que la base invalidó al revalidar y cuenta lo liberado al cerrar', async () => {
+		const database = batchDatabase(claimed(2), [
+			advanced([prepared(2)], { invalidated: [{ subscription_id: 'sub-1', kind: '24h', reason: 'revalidation_failed' }] }),
+			advanced([], { completed: 1, released: 0 })
+		]);
+		const service = pushService();
+
+		const summary = await sendPushReminderBatch({ supabase: database.supabase, budget: createJobBudget('free'), providerFetch: service.fetchFn, now });
+
+		expect(service.requests.map((request) => request.url)).toEqual(['https://push.example/ep-2']);
+		expect(summary).toMatchObject({ claimed: 2, sent: 1, invalidated: 1 });
+	});
+
+	it('deja de preparar trabajo cuando ya no cabe en el tiempo y libera el resto de la reclamación', async () => {
+		let clock = 0;
+		const budget = createJobBudget('free', () => clock);
+		const database = batchDatabase(claimed(8), [
+			advanced([1, 2, 3, 4].map((index) => prepared(index))),
+			advanced([], { completed: 4, released: 4 })
+		]);
+		const service = pushService(() => {
+			clock = WORK_DEADLINE_MS - 1_000;
+			return new Response(null, { status: 201 });
+		});
+
+		const summary = await sendPushReminderBatch({ supabase: database.supabase, budget, providerFetch: budget.fetchFor('provider', service.fetchFn), now });
+
+		expect(service.requests).toHaveLength(4);
+		const [, last] = database.advances();
+		expect(last.args).toMatchObject({ p_next: [], p_finish: true });
+		expect(summary).toMatchObject({ claimed: 8, sent: 4, released: 4 });
+	});
+
+	it('excluye de los resultados un envío que la fecha límite impidió empezar', async () => {
+		const database = batchDatabase(claimed(1), [advanced([prepared(1)])]);
+
+		const summary = await sendPushReminderBatch({
+			supabase: database.supabase,
+			budget: createJobBudget('free'),
+			providerFetch: async () => {
+				throw new JobBudgetExhaustedError('time');
+			},
+			now
+		});
+
+		expect(database.advances()[1].args).toMatchObject({ p_results: [], p_finish: true });
+		expect(summary).toMatchObject({ sent: 0, failed: 0 });
+	});
+
+	it('rechaza un recordatorio preparado que no pidió y cierra el lote antes de fallar', async () => {
+		const database = batchDatabase(claimed(1), [advanced([prepared(9)])]);
+		const service = pushService();
+
+		await expect(
+			sendPushReminderBatch({ supabase: database.supabase, budget: createJobBudget('free'), providerFetch: service.fetchFn, now })
+		).rejects.toBeInstanceOf(InvalidDataContractError);
+
+		expect(service.requests).toHaveLength(0);
+		expect(database.advances().at(-1)?.args).toMatchObject({ p_next: [], p_finish: true });
+	});
+
+	it('sin VAPID configurado no reclama nada', async () => {
 		delete envState.privateEnv.VAPID_PUBLIC_KEY;
 		delete envState.privateEnv.VAPID_PRIVATE_KEY;
 		delete envState.publicEnv.PUBLIC_VAPID_PUBLIC_KEY;
-		const { supabase } = createSupabaseMock({}, { data: [], error: null });
-		const result = await sendDuePushReminders(supabase, { now });
-		expect(result).toMatchObject({ configured: false, sent: 0 });
+		const database = batchDatabase([], []);
+
+		const summary = await sendPushReminderBatch({ supabase: database.supabase, budget: createJobBudget('free'), providerFetch: fetch, now });
+
+		expect(summary).toMatchObject({ configured: false, claimed: 0 });
+		expect(database.calls).toHaveLength(0);
 	});
 });
 
@@ -870,24 +967,25 @@ describe('sendReschedulePushNotice', () => {
 	};
 
 	it('envía aunque falte confirmar la prueba, sin tocar flags sent/claimed', async () => {
-		vi.mocked(webpush.sendNotification).mockResolvedValue({} as any);
 		const { supabase, updates, filters } = createSupabaseMock(
 			{
 				appointments: [{ data: liveAppointment, error: null }],
-				push_subscriptions: [{ data: [subscriptionRow], error: null }]
+				push_subscriptions: [{ data: [subscriptionRow], error: null }],
+				push_delivery_attempts: [{ data: { id: 'delivery-1' }, error: null }, { data: null, error: null }]
 			},
 			{ data: null, error: null }
 		);
+		const service = pushService();
 
-		const result = await sendReschedulePushNotice(supabase, {
+		const result = await sendReschedulePushNotice(supabase, service.fetchFn, {
 			businessId: 'biz-1',
 			appointmentId: 'apt-1',
 			now
 		});
 
 		expect(result.sent).toBe(1);
-		expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
-		const payload = JSON.parse(vi.mocked(webpush.sendNotification).mock.calls[0][1] as string);
+		expect(service.requests).toHaveLength(1);
+		const payload = await payloadOf(service.requests[0]);
 		expect(payload.body).toContain('reprogramado');
 		expect(payload.body).toContain('a las 08:00');
 		expect(payload.body).toContain('Descripción pública sintética');
@@ -897,7 +995,7 @@ describe('sendReschedulePushNotice', () => {
 		expect(payload.tag).toBe('turno-apt-1-24h');
 		expect(payload.group).toBe('turno-apt-1');
 		expect(payload.url).toContain('/turno/tok-1');
-		expect(vi.mocked(webpush.sendNotification).mock.calls[0][2]).toMatchObject({
+		expect(vi.mocked(webpush.generateRequestDetails).mock.calls[0][2]).toMatchObject({
 			topic: pushTopicForAppointment('apt-1')
 		});
 		expect(filters).not.toContainEqual({
@@ -924,27 +1022,29 @@ describe('sendReschedulePushNotice', () => {
 			},
 			{ data: null, error: null }
 		);
+		const service = pushService();
 
-		const result = await sendReschedulePushNotice(supabase, {
+		const result = await sendReschedulePushNotice(supabase, service.fetchFn, {
 			businessId: 'biz-1',
 			appointmentId: 'apt-1',
 			now
 		});
 		expect(result.sent).toBe(0);
-		expect(webpush.sendNotification).not.toHaveBeenCalled();
+		expect(service.requests).toHaveLength(0);
 	});
 
 	it('endpoint muerto (410): registra el dispositivo sin desvincular el turno', async () => {
-		vi.mocked(webpush.sendNotification).mockRejectedValue({ statusCode: 410 });
 		const { supabase, updates, rpcCalls } = createSupabaseMock(
 			{
 				appointments: [{ data: liveAppointment, error: null }],
-				push_subscriptions: [{ data: [subscriptionRow], error: null }, { data: null }]
+				push_subscriptions: [{ data: [subscriptionRow], error: null }],
+				push_delivery_attempts: [{ data: { id: 'delivery-1' }, error: null }, { data: null, error: null }]
 			},
 			{ data: null, error: null }
 		);
+		const service = pushService(() => new Response(null, { status: 410 }));
 
-		const result = await sendReschedulePushNotice(supabase, {
+		const result = await sendReschedulePushNotice(supabase, service.fetchFn, {
 			businessId: 'biz-1',
 			appointmentId: 'apt-1',
 			now
@@ -991,7 +1091,7 @@ describe('resetPushRemindersForReschedule', () => {
 		return { supabase, calls };
 	};
 
-	it('limpia sent/claimed de 24h y 2h sólo en vínculos asociados', async () => {
+	it('reinicia ambos recordatorios, su reclamación y su espera sólo en vínculos asociados', async () => {
 		const { supabase, calls } = makeMock([{ id: 'sub-1' }, { id: 'sub-2' }]);
 		const count = await resetPushRemindersForReschedule(supabase, {
 			businessId: 'biz-1',
@@ -1004,8 +1104,14 @@ describe('resetPushRemindersForReschedule', () => {
 		expect(calls.update).toEqual({
 			push_24h_claimed_at: null,
 			push_24h_sent_at: null,
+			push_24h_claim_token: null,
+			push_24h_retry_at: null,
+			push_24h_failures: 0,
 			push_2h_claimed_at: null,
 			push_2h_sent_at: null,
+			push_2h_claim_token: null,
+			push_2h_retry_at: null,
+			push_2h_failures: 0,
 			updated_at: now.toISOString()
 		});
 		expect(calls.eq).toEqual([

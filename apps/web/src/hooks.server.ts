@@ -58,7 +58,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.verifiedUser = null;
 	const startedAt = performance.now();
 	let authMs = 0;
-	let dbQ = 0;
+	// HTTP trips to PostgREST and Auth: a fetch counter, not a count of SQL queries.
+	let dbHttpRequests = 0;
 	let dbMs = 0;
 	let dbMaxMs = 0;
 
@@ -82,7 +83,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		const fetchMs = performance.now() - fetchStart;
 
 		if (isRestRequest || isAuthRequest) {
-			dbQ += 1;
+			dbHttpRequests += 1;
 			dbMs += fetchMs;
 			dbMaxMs = Math.max(dbMaxMs, fetchMs);
 		}
@@ -239,7 +240,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		`load;dur=${loadMs.toFixed(1)}`,
 		`db;dur=${dbMs.toFixed(1)}`,
 		`db_max;dur=${dbMaxMs.toFixed(1)}`,
-		`db_q;desc="${dbQ}"`,
+		`db_http;desc="${dbHttpRequests}"`,
 		`runtime_region;desc="${runtimeRegion || 'unknown'}"`
 	].join(', ');
 	const existingTiming = response.headers.get('Server-Timing');

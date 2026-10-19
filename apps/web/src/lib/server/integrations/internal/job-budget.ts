@@ -3,6 +3,10 @@
 // Storage, Auth) and provider calls are kept apart, because a fetch counter is not a
 // count of SQL queries. The budget covers the whole chain, so the Service Binding
 // request that started the job is already spent when the app receives it.
+// PostgREST retries idempotent GET requests by itself, also after a refused call:
+// queries made by a job disable it (`.retry(false)`), the persistent retry of each
+// queue already covers that failure and the worst case per item stays exact.
+import type { CitaSupabaseClient } from '$lib/types/database';
 
 export type JobBudgetProfile = 'free' | 'paid';
 export type ExternalCallKind = 'database' | 'provider';
@@ -35,6 +39,14 @@ export const parseJobBudgetProfile = (value: string | undefined): JobBudgetProfi
 	value?.trim() === 'paid' ? 'paid' : 'free';
 
 export type JobBudget = ReturnType<typeof createJobBudget>;
+
+/** One run of a job: a database client and a provider fetch, both counted by its budget. */
+export type ScheduledJobRun = {
+	supabase: CitaSupabaseClient;
+	budget: JobBudget;
+	providerFetch: typeof fetch;
+	now: Date;
+};
 
 export function createJobBudget(profile: JobBudgetProfile, now: () => number = Date.now) {
 	const startedAt = now();

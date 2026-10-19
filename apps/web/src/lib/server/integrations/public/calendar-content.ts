@@ -9,10 +9,18 @@ import { buildGoogleCalendarUrl, buildOutlookUrl, type CalendarLinkInput } from 
 import { getPublicSiteUrl, publicAppointmentUrl } from '$lib/server/integrations/public/messaging';
 import type { PublicAppointmentView } from '$lib/server/scheduling/public/public-appointments';
 
-export const calendarSummaryFor = (appointment: PublicAppointmentView): string =>
+/** What a calendar event shows of its appointment: schedule, professional and place. */
+export type CalendarEventAppointment = Pick<
+	PublicAppointmentView,
+	'id' | 'token' | 'status' | 'starts_at' | 'ends_at' | 'professional_name_snapshot' | 'calendar_sequence' | 'booking_context'
+> & {
+	business: Pick<PublicAppointmentView['business'], 'name' | 'timezone' | 'address' | 'address_instructions' | 'maps_link'>;
+};
+
+export const calendarSummaryFor = (appointment: CalendarEventAppointment): string =>
 	`Turno en ${appointment.business.name}`;
 
-export const calendarLocationFor = (appointment: PublicAppointmentView): string | null => {
+export const calendarLocationFor = (appointment: CalendarEventAppointment): string | null => {
 	if (appointment.booking_context?.modality === 'video') return 'Consulta virtual';
 	const address = appointment.business.address?.trim();
 	if (!address) return null;
@@ -20,7 +28,7 @@ export const calendarLocationFor = (appointment: PublicAppointmentView): string 
 	return instructions ? `${address} · ${instructions}` : address;
 };
 
-export const calendarDescriptionFor = (appointment: PublicAppointmentView): string => {
+export const calendarDescriptionFor = (appointment: CalendarEventAppointment): string => {
 	const { dateLabel, timeLabel } = formatInTimeZone(
 		appointment.starts_at,
 		appointment.business.timezone

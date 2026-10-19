@@ -98,7 +98,7 @@ export const POST: RequestHandler = async ({ params, request, fetch, setHeaders 
 			return json({ ok: true, verified: true, delivery: null, verificationAvailable: true });
 		}
 		if (requestTest) {
-			const testResult = await sendTestPushNotification(supabase, {
+			const testResult = await sendTestPushNotification(supabase, fetch, {
 				appointment,
 				...(testRequestKey ? { requestKey: testRequestKey } : {}),
 				subscription: {

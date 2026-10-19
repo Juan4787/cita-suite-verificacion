@@ -125,6 +125,7 @@ describe('POST /turno/[token]/push', () => {
 		expect(mocks.sendTestPushNotification).toHaveBeenCalledOnce();
 		expect(mocks.sendTestPushNotification).toHaveBeenCalledWith(
 			{ admin: true },
+			expect.any(Function),
 			{
 				appointment,
 				requestKey: 'push:session-1234567890:recovery',

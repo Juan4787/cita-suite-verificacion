@@ -1,16 +1,41 @@
 import { logServerFailure } from '$lib/server/platform/logging';
-import { isRecord, readNullableText, readFiniteNumber, readChoice } from '$lib/contracts/json';
+import {
+	InvalidDataContractError,
+	isRecord,
+	readArray,
+	readChoice,
+	readFiniteNumber,
+	readNullableText,
+	readRecord,
+	readText
+} from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
-import type { CitaSupabaseClient } from '$lib/types/database';
+import type { CitaRow, CitaSupabaseClient } from '$lib/types/database';
 import crypto from 'node:crypto';
 import {
 	calendarDescriptionFor,
 	calendarLocationFor,
-	calendarSummaryFor
+	calendarSummaryFor,
+	type CalendarEventAppointment
 } from '$lib/server/integrations/public/calendar-content';
 import { alarmsForProximity } from '$lib/server/integrations/public/ics';
 import { getPublicSiteUrl } from '$lib/server/integrations/public/messaging';
-import { loadPublicAppointmentByToken, type PublicAppointmentView } from '$lib/server/scheduling/public/public-appointments';
+import {
+	MAX_CONCURRENT_EXTERNAL_CALLS,
+	type ScheduledJobRun
+} from '$lib/server/integrations/internal/job-budget';
+import { isAppointmentStatus } from '$lib/server/scheduling/public/appointments';
+import {
+	loadPublicAppointmentByToken,
+	publicAppointmentPlace,
+	type PublicAppointmentView
+} from '$lib/server/scheduling/public/public-appointments';
+import { bookingContextsAvailable } from '$lib/server/sites/public/booking-integration-flags';
+import {
+	readAppointmentBookingContext,
+	type AppointmentBookingContext
+} from '$lib/server/sites/public/booking-integrations';
+import { isActiveAppointmentStatus } from '$lib/utils/appointment-visibility';
 
 const GOOGLE_AUTHORIZATION_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
@@ -37,13 +62,16 @@ const isPendingGoogleCalendarStatus = (
 ): status is (typeof GOOGLE_CALENDAR_PENDING_STATUSES)[number] =>
 	(GOOGLE_CALENDAR_PENDING_STATUSES as readonly string[]).includes(status);
 
-export type GoogleCalendarSyncStatus =
-	| (typeof GOOGLE_CALENDAR_PENDING_STATUSES)[number]
-	| 'active'
-	| 'deleted'
-	| 'detached'
-	| 'needs_reconnect'
-	| 'failed';
+const GOOGLE_CALENDAR_SYNC_STATUSES = [
+	...GOOGLE_CALENDAR_PENDING_STATUSES,
+	'active',
+	'deleted',
+	'detached',
+	'needs_reconnect',
+	'failed'
+] as const;
+
+export type GoogleCalendarSyncStatus = (typeof GOOGLE_CALENDAR_SYNC_STATUSES)[number];
 
 export type GoogleCalendarUiState = {
 	available: boolean;
@@ -497,7 +525,7 @@ export const googleCalendarReminderLabel = (startsAt: Date, now = new Date()): s
 };
 
 export const googleCalendarEventResource = (
-	appointment: PublicAppointmentView,
+	appointment: CalendarEventAppointment,
 	now = new Date()
 ) => ({
 	summary: calendarSummaryFor(appointment),
@@ -669,7 +697,7 @@ const loadEventLink = async (
 			connection_id: String(event.connection_id),
 			calendar_id: String(event.calendar_id),
 			event_id: event.event_id ? String(event.event_id) : null,
-			sync_status: readChoice(event.sync_status, ['pending_create', 'pending_update', 'pending_delete', 'active', 'deleted', 'detached', 'needs_reconnect', 'failed'], 'googleCalendar.syncStatus'),
+			sync_status: readChoice(event.sync_status, GOOGLE_CALENDAR_SYNC_STATUSES, 'googleCalendar.syncStatus'),
 			synced_sequence: Number(event.synced_sequence),
 			attempt_count: Number(event.attempt_count ?? 0),
 			claimed_at: event.claimed_at ? String(event.claimed_at) : null
@@ -691,6 +719,19 @@ const nextRetryAt = (attemptCount: number, now: Date): Date => {
 	return new Date(now.getTime() + (minutes * 60 + seconds) * 1000);
 };
 
+/** How a failed change is recorded: its category, a safe code and the next attempt. */
+const syncFailure = (error: unknown, attemptCount: number, now: Date) => {
+	const remote =
+		error instanceof GoogleCalendarRemoteError
+			? error
+			: new GoogleCalendarRemoteError('transient', 'calendar_sync_unexpected');
+	return {
+		remote,
+		category: remote.category === 'conflict' ? 'permanent' : remote.category,
+		nextAttemptAt: nextRetryAt(attemptCount + 1, now).toISOString()
+	};
+};
+
 const markSyncFailure = async (
 	supabase: CitaSupabaseClient,
 	eventRowId: string,
@@ -698,12 +739,12 @@ const markSyncFailure = async (
 	attemptCount: number,
 	now: Date
 ) => {
-	const category = error.category === 'conflict' ? 'permanent' : error.category;
+	const failure = syncFailure(error, attemptCount, now);
 	const { data, error: rpcError } = await supabase.rpc('fail_google_calendar_event_sync', {
 		p_event_row_id: eventRowId,
-		p_failure_category: category,
-		p_error_code: error.safeCode,
-		p_next_attempt_at: nextRetryAt(attemptCount + 1, now).toISOString(),
+		p_failure_category: failure.category,
+		p_error_code: failure.remote.safeCode,
+		p_next_attempt_at: failure.nextAttemptAt,
 		p_now: now.toISOString()
 	});
 	if (rpcError) throw rpcError;
@@ -762,6 +803,81 @@ const revokeGoogleRefreshToken = async (
 	}
 };
 
+type GoogleCalendarChange =
+	| { outcome: 'deleted' }
+	| { outcome: 'delete_requested' }
+	| { outcome: 'synced'; googleEventId: string; syncedSequence: number };
+
+/**
+ * The remote effect of one pending event, shared by the immediate path and the
+ * scheduled batch; each records the outcome its own way. Throws a
+ * GoogleCalendarRemoteError when Google refuses or does not answer.
+ */
+const applyGoogleCalendarChange = async (
+	event: Pick<EventLinkRow, 'calendar_id' | 'event_id' | 'sync_status'>,
+	appointment: CalendarEventAppointment,
+	accessToken: () => Promise<string>,
+	fetchFn: typeof fetch,
+	now: Date
+): Promise<GoogleCalendarChange> => {
+	if (event.sync_status === 'pending_delete' || appointment.status === 'cancelled') {
+		if (event.event_id) {
+			try {
+				await googleCalendarRequest(
+					`/calendars/${encodeURIComponent(event.calendar_id)}/events/${encodeURIComponent(event.event_id)}`,
+					await accessToken(),
+					fetchFn,
+					{ method: 'DELETE' }
+				);
+			} catch (error) {
+				if (!(error instanceof GoogleCalendarRemoteError) || error.category !== 'missing') {
+					throw error;
+				}
+			}
+		}
+		return { outcome: 'deleted' };
+	}
+
+	const token = await accessToken();
+	if (!isActiveAppointmentStatus(appointment.status)) return { outcome: 'delete_requested' };
+
+	const resource = googleCalendarEventResource(appointment, now);
+	let googleEventId = event.event_id;
+	if (event.sync_status === 'pending_create' || !googleEventId) {
+		const deterministicId = deterministicGoogleCalendarEventId(appointment.id);
+		try {
+			const created = await googleCalendarRequest(
+				`/calendars/${encodeURIComponent(event.calendar_id)}/events`,
+				token,
+				fetchFn,
+				{ method: 'POST', body: { ...resource, id: deterministicId } }
+			);
+			if (!isRecord(created) || typeof created.id !== 'string' || !created.id) throw new GoogleCalendarRemoteError('transient', 'calendar_response_invalid');
+			googleEventId = created.id;
+		} catch (error) {
+			if (!(error instanceof GoogleCalendarRemoteError) || error.category !== 'conflict') {
+				throw error;
+			}
+			// La creacion anterior llego a Google pero la respuesta se perdio.
+			const existing = await googleCalendarRequest(
+				`/calendars/${encodeURIComponent(event.calendar_id)}/events/${encodeURIComponent(deterministicId)}`,
+				token,
+				fetchFn
+			);
+			if (!isRecord(existing) || typeof existing.id !== 'string' || !existing.id) throw new GoogleCalendarRemoteError('transient', 'calendar_response_invalid');
+			googleEventId = existing.id;
+		}
+	} else {
+		await googleCalendarRequest(
+			`/calendars/${encodeURIComponent(event.calendar_id)}/events/${encodeURIComponent(googleEventId)}`,
+			token,
+			fetchFn,
+			{ method: 'PATCH', body: resource }
+		);
+	}
+	return { outcome: 'synced', googleEventId, syncedSequence: appointment.calendar_sequence };
+};
+
 export const processGoogleCalendarEvent = async (
 	supabase: CitaSupabaseClient,
 	eventRowId: string,
@@ -782,35 +898,23 @@ export const processGoogleCalendarEvent = async (
 		return { status: event.sync_status };
 	}
 
+	let accessToken = options.accessToken;
 	try {
-		let accessToken = options.accessToken;
-
-		if (event.sync_status === 'pending_delete' || appointment.status === 'cancelled') {
-			if (event.event_id) {
-				accessToken ??= await refreshGoogleAccessToken(connection, fetchFn);
-				try {
-					await googleCalendarRequest(
-						`/calendars/${encodeURIComponent(event.calendar_id)}/events/${encodeURIComponent(event.event_id)}`,
-						accessToken,
-						fetchFn,
-						{ method: 'DELETE' }
-					);
-				} catch (error) {
-					if (!(error instanceof GoogleCalendarRemoteError) || error.category !== 'missing') {
-						throw error;
-					}
-				}
-			}
+		const change = await applyGoogleCalendarChange(
+			event,
+			appointment,
+			async () => (accessToken ??= await refreshGoogleAccessToken(connection, fetchFn)),
+			fetchFn,
+			now
+		);
+		if (change.outcome === 'deleted') {
 			const removedConnectionId = await completeDelete(supabase, event.id, now);
 			if (removedConnectionId === connection.id) {
 				await revokeGoogleRefreshToken(connection, fetchFn);
 			}
 			return { status: 'deleted' };
 		}
-
-		accessToken ??= await refreshGoogleAccessToken(connection, fetchFn);
-
-		if (!['reserved', 'confirmed', 'reschedule_requested'].includes(appointment.status)) {
+		if (change.outcome === 'delete_requested') {
 			const { error } = await supabase.rpc('request_google_calendar_event_deletion', {
 				p_appointment_id: appointment.id,
 				p_now: now.toISOString()
@@ -818,46 +922,10 @@ export const processGoogleCalendarEvent = async (
 			if (error) throw error;
 			return { status: 'pending_delete' };
 		}
-
-		const resource = googleCalendarEventResource(appointment, now);
-		let googleEventId = event.event_id;
-		if (event.sync_status === 'pending_create' || !googleEventId) {
-			const deterministicId = deterministicGoogleCalendarEventId(appointment.id);
-			try {
-				const created = await googleCalendarRequest(
-					`/calendars/${encodeURIComponent(event.calendar_id)}/events`,
-					accessToken,
-					fetchFn,
-					{ method: 'POST', body: { ...resource, id: deterministicId } }
-				);
-				if (!isRecord(created) || typeof created.id !== 'string' || !created.id) throw new GoogleCalendarRemoteError('transient', 'calendar_response_invalid');
-				googleEventId = created.id;
-			} catch (error) {
-				if (!(error instanceof GoogleCalendarRemoteError) || error.category !== 'conflict') {
-					throw error;
-				}
-				// La creacion anterior llego a Google pero la respuesta se perdio.
-				const existing = await googleCalendarRequest(
-					`/calendars/${encodeURIComponent(event.calendar_id)}/events/${encodeURIComponent(deterministicId)}`,
-					accessToken,
-					fetchFn
-				);
-				if (!isRecord(existing) || typeof existing.id !== 'string' || !existing.id) throw new GoogleCalendarRemoteError('transient', 'calendar_response_invalid');
-				googleEventId = existing.id;
-			}
-		} else {
-			await googleCalendarRequest(
-				`/calendars/${encodeURIComponent(event.calendar_id)}/events/${encodeURIComponent(googleEventId)}`,
-				accessToken,
-				fetchFn,
-				{ method: 'PATCH', body: resource }
-			);
-		}
-
 		const { data, error } = await supabase.rpc('complete_google_calendar_event_sync', {
 			p_event_row_id: event.id,
-			p_google_event_id: googleEventId,
-			p_synced_sequence: appointment.calendar_sequence,
+			p_google_event_id: change.googleEventId,
+			p_synced_sequence: change.syncedSequence,
 			p_now: now.toISOString()
 		});
 		if (error) throw error;
@@ -894,41 +962,256 @@ export const processGoogleCalendarEvent = async (
 	}
 };
 
-export const processGoogleCalendarSyncJobs = async (
-	supabase: CitaSupabaseClient,
-	fetchFn: typeof fetch,
-	options: { limit?: number; now?: Date } = {}
-) => {
-	if (!isGoogleCalendarConfigured()) {
-		return { configured: false, claimed: 0, active: 0, deleted: 0, retrying: 0, attention: 0 };
+// Sincronización programada ----------------------------------------------------------
+
+/** Events of one chunk are read, changed and recorded together. */
+const CALENDAR_CHUNK_SIZE = MAX_CONCURRENT_EXTERNAL_CALLS;
+/** Worst case of one event at Google: token refresh, the change and a lookup or a revocation. */
+const CALENDAR_EVENT_PROVIDER_CALLS = 3;
+/** Each chunk reads its appointments and records its results. */
+const CALENDAR_CHUNK_DATABASE_CALLS = 2;
+/** The claim itself and the release when the run stops before its queue ends. */
+const CALENDAR_FIXED_CALLS = 2;
+/** Largest claim the database accepts in one call. */
+const CALENDAR_MAX_CLAIM = 100;
+
+const calendarChunkCalls = (size: number) =>
+	CALENDAR_CHUNK_DATABASE_CALLS + CALENDAR_EVENT_PROVIDER_CALLS * size;
+
+/** Events whose chunks fit the calls the run has left. */
+const calendarClaimLimit = (remainingCalls: number) => {
+	let calls = remainingCalls - CALENDAR_FIXED_CALLS;
+	let events = 0;
+	while (events < CALENDAR_MAX_CLAIM) {
+		const size = Math.min(
+			CALENDAR_CHUNK_SIZE,
+			Math.floor((calls - CALENDAR_CHUNK_DATABASE_CALLS) / CALENDAR_EVENT_PROVIDER_CALLS)
+		);
+		if (size < 1) break;
+		events += size;
+		calls -= calendarChunkCalls(size);
 	}
-	const now = options.now ?? new Date();
-	const limit = Math.max(1, Math.min(Number(options.limit ?? 20), 100));
-	const { data, error } = await supabase.rpc('claim_google_calendar_sync_jobs', {
-		claim_now: now.toISOString(),
-		claim_limit: limit
-	});
-	if (error) throw error;
-	const ids = (data ?? []).map((row) => String(row.event_row_id));
-	const result = { configured: true, claimed: ids.length, active: 0, deleted: 0, retrying: 0, attention: 0 };
-	for (const id of ids) {
-		try {
-			const processed = await processGoogleCalendarEvent(supabase, id, fetchFn, { now });
-			if (processed.status === 'active') result.active += 1;
-			else if (processed.status === 'deleted') result.deleted += 1;
-			else if (processed.status.startsWith('pending_')) result.retrying += 1;
-			else result.attention += 1;
-		} catch (error) {
-			// Un registro dañado o una lectura transitoria no debe bloquear los demás.
-			// El claim vence solo y permite reintentar este trabajo más adelante.
-			result.attention += 1;
-			logServerFailure('Error aislado procesando Google Calendar', {
-				eventRowId: id,
-				code: error instanceof Error ? error.message.slice(0, 120) : 'unknown'
-			});
+	return Math.min(events, CALENDAR_MAX_CLAIM);
+};
+
+type ClaimedCalendarEvent = {
+	event: Pick<EventLinkRow, 'id' | 'appointment_id' | 'calendar_id' | 'event_id' | 'sync_status' | 'attempt_count'>;
+	connection: ConnectionRow;
+};
+
+const readClaimedCalendarEvent = (value: unknown): ClaimedCalendarEvent => {
+	const item = readRecord(value, 'calendarBatch.claim');
+	return {
+		event: {
+			id: readText(item.event_row_id, 'calendarBatch.claim.event'),
+			appointment_id: readText(item.appointment_id, 'calendarBatch.claim.appointment'),
+			calendar_id: readText(item.calendar_id, 'calendarBatch.claim.calendar'),
+			event_id: readNullableText(item.event_id, 'calendarBatch.claim.googleEvent'),
+			sync_status: readChoice(item.sync_status, GOOGLE_CALENDAR_SYNC_STATUSES, 'calendarBatch.claim.status'),
+			attempt_count: readFiniteNumber(item.attempt_count, 'calendarBatch.claim.attempts')
+		},
+		connection: {
+			id: readText(item.connection_id, 'calendarBatch.claim.connection'),
+			refresh_token_ciphertext: readNullableText(item.refresh_token_ciphertext, 'calendarBatch.claim.token'),
+			revoked_at: readNullableText(item.connection_revoked_at, 'calendarBatch.claim.revokedAt')
 		}
+	};
+};
+
+const readCalendarCompletion = (value: unknown) => {
+	const record = readRecord(value, 'calendarBatch.completion');
+	return {
+		released: readFiniteNumber(record.released, 'calendarBatch.completion.released'),
+		results: readArray(record.results, 'calendarBatch.completion.results').map((entry) => {
+			const result = readRecord(entry, 'calendarBatch.result');
+			return {
+				eventRowId: readText(result.event_row_id, 'calendarBatch.result.event'),
+				status: readText(result.status, 'calendarBatch.result.status'),
+				removedConnectionId: readNullableText(result.removed_connection_id, 'calendarBatch.result.removed')
+			};
+		})
+	};
+};
+
+const CALENDAR_APPOINTMENT_SELECT =
+	'id, confirmation_token, status, starts_at, ends_at, professional_name_snapshot, calendar_sequence, businesses!inner(name, timezone, address, address_instructions, maps_url)';
+
+type CalendarAppointmentRow = Pick<
+	CitaRow<'appointments'>,
+	'id' | 'confirmation_token' | 'status' | 'starts_at' | 'ends_at' | 'professional_name_snapshot' | 'calendar_sequence'
+> & {
+	businesses: Pick<CitaRow<'businesses'>, 'name' | 'timezone' | 'address' | 'address_instructions' | 'maps_url'>;
+};
+
+/**
+ * Appointments of one chunk in one read, revalidated right before the change at
+ * Google; a cancellation or a reschedule after the claim is seen here. The place
+ * follows the same rule as the public view of the appointment.
+ */
+const loadCalendarAppointments = async (
+	supabase: CitaSupabaseClient,
+	appointmentIds: string[]
+): Promise<Map<string, CalendarEventAppointment>> => {
+	const appointments = new Map<string, CalendarEventAppointment>();
+	const add = (row: CalendarAppointmentRow, bookingContext: AppointmentBookingContext | null) => {
+		if (!isAppointmentStatus(row.status)) throw new InvalidDataContractError('calendarBatch.appointment.status');
+		appointments.set(row.id, {
+			id: row.id,
+			token: row.confirmation_token,
+			status: row.status,
+			starts_at: row.starts_at,
+			ends_at: row.ends_at,
+			professional_name_snapshot: row.professional_name_snapshot,
+			calendar_sequence: row.calendar_sequence,
+			booking_context: bookingContext,
+			business: {
+				name: row.businesses.name,
+				timezone: row.businesses.timezone,
+				...publicAppointmentPlace(row.businesses, bookingContext)
+			}
+		});
+	};
+	if (bookingContextsAvailable()) {
+		const { data, error } = await supabase
+			.from('appointments')
+			.select(`${CALENDAR_APPOINTMENT_SELECT},appointment_booking_contexts(theme_snapshot,modality,video_instructions_snapshot)`)
+			.in('id', appointmentIds)
+			.retry(false);
+		if (error) throw error;
+		for (const row of data) {
+			const [context, ...extra] = row.appointment_booking_contexts;
+			if (extra.length) throw new InvalidDataContractError('calendarBatch.appointment.context');
+			add(row, context ? readAppointmentBookingContext(context) : null);
+		}
+	} else {
+		const { data, error } = await supabase
+			.from('appointments')
+			.select(CALENDAR_APPOINTMENT_SELECT)
+			.in('id', appointmentIds)
+			.retry(false);
+		if (error) throw error;
+		for (const row of data) add(row, null);
 	}
-	return result;
+	return appointments;
+};
+
+type CalendarBatchResult =
+	| { event_row_id: string; outcome: 'synced'; google_event_id: string; synced_sequence: number }
+	| { event_row_id: string; outcome: 'deleted' | 'delete_requested' }
+	| {
+			event_row_id: string;
+			outcome: 'failed';
+			failure_category: string;
+			error_code: string;
+			next_attempt_at: string;
+	  };
+
+/**
+ * One scheduled calendar run. The claim shares the queue between practices and
+ * carries each connection; an access token is refreshed once per connection and
+ * run. Each chunk reads its appointments, makes the changes at Google and records
+ * them in one database trip; a chunk starts only while its worst case still fits.
+ */
+export const processGoogleCalendarSyncBatch = async (job: ScheduledJobRun) => {
+	const summary = { configured: isGoogleCalendarConfigured(), claimed: 0, active: 0, deleted: 0, retrying: 0, attention: 0, stale: 0, released: 0 };
+	if (!summary.configured) return summary;
+	const limit = calendarClaimLimit(job.budget.remaining());
+	if (limit < 1) return summary;
+	const now = job.now.toISOString();
+	const claimToken = crypto.randomUUID();
+	const { data: claimed, error: claimError } = await job.supabase.rpc('claim_google_calendar_sync_batch', {
+		p_now: now,
+		p_limit: limit,
+		p_claim_token: claimToken
+	});
+	if (claimError) throw claimError;
+	const queue = readArray(claimed, 'calendarBatch.claim').map(readClaimedCalendarEvent);
+	summary.claimed = queue.length;
+	if (!queue.length) return summary;
+	const accessTokens = new Map<string, Promise<string>>();
+	const accessTokenFor = (connection: ConnectionRow) => {
+		let token = accessTokens.get(connection.id);
+		if (!token) {
+			token = refreshGoogleAccessToken(connection, job.providerFetch);
+			accessTokens.set(connection.id, token);
+		}
+		return token;
+	};
+	let finished = false;
+	try {
+		while (queue.length && job.budget.admits({ calls: calendarChunkCalls(Math.min(CALENDAR_CHUNK_SIZE, queue.length)) }, 1)) {
+			const chunk = queue.splice(0, CALENDAR_CHUNK_SIZE);
+			const appointments = await loadCalendarAppointments(job.supabase, chunk.map((item) => item.event.appointment_id));
+			const results = await Promise.all(
+				chunk.map(async ({ event, connection }): Promise<CalendarBatchResult> => {
+					try {
+						const appointment = appointments.get(event.appointment_id);
+						if (!appointment) throw new GoogleCalendarRemoteError('transient', 'calendar_appointment_unavailable');
+						const change = await applyGoogleCalendarChange(event, appointment, () => accessTokenFor(connection), job.providerFetch, job.now);
+						return change.outcome === 'synced'
+							? { event_row_id: event.id, outcome: 'synced', google_event_id: change.googleEventId, synced_sequence: change.syncedSequence }
+							: { event_row_id: event.id, outcome: change.outcome };
+					} catch (error) {
+						const failure = syncFailure(error, event.attempt_count, job.now);
+						return {
+							event_row_id: event.id,
+							outcome: 'failed',
+							failure_category: failure.category,
+							error_code: failure.remote.safeCode,
+							next_attempt_at: failure.nextAttemptAt
+						};
+					}
+				})
+			);
+			finished = queue.length === 0;
+			const { data, error } = await job.supabase.rpc('complete_google_calendar_sync_batch', {
+				p_claim_token: claimToken,
+				p_now: now,
+				p_results: results,
+				p_finish: finished
+			});
+			if (error) throw error;
+			const completion = readCalendarCompletion(data);
+			summary.released += completion.released;
+			for (const result of completion.results) {
+				if (result.status === 'active') summary.active += 1;
+				else if (result.status === 'deleted') summary.deleted += 1;
+				else if (result.status === 'stale') summary.stale += 1;
+				else if (result.status.startsWith('pending_')) summary.retrying += 1;
+				else summary.attention += 1;
+				// Revoked only after the deletion that removed its last link is committed.
+				const connection = chunk.find((item) => item.connection.id === result.removedConnectionId)?.connection;
+				if (connection) await revokeGoogleRefreshToken(connection, job.providerFetch);
+			}
+		}
+		if (!finished) {
+			job.budget.enterFinalization();
+			const { data, error } = await job.supabase.rpc('complete_google_calendar_sync_batch', {
+				p_claim_token: claimToken,
+				p_now: now,
+				p_results: [],
+				p_finish: true
+			});
+			if (error) throw error;
+			summary.released += readCalendarCompletion(data).released;
+		}
+		return summary;
+	} catch (error) {
+		// Abandoned claims expire on their own; releasing them now only saves the wait.
+		try {
+			job.budget.enterFinalization();
+			const { error: releaseError } = await job.supabase.rpc('complete_google_calendar_sync_batch', {
+				p_claim_token: claimToken,
+				p_now: now,
+				p_results: [],
+				p_finish: true
+			});
+			if (releaseError) throw releaseError;
+		} catch (releaseError) {
+			logServerFailure('Error cerrando el lote de Google Calendar', releaseError);
+		}
+		throw error;
+	}
 };
 
 export const processAppointmentGoogleCalendarSync = async (

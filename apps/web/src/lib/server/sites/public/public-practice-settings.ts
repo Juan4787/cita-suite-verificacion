@@ -1,6 +1,7 @@
-import { InvalidDataContractError, readArray, readBoolean, readFiniteNumber, readRecord, readText } from '$lib/contracts/json';
+import { InvalidDataContractError, readBoolean, readFiniteNumber, readRecord } from '$lib/contracts/json';
 import { env } from "$env/dynamic/private";
 import { createSupabaseAdminClient } from "$lib/server/platform/supabase";
+import { readExpiredClinicalUploads, removeExpiredClinicalUploads } from "$lib/server/patients/public/clinical-files";
 import { getOdontoContext } from "$lib/server/access/public/odonto-context";
 import { readBoundedBookingForm } from "$lib/server/platform/form-data";
 import { error, fail, type RequestEvent, type Actions } from "@sveltejs/kit";
@@ -25,24 +26,18 @@ export const legacyPublicPracticeActions: Actions = {
       return fail(400, {
         message: "No pudimos revisar las cargas abandonadas. Probá nuevamente.",
       });
-    let removed = 0;
-    for (const value of readArray(data, 'expiredClinicalUploads')) {
-      const item = readRecord(value, 'expiredClinicalUpload');
-      const bucket = readText(item.bucket, 'expiredClinicalUpload.bucket');
-      const paths = readArray(item.paths, 'expiredClinicalUpload.paths').map(path => readText(path, 'expiredClinicalUpload.path'));
-      const { error: removeError } = await admin.storage
-        .from(bucket)
-        .remove(paths);
-      if (removeError)
-        return fail(503, {
-          message:
-            "No pudimos terminar la limpieza. Los documentos confirmados se conservan; podés volver a intentar.",
-        });
-      removed++;
+    const uploads = readExpiredClinicalUploads(data);
+    try {
+      await removeExpiredClinicalUploads(admin, uploads);
+    } catch {
+      return fail(503, {
+        message:
+          "No pudimos terminar la limpieza. Los documentos confirmados se conservan; podés volver a intentar.",
+      });
     }
     return {
       saved: true,
-      message: removed
+      message: uploads.length
         ? "Se limpiaron cargas abandonadas. Los documentos guardados y la papelera se conservaron."
         : "No hay cargas abandonadas que puedan limpiarse.",
     };

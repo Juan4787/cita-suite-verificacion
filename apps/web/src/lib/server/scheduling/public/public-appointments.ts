@@ -110,6 +110,19 @@ const publicActionAttempt: Record<
 	reschedule: 'token_reschedule'
 };
 
+/** Where the appointment takes place: a video appointment shows its instructions, never the address. */
+export const publicAppointmentPlace = (
+	business: { address: string | null; address_instructions: string | null; maps_url: string | null },
+	bookingContext: AppointmentBookingContext | null
+) =>
+	bookingContext?.modality === 'video'
+		? { address: null, address_instructions: bookingContext.videoInstructions, maps_link: null }
+		: {
+				address: business.address ?? null,
+				address_instructions: business.address_instructions ?? null,
+				maps_link: resolveMapsUrl({ address: business.address ?? null, maps_url: business.maps_url ?? null })
+			};
+
 export const loadPublicAppointmentByToken = async (
 	supabase: CitaSupabaseClient,
 	token: string,
@@ -168,12 +181,7 @@ export const loadPublicAppointmentByToken = async (
 			name: String(business.name),
 			slug: String(business.slug),
 			phone: business.phone ?? null,
-			address: bookingContext?.modality === 'video' ? null : business.address ?? null,
-			address_instructions: bookingContext?.modality === 'video' ? bookingContext.videoInstructions : business.address_instructions ?? null,
-			maps_link: bookingContext?.modality === 'video' ? null : resolveMapsUrl({
-				address: business.address ?? null,
-				maps_url: business.maps_url ?? null
-			}),
+			...publicAppointmentPlace(business, bookingContext),
 			logo_url: sanitizePublicImageUrl(business.logo_url),
 			timezone: String(business.timezone),
 			is_active: Boolean(business.is_active),

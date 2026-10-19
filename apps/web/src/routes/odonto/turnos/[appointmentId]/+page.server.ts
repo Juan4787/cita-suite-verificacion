@@ -416,7 +416,7 @@ export const actions: Actions = {
 				logServerFailure('Error reforzando el reseteo de avisos tras reprogramar', resetError);
 			}
 			try {
-				await sendReschedulePushNotice(admin, {
+				await sendReschedulePushNotice(admin, fetch, {
 					businessId: business.business.id,
 					appointmentId: params.appointmentId
 				});

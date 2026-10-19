@@ -132,15 +132,23 @@ export function intakeAnswersFromForm(integration: Pick<BookingIntegration, 'int
 	return validateBookingIntakeAnswers(integration.intakeFields, raw);
 }
 
+/** Context saved with an appointment, read from its row by every loader. */
+export function readAppointmentBookingContext(row: {
+	theme_snapshot: string;
+	modality: string;
+	video_instructions_snapshot: string | null;
+}): AppointmentBookingContext {
+	const theme = BOOKING_THEMES.find(theme => theme === row.theme_snapshot);
+	const modality = BOOKING_MODALITIES.find(modality => modality === row.modality);
+	if (!theme || !modality) throw new Error('BOOKING_INTEGRATION_CONFIGURATION_INVALID');
+	return { theme, modality, videoInstructions: row.video_instructions_snapshot };
+}
+
 export async function loadAppointmentBookingContext(supabase: CitaSupabaseClient, appointmentId: string): Promise<AppointmentBookingContext | null> {
 	const { data, error } = await supabase.from('appointment_booking_contexts')
 		.select('theme_snapshot, modality, video_instructions_snapshot').eq('appointment_id', appointmentId).maybeSingle();
 	if (error) throw error;
-	if (!data) return null;
-	const theme = BOOKING_THEMES.find(theme => theme === data.theme_snapshot);
-	const modality = BOOKING_MODALITIES.find(modality => modality === data.modality);
-	if (!theme || !modality) throw new Error('BOOKING_INTEGRATION_CONFIGURATION_INVALID');
-	return { theme, modality, videoInstructions: data.video_instructions_snapshot };
+	return data ? readAppointmentBookingContext(data) : null;
 }
 
 /** Use the authenticated client: RLS protects clinical answers and archived links. */

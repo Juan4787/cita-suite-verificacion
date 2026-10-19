@@ -286,6 +286,7 @@ export type Database = {
           attempt_count: number
           business_id: string
           calendar_id: string
+          claim_token: string | null
           claimed_at: string | null
           connection_id: string
           created_at: string
@@ -305,6 +306,7 @@ export type Database = {
           attempt_count?: number
           business_id: string
           calendar_id?: string
+          claim_token?: string | null
           claimed_at?: string | null
           connection_id: string
           created_at?: string
@@ -324,6 +326,7 @@ export type Database = {
           attempt_count?: number
           business_id?: string
           calendar_id?: string
+          claim_token?: string | null
           claimed_at?: string | null
           connection_id?: string
           created_at?: string
@@ -3321,9 +3324,15 @@ export type Database = {
           device_id: string
           failed_count: number
           id: string
+          push_24h_claim_token: string | null
           push_24h_claimed_at: string | null
+          push_24h_failures: number
+          push_24h_retry_at: string | null
           push_24h_sent_at: string | null
+          push_2h_claim_token: string | null
           push_2h_claimed_at: string | null
+          push_2h_failures: number
+          push_2h_retry_at: string | null
           push_2h_sent_at: string | null
           updated_at: string
         }
@@ -3336,9 +3345,15 @@ export type Database = {
           device_id: string
           failed_count?: number
           id?: string
+          push_24h_claim_token?: string | null
           push_24h_claimed_at?: string | null
+          push_24h_failures?: number
+          push_24h_retry_at?: string | null
           push_24h_sent_at?: string | null
+          push_2h_claim_token?: string | null
           push_2h_claimed_at?: string | null
+          push_2h_failures?: number
+          push_2h_retry_at?: string | null
           push_2h_sent_at?: string | null
           updated_at?: string
         }
@@ -3351,9 +3366,15 @@ export type Database = {
           device_id?: string
           failed_count?: number
           id?: string
+          push_24h_claim_token?: string | null
           push_24h_claimed_at?: string | null
+          push_24h_failures?: number
+          push_24h_retry_at?: string | null
           push_24h_sent_at?: string | null
+          push_2h_claim_token?: string | null
           push_2h_claimed_at?: string | null
+          push_2h_failures?: number
+          push_2h_retry_at?: string | null
           push_2h_sent_at?: string | null
           updated_at?: string
         }
@@ -3688,6 +3709,16 @@ export type Database = {
         }
         Returns: string
       }
+      advance_push_reminder_batch: {
+        Args: {
+          p_claim_token: string
+          p_finish?: boolean
+          p_next: Json
+          p_now: string
+          p_results: Json
+        }
+        Returns: Json
+      }
       assert_email_available_for_business: {
         Args: { target_business_id: string; target_email: string }
         Returns: undefined
@@ -3815,6 +3846,10 @@ export type Database = {
         Args: { p_actor_user_id: string; p_export_id: string }
         Returns: Json
       }
+      claim_abandoned_clinical_uploads: {
+        Args: { p_limit: number }
+        Returns: Json
+      }
       claim_due_google_review_requests: {
         Args: { claim_limit?: number; claim_now: string }
         Returns: {
@@ -3848,10 +3883,40 @@ export type Database = {
         Args: { p_actor_id: string; p_business_id: string }
         Returns: Json
       }
+      claim_google_calendar_sync_batch: {
+        Args: { p_claim_token: string; p_limit: number; p_now: string }
+        Returns: Json
+      }
       claim_google_calendar_sync_jobs: {
         Args: { claim_limit?: number; claim_now: string }
         Returns: {
           event_row_id: string
+        }[]
+      }
+      claim_google_review_request_batch: {
+        Args: { claim_limit: number; claim_now: string }
+        Returns: {
+          appointment_ends_at: string
+          appointment_id: string
+          auth: string
+          business_id: string
+          claim_token: string
+          confirmation_token: string
+          endpoint: string
+          p256dh: string
+          patient_id: string
+          request_id: string
+          scheduled_for: string
+          subscription_id: string
+        }[]
+      }
+      claim_push_reminder_batch: {
+        Args: { p_claim_token: string; p_limit: number; p_now: string }
+        Returns: {
+          business_id: string
+          business_turn: number
+          reminder_kind: string
+          subscription_id: string
         }[]
       }
       claim_queued_message_dispatches: {
@@ -3920,6 +3985,15 @@ export type Database = {
           p_synced_sequence: number
         }
         Returns: string
+      }
+      complete_google_calendar_sync_batch: {
+        Args: {
+          p_claim_token: string
+          p_finish?: boolean
+          p_now: string
+          p_results: Json
+        }
+        Returns: Json
       }
       complete_google_review_request: {
         Args: {
@@ -4503,6 +4577,7 @@ export type Database = {
         }[]
       }
       is_email_enabled: { Args: { p_email: string }; Returns: boolean }
+      legacy_job_entrypoints_enabled: { Args: never; Returns: boolean }
       list_accessible_patients_page: {
         Args: {
           p_business_id: string
@@ -4923,6 +4998,10 @@ export type Database = {
           p_uploads_enabled: boolean
         }
         Returns: undefined
+      }
+      set_legacy_job_entrypoints: {
+        Args: { p_enabled: boolean }
+        Returns: boolean
       }
       set_patient_archive_state_safely: {
         Args: {

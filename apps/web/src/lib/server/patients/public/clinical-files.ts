@@ -1,4 +1,4 @@
-import { readRecord } from '$lib/contracts/json';
+import { readArray, readBoolean, readFiniteNumber, readRecord, readText } from '$lib/contracts/json';
 import {isHttpError,isRedirect,type RequestEvent} from '@sveltejs/kit';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
@@ -562,4 +562,75 @@ export const verifyStoredClinicalThumbnail = async ({
 export const clinicalFileCacheHeaders = {
 	'cache-control': 'private, no-store',
 	vary: 'Cookie'
+};
+
+// Limpieza de cargas abandonadas -----------------------------------------------------
+
+export type ExpiredClinicalUpload = { bucket: string; paths: string[] };
+
+/** Objects named by a cleanup claim, validated before any removal. */
+export const readExpiredClinicalUploads = (data: unknown): ExpiredClinicalUpload[] =>
+	readArray(data, 'expiredClinicalUploads').map((value) => {
+		const item = readRecord(value, 'expiredClinicalUpload');
+		return {
+			bucket: readText(item.bucket, 'expiredClinicalUpload.bucket'),
+			paths: readArray(item.paths, 'expiredClinicalUpload.paths').map((path) =>
+				readText(path, 'expiredClinicalUpload.path')
+			)
+		};
+	});
+
+/** Each Storage request removes up to this many objects. */
+const CLINICAL_CLEANUP_PATHS_PER_REQUEST = 100;
+
+/**
+ * Removes the objects of a cleanup claim through the Storage API, grouped by bucket.
+ * Confirmed files never reach this list. A failed removal is retried by the next
+ * cleanup: the claim returns the same objects while they still exist.
+ */
+export const removeExpiredClinicalUploads = async (
+	admin: CitaSupabaseClient,
+	uploads: ExpiredClinicalUpload[]
+) => {
+	const pathsByBucket = new Map<string, string[]>();
+	for (const upload of uploads)
+		pathsByBucket.set(upload.bucket, [...(pathsByBucket.get(upload.bucket) ?? []), ...upload.paths]);
+	let objects = 0;
+	for (const [bucket, paths] of pathsByBucket)
+		for (let start = 0; start < paths.length; start += CLINICAL_CLEANUP_PATHS_PER_REQUEST) {
+			const chunk = paths.slice(start, start + CLINICAL_CLEANUP_PATHS_PER_REQUEST);
+			const { error } = await admin.storage.from(bucket).remove(chunk);
+			if (error) throw error;
+			objects += chunk.length;
+		}
+	return objects;
+};
+
+/**
+ * Scheduled cleanup for every practice, one turn per practice. The claim first
+ * releases expired upload reservations, so pending space returns to the budgets
+ * even when nothing is left to remove.
+ */
+export const cleanupAbandonedClinicalUploads = async (admin: CitaSupabaseClient, limit: number) => {
+	const { data, error } = await admin.rpc('claim_abandoned_clinical_uploads', { p_limit: limit });
+	if (error) throw error;
+	const uploads = readExpiredClinicalUploads(data);
+	return { files: uploads.length, objects: await removeExpiredClinicalUploads(admin, uploads) };
+};
+
+/**
+ * Scheduled reconciliation of the clinical storage ledgers against Storage. It never
+ * deletes an object nor raises a quota to make a counter look consistent; an
+ * overcommit is reported as found.
+ */
+export const reconcileClinicalStorage = async (admin: CitaSupabaseClient) => {
+	const { data, error } = await admin.rpc('reconcile_clinical_storage_budget', { p_max_businesses: 1000 });
+	if (error) throw error;
+	const result = readRecord(data, 'clinicalReconciliation');
+	return {
+		unattributedBytes: readFiniteNumber(result.unattributed_bytes, 'clinicalReconciliation.unattributed'),
+		unknownSizeObjects: readFiniteNumber(result.unknown_size_objects, 'clinicalReconciliation.unknownSizes'),
+		overGlobalLimit: readBoolean(result.over_global_limit, 'clinicalReconciliation.overGlobal'),
+		overBusinessLimit: readFiniteNumber(result.over_business_limit, 'clinicalReconciliation.overBusiness')
+	};
 };

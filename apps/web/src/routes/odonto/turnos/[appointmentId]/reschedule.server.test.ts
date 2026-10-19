@@ -146,6 +146,7 @@ describe('reprogramación desde el detalle de Agenda', () => {
 		expect(mocks.resetPushRemindersForReschedule).toHaveBeenCalledOnce();
 		expect(mocks.sendReschedulePushNotice).toHaveBeenCalledWith(
 			{ admin: true },
+			expect.any(Function),
 			{ businessId: 'business-1', appointmentId: 'appointment-1' }
 		);
 		expect(mocks.processAppointmentGoogleCalendarSync).toHaveBeenCalledWith(

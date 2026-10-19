@@ -23,3 +23,7 @@ export function logServerFailure(operation: string, cause?: unknown): void {
 export function logServerWarning(operation: string, cause?: unknown): void {
 	console.warn(operation, failureMetadata(cause));
 }
+/** Measurements of one scheduled job run: names, counts and durations, never data. */
+export function logScheduledJob(measurements: Record<string, string | number | boolean | null>): void {
+	console.info('Tarea programada', measurements);
+}

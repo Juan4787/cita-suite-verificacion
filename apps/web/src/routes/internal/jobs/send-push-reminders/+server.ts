@@ -1,64 +1,24 @@
-import { logServerFailure } from '$lib/server/platform/logging';
-// Job de envío de recordatorios push (cron externo ~cada 10 min, igual que los jobs
-// de dispatches). Idempotente: claim atómico en la RPC + sent_at tras envío exitoso.
-
 import { assertInternalJobRequest } from '$lib/server/integrations/public/internal-jobs';
-import { processGoogleCalendarSyncJobs } from '$lib/server/integrations/public/google-calendar';
-import { sendDueGoogleReviewRequests } from '$lib/server/integrations/public/google-reviews';
-import { sendDuePushReminders } from '$lib/server/integrations/public/push';
-import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
+import { legacyJobEntrypointsEnabled, runScheduledJob } from '$lib/server/integrations/public/scheduled-jobs';
+import { logServerFailure } from '$lib/server/platform/logging';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-export const POST: RequestHandler = async ({ request, fetch, url }) => {
+// Entrada del programador anterior (cron externo). Durante la transición ejecuta sólo
+// recordatorios push, con la misma implementación presupuestada que el programador
+// nuevo; calendario y reseñas tienen su propia categoría. Cuando el paso de release
+// apaga las entradas antiguas responde 410 sin ejecutar nada.
+export const POST: RequestHandler = async ({ request, fetch }) => {
 	const unauthorized = assertInternalJobRequest(request);
 	if (unauthorized) return unauthorized;
-
-	const supabase = await createSupabaseAdminClient('odonto', fetch);
-	let push: Awaited<ReturnType<typeof sendDuePushReminders>> | null = null;
-	let googleReviews: Awaited<ReturnType<typeof sendDueGoogleReviewRequests>> | null = null;
-	let googleCalendar: Awaited<ReturnType<typeof processGoogleCalendarSyncJobs>> | null = null;
-	let failed = false;
-
 	try {
-		push = await sendDuePushReminders(supabase, {
-			limit: Number(url.searchParams.get('limit') ?? 50)
-		});
+		if (!(await legacyJobEntrypointsEnabled(fetch))) {
+			return json({ message: 'Esta entrada fue retirada: las tareas las ejecuta el programador nuevo.' }, { status: 410 });
+		}
 	} catch (error) {
-		failed = true;
-		logServerFailure('Error procesando recordatorios push', {
-			code: error instanceof Error ? error.message.slice(0, 120) : 'unknown'
-		});
+		logServerFailure('No se pudo consultar el estado de las entradas antiguas de tareas', error);
+		return json({ message: 'No se pudo consultar el estado de las tareas.' }, { status: 503 });
 	}
-
-	// La cola de reseñas comparte la frecuencia del cron, pero no su resultado:
-	// una integración con problemas nunca debe frenar recordatorios ni calendario.
-	try {
-		googleReviews = await sendDueGoogleReviewRequests(supabase, {
-			limit: Number(url.searchParams.get('review_limit') ?? 20)
-		});
-	} catch (error) {
-		failed = true;
-		logServerFailure('Error procesando solicitudes de reseña', {
-			code: error instanceof Error ? error.message.slice(0, 120) : 'unknown'
-		});
-	}
-
-	// Aprovecha el job ya programado cada ~10 minutos. Se ejecuta aun si el
-	// pipeline push tuvo un problema, y viceversa: son coberturas independientes.
-	try {
-		googleCalendar = await processGoogleCalendarSyncJobs(supabase, fetch, {
-			limit: Number(url.searchParams.get('calendar_limit') ?? 20)
-		});
-	} catch (error) {
-		failed = true;
-		logServerFailure('Error procesando sincronizaciones Google Calendar', {
-			code: error instanceof Error ? error.message.slice(0, 120) : 'unknown'
-		});
-	}
-
-	return json(
-		{ ok: !failed, push, googleReviews, googleCalendar },
-		{ status: failed ? 500 : 200 }
-	);
+	const receipt = await runScheduledJob('push', fetch);
+	return json(receipt, { status: receipt.ok ? 200 : 500 });
 };

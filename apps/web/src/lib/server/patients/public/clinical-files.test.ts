@@ -21,8 +21,13 @@ const {
 	normalizeClinicalFilename,
 	normalizeClinicalNote,
 	verifyStoredClinicalImage,
-	verifyStoredClinicalThumbnail
+	verifyStoredClinicalThumbnail,
+	cleanupAbandonedClinicalUploads,
+	readExpiredClinicalUploads,
+	reconcileClinicalStorage,
+	removeExpiredClinicalUploads
 } = await import('$lib/server/patients/public/clinical-files');
+const { InvalidDataContractError } = await import('$lib/contracts/json');
 
 const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
 const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
@@ -407,3 +412,77 @@ describe('human HTTP boundary errors',()=>{
   expect(clinicalFileError(cause)).toMatchObject({status:401,code:'AUTH_REQUIRED'});
  });
 });
+
+describe('limpieza de cargas abandonadas', () => {
+	const storage = (failOn?: string) => {
+		const removals: Array<{ bucket: string; paths: string[] }> = [];
+		return {
+			removals,
+			admin: {
+				storage: {
+					from: (bucket: string) => ({
+						remove: async (paths: string[]) => {
+							removals.push({ bucket, paths });
+							return paths.includes(failOn ?? '') ? { data: null, error: { message: 'unavailable' } } : { data: [], error: null };
+						}
+					})
+				}
+			} as any
+		};
+	};
+
+	it('valida lo reclamado antes de borrar cualquier objeto', () => {
+		expect(readExpiredClinicalUploads([{ id: 'f1', bucket: 'b', paths: ['a', 'b'] }])).toEqual([{ bucket: 'b', paths: ['a', 'b'] }]);
+		for (const malformed of [null, [{ bucket: 'b' }], [{ bucket: 1, paths: [] }], [{ bucket: 'b', paths: [2] }]])
+			expect(() => readExpiredClinicalUploads(malformed)).toThrow(InvalidDataContractError);
+	});
+
+	it('agrupa por bucket y borra en pedidos acotados', async () => {
+		const { admin, removals } = storage();
+		const many = Array.from({ length: 150 }, (_, index) => `business/patient/file-${index}/original.pdf`);
+		const objects = await removeExpiredClinicalUploads(admin, [
+			{ bucket: CLINICAL_FILES_BUCKET, paths: many.slice(0, 120) },
+			{ bucket: 'other-bucket', paths: ['x/preview.webp'] },
+			{ bucket: CLINICAL_FILES_BUCKET, paths: many.slice(120) }
+		]);
+		expect(objects).toBe(151);
+		expect(removals.map(({ bucket, paths }) => [bucket, paths.length])).toEqual([
+			[CLINICAL_FILES_BUCKET, 100],
+			[CLINICAL_FILES_BUCKET, 50],
+			['other-bucket', 1]
+		]);
+		expect(removals.flatMap(({ paths }) => paths)).toEqual([...many.slice(0, 100), ...many.slice(100), 'x/preview.webp']);
+	});
+
+	it('un borrado fallido se informa para que la próxima limpieza lo repita', async () => {
+		const { admin } = storage('b/2');
+		await expect(removeExpiredClinicalUploads(admin, [{ bucket: 'b', paths: ['b/1', 'b/2'] }])).rejects.toMatchObject({ message: 'unavailable' });
+	});
+
+	it('la tarea programada reclama para todos los consultorios y borra lo devuelto', async () => {
+		const { admin, removals } = storage();
+		const calls: Array<[string, unknown]> = [];
+		admin.rpc = async (name: string, args: unknown) => {
+			calls.push([name, args]);
+			return { data: [{ id: 'f1', bucket: CLINICAL_FILES_BUCKET, paths: ['p/1', 'p/1.webp'] }, { id: 'f2', bucket: CLINICAL_FILES_BUCKET, paths: ['p/2'] }], error: null };
+		};
+		await expect(cleanupAbandonedClinicalUploads(admin, 200)).resolves.toEqual({ files: 2, objects: 3 });
+		expect(calls).toEqual([['claim_abandoned_clinical_uploads', { p_limit: 200 }]]);
+		expect(removals).toEqual([{ bucket: CLINICAL_FILES_BUCKET, paths: ['p/1', 'p/1.webp', 'p/2'] }]);
+	});
+
+	it('la reconciliación informa el sobrecompromiso tal como lo encuentra', async () => {
+		const admin = {
+			rpc: async () => ({ data: { unattributed_bytes: 10, unknown_size_objects: 0, over_global_limit: false, over_business_limit: 2 }, error: null })
+		} as any;
+		await expect(reconcileClinicalStorage(admin)).resolves.toEqual({
+			unattributedBytes: 10,
+			unknownSizeObjects: 0,
+			overGlobalLimit: false,
+			overBusinessLimit: 2
+		});
+		admin.rpc = async () => ({ data: { unattributed_bytes: 10 }, error: null });
+		await expect(reconcileClinicalStorage(admin)).rejects.toBeInstanceOf(InvalidDataContractError);
+	});
+});
+

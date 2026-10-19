@@ -1,6 +1,6 @@
 # Tareas automáticas: programación, presupuestos y recuperación
 
-**Etapa 6 en preparación.** La fuente normativa es la etapa 6 del [plan íntegro](../plans/refactorizacion-cita-suite.md). Este documento registra límites verificados, el estado de partida y el diseño adoptado a medida que se implementa y comprueba. Nada de lo descrito aquí está publicado mientras el registro no acredite el despliegue.
+**Etapa 6 en curso: implementada y probada en el entorno descartable; falta la medición desplegada en staging y la transición.** La fuente normativa es la etapa 6 del [plan íntegro](../plans/refactorizacion-cita-suite.md). Este documento registra límites verificados, el estado de partida y el diseño adoptado. Nada de lo descrito aquí está publicado mientras el registro no acredite el despliegue.
 
 ## Límites de plataforma verificados (19 de octubre de 2026)
 
@@ -30,7 +30,7 @@ Wrangler 4.86.0 autenticado en la cuenta esperada `52b358653379c162b5a07b10ae5e8
 - `POST /internal/jobs/send-push-reminders` ejecuta en una sola llamada recordatorios push, solicitudes de reseña y sincronización de Google Calendar. Lo dispara un cron externo (cron-job.org, fuera del repositorio) con secreto `INTERNAL_JOB_SECRET`.
 - `POST /internal/jobs/reconcile-mercadopago`: conciliación comercial disparada externamente cada ~6 h.
 - `generate-reminder-dispatches` y `process-message-dispatches` pertenecen a WhatsApp, descartado por el plan; no forman parte de los cinco disparadores.
-- **Destino antiguo activo:** `https://cita-suite.netlify.app` sirve la aplicación completa y su `/internal/jobs/send-push-reminders` responde 401 sin secreto. Según la memoria operativa de junio, el cron de cron-job.org apuntaba a ese host cada 10 minutos. Antes de activar el programador nuevo hay que confirmar qué llama realmente a los jobs y retirar o neutralizar ese destino de forma reversible.
+- **Destinos antiguos:** `https://cita-suite.netlify.app` servía la aplicación completa con su `/internal/jobs/send-push-reminders`; según la memoria operativa de junio, cron-job.org lo llamaba cada 10 minutos. El 19 de octubre el usuario desactivó ese proyecto y pausó otra copia en `https://cita-suite-app.vercel.app` (comprobado: 404 y 503). Cualquier llamador antiguo que quede, por ejemplo contra el Worker, se neutraliza con el interruptor de base descrito abajo.
 - `pg_cron` en la base: `cita-suite-clinical-files-integrity` (`17 */6 * * *`) y `cita-suite-patient-export-maintenance` (`*/15 * * * *`).
 - **Brecha:** `private.release_expired_clinical_reservations()` (liberación de reservas de carga vencidas) sólo se invoca desde pruebas SQL. La limpieza de cargas abandonadas existe únicamente como acción manual del dueño. En producción ningún proceso automático libera hoy esas reservas.
 - Las reclamaciones de push ordenan por id de suscripción; calendario y reseñas usan una cola global. Ninguna reparte el trabajo entre consultorios: uno con mucho pendiente puede ocupar todo el lote. Las reclamaciones vencidas se recuperan a los 10 minutos.
@@ -46,26 +46,49 @@ Wrangler 4.86.0 autenticado en la cuenta esperada `52b358653379c162b5a07b10ae5e8
 
 Con el presupuesto Free de 40 llamadas por cadena (incluida la del Service Binding), push procesaría hoy unos 4 recordatorios por ejecución en el peor caso. Esto confirma que el lote debe derivarse del costo y que el contexto y las escrituras deben agruparse por lote donde sea seguro. A esto se suma la CPU de 10 ms, que se mide aparte.
 
-## Diseño (borrador de entrada; se ajusta al implementar y se reemplaza por lo comprobado)
+## Diseño adoptado
 
-1. **Programador** `apps/scheduler` (Worker propio, sin reglas de negocio ni credenciales de Supabase o proveedores). Cinco triggers UTC fijos del plan: push `*/5 * * * *`, calendario `1-59/5 * * * *`, reseñas `2-59/10 * * * *`, limpieza de cargas `3-59/15 * * * *` y mantenimiento `17 */3 * * *`. El mantenimiento alterna conciliación comercial y reconciliación de almacenamiento, cada una cada seis horas. Cada evento llama a **una** categoría mediante Service Binding al Worker `app`, espera el recibo y falla visiblemente si no es válido. Sólo comparte con el app el secreto de tareas internas.
-2. **Endpoints por categoría** en el app, con autenticación interna, presupuesto y recibo estructurado sin datos clínicos, tokens ni URLs firmadas. El endpoint antiguo `send-push-reminders` deja de ejecutar varias categorías durante la transición.
-3. **Presupuesto de toda la cadena:** contador de llamadas externas (HTTP a Supabase mediante el `fetch` envuelto y llamadas a proveedores registradas en su punto de uso), hasta cuatro simultáneas y fecha límite de 20 s con margen para cerrar. Perfil Free: 40 llamadas, incluida la del Service Binding. Perfil Paid: 300, sujeto a medición; no autoriza contratar. El lote se deriva del peor costo por elemento de cada categoría, incluidos fallos y registros finales.
-4. **Contexto y escrituras agrupados** donde sea seguro: la reclamación devuelve el contexto necesario y los resultados se registran por lote. La cancelación o reprogramación se revalida inmediatamente antes del efecto externo.
-5. **Reparto entre consultorios:** las reclamaciones ordenan por ronda (primer pendiente de cada consultorio, luego el segundo, etc.) y por urgencia, para que uno con mucho trabajo no monopolice la cola.
-6. **Recuperación e idempotencia:** reclamaciones con vencimiento, reintentos persistentes con espera creciente y límite, y respuestas perdidas tratadas como inciertas. Se usan identificadores estables del proveedor cuando existen (`topic` por turno en Web Push e id de evento determinista en Calendar). No se promete entrega exactamente una.
-7. **Limpieza automática de cargas**, con reparto entre consultorios: libera reservas vencidas respetando el plazo protegido y elimina mediante la API de Storage los objetos abandonados que ya no tienen URL válida. Nunca borra archivos clínicos confirmados.
+### Cadena y puntos de entrada
 
-8. **Envío Web Push contable:** `web-push` cifra y firma con `generateRequestDetails()`, y la petición sale por el `fetch` presupuestado con timeout explícito, en lugar del `https.request` interno de la biblioteca. Así cada llamada al proveedor se cuenta y se acota, y la cadena completa puede probarse contra un servicio push falso en el entorno descartable, sin relajar la validación de hosts al guardar suscripciones.
-9. **CPU de Free:** cada envío cifra (ECDH P-256, HKDF, AES-128-GCM) y firma un JWT ES256. Con 10 ms por invocación, el lote de Free puede quedar limitado por CPU antes que por llamadas. Se mide con `workersInvocationsAdaptive` (`cpuTimeP50`/`cpuTimeP99`, `subrequests`) en el Worker real y el lote del perfil Free se fija con esa medición, no con un número supuesto.
+- **Programador** `apps/scheduler` (Worker `cita-suite-scheduler`, sin `workers_dev` ni URLs de preview): cinco triggers UTC versionados en `wrangler.jsonc` (push `*/5`, calendario `1-59/5`, reseñas `2-59/10`, cargas `3-59/15`, mantenimiento `17 */3`). El mantenimiento alterna conciliación comercial (00, 06, 12 y 18 h UTC) y reconciliación de almacenamiento (03, 09, 15 y 21 h). Cada evento hace **una** llamada por Service Binding a `POST /internal/jobs/<categoría>` del Worker `app` con el secreto de tareas y la hora programada, y exige un recibo `{ ok: true, kind }` de esa categoría; si no lo recibe, falla visiblemente y llama a `noRetry()`, porque las reclamaciones persistentes ya retoman el trabajo. No contiene reglas ni credenciales de Supabase o proveedores. El contrato de categorías y recibo es `@cita-suite/shared/scheduled-jobs`. Sus pruebas corren con `node:test` sobre el stripping de tipos nativo de Node 22.23, sin bundler.
+- **App:** la ruta `/internal/jobs/[kind=job]` (el matcher sólo admite las seis categorías) ejecuta `runScheduledJob` (`server/integrations/public/scheduled-jobs.ts`). El recibo y el registro `Tarea programada` llevan sólo nombres, conteos y mediciones (perfil, llamadas usadas, viajes a la base, llamadas a proveedores, duración): nunca datos clínicos, tokens ni URLs firmadas.
+- **Entradas antiguas:** `send-push-reminders` ejecuta sólo push y `reconcile-mercadopago` sólo la conciliación, con la misma implementación presupuestada; calendario y reseñas dejaron de correr ahí. Cuando el interruptor `public.set_legacy_job_entrypoints(false)` está apagado responden **410** sin ejecutar nada. Además, las reclamaciones SQL antiguas (`claim_due_push_reminders`, `claim_google_calendar_sync_jobs`, `claim_due_google_review_requests`) devuelven vacío con el interruptor apagado, sea cual sea la versión de la app que las llame. Así, detener el programador anterior en el release no depende de acceder a su host. La migración deja el interruptor encendido hasta ese paso (prueba de actualización).
 
-### Orden de implementación previsto
+### Presupuesto de la cadena
 
-1. Presupuesto de cadena (`job-budget`) y ejecutor común de tareas internas, con pruebas unitarias de conteo, concurrencia, fecha límite y agotamiento sin éxito parcial silencioso.
-2. Migración compatible: reclamaciones con reparto por consultorio para push, calendario y reseñas (las firmas anteriores se conservan mientras el endpoint antiguo exista), espera creciente persistente en push y cierre de lote en un solo RPC. Además, limpieza automática de cargas para todos los consultorios con liberación de reservas vencidas. Pruebas SQL: reparto en escenario desigual, recuperación de reclamaciones vencidas, idempotencia del cierre, revalidación de cancelación y reprogramación, y aislamiento entre consultorios.
-3. Endpoints por categoría (`push`, `calendar`, `reviews`, `uploads`, `commercial`, `storage`), cada uno con su presupuesto y recibo. El endpoint antiguo queda limitado a una sola categoría y, al activar el programador nuevo, deja de procesar.
-4. Worker `apps/scheduler` con los cinco triggers versionados, Service Binding al `app` y pruebas del mapeo cron → categoría y de la alternancia del mantenimiento.
-5. Integración en el entorno descartable: colas sintéticas (cinco pendientes por consultorio y un consultorio con cola grande), servicio push falso y medición del comienzo del trabajo por consultorio en tiempo simulado.
-6. Staging y producción: medición real de CPU, subrequests y antigüedad de colas, y transición del programador anterior según la secuencia de publicación del plan.
+`server/integrations/internal/job-budget.ts`. Perfil Free: 40 llamadas por cadena, contando la del Service Binding; perfil Paid (`JOB_BUDGET_PROFILE=paid`): 300. Ambos: 4 llamadas externas simultáneas, 5 s como máximo por llamada y 20 s en total, con los últimos 4 s reservados para registrar resultados. El cliente de Supabase de la tarea usa `fetch` presupuestado como `database` (PostgREST, Storage, Auth) y los proveedores como `provider`; ninguno se presenta como cantidad de consultas SQL. Cada llamada se cuenta antes de empezar, y el trabajo nuevo empieza sólo si su peor caso y la reserva de cierre todavía entran. **PostgREST reintenta solo los GET, también tras un rechazo del presupuesto**, durmiendo 1, 2 y 4 s: las lecturas que hace una tarea llevan `.retry(false)`, y la recuperación persistente de cada cola cubre ese fallo.
+
+| Categoría | Peor caso por elemento | Fijo por ejecución | Límite con Free |
+|---|---|---|---|
+| Push | 1 envío; el avance de cada tramo de 4 registra el tramo anterior y prepara el siguiente | reclamación + avance final | 28 recordatorios (7 tramos de 4) |
+| Calendario | 3 llamadas a Google (token, cambio, búsqueda o revocación); por tramo, 1 lectura y 1 cierre | reclamación + liberación final | 10 eventos |
+| Reseñas | 8 (entrega previa, preparación, comprobación, intento, envío, resultado, cierre, auditoría) | recuperación + reclamación | 4 solicitudes |
+| Cargas abandonadas | — | 1 reclamación + 1 borrado por bucket y cada 100 objetos | 200 archivos |
+| Conciliación comercial | 9 por suscripción + 4 por cada cobro aprobado nuevo | lectura + resumen | según presupuesto, 20 suscripciones como máximo |
+| Almacenamiento | — | 1 RPC | — |
+
+**La CPU de Free (10 ms por invocación) no está certificada por este cálculo.** El cifrado Web Push se mide en el Worker desplegado (`workersInvocationsAdaptive`) y, si hace falta, el lote de Free se acota por CPU con esa medición.
+
+### Colas, reparto y recuperación (`20261019010000_scheduled_job_batches.sql`)
+
+- **Reparto:** push, calendario, reseñas y cargas reclaman por turnos: el primer pendiente de cada consultorio, luego el segundo, etc., y dentro del turno el más urgente. Un consultorio con mucha cola no monopoliza el lote (prueba con una cola larga que empieza primero).
+- **Propiedad:** push y calendario guardan un token de reclamación; sólo su dueño registra resultados, y un resultado tardío de otro dueño se descarta (`stale`). Las reclamaciones vencen a los 10 minutos y se recuperan.
+- **Push:** `claim_push_reminder_batch` no devuelve endpoint ni claves. `advance_push_reminder_batch` registra en un viaje los resultados del tramo enviado (aceptado, `gone`, rechazado o transitorio, con auditoría en SQL) y prepara el siguiente. Antes de devolverlo revalida reclamación, vínculo, dispositivo (vía el trigger de identidad) y ventana viva del turno, cierra como transitorio un intento previo sin resultado (respuesta perdida) y crea el intento nuevo. Un fallo espera en forma persistente 1, 2, 4… hasta 60 minutos; la ventana del recordatorio termina los reintentos. Una reprogramación reinicia ambos recordatorios, su reclamación y su espera. No se promete entrega exactamente una vez: el `topic` por turno y el `tag` de la notificación colapsan un recordatorio repetido.
+- **Envío Web Push:** `web-push` sólo cifra (aes128gcm); la petición sale por el `fetch` del llamador y la firma VAPID se hace una vez por origen del servicio push. Lo mismo vale para la prueba de notificación y el aviso de reprogramación. Una prueba con la biblioteca real descifra el mensaje con la clave del navegador y verifica la firma.
+- **Calendario:** la reclamación trae cada vínculo y el token cifrado de su conexión. El token se refresca una vez por conexión y ejecución. Cada tramo lee sus turnos en una consulta (el lugar sigue la regla de la vista pública), hace los cambios en Google con el núcleo compartido con el camino inmediato y los registra con `complete_google_calendar_sync_batch`, que reutiliza las transiciones existentes. Un resultado mal formado rechaza el tramo completo. La revocación ante Google ocurre después de confirmar el borrado que eliminó el último vínculo.
+- **Reseñas:** misma implementación para la reclamación antigua y la de lote (`private.claim_google_review_requests`), con el protocolo por solicitud existente.
+- **Cargas:** `claim_abandoned_clinical_uploads` libera las reservas vencidas de todos los consultorios (la brecha del estado de partida) y devuelve los objetos a borrar, nunca archivos confirmados. Es la misma implementación que la limpieza manual del dueño, limitada a su consultorio. El borrado agrupa por bucket.
+- **Conciliación comercial:** lee en un viaje qué cobros ya están acreditados (`access_grants`) y sólo acredita los nuevos; antes llamaba al RPC idempotente por cada cobro de la página, un costo que crecía con la antigüedad de la suscripción.
+- **Telemetría push:** la retención de 90 días pasó a pg_cron (`cita-suite-push-telemetry-retention`, 04:41 UTC), porque es trabajo sólo de base.
+
+### Evidencia
+
+SQL 39330239590 (`scheduled_job_batches.sql` 6/6, par de actualización 5/5, todas las suites y carreras); unidades locales de cada módulo. Las verificaciones completas, la medición desplegada y la transición se registran en el [registro](../plans/registro-refactorizacion-cita-suite.md).
+
+### Pendiente de esta etapa
+
+1. Full positivo de la revisión exacta.
+2. Staging: desplegar app y programador, colas sintéticas (cinco pendientes por consultorio y escenario desigual), medir CPU p50/p99, subrequests y antigüedad por consultorio, y fijar el lote de Free por CPU si hace falta.
+3. Transición según la secuencia de publicación del plan, con los triggers de Free prestados a staging durante una ventana acotada.
 
 Restricción de cuenta: Workers Free admite cinco Cron Triggers **por cuenta**. Staging y producción no pueden tener sus cinco triggers activos al mismo tiempo. La validación desplegada en staging usará la cuota durante una ventana acotada y la liberará antes de activar producción; se documentará el orden exacto.

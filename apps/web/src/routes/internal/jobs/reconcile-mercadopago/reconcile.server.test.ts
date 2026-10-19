@@ -5,70 +5,64 @@ const envState = vi.hoisted(() => ({
 }));
 
 const mocks = vi.hoisted(() => ({
-	createSupabaseAdminClient: vi.fn(),
-	reconcileMercadoPago: vi.fn()
+	legacyJobEntrypointsEnabled: vi.fn(),
+	runScheduledJob: vi.fn()
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: envState.privateEnv }));
-vi.mock('$lib/server/platform/supabase', () => ({
-	createSupabaseAdminClient: mocks.createSupabaseAdminClient
-}));
-vi.mock('$lib/server/integrations/public/mercadopago', () => ({
-	reconcileMercadoPago: mocks.reconcileMercadoPago
+vi.mock('$lib/server/integrations/public/scheduled-jobs', () => ({
+	legacyJobEntrypointsEnabled: mocks.legacyJobEntrypointsEnabled,
+	runScheduledJob: mocks.runScheduledJob
 }));
 
 const { POST } = await import('./+server');
 
 const JOB_URL = 'https://app.test/internal/jobs/reconcile-mercadopago';
+const requestFetch = vi.fn();
 
-const callPost = (headers: Record<string, string>, url = JOB_URL) =>
+const callPost = (headers: Record<string, string>) =>
 	POST({
-		request: new Request(url, { method: 'POST', headers }),
-		fetch: vi.fn(),
-		url: new URL(url)
+		request: new Request(JOB_URL, { method: 'POST', headers }),
+		fetch: requestFetch,
+		url: new URL(JOB_URL)
 	} as unknown as Parameters<typeof POST>[0]);
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	for (const key of Object.keys(envState.privateEnv)) delete envState.privateEnv[key];
+	mocks.legacyJobEntrypointsEnabled.mockResolvedValue(true);
+	mocks.runScheduledJob.mockResolvedValue({ ok: true, kind: 'commercial', scheduledFor: null, budget: {}, result: { scanned: 2, credited: 1 } });
 });
 
-describe('POST /internal/jobs/reconcile-mercadopago', () => {
+describe('POST /internal/jobs/reconcile-mercadopago (entrada anterior)', () => {
 	it('falla-cerrado sin INTERNAL_JOB_SECRET configurado', async () => {
 		const response = await callPost({ authorization: 'Bearer lo-que-sea' });
 		expect(response.status).toBe(503);
-		expect(mocks.reconcileMercadoPago).not.toHaveBeenCalled();
+		expect(mocks.runScheduledJob).not.toHaveBeenCalled();
 	});
 
 	it('rechaza secrets incorrectos', async () => {
 		envState.privateEnv.INTERNAL_JOB_SECRET = 'secreto-real';
 		const response = await callPost({ authorization: 'Bearer equivocado' });
 		expect(response.status).toBe(401);
-		expect(mocks.reconcileMercadoPago).not.toHaveBeenCalled();
+		expect(mocks.legacyJobEntrypointsEnabled).not.toHaveBeenCalled();
+		expect(mocks.runScheduledJob).not.toHaveBeenCalled();
 	});
 
-	it('con el secret correcto corre la conciliación y devuelve el resumen', async () => {
+	it('con el secret correcto corre la conciliación presupuestada y devuelve su recibo', async () => {
 		envState.privateEnv.INTERNAL_JOB_SECRET = 'secreto-real';
-		mocks.createSupabaseAdminClient.mockResolvedValue({ admin: true });
-		mocks.reconcileMercadoPago.mockResolvedValue({
-			scanned: 2,
-			credited: 1,
-			attention: 0,
-			errors: 0,
-			details: []
-		});
-
-		const response = await callPost(
-			{ authorization: 'Bearer secreto-real' },
-			`${JOB_URL}?limit=5`
-		);
+		const response = await callPost({ authorization: 'Bearer secreto-real' });
 
 		expect(response.status).toBe(200);
-		await expect(response.json()).resolves.toMatchObject({ scanned: 2, credited: 1 });
-		expect(mocks.reconcileMercadoPago).toHaveBeenCalledWith(
-			{ admin: true },
-			expect.any(Function),
-			{ limit: 5 }
-		);
+		await expect(response.json()).resolves.toMatchObject({ ok: true, kind: 'commercial', result: { scanned: 2, credited: 1 } });
+		expect(mocks.runScheduledJob).toHaveBeenCalledWith('commercial', requestFetch);
+	});
+
+	it('responde 410 sin conciliar cuando el release apagó las entradas antiguas', async () => {
+		envState.privateEnv.INTERNAL_JOB_SECRET = 'secreto-real';
+		mocks.legacyJobEntrypointsEnabled.mockResolvedValue(false);
+		const response = await callPost({ authorization: 'Bearer secreto-real' });
+		expect(response.status).toBe(410);
+		expect(mocks.runScheduledJob).not.toHaveBeenCalled();
 	});
 });

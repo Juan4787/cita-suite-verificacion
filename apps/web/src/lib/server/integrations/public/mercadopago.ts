@@ -330,7 +330,8 @@ const businessExists = async (admin: CitaSupabaseClient, businessId: string): Pr
 		.from('businesses')
 		.select('id')
 		.eq('id', businessId)
-		.maybeSingle();
+		.maybeSingle()
+		.retry(false);
 	if (error) {
 		throw new Error(`No se pudo verificar el negocio ${businessId}: ${error.message}`);
 	}
@@ -345,7 +346,8 @@ const businessIsPermanent = async (
 		.from('business_subscriptions')
 		.select('is_permanent')
 		.eq('business_id', businessId)
-		.maybeSingle();
+		.maybeSingle()
+		.retry(false);
 	if (error) {
 		throw new Error(`No se pudo leer la suscripción del negocio ${businessId}: ${error.message}`);
 	}
@@ -493,7 +495,8 @@ export const upsertMpSubscription = async (
 			.select('preapproval_id')
 			.eq('business_id', businessId)
 			.eq('status', 'authorized')
-			.limit(2);
+			.limit(2)
+			.retry(false);
 		if (!dupError && (dupRows ?? []).length > 1) {
 			await logMpWebhookEventOnce(admin, {
 				topic: 'duplicate_subscription',
@@ -974,7 +977,8 @@ export const logMpWebhookEventOnce = async (
 		.eq('action', row.action)
 		.eq('resource_id', row.resource_id)
 		.limit(1)
-		.maybeSingle();
+		.maybeSingle()
+		.retry(false);
 	if (error) {
 		logServerFailure('No se pudo verificar eventos previos de Mercado Pago', error);
 		// Ante la duda se loguea igual: mejor una alerta repetida que ninguna.
@@ -1028,14 +1032,35 @@ export type MpReconcileSummary = {
 };
 
 const RECONCILE_BUDGET_MS = 6500;
+/**
+ * Worst case of one subscription before its charges: the preapproval, its sync with
+ * the duplicate check and a one-time alert, a status alert, the charge search and the
+ * credited ledger. Each new approved charge adds its business checks, credit and log.
+ */
+export const RECONCILE_SUBSCRIPTION_CALLS = 9;
+export const RECONCILE_CHARGE_CALLS = 4;
+
+/** Payments already credited, read from the ledger in one trip instead of retried one by one. */
+const creditedPayments = async (admin: CitaSupabaseClient, paymentIds: string[]): Promise<Set<string>> => {
+	if (!paymentIds.length) return new Set();
+	const { data, error } = await admin
+		.from('access_grants')
+		.select('idempotency_key')
+		.in('idempotency_key', paymentIds.map((id) => MP_PAYMENT_IDEMPOTENCY_PREFIX + id))
+		.retry(false);
+	if (error) throw new Error(`No se pudieron leer los pagos acreditados: ${error.message}`);
+	return new Set(data.map((row) => row.idempotency_key.slice(MP_PAYMENT_IDEMPOTENCY_PREFIX.length)));
+};
 
 export const reconcileMercadoPago = async (
 	admin: CitaSupabaseClient,
 	fetchFn: FetchLike,
-	opts?: { limit?: number; budgetMs?: number }
+	// `admits` lets a scheduled run start new work only while its worst case fits the budget.
+	opts?: { limit?: number; budgetMs?: number; admits?: (calls: number) => boolean }
 ): Promise<MpReconcileSummary> => {
 	const limit = opts?.limit ?? 20;
 	const deadline = Date.now() + (opts?.budgetMs ?? RECONCILE_BUDGET_MS);
+	const fits = (calls: number) => opts?.admits?.(calls) ?? true;
 	const summary: MpReconcileSummary = {
 		scanned: 0,
 		credited: 0,
@@ -1051,14 +1076,15 @@ export const reconcileMercadoPago = async (
 		.select('business_id, preapproval_id, status')
 		.in('status', ['pending', 'authorized', 'paused'])
 		.order('last_synced_at', { ascending: true })
-		.limit(limit);
+		.limit(limit)
+		.retry(false);
 	if (error) {
 		throw new Error(`No se pudieron leer suscripciones para conciliar: ${error.message}`);
 	}
 
 	for (const row of rows ?? []) {
-		if (Date.now() > deadline) {
-			summary.details.push('Presupuesto de tiempo agotado; continúa en la próxima corrida.');
+		if (Date.now() > deadline || !fits(RECONCILE_SUBSCRIPTION_CALLS)) {
+			summary.details.push('Presupuesto agotado; continúa en la próxima corrida.');
 			break;
 		}
 		summary.scanned += 1;
@@ -1121,13 +1147,23 @@ export const reconcileMercadoPago = async (
 				continue;
 			}
 
-			for (const charge of page?.results ?? []) {
-				const paymentId = charge.payment?.id != null ? String(charge.payment.id) : null;
-				if (!paymentId || charge.payment?.status !== 'approved') continue;
+			const approved = (page?.results ?? []).flatMap((charge) =>
+				charge.payment?.id != null && charge.payment.status === 'approved'
+					? [{ paymentId: String(charge.payment.id), amount: charge.transaction_amount ?? null }]
+					: []
+			);
+			// Already credited is the normal case: it needs no further trip.
+			const credited = await creditedPayments(admin, approved.map((charge) => charge.paymentId));
+			for (const { paymentId, amount } of approved) {
+				if (credited.has(paymentId)) continue;
+				if (!fits(RECONCILE_CHARGE_CALLS)) {
+					summary.details.push('Presupuesto agotado; continúa en la próxima corrida.');
+					break;
+				}
 				const outcome = await creditApprovedPayment(admin, {
 					businessId: row.business_id,
 					paymentId,
-					amount: charge.transaction_amount ?? null,
+					amount,
 					origin: 'conciliación'
 				});
 				if (outcome.kind === 'credited') {

@@ -20,8 +20,10 @@ import {
 	isGoogleCalendarConfigured,
 	loadGoogleCalendarUiState,
 	parseGoogleCalendarEncryptionKey,
+	processGoogleCalendarSyncBatch,
 	requestGoogleCalendarEventDeletion
 } from '$lib/server/integrations/public/google-calendar';
+import { WORK_DEADLINE_MS, createJobBudget } from '$lib/server/integrations/internal/job-budget';
 import type { PublicAppointmentView } from '$lib/server/scheduling/public/public-appointments';
 
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events.owned';
@@ -279,3 +281,281 @@ describe('evento y autorización', () => {
 		).toBe('refresh-secret');
 	});
 });
+
+describe('sincronización programada por lotes', () => {
+	const now = new Date('2026-08-09T12:00:00.000Z');
+	const claimedEvent = (index: number, overrides: Record<string, unknown> = {}) => ({
+		event_row_id: `event-${index}`,
+		business_id: '22222222-2222-4222-8222-222222222222',
+		appointment_id: `apt-${index}`,
+		connection_id: 'connection-1',
+		calendar_id: 'primary',
+		event_id: null,
+		sync_status: 'pending_create',
+		synced_sequence: -1,
+		attempt_count: 0,
+		business_turn: 1,
+		refresh_token_ciphertext: encryptGoogleCalendarSecret('refresh-token', KEY),
+		connection_revoked_at: null,
+		...overrides
+	});
+	const appointmentRow = (id: string, overrides: Record<string, unknown> = {}) => ({
+		id,
+		confirmation_token: `turno-${id}`,
+		status: 'reserved',
+		starts_at: '2026-08-10T15:00:00.000Z',
+		ends_at: '2026-08-10T15:30:00.000Z',
+		professional_name_snapshot: 'Dra. Ramírez',
+		calendar_sequence: 3,
+		businesses: {
+			name: 'Consultorio Ramírez',
+			timezone: 'America/Argentina/Buenos_Aires',
+			address: 'Av. Siempre Viva 123',
+			address_instructions: null,
+			maps_url: null
+		},
+		...overrides
+	});
+	const statusFor = (result: { outcome: string; failure_category?: string }) =>
+		result.outcome === 'synced' ? 'active'
+			: result.outcome === 'deleted' ? 'deleted'
+				: result.outcome === 'delete_requested' ? 'pending_delete'
+					: result.failure_category === 'authorization' ? 'needs_reconnect' : 'pending_create';
+	const calendarDatabase = (options: {
+		claimed: unknown[];
+		appointments: Array<{ id: string }>;
+		removedConnection?: string;
+		released?: number;
+	}) => {
+		const timeline: string[] = [];
+		const rpcCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
+		const reads: string[][] = [];
+		const supabase = {
+			rpc: async (name: string, args: Record<string, unknown>) => {
+				rpcCalls.push({ name, args });
+				timeline.push(name);
+				if (name === 'claim_google_calendar_sync_batch') return { data: options.claimed, error: null };
+				if (name === 'complete_google_calendar_sync_batch') {
+					const results = (args.p_results as Array<{ event_row_id: string; outcome: string; failure_category?: string }>).map((result) => ({
+						event_row_id: result.event_row_id,
+						status: statusFor(result),
+						removed_connection_id: result.outcome === 'deleted' ? (options.removedConnection ?? null) : null
+					}));
+					return { data: { results, released: args.p_finish ? (options.released ?? 0) : 0 }, error: null };
+				}
+				return { data: null, error: { message: `unexpected ${name}` } };
+			},
+			from: (table: string) => {
+				let ids: string[] = [];
+				const chain: any = {
+					select: () => chain,
+					in: (_column: string, values: string[]) => {
+						ids = values;
+						reads.push(values);
+						timeline.push(`read:${table}`);
+						return chain;
+					},
+					retry: () => chain,
+					then: (resolve: (value: unknown) => unknown) =>
+						Promise.resolve({ data: options.appointments.filter((row) => ids.includes(row.id)), error: null }).then(resolve)
+				};
+				return chain;
+			}
+		} as any;
+		return { supabase, rpcCalls, reads, timeline, completions: () => rpcCalls.filter((call) => call.name === 'complete_google_calendar_sync_batch') };
+	};
+	const google = (timeline: string[], handler?: (request: Request) => Response | Promise<Response> | undefined) => {
+		const requests: Request[] = [];
+		const fetchFn: typeof fetch = async (input, init) => {
+			const request = new Request(input, init);
+			requests.push(request);
+			timeline.push(`${request.method} ${new URL(request.url).pathname}`);
+			const answer = await handler?.(request.clone());
+			if (answer) return answer;
+			if (request.url === 'https://oauth2.googleapis.com/token') return Response.json({ access_token: 'access-1', expires_in: 3600 });
+			if (request.url === 'https://oauth2.googleapis.com/revoke') return new Response(null, { status: 200 });
+			if (request.method === 'POST') return Response.json({ id: (await request.json()).id });
+			if (request.method === 'PATCH') return Response.json({ id: 'evt-existing' });
+			if (request.method === 'DELETE') return new Response(null, { status: 204 });
+			return new Response('{}', { status: 404 });
+		};
+		return { fetchFn, requests };
+	};
+
+	it('reparte el trabajo, refresca el token una vez por conexión y registra cada tramo', async () => {
+		const database = calendarDatabase({
+			claimed: [1, 2, 3, 4, 5].map((index) => claimedEvent(index)),
+			appointments: [1, 2, 3, 4, 5].map((index) => appointmentRow(`apt-${index}`))
+		});
+		const service = google(database.timeline);
+		const budget = createJobBudget('free');
+
+		const summary = await processGoogleCalendarSyncBatch({
+			supabase: database.supabase,
+			budget,
+			providerFetch: budget.fetchFor('provider', service.fetchFn),
+			now
+		});
+
+		expect(summary).toMatchObject({ configured: true, claimed: 5, active: 5, attention: 0 });
+		// Free: 39 calls after the Service Binding; chunks of four cost 2 + 3 per event.
+		expect(database.rpcCalls[0]).toMatchObject({ name: 'claim_google_calendar_sync_batch', args: { p_limit: 10, p_now: now.toISOString() } });
+		expect(service.requests.filter((request) => request.url === 'https://oauth2.googleapis.com/token')).toHaveLength(1);
+		expect(database.reads).toEqual([['apt-1', 'apt-2', 'apt-3', 'apt-4'], ['apt-5']]);
+		const [first, last] = database.completions();
+		expect(first.args.p_finish).toBe(false);
+		expect(last.args.p_finish).toBe(true);
+		expect(database.completions()).toHaveLength(2);
+		expect(first.args.p_results).toEqual(
+			[1, 2, 3, 4].map((index) => ({
+				event_row_id: `event-${index}`,
+				outcome: 'synced',
+				google_event_id: deterministicGoogleCalendarEventId(`apt-${index}`),
+				synced_sequence: 3
+			}))
+		);
+		expect(budget.summary()).toMatchObject({ providerRequests: 6 });
+	});
+
+	it('una cancelación posterior a la reclamación borra el evento en vez de actualizarlo', async () => {
+		const database = calendarDatabase({
+			claimed: [claimedEvent(1, { sync_status: 'pending_update', event_id: 'evt-1' }), claimedEvent(2, { sync_status: 'pending_update', event_id: 'evt-2' })],
+			appointments: [appointmentRow('apt-1', { status: 'cancelled' }), appointmentRow('apt-2', { status: 'cancelled' })]
+		});
+		const service = google(database.timeline, (request) =>
+			request.method === 'DELETE' && request.url.endsWith('/evt-2') ? new Response('{}', { status: 410 }) : undefined
+		);
+
+		const summary = await processGoogleCalendarSyncBatch({ supabase: database.supabase, budget: createJobBudget('free'), providerFetch: service.fetchFn, now });
+
+		expect(service.requests.filter((request) => request.method === 'DELETE')).toHaveLength(2);
+		expect(service.requests.some((request) => request.method === 'PATCH')).toBe(false);
+		// Already missing at Google counts as deleted too.
+		expect(database.completions()[0].args.p_results).toEqual([
+			{ event_row_id: 'event-1', outcome: 'deleted' },
+			{ event_row_id: 'event-2', outcome: 'deleted' }
+		]);
+		expect(summary.deleted).toBe(2);
+	});
+
+	it('una creación cuya respuesta se perdió se recupera con el ID determinista', async () => {
+		const database = calendarDatabase({ claimed: [claimedEvent(1)], appointments: [appointmentRow('apt-1')] });
+		const deterministic = deterministicGoogleCalendarEventId('apt-1');
+		const service = google(database.timeline, (request) => {
+			if (request.method === 'POST' && request.url.endsWith('/events')) return new Response('{}', { status: 409 });
+			if (request.method === 'GET' && request.url.endsWith(`/events/${deterministic}`)) return Response.json({ id: deterministic });
+			return undefined;
+		});
+
+		await processGoogleCalendarSyncBatch({ supabase: database.supabase, budget: createJobBudget('free'), providerFetch: service.fetchFn, now });
+
+		expect(database.completions()[0].args.p_results).toEqual([
+			{ event_row_id: 'event-1', outcome: 'synced', google_event_id: deterministic, synced_sequence: 3 }
+		]);
+	});
+
+	it('una autorización revocada pide reconectar todos sus eventos con un solo intento de token', async () => {
+		const database = calendarDatabase({
+			claimed: [claimedEvent(1), claimedEvent(2)],
+			appointments: [appointmentRow('apt-1'), appointmentRow('apt-2')]
+		});
+		const service = google(database.timeline, (request) =>
+			request.url === 'https://oauth2.googleapis.com/token' ? Response.json({ error: 'invalid_grant' }, { status: 400 }) : undefined
+		);
+
+		const summary = await processGoogleCalendarSyncBatch({ supabase: database.supabase, budget: createJobBudget('free'), providerFetch: service.fetchFn, now });
+
+		expect(service.requests).toHaveLength(1);
+		expect(database.completions()[0].args.p_results).toEqual(
+			[1, 2].map((index) => expect.objectContaining({ event_row_id: `event-${index}`, outcome: 'failed', failure_category: 'authorization', error_code: 'oauth_revoked' }))
+		);
+		expect(summary.attention).toBe(2);
+	});
+
+	it('un fallo transitorio programa el reintento con la espera creciente existente', async () => {
+		const database = calendarDatabase({
+			claimed: [claimedEvent(1, { sync_status: 'pending_update', event_id: 'evt-1', attempt_count: 2 })],
+			appointments: [appointmentRow('apt-1')]
+		});
+		const service = google(database.timeline, (request) => (request.method === 'PATCH' ? new Response('{}', { status: 503 }) : undefined));
+
+		const summary = await processGoogleCalendarSyncBatch({ supabase: database.supabase, budget: createJobBudget('free'), providerFetch: service.fetchFn, now });
+
+		// Third attempt: 2^3 minutes plus a deterministic jitter of (3 * 37) % 60 seconds.
+		expect(database.completions()[0].args.p_results).toEqual([
+			{
+				event_row_id: 'event-1',
+				outcome: 'failed',
+				failure_category: 'transient',
+				error_code: 'calendar_service_busy',
+				next_attempt_at: new Date(now.getTime() + (8 * 60 + 51) * 1000).toISOString()
+			}
+		]);
+		expect(summary.retrying).toBe(1);
+	});
+
+	it('revoca la autorización recién después de confirmar el borrado de su último evento', async () => {
+		const database = calendarDatabase({
+			claimed: [claimedEvent(1, { sync_status: 'pending_delete', event_id: 'evt-1' })],
+			appointments: [appointmentRow('apt-1')],
+			removedConnection: 'connection-1'
+		});
+		const service = google(database.timeline);
+
+		await processGoogleCalendarSyncBatch({ supabase: database.supabase, budget: createJobBudget('free'), providerFetch: service.fetchFn, now });
+
+		expect(database.timeline).toEqual([
+			'claim_google_calendar_sync_batch',
+			'read:appointments',
+			'POST /token',
+			'DELETE /calendar/v3/calendars/primary/events/evt-1',
+			'complete_google_calendar_sync_batch',
+			'POST /revoke'
+		]);
+	});
+
+	it('deja de empezar tramos cuando ya no entran en el tiempo y libera el resto', async () => {
+		let clock = 0;
+		const budget = createJobBudget('free', () => clock);
+		const database = calendarDatabase({
+			claimed: [1, 2, 3, 4, 5, 6].map((index) => claimedEvent(index)),
+			appointments: [1, 2, 3, 4, 5, 6].map((index) => appointmentRow(`apt-${index}`)),
+			released: 2
+		});
+		const service = google(database.timeline, () => {
+			clock = WORK_DEADLINE_MS;
+			return undefined;
+		});
+
+		const summary = await processGoogleCalendarSyncBatch({ supabase: database.supabase, budget, providerFetch: service.fetchFn, now });
+
+		expect(database.reads).toHaveLength(1);
+		const [first, last] = database.completions();
+		expect(first.args).toMatchObject({ p_finish: false });
+		expect(last.args).toMatchObject({ p_results: [], p_finish: true });
+		expect(summary).toMatchObject({ claimed: 6, active: 4, released: 2 });
+	});
+
+	it('un turno que la lectura ya no encuentra queda para reintentar sin tocar Google', async () => {
+		const database = calendarDatabase({ claimed: [claimedEvent(1)], appointments: [] });
+		const service = google(database.timeline);
+
+		await processGoogleCalendarSyncBatch({ supabase: database.supabase, budget: createJobBudget('free'), providerFetch: service.fetchFn, now });
+
+		expect(service.requests).toHaveLength(0);
+		expect(database.completions()[0].args.p_results).toEqual([
+			expect.objectContaining({ event_row_id: 'event-1', outcome: 'failed', failure_category: 'transient', error_code: 'calendar_appointment_unavailable' })
+		]);
+	});
+
+	it('sin configuración no reclama nada', async () => {
+		delete envState.privateEnv.GOOGLE_CALENDAR_MANAGED_ENABLED;
+		const database = calendarDatabase({ claimed: [claimedEvent(1)], appointments: [] });
+
+		const summary = await processGoogleCalendarSyncBatch({ supabase: database.supabase, budget: createJobBudget('free'), providerFetch: fetch, now });
+
+		expect(summary).toMatchObject({ configured: false, claimed: 0 });
+		expect(database.rpcCalls).toHaveLength(0);
+	});
+});
+

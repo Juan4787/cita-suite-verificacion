@@ -8,20 +8,29 @@ const envState = vi.hoisted(() => ({
 	} as Record<string, string | undefined>,
 	publicEnv: {} as Record<string, string | undefined>
 }));
-const mocks = vi.hoisted(() => ({ writeAuditLog: vi.fn() }));
+const mocks = vi.hoisted(() => ({ insertAuditLog: vi.fn() }));
 
 vi.mock('$env/dynamic/private', () => ({ env: envState.privateEnv }));
 vi.mock('$env/dynamic/public', () => ({ env: envState.publicEnv }));
+// The plain payload travels in the request so the test reads what the patient receives.
 vi.mock('web-push', () => ({
 	default: {
-		setVapidDetails: vi.fn(),
-		sendNotification: vi.fn()
+		getVapidHeaders: vi.fn(() => ({ Authorization: 'vapid t=test-jwt, k=test-public-key' })),
+		generateRequestDetails: vi.fn(
+			(subscription: { endpoint: string }, payload: string, options: { headers: Record<string, string> }) => ({
+				method: 'POST',
+				endpoint: subscription.endpoint,
+				headers: { ...options.headers },
+				body: Buffer.from(payload)
+			})
+		)
 	}
 }));
-vi.mock('$lib/server/platform/audit', () => ({ writeAuditLog: mocks.writeAuditLog }));
+vi.mock('$lib/server/platform/audit', () => ({ insertAuditLog: mocks.insertAuditLog }));
 
 import webpush from 'web-push';
-import { sendDueGoogleReviewRequests } from '$lib/server/integrations/public/google-reviews';
+import { WORK_DEADLINE_MS, createJobBudget } from '$lib/server/integrations/internal/job-budget';
+import { sendGoogleReviewRequestBatch } from '$lib/server/integrations/public/google-reviews';
 import { pushTopicForAppointment } from '$lib/server/integrations/public/push';
 
 const now = new Date('2026-08-24T18:00:00.000Z');
@@ -58,13 +67,14 @@ const createSupabase = (options: {
 		superseded_at: null;
 	} | null;
 	trackingInsertError?: { code: string; message: string };
+	claimed?: (typeof claim)[];
 } = {}) => {
 	const rpcCalls: Array<{ name: string; args: Record<string, unknown> | undefined }> = [];
 	const inserts: Array<Record<string, unknown>> = [];
 	const updates: Array<Record<string, unknown>> = [];
 
 	const rpcResult = (name: string) => {
-		if (name === 'claim_due_google_review_requests') return { data: [claim], error: null };
+		if (name === 'claim_google_review_request_batch') return { data: options.claimed ?? [claim], error: null };
 		if (name === 'prepare_google_review_request_delivery') {
 			return { data: options.prepareData === undefined ? prepared : options.prepareData, error: null };
 		}
@@ -109,6 +119,7 @@ const createSupabase = (options: {
 				is: () => chain,
 				order: () => chain,
 				limit: () => chain,
+				retry: () => chain,
 				insert: (payload: Record<string, unknown>) => {
 					inserts.push(payload);
 					result = options.trackingInsertError
@@ -124,8 +135,8 @@ const createSupabase = (options: {
 					result = { data: null, error: null };
 					return chain;
 				},
-				maybeSingle: async () => result,
-				single: async () => result,
+				maybeSingle: () => chain,
+				single: () => chain,
 				then: (resolve: (value: typeof result) => unknown) =>
 					Promise.resolve(result).then(resolve)
 			};
@@ -136,20 +147,32 @@ const createSupabase = (options: {
 	return { supabase, rpcCalls, inserts, updates };
 };
 
+// Push service double: records each request and answers with the given status.
+const pushService = (answer: () => Response | Promise<Response> = () => new Response(null, { status: 201 })) => {
+	const requests: Request[] = [];
+	const fetchFn: typeof fetch = async (input, init) => {
+		requests.push(new Request(input, init));
+		return answer();
+	};
+	return { fetchFn, requests };
+};
+
+const run = (supabase: unknown, service: ReturnType<typeof pushService>, budget = createJobBudget('free')) =>
+	sendGoogleReviewRequestBatch({ supabase: supabase as any, budget, providerFetch: service.fetchFn, now });
+
 beforeEach(() => {
 	vi.clearAllMocks();
-	vi.mocked(webpush.sendNotification).mockResolvedValue({ statusCode: 201 } as any);
 });
 
-describe('sendDueGoogleReviewRequests', () => {
+describe('sendGoogleReviewRequestBatch', () => {
 	it('envía el mensaje editable, registra una sola entrega y completa el cooldown', async () => {
 		const { supabase, rpcCalls, inserts } = createSupabase();
-		const result = await sendDueGoogleReviewRequests(supabase, { now, limit: 7 });
+		const service = pushService();
+		const result = await run(supabase, service);
 
 		expect(result).toMatchObject({ claimed: 1, sent: 1, failed: 0, invalidated: 0 });
-		expect(webpush.sendNotification).toHaveBeenCalledOnce();
-		const [, rawPayload, options] = vi.mocked(webpush.sendNotification).mock.calls[0];
-		const payload = JSON.parse(String(rawPayload));
+		expect(service.requests).toHaveLength(1);
+		const payload = JSON.parse(await service.requests[0].text());
 		expect(payload).toMatchObject({
 			title: prepared.notification_title,
 			body: prepared.notification_body,
@@ -160,7 +183,7 @@ describe('sendDueGoogleReviewRequests', () => {
 			]
 		});
 		expect(payload.url).toMatch(/^\/r\/[A-Za-z0-9_-]{43}$/);
-		expect(options).toMatchObject({
+		expect(vi.mocked(webpush.generateRequestDetails).mock.calls[0][2]).toMatchObject({
 			TTL: 24 * 60 * 60,
 			topic: pushTopicForAppointment(claim.appointment_id, 'review')
 		});
@@ -180,21 +203,52 @@ describe('sendDueGoogleReviewRequests', () => {
 				complete_time: now.toISOString()
 			}
 		});
-		expect(mocks.writeAuditLog).toHaveBeenCalledOnce();
+		// The audit goes through the job's own client, inside its budget.
+		expect(mocks.insertAuditLog).toHaveBeenCalledOnce();
+		expect(mocks.insertAuditLog.mock.calls[0][0]).toBe(supabase);
+	});
+
+	it('recupera reclamaciones vencidas y reclama sólo lo que cabe en el presupuesto', async () => {
+		const { supabase, rpcCalls } = createSupabase();
+		await run(supabase, pushService());
+
+		expect(rpcCalls[0]).toEqual({ name: 'recover_expired_google_review_request_claims', args: { recover_time: now.toISOString() } });
+		// Free: 39 calls after the Service Binding, two fixed, eight per request in its worst case.
+		expect(rpcCalls[1]).toEqual({ name: 'claim_google_review_request_batch', args: { claim_now: now.toISOString(), claim_limit: 4 } });
+	});
+
+	it('no empieza una solicitud cuyo peor caso ya no entra en el tiempo de la ejecución', async () => {
+		let clock = 0;
+		const budget = createJobBudget('free', () => clock);
+		const second = { ...claim, request_id: '10000000-0000-4000-8000-0000000000aa' };
+		const { supabase, rpcCalls } = createSupabase({ claimed: [claim, second] });
+		const service = pushService(() => {
+			clock = WORK_DEADLINE_MS;
+			return new Response(null, { status: 201 });
+		});
+
+		const result = await run(supabase, service, budget);
+
+		expect(result).toMatchObject({ claimed: 2, sent: 1 });
+		expect(service.requests).toHaveLength(1);
+		expect(rpcCalls.filter((call) => call.name === 'prepare_google_review_request_delivery')).toHaveLength(1);
 	});
 
 	it('no envía si una reprogramación invalida el claim durante la preparación', async () => {
 		const { supabase } = createSupabase({ liveStatus: 'superseded' });
-		const result = await sendDueGoogleReviewRequests(supabase, { now });
+		const service = pushService();
+		const result = await run(supabase, service);
 
 		expect(result).toMatchObject({ sent: 0, failed: 0, invalidated: 1 });
-		expect(webpush.sendNotification).not.toHaveBeenCalled();
+		expect(service.requests).toHaveLength(0);
 	});
 
 	it('un fallo transitorio libera para reintentar sin matar el dispositivo', async () => {
-		vi.mocked(webpush.sendNotification).mockRejectedValue(new Error('timeout'));
 		const { supabase, rpcCalls } = createSupabase();
-		const result = await sendDueGoogleReviewRequests(supabase, { now });
+		const service = pushService(() => {
+			throw new TypeError('fetch failed');
+		});
+		const result = await run(supabase, service);
 
 		expect(result).toMatchObject({ sent: 0, failed: 1, deadEndpoints: 0 });
 		expect(rpcCalls.some((call) => call.name === 'release_google_review_request')).toBe(true);
@@ -202,9 +256,8 @@ describe('sendDueGoogleReviewRequests', () => {
 	});
 
 	it('un 410 marca sólo el dispositivo y libera la solicitud', async () => {
-		vi.mocked(webpush.sendNotification).mockRejectedValue({ statusCode: 410 });
 		const { supabase, rpcCalls } = createSupabase();
-		const result = await sendDueGoogleReviewRequests(supabase, { now });
+		const result = await run(supabase, pushService(() => new Response(null, { status: 410 })));
 
 		expect(result).toMatchObject({ sent: 0, failed: 1, deadEndpoints: 1 });
 		expect(rpcCalls).toContainEqual({
@@ -224,10 +277,11 @@ describe('sendDueGoogleReviewRequests', () => {
 				superseded_at: null
 			}
 		});
-		const result = await sendDueGoogleReviewRequests(supabase, { now });
+		const service = pushService();
+		const result = await run(supabase, service);
 
 		expect(result).toMatchObject({ sent: 1, failed: 0 });
-		expect(webpush.sendNotification).not.toHaveBeenCalled();
+		expect(service.requests).toHaveLength(0);
 		expect(inserts).toHaveLength(0);
 		expect(rpcCalls).toContainEqual({
 			name: 'complete_google_review_request',
@@ -243,10 +297,11 @@ describe('sendDueGoogleReviewRequests', () => {
 
 	it('si falla el cierre después de la aceptación no libera ni duplica la solicitud', async () => {
 		const { supabase, rpcCalls } = createSupabase({ complete: false });
-		const result = await sendDueGoogleReviewRequests(supabase, { now });
+		const service = pushService();
+		const result = await run(supabase, service);
 
 		expect(result).toMatchObject({ sent: 0, failed: 1 });
-		expect(webpush.sendNotification).toHaveBeenCalledOnce();
+		expect(service.requests).toHaveLength(1);
 		expect(rpcCalls.some((call) => call.name === 'release_google_review_request')).toBe(false);
 	});
 
@@ -264,10 +319,11 @@ describe('sendDueGoogleReviewRequests', () => {
 				message: 'push_delivery_attempts_live_review_request_uq'
 			}
 		});
-		const result = await sendDueGoogleReviewRequests(supabase, { now });
+		const service = pushService();
+		const result = await run(supabase, service);
 
 		expect(result).toMatchObject({ sent: 0, failed: 1 });
-		expect(webpush.sendNotification).not.toHaveBeenCalled();
+		expect(service.requests).toHaveLength(0);
 		expect(rpcCalls.some((call) => call.name === 'release_google_review_request')).toBe(false);
 	});
 });

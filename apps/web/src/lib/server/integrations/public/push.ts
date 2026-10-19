@@ -1,27 +1,40 @@
 import { logServerFailure } from '$lib/server/platform/logging';
-import { readChoice, isRecord } from '$lib/contracts/json';
+import {
+	readArray,
+	readChoice,
+	readFiniteNumber,
+	readNullableText,
+	readRecord,
+	readText,
+	isRecord
+} from '$lib/contracts/json';
 import { InvalidDataContractError } from '$lib/contracts/json';
 // Recordatorios Web Push para navegadores compatibles (este flujo nunca se ofrece en iOS).
 //
-// Confiabilidad del envío: claim atómico vía RPC claim_due_push_reminders
-// (FOR UPDATE SKIP LOCKED + reclaim a los 10 min si el proceso murió entre claim y
-// envío). sent_at se marca SOLO tras envío exitoso: un fallo transitorio reintenta
-// en el próximo run en vez de perder el recordatorio.
+// Confiabilidad del envío: la reclamación por lotes (claim_push_reminder_batch) reparte
+// la cola entre consultorios y vence a los 10 minutos si el proceso muere. La base
+// revalida cada recordatorio justo antes del envío y sent_at se marca SOLO con la
+// aceptación del proveedor; un fallo espera en forma persistente y creciente.
 
 import { env } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
 import webpush from 'web-push';
 import crypto from 'node:crypto';
 import { isIP } from 'node:net';
-import type { CitaRow, CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
+import type { CitaRow, CitaSupabaseClient } from '$lib/types/database';
 import { writeAuditLog } from '$lib/server/platform/audit';
 import { formatInTimeZone } from '$lib/utils/format';
 import { isActiveAppointmentStatus } from '$lib/utils/appointment-visibility';
-import { addMinutes } from '$lib/server/scheduling/public/appointments';
 import type { PublicAppointmentView } from '$lib/server/scheduling/public/public-appointments';
+import {
+	JobBudgetExhaustedError,
+	MAX_CONCURRENT_EXTERNAL_CALLS,
+	type ScheduledJobRun
+} from '$lib/server/integrations/internal/job-budget';
 
 const TEST_PUSH_TTL_SECONDS = 5 * 60;
-const PUSH_TELEMETRY_RETENTION_DAYS = 90;
+/** Upper bound of one push request outside a job; a job budget may cut it shorter. */
+const PUSH_REQUEST_TIMEOUT_MS = 10_000;
 const pushAppointmentPath = (confirmationToken: string) =>
 	`/turno/${encodeURIComponent(confirmationToken)}`;
 
@@ -52,14 +65,71 @@ export const getVapidPublicKey = (): string | null =>
 export const isPushConfigured = (): boolean =>
 	Boolean(getVapidPublicKey() && env.VAPID_PRIVATE_KEY?.trim());
 
-let vapidConfigured = false;
-const ensureVapid = () => {
-	if (vapidConfigured) return;
+const readVapidKeys = () => {
 	const publicKey = getVapidPublicKey();
 	const privateKey = env.VAPID_PRIVATE_KEY?.trim();
 	if (!publicKey || !privateKey) throw new Error('PUSH_NOT_CONFIGURED');
-	webpush.setVapidDetails(env.VAPID_SUBJECT?.trim() || 'mailto:soporte@example.com', publicKey, privateKey);
-	vapidConfigured = true;
+	return { subject: env.VAPID_SUBJECT?.trim() || 'mailto:soporte@example.com', publicKey, privateKey };
+};
+
+export type WebPushTarget = { endpoint: string; p256dh: string; auth: string };
+export type WebPushSender = (
+	target: WebPushTarget,
+	payload: string,
+	options: { ttlSeconds: number; topic: string }
+) => Promise<number>;
+
+/** Answer of a push service outside 2xx; `code` names a delivery recovered without a send. */
+export class PushServiceError extends Error {
+	constructor(
+		readonly statusCode: number,
+		readonly code: string | null = null
+	) {
+		super(`Push service answered HTTP ${statusCode}.`);
+		this.name = 'PushServiceError';
+	}
+}
+
+// web-push only encrypts the payload: the request goes out through the caller's fetch,
+// so a scheduled job counts and bounds it and no Node HTTP client is involved. The
+// VAPID signature is made once per push service origin, not once per message.
+export const createWebPushSender = (fetchFn: typeof fetch): WebPushSender => {
+	const keys = readVapidKeys();
+	const authorizations = new Map<string, string>();
+	return async (target, payload, options) => {
+		const audience = new URL(target.endpoint).origin;
+		let authorization = authorizations.get(audience);
+		if (!authorization) {
+			authorization = webpush.getVapidHeaders(audience, keys.subject, keys.publicKey, keys.privateKey, 'aes128gcm')
+				.Authorization;
+			authorizations.set(audience, authorization);
+		}
+		const request = webpush.generateRequestDetails(
+			{ endpoint: target.endpoint, keys: { p256dh: target.p256dh, auth: target.auth } },
+			payload,
+			{
+				TTL: options.ttlSeconds,
+				urgency: 'high',
+				topic: options.topic,
+				contentEncoding: 'aes128gcm',
+				headers: { Authorization: authorization }
+			}
+		);
+		const headers = new Headers();
+		// fetch sets the length of the body itself.
+		for (const [name, value] of Object.entries(request.headers))
+			if (name.toLowerCase() !== 'content-length') headers.set(name, String(value));
+		const response = await fetchFn(request.endpoint, {
+			method: 'POST',
+			headers,
+			body: new Uint8Array(request.body),
+			signal: AbortSignal.timeout(PUSH_REQUEST_TIMEOUT_MS)
+		});
+		// The short answer is not used; releasing it frees the outgoing connection.
+		await response.body?.cancel();
+		if (!response.ok) throw new PushServiceError(response.status);
+		return response.status;
+	};
 };
 
 export type PushSubscriptionPayload = {
@@ -347,15 +417,27 @@ type TrackedPushResult =
 	  }
 	| { ok: false; deliveryId: string | null; error: unknown };
 
+/** 404/410 retire the device; 429, 5xx and lost answers are retried; other 4xx are rejections. */
 export const failureKindFor = (error: unknown): 'gone' | 'rejected' | 'transient' => {
-	const statusCode = Number((error as { statusCode?: number })?.statusCode ?? 0);
+	const statusCode = error instanceof PushServiceError ? error.statusCode : 0;
 	if (statusCode === 404 || statusCode === 410) return 'gone';
-	if (statusCode >= 400 && statusCode < 500) return 'rejected';
+	if (statusCode >= 400 && statusCode < 500 && statusCode !== 429) return 'rejected';
 	return 'transient';
 };
 
+// A repair or detachment won the race: sending without a durable attempt could notify
+// a patient about an appointment that is no longer theirs.
+const IDENTITY_RACE_CODES = [
+	'PUSH_SUBSCRIPTION_DETACHED',
+	'PUSH_DEVICE_GONE',
+	'PUSH_SUBSCRIPTION_REVOKED',
+	'PUSH_SUBSCRIPTION_MISMATCH',
+	'PUSH_SUBSCRIPTION_NOT_FOUND'
+];
+
 export const sendTrackedPush = async (
 	supabase: CitaSupabaseClient,
+	send: WebPushSender,
 	input: {
 		businessId: string;
 		appointmentId: string;
@@ -371,55 +453,36 @@ export const sendTrackedPush = async (
 		requireTracking?: boolean;
 	}
 ): Promise<TrackedPushResult> => {
-	ensureVapid();
 	const receiptToken = crypto.randomBytes(32).toString('base64url');
 	const expiresAt = new Date(input.now.getTime() + input.ttlSeconds * 1000).toISOString();
 	let deliveryId: string | null = null;
 
-	// La telemetría no debe impedir los recordatorios programados. La prueba visible,
-	// en cambio, exige una fila durable: sin ella no podríamos garantizar que dos
+	// La telemetría no debe impedir los avisos inmediatos. La prueba visible, en
+	// cambio, exige una fila durable: sin ella no podríamos garantizar que dos
 	// eventos de foco representen una sola entrega lógica.
-	try {
-		const { data, error } = await supabase
-			.from('push_delivery_attempts')
-			.insert({
-				business_id: input.businessId,
-				appointment_id: input.appointmentId,
-				subscription_id: input.target.id,
-				kind: input.kind,
-				request_key_hash: input.requestKeyHash ?? null,
-				google_review_request_id: input.googleReviewRequestId ?? null,
-				receipt_token_hash: hashReceiptToken(receiptToken),
-				expires_at: expiresAt,
-				created_at: input.now.toISOString(),
-				updated_at: input.now.toISOString()
-			})
-			.select('id')
-			.single();
-		if (error) throw error;
-		deliveryId = data?.id ? String(data.id) : null;
-	} catch (trackingError) {
-		const typedTrackingError = trackingError as {
-			code?: string;
-			message?: string;
-			details?: string;
-		};
-		const errorCode = String(typedTrackingError?.code ?? '');
-		const errorText = `${errorCode} ${typedTrackingError?.message ?? ''} ${
-			typedTrackingError?.details ?? ''
-		}`;
-		if (
-			errorText.includes('PUSH_SUBSCRIPTION_DETACHED') ||
-			errorText.includes('PUSH_DEVICE_GONE') ||
-			errorText.includes('PUSH_SUBSCRIPTION_REVOKED') ||
-			errorText.includes('PUSH_SUBSCRIPTION_MISMATCH') ||
-			errorText.includes('PUSH_SUBSCRIPTION_NOT_FOUND')
-		) {
-			// Una reparación o desvinculación ganó la carrera. Enviar sin un intento
-			// durable podría avisar al paciente que ya no corresponde a este turno.
+	const { data: tracked, error: trackingError } = await supabase
+		.from('push_delivery_attempts')
+		.insert({
+			business_id: input.businessId,
+			appointment_id: input.appointmentId,
+			subscription_id: input.target.id,
+			kind: input.kind,
+			request_key_hash: input.requestKeyHash ?? null,
+			google_review_request_id: input.googleReviewRequestId ?? null,
+			receipt_token_hash: hashReceiptToken(receiptToken),
+			expires_at: expiresAt,
+			created_at: input.now.toISOString(),
+			updated_at: input.now.toISOString()
+		})
+		.select('id')
+		.single();
+	if (!trackingError) deliveryId = String(tracked.id);
+	else {
+		const errorText = `${trackingError.code} ${trackingError.message} ${trackingError.details}`;
+		if (IDENTITY_RACE_CODES.some((code) => errorText.includes(code))) {
 			return { ok: false, deliveryId: null, error: trackingError };
 		}
-		if (input.googleReviewRequestId && errorCode === '23505') {
+		if (input.googleReviewRequestId && trackingError.code === '23505') {
 			try {
 				const { data: existing, error: existingError } = await supabase
 					.from('push_delivery_attempts')
@@ -431,7 +494,8 @@ export const sendTrackedPush = async (
 					.is('failed_at', null)
 					.order('created_at', { ascending: false })
 					.limit(1)
-					.maybeSingle();
+					.maybeSingle()
+					.retry(false);
 				if (existingError) throw existingError;
 				if (
 					existing?.id &&
@@ -453,10 +517,10 @@ export const sendTrackedPush = async (
 			return {
 				ok: false,
 				deliveryId: null,
-				error: { statusCode: 503, code: 'PUSH_REVIEW_DELIVERY_OUTCOME_UNKNOWN' }
+				error: new PushServiceError(503, 'PUSH_REVIEW_DELIVERY_OUTCOME_UNKNOWN')
 			};
 		}
-		if (input.requestKeyHash && errorCode === '23505') {
+		if (input.requestKeyHash && trackingError.code === '23505') {
 			try {
 				const { data: existing, error: existingError } = await supabase
 					.from('push_delivery_attempts')
@@ -464,17 +528,18 @@ export const sendTrackedPush = async (
 					.eq('subscription_id', input.target.id)
 					.eq('request_key_hash', input.requestKeyHash)
 					.eq('kind', input.kind)
-					.maybeSingle();
+					.maybeSingle()
+					.retry(false);
 				if (existingError) throw existingError;
 				if (existing?.id) {
 					if (existing.failed_at) {
 						return {
 							ok: false,
 							deliveryId: String(existing.id),
-							error: {
-								statusCode: existing.failure_kind === 'gone' ? 410 : 503,
-								code: `PUSH_TEST_${String(existing.failure_kind ?? 'FAILED').toUpperCase()}`
-							}
+							error: new PushServiceError(
+								existing.failure_kind === 'gone' ? 410 : 503,
+								`PUSH_TEST_${String(existing.failure_kind ?? 'FAILED').toUpperCase()}`
+							)
 						};
 					}
 					return {
@@ -506,15 +571,11 @@ export const sendTrackedPush = async (
 		: undefined;
 
 	try {
-		const response = await webpush.sendNotification(
-			{
-				endpoint: input.target.endpoint,
-				keys: { p256dh: input.target.p256dh, auth: input.target.auth }
-			},
+		const pushServiceStatus = await send(
+			input.target,
 			JSON.stringify({ ...input.payload, ...(delivery ? { delivery } : {}) }),
-			{ TTL: input.ttlSeconds, urgency: 'high', topic: input.topic }
+			{ ttlSeconds: input.ttlSeconds, topic: input.topic }
 		);
-		const pushServiceStatus = Number((response as { statusCode?: number })?.statusCode ?? 0) || null;
 		if (deliveryId) {
 			const acceptedAt = new Date().toISOString();
 			const { error } = await supabase
@@ -531,7 +592,7 @@ export const sendTrackedPush = async (
 	} catch (error) {
 		if (deliveryId) {
 			const failedAt = new Date().toISOString();
-			const statusCode = Number((error as { statusCode?: number })?.statusCode ?? 0) || null;
+			const statusCode = error instanceof PushServiceError ? error.statusCode : null;
 			const { error: trackingError } = await supabase
 				.from('push_delivery_attempts')
 				.update({
@@ -555,6 +616,7 @@ export const pushTtlUntilAppointment = (
 
 export const sendTestPushNotification = async (
 	supabase: CitaSupabaseClient,
+	fetchFn: typeof fetch,
 	input: {
 		appointment: PublicAppointmentView;
 		subscription: TrackedPushTarget;
@@ -563,7 +625,6 @@ export const sendTestPushNotification = async (
 	}
 ) => {
 	if (!isPushConfigured()) return { configured: false, accepted: false, deliveryId: null };
-	ensureVapid();
 	const now = input.now ?? new Date();
 	try {
 		const latest = await getLatestPushTestStatus(supabase, {
@@ -586,7 +647,7 @@ export const sendTestPushNotification = async (
 		// Una falla de observabilidad no bloquea la prueba ni los recordatorios reales.
 		logServerFailure('Error consultando prueba push reciente', trackingError);
 	}
-	const result = await sendTrackedPush(supabase, {
+	const result = await sendTrackedPush(supabase, createWebPushSender(fetchFn), {
 		businessId: input.appointment.business.id,
 		appointmentId: input.appointment.id,
 		confirmationToken: input.appointment.token,
@@ -620,9 +681,11 @@ export const sendTestPushNotification = async (
 
 // Reprogramación: invalida los avisos pendientes del horario VIEJO y deja que se
 // recalculen los de 24h/2h para el NUEVO horario. Limpiar *_sent_at desbloquea el
-// reenvío (el job no reenvía si sent_at ya está marcado) y limpiar *_claimed_at
-// libera cualquier claim en vuelo; las ventanas se computan en claim_due_push_reminders
-// contra el starts_at vivo, así que tras esto apuntan automáticamente a la fecha nueva.
+// reenvío, limpiar la reclamación (*_claimed_at y su token) descarta el resultado
+// tardío de un envío en vuelo y limpiar la espera reinicia los reintentos: el horario
+// nuevo empieza sin el historial del viejo. Las ventanas se computan contra el
+// starts_at vivo, así que tras esto apuntan automáticamente a la fecha nueva. Es el
+// mismo efecto del trigger de reprogramación de la base.
 // Requiere cliente service-role (push_subscriptions tiene RLS sin policies). Sólo
 // opera vínculos todavía asociados a este turno; la salud del dispositivo vive en
 // push_devices y no se modifica al reprogramar.
@@ -636,8 +699,14 @@ export const resetPushRemindersForReschedule = async (
 		.update({
 			push_24h_claimed_at: null,
 			push_24h_sent_at: null,
+			push_24h_claim_token: null,
+			push_24h_retry_at: null,
+			push_24h_failures: 0,
 			push_2h_claimed_at: null,
 			push_2h_sent_at: null,
+			push_2h_claim_token: null,
+			push_2h_retry_at: null,
+			push_2h_failures: 0,
 			updated_at: now
 		})
 		.eq('business_id', input.businessId)
@@ -658,10 +727,11 @@ export const resetPushRemindersForReschedule = async (
 // el refuerzo manual y nunca habilita ni bloquea estas entregas reales.
 export const sendReschedulePushNotice = async (
 	supabase: CitaSupabaseClient,
+	fetchFn: typeof fetch,
 	input: { businessId: string; appointmentId: string; now?: Date }
 ) => {
 	if (!isPushConfigured()) return { configured: false, sent: 0, failed: 0, deadEndpoints: 0 };
-	ensureVapid();
+	const send = createWebPushSender(fetchFn);
 	const now = input.now ?? new Date();
 
 	const { data: appointment, error: appointmentError } = await supabase
@@ -711,7 +781,7 @@ export const sendReschedulePushNotice = async (
 	for (const subscription of subscriptions) {
 		const device = subscription.push_devices;
 		try {
-			const tracked = await sendTrackedPush(supabase, {
+			const tracked = await sendTrackedPush(supabase, send, {
 				businessId: input.businessId,
 				appointmentId: input.appointmentId,
 				confirmationToken: String(appointment.confirmation_token),
@@ -757,29 +827,8 @@ export const sendReschedulePushNotice = async (
 	return { configured: true, sent, failed, deadEndpoints };
 };
 
-type ClaimedReminder = {
-	subscription_id: string;
-	appointment_id: string;
-	business_id: string;
-	endpoint: string;
-	p256dh: string;
-	auth: string;
-	reminder_kind: '24h' | '2h';
-};
-
-// Mismas ventanas que claim_due_push_reminders, evaluadas contra el starts_at VIVO:
-// si una reprogramación corrió entre el claim y el envío, el turno puede haber salido
-// de la ventana del kind reclamado. Enviar igual consumiría el sent_at con días de
-// anticipación y el recordatorio real nunca saldría.
-const isWithinReminderWindow = (kind: '24h' | '2h', startsAt: Date, now: Date) =>
-	kind === '24h'
-		? startsAt > addMinutes(now, 2 * 60) && startsAt <= addMinutes(now, 24 * 60)
-		: startsAt > now && startsAt <= addMinutes(now, 2 * 60);
-
-export const isGoneError = (error: unknown) => {
-	const statusCode = (error as { statusCode?: number })?.statusCode;
-	return statusCode === 404 || statusCode === 410;
-};
+export const isGoneError = (error: unknown) =>
+	error instanceof PushServiceError && (error.statusCode === 404 || error.statusCode === 410);
 
 export const markEndpointGone = async (
 	supabase: CitaSupabaseClient,
@@ -795,167 +844,194 @@ export const markEndpointGone = async (
 	if (error) throw error;
 };
 
-const releaseClaim = async (
-	supabase: CitaSupabaseClient,
-	claimed: ClaimedReminder,
-	failedCount: number,
-	now: Date
-) => {
-	const updates: CitaUpdate<'push_subscriptions'> = {
-		failed_count: failedCount,
-		updated_at: now.toISOString(),
-		[claimed.reminder_kind === '24h' ? 'push_24h_claimed_at' : 'push_2h_claimed_at']: null
-	};
-	const { error } = await supabase
-		.from('push_subscriptions')
-		.update(updates)
-		.eq('id', claimed.subscription_id);
-	if (error) throw error;
+// Recordatorios programados ----------------------------------------------------------
+
+const REMINDER_KINDS = ['24h', '2h'] as const;
+type ReminderKind = (typeof REMINDER_KINDS)[number];
+
+/** One chunk is prepared, sent and recorded together and never exceeds the parallel calls. */
+const PUSH_CHUNK_SIZE = MAX_CONCURRENT_EXTERNAL_CALLS;
+/** Largest claim the database accepts in one call. */
+const PUSH_MAX_CLAIM = 100;
+/** The claim itself and the final advance that records the last results. */
+const PUSH_FIXED_CALLS = 2;
+
+type PushBatchOutcome = {
+	subscription_id: string;
+	kind: ReminderKind;
+	delivery_id: string;
+	outcome: 'accepted' | 'gone' | 'rejected' | 'transient';
+	status_code: number | null;
 };
 
-export const sendDuePushReminders = async (
-	supabase: CitaSupabaseClient,
-	input: { now?: Date; limit?: number } = {}
-) => {
-	if (!isPushConfigured()) {
-		return { configured: false, claimed: 0, sent: 0, failed: 0, deadEndpoints: 0 };
-	}
-	ensureVapid();
-	const now = input.now ?? new Date();
-	const retentionCutoff = new Date(
-		now.getTime() - PUSH_TELEMETRY_RETENTION_DAYS * 24 * 60 * 60 * 1000
-	).toISOString();
-	const { error: telemetryCleanupError } = await supabase
-		.from('push_delivery_attempts')
-		.delete()
-		.lt('created_at', retentionCutoff);
-	if (telemetryCleanupError) {
-		logServerFailure('Error limpiando seguimiento histórico de push', telemetryCleanupError);
-	}
+type PreparedReminder = {
+	subscriptionId: string;
+	kind: ReminderKind;
+	appointmentId: string;
+	deliveryId: string;
+	target: WebPushTarget;
+	ttlSeconds: number;
+	startsAt: string;
+	confirmationToken: string;
+	reminderDescription: string | null;
+	businessName: string;
+	businessTimezone: string;
+};
 
-	let deadEndpoints = 0;
+const readPreparedReminder = (value: unknown): PreparedReminder => {
+	const item = readRecord(value, 'pushBatch.prepared');
+	return {
+		subscriptionId: readText(item.subscription_id, 'pushBatch.prepared.subscription'),
+		kind: readChoice(item.kind, REMINDER_KINDS, 'pushBatch.prepared.kind'),
+		appointmentId: readText(item.appointment_id, 'pushBatch.prepared.appointment'),
+		deliveryId: readText(item.delivery_id, 'pushBatch.prepared.delivery'),
+		target: {
+			endpoint: readText(item.endpoint, 'pushBatch.prepared.endpoint'),
+			p256dh: readText(item.p256dh, 'pushBatch.prepared.p256dh'),
+			auth: readText(item.auth, 'pushBatch.prepared.auth')
+		},
+		ttlSeconds: readFiniteNumber(item.ttl_seconds, 'pushBatch.prepared.ttl'),
+		startsAt: readText(item.starts_at, 'pushBatch.prepared.startsAt'),
+		confirmationToken: readText(item.confirmation_token, 'pushBatch.prepared.token'),
+		reminderDescription: readNullableText(item.reminder_description, 'pushBatch.prepared.description'),
+		businessName: readText(item.business_name, 'pushBatch.prepared.businessName'),
+		businessTimezone: readText(item.business_timezone, 'pushBatch.prepared.timezone')
+	};
+};
 
-	const { data: claimedRows, error: claimError } = await supabase.rpc('claim_due_push_reminders', {
-		claim_now: now.toISOString(),
-		claim_limit: input.limit ?? 50
+const readPushAdvance = (value: unknown) => {
+	const record = readRecord(value, 'pushBatch.advance');
+	return {
+		released: readFiniteNumber(record.released, 'pushBatch.advance.released'),
+		prepared: readArray(record.prepared, 'pushBatch.advance.prepared').map(readPreparedReminder),
+		invalidated: readArray(record.invalidated, 'pushBatch.advance.invalidated').length
+	};
+};
+
+// Payload neutral (§67): sin servicio ni datos clínicos. `group` permite al service
+// worker cerrar notificaciones viejas del mismo turno (otro kind).
+const reminderPayload = (item: PreparedReminder, receiptToken: string) => {
+	const { dateLabel, timeLabel } = formatInTimeZone(item.startsAt, item.businessTimezone);
+	const path = pushAppointmentPath(item.confirmationToken);
+	return {
+		title: `Turno en ${item.businessName}`,
+		body:
+			`Te recordamos tu turno el ${dateLabel} a las ${timeLabel}.` +
+			(item.reminderDescription ? ` ${item.reminderDescription.slice(0, 180)}` : ''),
+		url: path,
+		tag: `turno-${item.appointmentId}-${item.kind}`,
+		group: `turno-${item.appointmentId}`,
+		delivery: { id: item.deliveryId, token: receiptToken, receiptUrl: `${path}/push/receipt` }
+	};
+};
+
+/** Sends one prepared reminder; null when the job deadline came before the request started. */
+const deliverReminder = async (
+	send: WebPushSender,
+	item: PreparedReminder,
+	receiptToken: string
+): Promise<PushBatchOutcome | null> => {
+	const sent = { subscription_id: item.subscriptionId, kind: item.kind, delivery_id: item.deliveryId };
+	try {
+		const status = await send(item.target, JSON.stringify(reminderPayload(item, receiptToken)), {
+			ttlSeconds: item.ttlSeconds,
+			topic: pushTopicForAppointment(item.appointmentId)
+		});
+		return { ...sent, outcome: 'accepted', status_code: status };
+	} catch (error) {
+		// Never sent: finishing releases its claim and the next preparation closes the attempt.
+		if (error instanceof JobBudgetExhaustedError) return null;
+		// A lost answer is transient: the provider may have delivered it, and the
+		// per-appointment topic and tag collapse a repeated reminder into one.
+		return {
+			...sent,
+			outcome: failureKindFor(error),
+			status_code: error instanceof PushServiceError ? error.statusCode : null
+		};
+	}
+};
+
+/**
+ * One scheduled push run. The claim shares the queue between practices; each chunk
+ * goes through a single database trip that records the previous results and prepares
+ * the next reminders (revalidated, with their delivery attempt and live context), and
+ * new work starts only while its worst case still fits the budget.
+ */
+export const sendPushReminderBatch = async (job: ScheduledJobRun) => {
+	const summary = { configured: isPushConfigured(), claimed: 0, sent: 0, failed: 0, gone: 0, invalidated: 0, released: 0 };
+	if (!summary.configured) return summary;
+	const send = createWebPushSender(job.providerFetch);
+	const now = job.now.toISOString();
+	const claimToken = crypto.randomUUID();
+	const chunks = Math.floor((job.budget.remaining() - PUSH_FIXED_CALLS) / (PUSH_CHUNK_SIZE + 1));
+	const limit = Math.min(PUSH_MAX_CLAIM, PUSH_CHUNK_SIZE * chunks);
+	if (limit < 1) return summary;
+	const { data: claimed, error: claimError } = await job.supabase.rpc('claim_push_reminder_batch', {
+		p_now: now,
+		p_limit: limit,
+		p_claim_token: claimToken
 	});
 	if (claimError) throw claimError;
-
-	let sent = 0;
-	let failed = 0;
-
-	for (const claimedRow of claimedRows ?? []) {
-		const claimed = { ...claimedRow, reminder_kind: readChoice(claimedRow.reminder_kind, ['24h', '2h'], 'pushClaim.reminderKind') };
-		try {
-			// Revalidación con el estado vivo: el claim pudo correr justo antes de una
-			// cancelación o reprogramación.
-			const { data: appointment, error: appointmentError } = await supabase
-				.from('appointments')
-				.select(
-					'id, status, starts_at, public_reminder_description_snapshot, confirmation_token, businesses!inner(name, timezone)'
-				)
-				.eq('id', claimed.appointment_id)
-				.eq('business_id', claimed.business_id)
-				.maybeSingle();
-			if (appointmentError) throw appointmentError;
-			if (
-				!appointment ||
-				!isActiveAppointmentStatus(appointment.status) ||
-				!isWithinReminderWindow(claimed.reminder_kind, new Date(appointment.starts_at), now)
-			) {
-				await releaseClaim(supabase, claimed, 0, now);
-				continue;
-			}
-
-			const business = appointment.businesses;
-			const { dateLabel, timeLabel } = formatInTimeZone(
-				String(appointment.starts_at),
-				String(business.timezone)
-			);
-			// Payload neutral (§67): sin servicio, sin datos clínicos. `group` permite al
-			// service worker cerrar notificaciones viejas del mismo turno (otro kind).
-			const payload = {
-				title: `Turno en ${business.name}`,
-				body: `Te recordamos tu turno el ${dateLabel} a las ${timeLabel}.` + (appointment.public_reminder_description_snapshot ? ` ${String(appointment.public_reminder_description_snapshot).slice(0,180)}` : ''),
-				url: pushAppointmentPath(String(appointment.confirmation_token)),
-				tag: `turno-${claimed.appointment_id}-${claimed.reminder_kind}`,
-				group: `turno-${claimed.appointment_id}`
-			};
-
-			const tracked = await sendTrackedPush(supabase, {
-				businessId: claimed.business_id,
-				appointmentId: claimed.appointment_id,
-				confirmationToken: String(appointment.confirmation_token),
-				target: {
-					id: claimed.subscription_id,
-					endpoint: claimed.endpoint,
-					p256dh: claimed.p256dh,
-					auth: claimed.auth
-				},
-				kind: claimed.reminder_kind,
-				payload,
-				ttlSeconds: pushTtlUntilAppointment(
-					new Date(appointment.starts_at),
-					now,
-					claimed.reminder_kind === '24h' ? 24 * 3600 : 2 * 3600
-				),
-				topic: pushTopicForAppointment(claimed.appointment_id),
-				now
+	const queue = claimed.map((row) => ({
+		subscriptionId: row.subscription_id,
+		kind: readChoice(row.reminder_kind, REMINDER_KINDS, 'pushBatch.claim.kind')
+	}));
+	summary.claimed = queue.length;
+	let results: PushBatchOutcome[] = [];
+	try {
+		for (;;) {
+			const size = Math.min(PUSH_CHUNK_SIZE, queue.length);
+			const chunk =
+				size > 0 && job.budget.admits({ calls: 1 + size }, 1)
+					? queue.splice(0, size).map((item) => ({ ...item, receiptToken: crypto.randomBytes(32).toString('base64url') }))
+					: [];
+			const finish = chunk.length === 0;
+			if (finish) job.budget.enterFinalization();
+			const { data, error } = await job.supabase.rpc('advance_push_reminder_batch', {
+				p_claim_token: claimToken,
+				p_now: now,
+				p_results: results,
+				p_next: chunk.map((item) => ({
+					subscription_id: item.subscriptionId,
+					kind: item.kind,
+					receipt_token_hash: hashReceiptToken(item.receiptToken)
+				})),
+				p_finish: finish
 			});
-			if (!tracked.ok) throw tracked.error;
-
-			const sentUpdate: CitaUpdate<'push_subscriptions'> = {
-					[claimed.reminder_kind === '24h' ? 'push_24h_sent_at' : 'push_2h_sent_at']:
-						now.toISOString(),
-					failed_count: 0,
-					updated_at: now.toISOString()
-				};
-			const { error: sentUpdateError } = await supabase
-				.from('push_subscriptions')
-				.update(sentUpdate)
-				.eq('id', claimed.subscription_id);
-			if (sentUpdateError) throw sentUpdateError;
-
-			await writeAuditLog(supabase, {
-				businessId: claimed.business_id,
-				userId: null,
-				action: 'appointment.push_sent',
-				entityType: 'appointment',
-				entityId: claimed.appointment_id,
-				metadata: { reminder_kind: claimed.reminder_kind }
+			if (error) throw error;
+			results = [];
+			const advanced = readPushAdvance(data);
+			summary.invalidated += advanced.invalidated;
+			summary.released += advanced.released;
+			if (finish) return summary;
+			const sends = advanced.prepared.map((item) => {
+				const requested = chunk.find((entry) => entry.subscriptionId === item.subscriptionId && entry.kind === item.kind);
+				if (!requested) throw new InvalidDataContractError('pushBatch.prepared.unrequested');
+				return { item, receiptToken: requested.receiptToken };
 			});
-			sent += 1;
-		} catch (sendError) {
-			failed += 1;
-			logServerFailure('Error enviando push de recordatorio', sendError);
-			try {
-				if (isGoneError(sendError)) {
-					await markEndpointGone(supabase, claimed.endpoint, now);
-					deadEndpoints += 1;
-				} else {
-					const { data: current } = await supabase
-						.from('push_subscriptions')
-						.select('failed_count')
-						.eq('id', claimed.subscription_id)
-						.maybeSingle();
-					await releaseClaim(
-						supabase,
-						claimed,
-						Number(current?.failed_count ?? 0) + 1,
-						now
-					);
-				}
-			} catch (cleanupError) {
-				logServerFailure('Error liberando claim de push', cleanupError);
+			for (const outcome of await Promise.all(sends.map(({ item, receiptToken }) => deliverReminder(send, item, receiptToken)))) {
+				if (!outcome) continue;
+				results.push(outcome);
+				if (outcome.outcome === 'accepted') summary.sent += 1;
+				else if (outcome.outcome === 'gone') summary.gone += 1;
+				else summary.failed += 1;
 			}
 		}
+	} catch (error) {
+		// Record what was sent and release the rest; abandoned claims also expire on their own.
+		try {
+			job.budget.enterFinalization();
+			const { error: releaseError } = await job.supabase.rpc('advance_push_reminder_batch', {
+				p_claim_token: claimToken,
+				p_now: now,
+				p_results: results,
+				p_next: [],
+				p_finish: true
+			});
+			if (releaseError) throw releaseError;
+		} catch (releaseError) {
+			logServerFailure('Error cerrando el lote de recordatorios push', releaseError);
+		}
+		throw error;
 	}
-
-	return {
-		configured: true,
-		claimed: claimedRows?.length ?? 0,
-		sent,
-		failed,
-		deadEndpoints
-	};
 };

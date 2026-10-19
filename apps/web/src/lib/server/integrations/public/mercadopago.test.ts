@@ -23,6 +23,8 @@ import {
 	pickRelevantMpSubscription,
 	processMpWebhookEvent,
 	reconcileMercadoPago,
+	RECONCILE_CHARGE_CALLS,
+	RECONCILE_SUBSCRIPTION_CALLS,
 	recordCancelledPayment,
 	SUBSCRIPTION_DURATION_SECONDS,
 	verifyMpWebhookSignature
@@ -47,7 +49,9 @@ type QueuedResult = { data: unknown; error: { message: string } | null };
 const TABLE_DEFAULTS: Record<string, QueuedResult> = {
 	businesses: { data: { id: BUSINESS_ID }, error: null },
 	business_subscriptions: { data: { is_permanent: false }, error: null },
-	mp_subscriptions: { data: null, error: null }
+	mp_subscriptions: { data: null, error: null },
+	// A select without rows answers an empty list, as PostgREST does.
+	access_grants: { data: [], error: null }
 };
 
 const createAdminMock = (opts?: {
@@ -82,10 +86,10 @@ const createAdminMock = (opts?: {
 			const result =
 				tableQueues[table]?.shift() ?? TABLE_DEFAULTS[table] ?? { data: null, error: null };
 			const q: Record<string, unknown> = {};
-			for (const method of ['select', 'eq', 'in', 'order', 'limit']) {
+			for (const method of ['select', 'eq', 'in', 'order', 'limit', 'retry']) {
 				q[method] = vi.fn(() => q);
 			}
-			q.maybeSingle = vi.fn(async () => result);
+			q.maybeSingle = vi.fn(() => q);
 			q.update = vi.fn((payload: Record<string, unknown>) => {
 				updateCalls.push({ table, payload });
 				return q;
@@ -1259,6 +1263,62 @@ describe('reconcileMercadoPago', () => {
 		expect(summary.scanned).toBe(0);
 		expect(calls).toHaveLength(0);
 		expect(summary.details.join(' ')).toContain('Presupuesto');
+	});
+
+	it('lee los pagos ya acreditados en un viaje y sólo acredita los nuevos', async () => {
+		const { admin, rpcCalls } = createAdminMock({
+			tables: {
+				mp_subscriptions: [
+					{ data: [{ business_id: BUSINESS_ID, preapproval_id: 'pre-1', status: 'authorized' }], error: null }
+				],
+				access_grants: [{ data: [{ idempotency_key: 'mp:payment:888' }], error: null }]
+			}
+		});
+		const { fetchMock } = createFetchMock([
+			['/preapproval/pre-1', { body: { id: 'pre-1', status: 'authorized', external_reference: BUSINESS_ID } }],
+			[
+				'/authorized_payments/search',
+				{
+					body: {
+						results: [
+							{ id: 90, transaction_amount: 50000, payment: { id: 888, status: 'approved' } },
+							{ id: 91, transaction_amount: 50000, payment: { id: 887, status: 'approved' } }
+						]
+					}
+				}
+			]
+		]);
+
+		const summary = await reconcileMercadoPago(admin, fetchMock);
+
+		expect(summary).toMatchObject({ scanned: 1, credited: 1, errors: 0 });
+		expect(rpcCalls.map((call) => call.args.p_idempotency_key)).toEqual(['mp:payment:887']);
+		const grantsRead = vi.mocked(admin as unknown as { from: (table: string) => unknown }).from.mock.calls.filter(([table]) => table === 'access_grants');
+		expect(grantsRead).toHaveLength(1);
+	});
+
+	it('una corrida programada sólo empieza lo que entra en su presupuesto', async () => {
+		const rows = { data: [{ business_id: BUSINESS_ID, preapproval_id: 'pre-1', status: 'authorized' }], error: null };
+		const routes: Array<[string, { status?: number; body?: unknown }]> = [
+			['/preapproval/pre-1', { body: { id: 'pre-1', status: 'authorized', external_reference: BUSINESS_ID } }],
+			['/authorized_payments/search', { body: { results: [{ id: 90, transaction_amount: 50000, payment: { id: 888, status: 'approved' } }] } }]
+		];
+
+		const none = createAdminMock({ tables: { mp_subscriptions: [rows] } });
+		const nothing = createFetchMock(routes);
+		const skipped = await reconcileMercadoPago(none.admin, nothing.fetchMock, { admits: () => false });
+		expect(skipped.scanned).toBe(0);
+		expect(nothing.calls).toHaveLength(0);
+
+		const partial = createAdminMock({ tables: { mp_subscriptions: [rows] } });
+		const subscriptionOnly = createFetchMock(routes);
+		const reviewed = await reconcileMercadoPago(partial.admin, subscriptionOnly.fetchMock, {
+			admits: (calls) => calls === RECONCILE_SUBSCRIPTION_CALLS
+		});
+		expect(reviewed).toMatchObject({ scanned: 1, credited: 0 });
+		expect(partial.rpcCalls).toHaveLength(0);
+		expect(reviewed.details.join(' ')).toContain('Presupuesto');
+		expect(RECONCILE_CHARGE_CALLS).toBeGreaterThan(0);
 	});
 });
 
