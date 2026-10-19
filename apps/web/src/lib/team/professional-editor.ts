@@ -1,4 +1,9 @@
-import type { ScheduleBlockDraft } from '$lib/utils/schedule-blocks';
+import {
+	canonicalScheduleBlocks,
+	serializeScheduleBlocks,
+	validateScheduleBlocks,
+	type ScheduleBlockDraft
+} from '$lib/utils/schedule-blocks';
 import { isRecord } from '$lib/contracts/json';
 
 /** A local editing draft, never an authorization or availability authority. */
@@ -305,4 +310,26 @@ export function professionalExceptionType(
 ): 'blocked' | 'extra_available' | 'restricted' {
 	if (value === 'blocked' || value === 'extra_available' || value === 'restricted') return value;
 	throw new Error('Invalid professional exception type');
+}
+
+/** A refreshed revision can anchor a dirty draft only when its persisted base
+ * still matches. New exception inputs append commands, never replace that base. */
+export function professionalBaselineMatches(
+	server: ProfessionalDraft,
+	baseline: ProfessionalDraft
+): boolean {
+	for (const field of ['name', 'specialty', 'phone', 'email'] as const)
+		if (server[field].trim() !== baseline[field].trim()) return false;
+	if (
+		server.isAvailable !== baseline.isAvailable ||
+		JSON.stringify([...server.serviceIds].sort()) !==
+			JSON.stringify([...baseline.serviceIds].sort())
+	)
+		return false;
+	const a = validateScheduleBlocks(server.schedule.blocks),
+		b = validateScheduleBlocks(baseline.schedule.blocks);
+	return a.ok && b.ok
+		? canonicalScheduleBlocks(a.blocks) === canonicalScheduleBlocks(b.blocks)
+		: serializeScheduleBlocks(server.schedule.blocks) ===
+				serializeScheduleBlocks(baseline.schedule.blocks);
 }

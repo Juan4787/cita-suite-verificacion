@@ -25,6 +25,7 @@
 	} from '$lib/team/professional-editor';
 	let {
 		active,
+		availabilityRevision,
 		data,
 		draft = $bindable(),
 		baseline,
@@ -39,6 +40,7 @@
 		form
 	}: {
 		active: boolean;
+		availabilityRevision:number;
 		data: ProfessionalEditorData;
 		draft: ProfessionalDraft;
 		baseline: ProfessionalDraft;
@@ -320,7 +322,7 @@
 						<p class="ux-section-meta ux-section-meta-warning">Cambios sin guardar</p>
 					{/if}
 				</div>
-				<input type="hidden" name="schedule_blocks" value={scheduleBlocksJson} /><input type="hidden" name="availability_revision" value={data.availabilityRevision??0}/><input type="hidden" name="exception_request_id" value={draft.exception.requestId}/>
+				<input type="hidden" name="schedule_blocks" value={scheduleBlocksJson} /><input type="hidden" name="availability_revision" value={availabilityRevision}/><input type="hidden" name="exception_request_id" value={draft.exception.requestId}/>
 				<div class="mt-6 grid gap-4">
 					{#each draft.schedule.blocks as block, blockIndex (block.id)}
 						{@const assignedByOtherBlock = usedWeekdays(block.id)}
@@ -460,7 +462,7 @@
 				{#if dirtyFields.exception}
 					<p class="ux-section-meta ux-section-meta-warning">Cambios sin guardar</p>
 				{/if}
-				<input type="hidden" name="period_mode" value={draft.exception.periodMode} /><input type="hidden" name="availability_revision" value={data.availabilityRevision??0}/><input type="hidden" name="exception_request_id" value={draft.exception.requestId}/><input type="hidden" name="dates" value={JSON.stringify(draft.exception.dates??[])}/>
+				<input type="hidden" name="period_mode" value={draft.exception.periodMode} /><input type="hidden" name="availability_revision" value={availabilityRevision}/><input type="hidden" name="exception_request_id" value={draft.exception.requestId}/><input type="hidden" name="dates" value={JSON.stringify(draft.exception.dates??[])}/>
 				<div class="mt-5 grid gap-4">
 					<div>
 						<span class="ux-label">Afecta a</span>

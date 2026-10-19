@@ -20,6 +20,7 @@
 		hasProfessionalExceptionDraft as hasExceptionDraft,
 		cloneProfessionalDraft as cloneDraft,
 		acceptProfessionalDraftSave,
+		professionalBaselineMatches,
 		emptyProfessionalException as emptyExceptionDraft,
 		sanitizeProfessionalDraft as sanitizeDraft,
 		type ProfessionalDraft,
@@ -72,6 +73,8 @@
 		return validateScheduleBlocks(schedule.blocks).ok;
 	};
 
+	// svelte-ignore state_referenced_locally
+	let availabilityRevision=$state(data.availabilityRevision??0);
 	let draftReady = $state(false);
 	const canOperate = $derived(data.context.canManage && !data.demo && draftReady);
 	const canManage = $derived(data.context.canManage && !data.demo);
@@ -362,10 +365,14 @@
 
 	$effect(() => {
 		// A shorthand like 09:00-20 is equivalent to 09:00-20:00, but must stay raw while editing.
-		if (!draftReady || hasUnsavedChanges || scheduleTimeEditing) return;
-		const serverDraft = buildServerDraft(data);
-		baseline = cloneDraft(serverDraft);
-		draft = cloneDraft(serverDraft);
+		if (!draftReady || scheduleTimeEditing) return;
+        const serverDraft = buildServerDraft(data);
+        if(!hasUnsavedChanges){
+            baseline=cloneDraft(serverDraft);draft=cloneDraft(serverDraft);availabilityRevision=data.availabilityRevision??0;
+        } else if(professionalBaselineMatches(serverDraft,baseline)) {
+            // Safe rebase after an own partial save or an unrelated clinic edit.
+            availabilityRevision=data.availabilityRevision??0;
+        }
 	});
 
 	onMount(() => {
@@ -447,10 +454,10 @@
 			{#each draft.serviceIds.filter((id) => !defaultServiceIdSet.has(id)) as serviceId}
 				<input type="hidden" name="service_id" value={serviceId} />
 			{/each}
-			<input type="hidden" name="schedule_blocks" value={scheduleBlocksJson} /><input type="hidden" name="availability_revision" value={data.availabilityRevision??0}/><input type="hidden" name="exception_request_id" value={draft.exception.requestId}/>
+			<input type="hidden" name="schedule_blocks" value={scheduleBlocksJson} /><input type="hidden" name="availability_revision" value={availabilityRevision}/><input type="hidden" name="exception_request_id" value={draft.exception.requestId}/>
 			<input type="hidden" name="applies_to" value={draft.exception.appliesTo} />
 			<input type="hidden" name="type" value={draft.exception.type} />
-			<input type="hidden" name="period_mode" value={draft.exception.periodMode} /><input type="hidden" name="availability_revision" value={data.availabilityRevision??0}/><input type="hidden" name="exception_request_id" value={draft.exception.requestId}/><input type="hidden" name="dates" value={JSON.stringify(draft.exception.dates??[])}/>
+			<input type="hidden" name="period_mode" value={draft.exception.periodMode} /><input type="hidden" name="dates" value={JSON.stringify(draft.exception.dates??[])}/>
 			<input type="hidden" name="date" value={draft.exception.date} />
 			<input type="hidden" name="date_from" value={draft.exception.dateFrom} />
 			<input type="hidden" name="date_to" value={draft.exception.dateTo} />
@@ -491,9 +498,9 @@
 	<ProfessionalServicesPanel active={activeTab === 'servicios'} services={data.services} professional={data.professional}
 		currentPriceLabels={data.currentPriceLabels} defaultServiceIds={data.defaultServiceIds} canManage={canManage && draftReady}
 		bind:selectedIds={draft.serviceIds} bind:baselineIds={baseline.serviceIds} bind:saving
-		dependencyKey={professionalDependencyKey} scope={`${businessId}:${userId}:${professionalId}:${canManage}`} onToggleService={toggleService} availabilityRevision={data.availabilityRevision ?? 0} />
+		dependencyKey={professionalDependencyKey} scope={`${businessId}:${userId}:${professionalId}:${canManage}`} onToggleService={toggleService} availabilityRevision={availabilityRevision} />
 
-	<ProfessionalSchedulePanel active={activeTab === 'horarios'} {data} bind:draft {baseline} {dirtyFields} {missingItems} {canOperate} {saving}
+	<ProfessionalSchedulePanel {availabilityRevision} active={activeTab === 'horarios'} {data} bind:draft {baseline} {dirtyFields} {missingItems} {canOperate} {saving}
  bind:acknowledgedAppointments bind:scheduleTimeEditing {sectionEnhance} {refreshEnhance} form={form ?? undefined} bind:this={schedulePanel} />
 
 		<Modal open={showExitGuard} title={guardTitle}>

@@ -64,7 +64,7 @@ describe('professional editor cross-task coordination', () => {
 	it('deselecting a service preserves a closed restricted schedule in the shared atomic payload', async () => {
 		render(ProfessionalEditor, { data: professionalEditorData() });
 		await fireEvent.click(screen.getByRole('button', { name: 'Servicios y aranceles' }));
-		const checkbox = screen.getByRole('checkbox', {name:/Consulta sintética/});
+		const checkbox = screen.getByRole('checkbox', { name: /Consulta sintética/ });
 		await fireEvent.change(checkbox, { target: { checked: false } });
 		expect(checkbox).not.toBeChecked();
 		const payload = document.querySelector<HTMLInputElement>(
@@ -78,5 +78,38 @@ describe('professional editor cross-task coordination', () => {
 		expect(
 			screen.getByText('La franja está cerrada hasta que elijas una prestación.')
 		).toBeVisible();
+	});
+});
+
+describe('availability revision belongs to the persisted draft base', () => {
+	it('does not replace a dirty draft token with the token of remotely changed rules', async () => {
+		const initial = professionalEditorData();
+		const view = render(ProfessionalEditor, { data: initial });
+		await fireEvent.input(screen.getByRole('textbox', { name: 'Nombre' }), {
+			target: { value: 'Borrador local' }
+		});
+		await view.rerender({
+			data: {
+				...initial,
+				availabilityRevision: 43,
+				rules: initial.rules.map((rule) => ({ ...rule, start_time: '10:00:00' }))
+			}
+		});
+		const form = document.querySelector<HTMLFormElement>('form[action="?/save_all"]');
+		if (!form) throw new Error('Missing atomic form');
+		expect(new FormData(form).getAll('availability_revision')).toEqual(['42']);
+		expect(screen.getByRole('textbox', { name: 'Nombre' })).toHaveValue('Borrador local');
+	});
+	it('can accept a fresh revision when the same persisted base is still displayed', async () => {
+		const initial = professionalEditorData();
+		const view = render(ProfessionalEditor, { data: initial });
+		await fireEvent.input(screen.getByRole('textbox', { name: 'Nombre' }), {
+			target: { value: 'Borrador local' }
+		});
+		await view.rerender({ data: { ...initial, availabilityRevision: 43 } });
+		const form = document.querySelector<HTMLFormElement>('form[action="?/save_all"]');
+		if (!form) throw new Error('Missing atomic form');
+		expect(new FormData(form).getAll('availability_revision')).toEqual(['43']);
+		expect(screen.getByRole('textbox', { name: 'Nombre' })).toHaveValue('Borrador local');
 	});
 });
