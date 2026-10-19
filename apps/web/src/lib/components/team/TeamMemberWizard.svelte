@@ -595,12 +595,12 @@
 				</div>
 			{:else if currentStep === 'servicios'}
 				<div class="mt-5 grid gap-5 xl:grid-cols-[1fr_0.75fr]">
-					<div class="ux-soft-card p-5">
+					<div class="ux-soft-card p-4 sm:p-5">
 						<h3 class="ux-section-title">Servicios que ofrece</h3>
 						<p class="mt-1 text-sm text-white/55">Estos servicios estarán disponibles para reservar con este profesional.</p>
 						<div class="mt-5 grid gap-3">
 							{#each defaultServiceRows as service}
-								<div class="ux-choice ux-choice-active flex min-w-0 items-center gap-4 p-4">
+								<div class="ux-choice ux-choice-active flex min-w-0 items-center gap-3 p-3 sm:gap-4 sm:p-4">
 									<input type="checkbox" checked disabled class="accent-[#7c3aed]" />
 									<span class="min-w-0 flex-1">
 										<span class="block break-words font-black text-white">{service.name}</span>
@@ -611,7 +611,7 @@
 								</div>
 							{/each}
 							{#each customServices as service}
-								<label class={`ux-choice flex min-w-0 items-center gap-4 p-4 ${selectedServiceIds.includes(service.id) ? 'ux-choice-active' : ''}`}>
+								<label class={`ux-choice flex min-w-0 items-center gap-3 p-3 sm:gap-4 sm:p-4 ${selectedServiceIds.includes(service.id) ? 'ux-choice-active' : ''}`}>
 									<input
 										type="checkbox"
 										checked={selectedServiceIds.includes(service.id)}
@@ -628,7 +628,7 @@
 								</label>
 							{/each}
 							{#each newServices as service, index}
-								<div class="ux-choice ux-choice-active flex min-w-0 items-center gap-4 p-4">
+								<div class="ux-choice ux-choice-active flex min-w-0 items-center gap-3 p-3 sm:gap-4 sm:p-4">
 									<input type="checkbox" checked disabled class="accent-[#7c3aed]" />
 									<span class="min-w-0 flex-1">
 										<span class="block break-words font-black text-white">{service.name}</span>
@@ -645,7 +645,7 @@
 						</div>
 					</div>
 
-					<div class="ux-soft-card p-5">
+					<div class="ux-soft-card p-4 sm:p-5">
 						<h3 class="ux-section-title">Agregar servicio</h3>
 						<p class="mt-1 text-sm text-white/55">
 							Crealo una vez y queda asignado a {professionalName.trim() || 'este profesional'}.
@@ -679,7 +679,7 @@
 				</div>
 			{:else if currentStep === 'horarios'}
 				<div class="mt-5 grid gap-5 xl:grid-cols-[1fr_0.78fr]">
-					<div class={`ux-soft-card p-5 ${scheduleError ? 'border border-red-400/40' : ''}`}>
+					<div class={`ux-soft-card p-4 sm:p-5 ${scheduleError ? 'border border-red-400/40' : ''}`}>
 						<h3 class="ux-section-title">Horarios de atención</h3>
 						<p class="mt-1 text-sm text-white/55">Cada bloque tiene sus propios días, horarios y descanso.</p>
 
@@ -772,7 +772,7 @@
 						</button>
 					</div>
 
-					<div class="ux-soft-card p-5">
+					<div class="ux-soft-card p-4 sm:p-5">
 						<h3 class="ux-section-title">Ausencia o cambio de horario (opcional)</h3>
 						<p class="mt-1 text-sm text-white/55">Podés bloquear un horario puntual o varios días completos.</p>
 						<div class="mt-5 grid gap-4">
