@@ -4,9 +4,13 @@ import { demoBusinessContext } from '$lib/server/access/public/business';
 import { APPOINTMENT_STATUSES, type AppointmentStatus } from '$lib/server/scheduling/public/appointments';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import { zonedDateTimeToUtc } from '$lib/server/scheduling/public/availability';
+import { todayForBusiness } from '$lib/server/scheduling/public/public-booking';
+import { isAvailabilityDate } from '$lib/availability/windows';
 import { InvalidDataContractError, readChoice, readFiniteNumber, readRecord, readText } from '$lib/contracts/json';
 import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const pad = (value: number) => String(value).padStart(2, '0');
 
@@ -46,8 +50,12 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 		membershipCache: 'fresh'
 	});
 	if (business.role === 'professional') throw redirect(303, '/odonto/mis-turnos');
-	const selectedDate = url.searchParams.get('date') ?? new Date().toISOString().slice(0, 10);
+	// Today is the practice's day, and an impossible date in the address shows this week.
+	const requestedDate = url.searchParams.get('date') ?? '';
+	const selectedDate = isAvailabilityDate(requestedDate) ? requestedDate : todayForBusiness(business.business);
 	const selectedProfessionalId = url.searchParams.get('professional_id') ?? '';
+	if (selectedProfessionalId && !UUID_PATTERN.test(selectedProfessionalId))
+		error(400, 'El profesional elegido no es válido. Volvé a la agenda de la semana.');
 	const weekStart = weekStartFor(selectedDate);
 	const dates = Array.from({ length: 7 }, (_, index) => toDateString(addDays(weekStart, index)));
 	const rangeStart = zonedDateTimeToUtc(dates[0], '00:00', business.business.timezone);
