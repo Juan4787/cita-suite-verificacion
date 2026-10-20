@@ -210,7 +210,8 @@ async function measurePublic(practices) {
 		const response = await fetch(appOrigin + path).catch(() => null);
 		return describePublicPage(response?.status ?? 0, await response?.json().catch(() => null), devalue.unflatten);
 	};
-	const entries = { page: await describe(`/reservar/${data.slug}/__data.json?${query}`), embed: await describe(`/embed/v1/${data.integrationKey}/__data.json?${query}`) };
+	const entries = { link: await describe(`/reservar/${data.slug}/__data.json?${query}`), page: await describe(`/reservar/${data.business}/__data.json?${query}`),
+		embed: await describe(`/embed/v1/${data.integrationKey}/__data.json?${query}`) };
 	console.log(`capacity-public-entries ${practices} ` + JSON.stringify(entries));
 	const repetitions = [];
 	let phone = '+5491177000000';

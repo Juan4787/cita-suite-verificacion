@@ -299,6 +299,7 @@ const publicQuery = (data, random, now) => {
 export async function runPublicGenerator({ origin, practices, random, measureFrom, until, record, unflatten, phone,
 	fetchFn = fetch, sleep = ms => new Promise(done => setTimeout(done, ms)) }) {
 	let nextWrite = Date.now() + 30_000;
+	const failures = [];
 	const timed = async (operation, request) => {
 		const started = Date.now();
 		let status = 0;
@@ -324,9 +325,13 @@ export async function runPublicGenerator({ origin, practices, random, measureFro
 			if (slot?.starts_at) await timed(PUBLIC_OPERATIONS.booking, () => fetchFn(`${origin}/reservar/${data.business}?/create_booking`, {
 				method: 'POST', redirect: 'manual', headers: actionHeaders(origin, new CookieJar()),
 				body: new URLSearchParams({ service_id: parameters.get('service_id'), professional_id: parameters.get('professional_id'),
-					slot_starts_at: slot.starts_at, patient_name: `Reserva pública ${phone.slice(-4)}`, patient_phone: phone,
+					slot_starts_at: slot.starts_at, patient_name: syntheticName('Reserva Pública', phone), patient_phone: phone,
 					idempotency_key: randomUUID() })
-			}).then(result => { phone = nextPhone(phone); return result; }));
+			}).then(result => {
+				phone = nextPhone(phone);
+				if (result.body?.type !== 'redirect') failures.push(String(result.body?.type ?? result.status));
+				return result;
+			}));
 		} else {
 			const embed = random() < 0.5;
 			await timed(embed ? PUBLIC_OPERATIONS.embed : PUBLIC_OPERATIONS.page, () =>
@@ -334,11 +339,18 @@ export async function runPublicGenerator({ origin, practices, random, measureFro
 		}
 		await sleep(PUBLIC_READ_INTERVAL_MS);
 	}
+	if (failures.length) console.error('Public bookings that did not succeed: ' + failures.join(', '));
 	return phone;
 }
 
 // The app's own answer when one address exceeds three bookings in ten minutes.
 const IP_LIMIT_MESSAGE = 'Se alcanzó el máximo de 3 intentos desde esta conexión en 10 minutos.';
+
+/** A letters-only synthetic name from the phone: public names admit no digits. */
+export const syntheticName = (prefix, phone) => {
+	const letters = [...phone.slice(-4)].map(digit => 'abcdefghij'[Number(digit)]).join('');
+	return `${prefix} ${letters[0].toUpperCase()}${letters.slice(1)}`;
+};
 
 /** A different synthetic phone for every public booking. */
 export const nextPhone = phone => '+5491177' + String(Number(phone.slice(-6)) + 1).padStart(6, '0');
@@ -371,12 +383,14 @@ export async function runPublicAbuse({ origin, unflatten, parse, phone, fetchFn 
 		const parameters = new URLSearchParams(query);
 		const response = await fetchFn(`${origin}/reservar/${data.business}?/create_booking`, { method: 'POST', redirect: 'manual',
 			headers: actionHeaders(origin, new CookieJar()), body: new URLSearchParams({ service_id: parameters.get('service_id'),
-				professional_id: parameters.get('professional_id'), slot_starts_at: slot.starts_at, patient_name: `Abuso ${attempt}`,
+				professional_id: parameters.get('professional_id'), slot_starts_at: slot.starts_at, patient_name: syntheticName('Abuso Prueba', phone),
 				patient_phone: phone, idempotency_key: randomUUID() }) }).catch(() => null);
 		const body = await response?.json().catch(() => null);
 		let detail = null;
 		try { detail = body?.type === 'failure' && typeof body.data === 'string' ? parse(body.data) : null; } catch {}
+		// The app's own message, synthetic data only: a refusal other than the limit must be visible.
 		bookings.push({ attempt, type: body?.type ?? null, status: body?.status ?? response?.status ?? 0,
+			message: typeof detail?.message === 'string' ? detail.message.slice(0, 160) : null,
 			rateLimited: body?.status === 400 && String(detail?.message ?? '').startsWith(IP_LIMIT_MESSAGE) });
 		phone = nextPhone(phone);
 	}

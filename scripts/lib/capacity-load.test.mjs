@@ -125,7 +125,8 @@ test('a virtual user logs in once, keeps its session, records only the measured 
 
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { PUBLIC_WRITE_INTERVAL_MS, nextPhone, pageData, runPublicAbuse, runPublicGenerator } from './capacity-load.mjs';
+import { PUBLIC_WRITE_INTERVAL_MS, nextPhone, pageData, runPublicAbuse, runPublicGenerator, syntheticName } from './capacity-load.mjs';
+import { isValidPatientFullName } from '../../apps/web/src/lib/utils/patient-name.ts';
 
 const kit = createRequire(createRequire(fileURLToPath(new URL('../../apps/web/package.json', import.meta.url))).resolve('@sveltejs/kit/package.json'));
 const devalue = await import(pathToFileURL(kit.resolve('devalue')).href);
@@ -138,6 +139,12 @@ test('public page data is decoded like the SvelteKit client does', () => {
 	// A failed page never borrows the data of its layout.
 	assert.equal(pageData({ type: 'data', nodes: [{ type: 'data', data: JSON.parse(devalue.stringify({ layout: true })) }, { type: 'error', status: 503 }] }, devalue.unflatten), null);
 	assert.equal(nextPhone('+5491177000009'), '+5491177000010');
+	// Public names admit no digits: every synthetic name passes the app's own rule.
+	assert.equal(syntheticName('Reserva Pública', '+5491177000123'), 'Reserva Pública Abcd');
+	let phone = '+5491177000000';
+	for (let index = 0; index < 1000; index++, phone = nextPhone(phone))
+		assert.ok(isValidPatientFullName(syntheticName('Reserva Pública', phone)) && isValidPatientFullName(syntheticName('Abuso Prueba', phone)), phone);
+	assert.equal(isValidPatientFullName('Reserva pública 0001'), false);
 });
 
 test('the public generator reads both entry points and books once every four minutes with a different phone', async () => {
