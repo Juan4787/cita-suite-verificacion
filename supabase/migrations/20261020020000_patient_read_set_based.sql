@@ -80,7 +80,8 @@ returns table (
 )
 language plpgsql
 security definer
-set search_path = public, pg_catalog
+-- The path 20261016012000 established for privileged functions: temporary schemas last.
+set search_path = public, pg_catalog, pg_temp
 as $$
 declare
 	v_actor uuid := auth.uid();
@@ -221,7 +222,8 @@ create or replace function public.accessible_patient_counts(p_business_id uuid)
 returns table(total_count bigint, active_count bigint, archived_count bigint)
 language plpgsql
 security definer
-set search_path = public, pg_catalog
+-- The path 20261016012000 established for privileged functions: temporary schemas last.
+set search_path = public, pg_catalog, pg_temp
 as $$
 declare
 	v_actor uuid := auth.uid();
