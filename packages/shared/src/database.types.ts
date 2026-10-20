@@ -5195,6 +5195,14 @@ export type Database = {
         Args: { target_professional_id: string }
         Returns: boolean
       }
+      user_linked_patient_ids: {
+        Args: never
+        Returns: {
+          business_id: string
+          patient_id: string
+        }[]
+      }
+      user_patient_reader_business_ids: { Args: never; Returns: string[] }
       validate_patient_export: {
         Args: {
           p_actor_user_id: string
