@@ -10,6 +10,7 @@ import { acquireVerificationLock } from './lib/verification-lock.mjs';
 import { cleanupFixtureResources } from './lib/fixture-cleanup.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
 import { assertPlatformDiagnostics } from './lib/platform-diagnostics.mjs';
+import { connectInspector, summarizeCpuProfile } from './lib/cpu-profile.mjs';
 import {
 	INTEGRITY_SQL, createRandom, describePublicPage, evaluateAcceptance, evaluateCleanup, localDate, login, practiceData, removeCapacityOwners,
 	runPublicAbuse, runPublicGenerator, runVirtualUser, summarize, uuidFrom
@@ -24,11 +25,14 @@ import {
 // Results describe this container, never the capacity of a hosted project.
 const root = fileURLToPath(new URL('../', import.meta.url));
 const mode = process.argv[2] ?? 'full';
-if (process.argv.length > 3 || !['full', '--seed-only', '--quick'].includes(mode))
-	throw new Error('Usage: run-campaign-capacity.mjs [--seed-only|--quick]. Neither diagnostic counts as a capacity result.');
+if (process.argv.length > 3 || !['full', '--seed-only', '--quick', '--profile'].includes(mode))
+	throw new Error('Usage: run-campaign-capacity.mjs [--seed-only|--quick|--profile]. No diagnostic counts as a capacity result.');
 const seedOnly = mode === '--seed-only';
+// The short pass also profiles the app's CPU in workerd: Workers Free allows 10 ms
+// per request, and the profile shows where each phase spends it.
+const profiling = mode === '--profile';
 // A short pass over the whole pipeline, with the five-practice scenario only.
-const quick = mode === '--quick';
+const quick = mode === '--quick' || profiling;
 assertHostedIntegrationResources();
 const lease = acquireVerificationLock(root);
 const campaignId = process.env.CITA_VERIFICATION_RUN_ID ?? randomUUID();
@@ -137,16 +141,54 @@ async function application(runtime, practices) {
 		}
 	}), { mode: 0o600 });
 	const log = openSync(join(evidence, `application-${practices}.log`), 'w', 0o600);
-	const child = spawn('pnpm', ['--filter', 'web', 'exec', 'wrangler', 'dev', '--config', join(directory, 'wrangler.json'), '--ip', '127.0.0.1', '--port', '8787', '--local'],
+	const child = spawn('pnpm', ['--filter', 'web', 'exec', 'wrangler', 'dev', '--config', join(directory, 'wrangler.json'), '--ip', '127.0.0.1', '--port', '8787', '--local',
+		...(profiling ? ['--inspector-port', String(INSPECTOR_PORT)] : [])],
 		{ cwd: root, env: { ...environment, WRANGLER_SEND_METRICS: 'false' }, stdio: ['ignore', log, log], detached: true });
 	for (let attempt = 0; attempt < 240; attempt++) {
 		if (child.exitCode !== null) break;
-		try { if ((await fetch(appOrigin + '/login', { signal: AbortSignal.timeout(2000) })).ok) return { child, directory }; } catch {}
+		try {
+			if ((await fetch(appOrigin + '/login', { signal: AbortSignal.timeout(2000) })).ok)
+				return { child, directory, profiler: profiling ? await openProfiler() : null };
+		} catch {}
 		await new Promise(resolve => setTimeout(resolve, 500));
 	}
 	await stop(child);
 	rmSync(directory, { recursive: true, force: true });
 	throw new Error('The built application did not start in workerd. Read the application log of this scenario.');
+}
+
+// The app Worker's inspector, through which the DevTools profiler samples its CPU.
+const INSPECTOR_PORT = 9229;
+async function openProfiler() {
+	for (let attempt = 0; attempt < 40; attempt++) {
+		try {
+			const targets = await (await fetch(`http://127.0.0.1:${INSPECTOR_PORT}/json/list`, { signal: AbortSignal.timeout(2000) })).json();
+			const target = targets.find(item => typeof item.webSocketDebuggerUrl === 'string');
+			if (target) {
+				const client = await connectInspector(target.webSocketDebuggerUrl);
+				await client.send('Profiler.enable');
+				await client.send('Profiler.setSamplingInterval', { interval: 1000 });
+				return client;
+			}
+		} catch {}
+		await new Promise(resolve => setTimeout(resolve, 500));
+	}
+	throw new Error('The workerd inspector offered no target to profile.');
+}
+
+// Profiles one phase from the start of its measured window until its work ends.
+const startProfileAt = (profiler, at) => profiler && new Promise((resolve, reject) =>
+	setTimeout(() => profiler.send('Profiler.start').then(resolve, reject), Math.max(0, at - Date.now())));
+async function finishProfile(profiler, started, phase, requests) {
+	if (!profiler) return null;
+	await started;
+	const { profile } = await profiler.send('Profiler.stop');
+	const summary = summarizeCpuProfile(profile, { top: 40 });
+	const result = { phase, requests, busyMsPerRequest: requests ? Math.round(summary.busyMs / requests * 100) / 100 : null, ...summary };
+	writeFileSync(join(evidence, `cpu-profile-${phase}.json`), JSON.stringify(result, null, 2) + '\n');
+	console.log(`capacity-cpu-profile ${phase} ` + JSON.stringify({ requests, busyMs: summary.busyMs, busyMsPerRequest: result.busyMsPerRequest,
+		self: summary.self.slice(0, 30), total: summary.total.slice(0, 30) }));
+	return result;
 }
 
 const DATABASE_STATISTICS = `select jsonb_build_object(
@@ -157,7 +199,7 @@ const DATABASE_STATISTICS = `select jsonb_build_object(
  'database',(select to_jsonb(d) from (select xact_commit,xact_rollback,deadlocks,temp_files,temp_bytes,blks_read,blks_hit
    from pg_stat_database where datname=current_database()) d))`;
 
-async function measure(database, practices, password) {
+async function measure(database, practices, password, profiler) {
 	psql(database, 'create extension if not exists pg_stat_statements with schema extensions;');
 	const jars = [];
 	const loginStarted = Date.now();
@@ -175,6 +217,7 @@ async function measure(database, practices, password) {
 			const value = await psqlAsync(database, 'select count(*) from pg_locks where not granted');
 			if (value !== null) waits.push(Number(value));
 		}, 10_000);
+		const profileStarted = startProfileAt(profiler, measureFrom);
 		try {
 			await Promise.all(jars.map((jar, index) => runVirtualUser({ origin: appOrigin, jar, data: practiceData(index + 1),
 				random: createRandom(`capacity-${practices}-${repetition}-${index + 1}`), measureFrom, until, record: sample => samples.push(sample) })));
@@ -182,14 +225,15 @@ async function measure(database, practices, password) {
 		const summary = summarize(samples);
 		repetitions.push({ repetition, summary, acceptance: evaluateAcceptance(summary),
 			lockWaits: { samples: waits.length, max: Math.max(0, ...waits), mean: waits.length ? waits.reduce((a, b) => a + b, 0) / waits.length : 0 },
-			database: JSON.parse(psql(database, DATABASE_STATISTICS)) });
+			database: JSON.parse(psql(database, DATABASE_STATISTICS)),
+			cpuProfile: await finishProfile(profiler, profileStarted, 'internal', summary.all.count) });
 		console.log(`capacity-repetition ${practices}/${repetition} ` + JSON.stringify({ read: summary.read, write: summary.write, acceptance: repetitions.at(-1).acceptance }));
 	}
 	return { logins: { count: practices, durationMs: Date.now() - loginStarted }, repetitions, integrity: JSON.parse(psql(database, INTEGRITY_SQL)) };
 }
 
 // Public booking on its own: one generator within the limits, then the abuse checks.
-async function measurePublic(practices) {
+async function measurePublic(practices, profiler) {
 	// What each public entry answers for one practice on its next weekday.
 	const data = practiceData(1);
 	let day = 1;
@@ -208,11 +252,13 @@ async function measurePublic(practices) {
 		const measureFrom = Date.now() + WARMUP_MS;
 		const until = measureFrom + MEASURE_MS;
 		const samples = [];
+		const profileStarted = startProfileAt(profiler, measureFrom);
 		const generated = await runPublicGenerator({ origin: appOrigin, practices, random: createRandom(`public-${practices}-${repetition}`), measureFrom, until,
 			record: sample => samples.push(sample), unflatten: devalue.unflatten, parse: devalue.parse, phone });
 		phone = generated.phone;
 		const summary = summarize(samples);
-		repetitions.push({ repetition, summary, acceptance: evaluateAcceptance(summary), bookingFailures: generated.failures });
+		repetitions.push({ repetition, summary, acceptance: evaluateAcceptance(summary), bookingFailures: generated.failures,
+			cpuProfile: await finishProfile(profiler, profileStarted, 'public', summary.all.count) });
 		console.log(`capacity-public ${practices}/${repetition} ` + JSON.stringify({ read: summary.read, write: summary.write,
 			acceptance: repetitions.at(-1).acceptance, bookingFailures: generated.failures }));
 	}
@@ -305,9 +351,9 @@ async function scenario(practices) {
 		const result = { practices, seed };
 		if (!seedOnly) {
 			app = await application(started.runtime, practices);
-			Object.assign(result, await measure(database, practices, password));
+			Object.assign(result, await measure(database, practices, password, app.profiler));
 			// Public booking is measured once, on the largest scenario of the run.
-			if (practices === 25 || quick) result.publicBooking = await measurePublic(practices);
+			if (practices === 25 || quick) result.publicBooking = await measurePublic(practices, app.profiler);
 			result.slowPlans = slowPlans(database);
 			result.passed = result.repetitions.every(item => item.acceptance.passed) &&
 				result.integrity.crossPractice === 0 && result.integrity.overlaps === 0 &&
@@ -325,7 +371,7 @@ async function scenario(practices) {
 	} finally {
 		// Stop the app and the services, letting them clean their own containers before
 		// the owned-resource cleanup; a cleanup problem never hides an earlier failure.
-		if (app) { await stop(app.child); rmSync(app.directory, { recursive: true, force: true }); }
+		if (app) { app.profiler?.close(); await stop(app.child); rmSync(app.directory, { recursive: true, force: true }); }
 		await stop(platform);
 		const problems = [];
 		const state = fixturePath(`platform-state-${runId}.json`);

@@ -62,4 +62,4 @@ Conclusión: con los planes gratuitos, el escenario de 5 consultorios no cumple 
 ## Límites conocidos
 
 - El escenario alojado de 25 consultorios necesita Supabase Pro: su base mide 1,02 GB frente a los 500 MB del plan gratuito. Requiere autorización del usuario.
-- La CPU de Workers Free (10 ms documentados) se supera en tareas y páginas comunes, y bajo la carga de 5 consultorios Cloudflare corta entre 15 % y 52 % de los pedidos (ver arriba y [tareas automáticas](tareas-automaticas.md)). Workers Paid lo resuelve y requiere la autorización del usuario.
+- La CPU de Workers Free (10 ms documentados) se supera en tareas y páginas comunes, y bajo la carga de 5 consultorios Cloudflare corta entre 15 % y 52 % de los pedidos (ver arriba y [tareas automáticas](tareas-automaticas.md)). El usuario decidió no contratar Workers Paid, porque su consumo excedente no tiene tope: la app y el programador tienen que entrar en el límite de Free, y esa reducción se mide ruta por ruta en staging.
