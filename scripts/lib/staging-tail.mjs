@@ -64,6 +64,57 @@ const quantile = (values, q) => {
 };
 const distribution = values => ({ p50: quantile(values, 0.5), p99: quantile(values, 0.99), max: values.length ? Math.max(...values) : null });
 
+/**
+ * A path without its data, for the capacity rehearsal: identifiers, integration keys
+ * and tokens become placeholders, so patients, practices and links never survive.
+ */
+export const routeTemplate = path => path
+	.replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\/|$)/gi, '/:id')
+	.replace(/\/[0-9a-f]{32}(?=\/|$)/gi, '/:key')
+	.replace(/\/(?=[A-Za-z0-9_-]*\d)[A-Za-z0-9_-]{24,}(?=\/|$)/g, '/:token');
+
+/** The measurement of any request to the app: route template and the platform's view of it. */
+export function requestMeasurement(event) {
+	let url;
+	try { url = new URL(event?.event?.request?.url); } catch { return null; }
+	return {
+		at: finite(event.eventTimestamp),
+		method: typeof event.event.request.method === 'string' ? event.event.request.method.toUpperCase() : null,
+		route: routeTemplate(url.pathname),
+		outcome: typeof event.outcome === 'string' ? event.outcome : null,
+		status: finite(event.event?.response?.status),
+		cpuTimeMs: finite(event.cpuTime),
+		wallTimeMs: finite(event.wallTime),
+		exceptions: (Array.isArray(event.exceptions) ? event.exceptions : []).map(exception => String(exception?.name ?? 'Error'))
+	};
+}
+
+/** Outcomes, statuses and CPU/wall distributions per method and route. */
+export function summarizeRequestMeasurements(measurements) {
+	const byRoute = new Map();
+	for (const measurement of measurements) {
+		const key = `${measurement.method ?? '?'} ${measurement.route}`;
+		byRoute.set(key, [...(byRoute.get(key) ?? []), measurement]);
+	}
+	const count = (list, field) => {
+		const counts = {};
+		for (const item of list) counts[item[field] ?? 'none'] = (counts[item[field] ?? 'none'] ?? 0) + 1;
+		return counts;
+	};
+	return {
+		events: measurements.length,
+		cpuReported: measurements.some(measurement => measurement.cpuTimeMs !== null),
+		outcomes: count(measurements, 'outcome'),
+		routes: Object.fromEntries([...byRoute].sort(([a], [b]) => a.localeCompare(b)).map(([route, list]) => [route, {
+			requests: list.length,
+			outcomes: count(list, 'outcome'),
+			statuses: count(list, 'status'),
+			cpuMs: distribution(list.map(item => item.cpuTimeMs).filter(value => value !== null)),
+			wallMs: distribution(list.map(item => item.wallTimeMs).filter(value => value !== null))
+		}]))
+	};
+}
+
 /** Outcomes and CPU/wall distributions per job path. */
 export function summarizeJobMeasurements(measurements) {
 	const byPath = new Map();

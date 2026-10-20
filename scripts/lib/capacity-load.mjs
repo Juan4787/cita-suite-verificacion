@@ -197,16 +197,60 @@ export function planOperation(operation, data, random, state, now = new Date()) 
 }
 
 /**
- * Classifies a response. A conflict on a slot taken meanwhile is the expected
- * answer of the system, not a technical error; a lost session, a server error or
- * an unexpected answer is.
- */
-/**
  * A load that failed inside a data response. SvelteKit answers a client navigation
  * with HTTP 200 and puts each failed load in its node, with its status.
  */
 export const nodeError = body => Array.isArray(body?.nodes) ? body.nodes.find(node => node?.type === 'error') ?? null : null;
 
+/** How long one request may take before it counts as failed: a hung answer must not stop a run. */
+export const REQUEST_TIMEOUT_MS = 30_000;
+
+/** The code of a Cloudflare error page (`error code: 1102`), which is the platform's answer, not the app's. */
+const cloudflareCode = text => /error(?: code)?:?\s*(1\d{3})\b/i.exec(text)?.[1] ?? null;
+
+/**
+ * One request with a deadline: its status, its JSON body and, without JSON, a hint of
+ * what answered (a Cloudflare error code, a timeout or the network). A request whose
+ * answer never completed has status 0. `request(signal)` makes the call; `onResponse`
+ * sees the response before its body is read.
+ */
+export async function exchange(request, { timeoutMs = REQUEST_TIMEOUT_MS, onResponse } = {}) {
+	let status = 0;
+	let body = null;
+	let hint = null;
+	try {
+		const response = await request(AbortSignal.timeout(timeoutMs));
+		status = response.status;
+		onResponse?.(response);
+		const text = await response.text();
+		try { body = JSON.parse(text); } catch {
+			const code = cloudflareCode(text);
+			hint = code ? 'cf' + code : 'not-json';
+		}
+	} catch (error) {
+		status = 0;
+		hint = error?.name === 'TimeoutError' || error?.name === 'AbortError' ? 'timeout' : 'network';
+	}
+	return { status, body, hint };
+}
+
+/** Why a response counts as an error, in a few words and without data, for the run's evidence. */
+export function failureReason({ status, body, hint }) {
+	if (status === 0) return hint ?? 'network';
+	if (status !== 200) return `http-${status}` + (hint?.startsWith('cf') ? '-' + hint : '');
+	if (!body || typeof body !== 'object') return hint ?? 'not-json';
+	if (body.type === 'redirect') return String(body.location).startsWith('/login') ? 'login' : 'redirect';
+	const node = nodeError(body);
+	if (node) return `node-${node.status ?? '?'}`;
+	if (body.type === 'failure') return `failure-${body.status ?? '?'}`;
+	return `type-${body.type ?? '?'}`;
+}
+
+/**
+ * Classifies a response. A conflict on a slot taken meanwhile is the expected
+ * answer of the system, not a technical error; a lost session, a server error or
+ * an unexpected answer is.
+ */
 export function classifyResponse(operation, status, body) {
 	if (status >= 500 || status === 0) return 'error';
 	if (operation.category === 'read') {
@@ -229,10 +273,13 @@ export function percentile(sorted, q) {
 export function summarize(samples) {
 	const group = list => {
 		const durations = list.filter(sample => sample.outcome !== 'error').map(sample => sample.durationMs).sort((a, b) => a - b);
-		const errors = list.filter(sample => sample.outcome === 'error').length;
-		return { count: list.length, errors, conflicts: list.filter(sample => sample.outcome === 'conflict').length,
-			errorRate: list.length ? errors / list.length : 0,
-			p50: percentile(durations, 0.5), p95: percentile(durations, 0.95), p99: percentile(durations, 0.99), max: durations.at(-1) ?? null };
+		const failed = list.filter(sample => sample.outcome === 'error');
+		const errorReasons = {};
+		for (const sample of failed) errorReasons[sample.reason ?? 'unknown'] = (errorReasons[sample.reason ?? 'unknown'] ?? 0) + 1;
+		return { count: list.length, errors: failed.length, conflicts: list.filter(sample => sample.outcome === 'conflict').length,
+			errorRate: list.length ? failed.length / list.length : 0,
+			p50: percentile(durations, 0.5), p95: percentile(durations, 0.95), p99: percentile(durations, 0.99), max: durations.at(-1) ?? null,
+			errorReasons };
 	};
 	const byOperation = {};
 	for (const name of new Set(samples.map(sample => sample.operation))) byOperation[name] = group(samples.filter(sample => sample.operation === name));
@@ -262,18 +309,27 @@ const actionHeaders = (origin, jar) => ({ origin, cookie: jar.header(), 'x-svelt
 export async function login(origin, email, password, fetchFn = fetch) {
 	const jar = new CookieJar();
 	const response = await fetchFn(origin + '/login?/login', { method: 'POST', redirect: 'manual', headers: actionHeaders(origin, jar),
-		body: new URLSearchParams({ email, password }) });
+		body: new URLSearchParams({ email, password }), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
 	jar.absorb(response);
 	const body = await response.json().catch(() => null);
 	if (body?.type !== 'redirect' || !jar.has('sb-access-token')) throw new Error(`The capacity login of ${email} failed (HTTP ${response.status}).`);
 	return jar;
 }
 
+/** One measured sample; an error carries its reason, never data. */
+const sample = (operation, durationMs, result) => {
+	const outcome = classifyResponse(operation, result.status, result.body);
+	return { operation: operation.name, category: operation.category, durationMs, outcome,
+		...(outcome === 'error' ? { reason: failureReason(result) } : {}) };
+};
+
 /**
  * Runs one virtual user until `until`, recording every request made after
- * `measureFrom`. Pauses are three to eight seconds between operations.
+ * `measureFrom`. Pauses are three to eight seconds between operations, and no
+ * request waits longer than `requestTimeoutMs`.
  */
-export async function runVirtualUser({ origin, jar, data, random, measureFrom, until, record, fetchFn = fetch, sleep = ms => new Promise(done => setTimeout(done, ms)) }) {
+export async function runVirtualUser({ origin, jar, data, random, measureFrom, until, record, fetchFn = fetch,
+	sleep = ms => new Promise(done => setTimeout(done, ms)), requestTimeoutMs = REQUEST_TIMEOUT_MS }) {
 	const state = { created: [] };
 	while (Date.now() < until) {
 		let operation = pickOperation(random);
@@ -281,30 +337,21 @@ export async function runVirtualUser({ origin, jar, data, random, measureFrom, u
 		if (plan.substitute) operation = OPERATIONS.find(candidate => candidate.name === plan.substitute);
 		const timed = async (entry, call) => {
 			const started = Date.now();
-			let status = 0;
-			let body = null;
-			try {
-				const response = await call();
-				status = response.status;
-				jar.absorb(response);
-				body = await response.json().catch(() => null);
-			} catch {}
-			const durationMs = Date.now() - started;
-			if (started >= measureFrom && Date.now() <= until)
-				record({ operation: entry.name, category: entry.category, durationMs, outcome: classifyResponse(entry, status, body) });
-			return { status, body };
+			const result = await exchange(call, { timeoutMs: requestTimeoutMs, onResponse: response => jar.absorb(response) });
+			if (started >= measureFrom && Date.now() <= until) record(sample(entry, Date.now() - started, result));
+			return result;
 		};
 		let slot;
 		if (plan.prepare) {
 			const availability = OPERATIONS.find(candidate => candidate.name === 'availability');
-			const prepared = await timed(availability, () => fetchFn(origin + plan.prepare, { headers: { cookie: jar.header() } }));
+			const prepared = await timed(availability, signal => fetchFn(origin + plan.prepare, { headers: { cookie: jar.header() }, signal }));
 			const slots = Array.isArray(prepared.body?.slots) ? prepared.body.slots : [];
 			slot = slots[Math.floor(random() * Math.min(slots.length, 6))];
 		}
 		if (!plan.prepare || slot) {
-			const result = await timed(operation, () => plan.form
-				? fetchFn(origin + plan.path, { method: 'POST', redirect: 'manual', headers: actionHeaders(origin, jar), body: new URLSearchParams(plan.form(slot)) })
-				: fetchFn(origin + plan.path, { headers: { cookie: jar.header() } }));
+			const result = await timed(operation, signal => plan.form
+				? fetchFn(origin + plan.path, { method: 'POST', redirect: 'manual', headers: actionHeaders(origin, jar), body: new URLSearchParams(plan.form(slot)), signal })
+				: fetchFn(origin + plan.path, { headers: { cookie: jar.header() }, signal }));
 			const created = operation.name === 'create_appointment' && result.body?.type === 'redirect'
 				? /\/odonto\/turnos\/([0-9a-f-]{36})/.exec(String(result.body.location))?.[1] : null;
 			if (created) state.created.push(created);
@@ -362,47 +409,37 @@ const publicQuery = (data, random, now) => {
 	return `service_id=${service}&professional_id=${professional}&date=${localDate(now, 1 + Math.floor(random() * 30))}`;
 };
 
-/** One request and its JSON answer; a network failure is status 0 and no body. */
-async function exchange(request) {
-	let status = 0;
-	let body = null;
-	try {
-		const response = await request();
-		status = response.status;
-		body = await response.json().catch(() => null);
-	} catch {}
-	return { status, body };
-}
-
 /**
  * A free slot found the way a person finds one: the page first lists the days with
  * availability of the next two weeks, then the chosen day lists its slots. Null when
  * the system offers none. `read` performs each page read (the generator measures them).
  */
-export async function findPublicSlot({ origin, data, random, unflatten, fetchFn = fetch, read = exchange }) {
+export async function findPublicSlot({ origin, data, random, unflatten, fetchFn = fetch, read = request => exchange(request) }) {
 	const selection = `service_id=${data.services[Math.floor(random() * 5)]}&professional_id=${data.professionals[Math.floor(random() * 3)]}`;
-	const listed = pageData((await read(() => fetchFn(`${origin}/reservar/${data.business}/__data.json?${selection}`))).body, unflatten);
+	const listed = pageData((await read(signal => fetchFn(`${origin}/reservar/${data.business}/__data.json?${selection}`, { signal }))).body, unflatten);
 	const days = Array.isArray(listed?.state?.days) ? listed.state.days : [];
 	if (!days.length) return null;
 	const query = `${selection}&date=${days[Math.floor(random() * Math.min(days.length, 5))].date}`;
-	const page = pageData((await read(() => fetchFn(`${origin}/reservar/${data.business}/__data.json?${query}`))).body, unflatten);
+	const page = pageData((await read(signal => fetchFn(`${origin}/reservar/${data.business}/__data.json?${query}`, { signal }))).body, unflatten);
 	const slots = Array.isArray(page?.state?.slots) ? page.state.slots : [];
 	const slot = slots[Math.floor(random() * Math.min(slots.length, 6))];
 	return slot?.starts_at ? { query, page, slot } : null;
 }
 
 /** What a public booking answered, without personal data: the app's own message when it refused. */
-function bookingAnswer({ status, body }, parse) {
+function bookingAnswer(result, parse) {
+	const { status, body } = result;
 	let detail = null;
 	try { detail = body?.type === 'failure' && typeof body.data === 'string' ? parse(body.data) : null; } catch {}
 	const message = typeof detail?.message === 'string' ? detail.message.slice(0, 160) : null;
 	return { type: body?.type ?? null, status: body?.status ?? status, message,
-		rateLimited: body?.type === 'failure' && body.status === 400 && String(message ?? '').startsWith(IP_LIMIT_MESSAGE) };
+		rateLimited: body?.type === 'failure' && body.status === 400 && String(message ?? '').startsWith(IP_LIMIT_MESSAGE),
+		reason: body?.type === 'redirect' ? null : failureReason(result) };
 }
 
-const submitPublicBooking = (origin, data, found, name, phone, fetchFn) => () => fetchFn(`${origin}/reservar/${data.business}?/create_booking`, {
+const submitPublicBooking = (origin, data, found, name, phone, fetchFn) => signal => fetchFn(`${origin}/reservar/${data.business}?/create_booking`, {
 	method: 'POST', redirect: 'manual', headers: actionHeaders(origin, new CookieJar()),
-	body: new URLSearchParams(publicBookingForm(found.page, found.query, found.slot, name, phone))
+	body: new URLSearchParams(publicBookingForm(found.page, found.query, found.slot, name, phone)), signal
 });
 
 /**
@@ -416,8 +453,7 @@ export async function runPublicGenerator({ origin, practices, random, measureFro
 	const timed = async (operation, request) => {
 		const started = Date.now();
 		const result = await exchange(request);
-		if (started >= measureFrom && Date.now() <= until)
-			record({ operation: operation.name, category: operation.category, durationMs: Date.now() - started, outcome: classifyResponse(operation, result.status, result.body) });
+		if (started >= measureFrom && Date.now() <= until) record(sample(operation, Date.now() - started, result));
 		return result;
 	};
 	while (Date.now() < until) {
@@ -430,13 +466,13 @@ export async function runPublicGenerator({ origin, practices, random, measureFro
 				const answer = bookingAnswer(await timed(PUBLIC_OPERATIONS.booking,
 					submitPublicBooking(origin, data, found, syntheticName('Reserva Pública', phone), phone, fetchFn)), parse);
 				phone = nextPhone(phone);
-				if (answer.type !== 'redirect') failures.push({ type: answer.type, status: answer.status, message: answer.message });
+				if (answer.type !== 'redirect') failures.push({ type: answer.type, status: answer.status, message: answer.message, reason: answer.reason });
 			}
 		} else {
 			const query = publicQuery(data, random, new Date());
 			const embed = random() < 0.5;
-			await timed(embed ? PUBLIC_OPERATIONS.embed : PUBLIC_OPERATIONS.page, () =>
-				fetchFn(embed ? `${origin}/embed/v1/${data.integrationKey}/__data.json?${query}` : `${origin}/reservar/${data.business}/__data.json?${query}`));
+			await timed(embed ? PUBLIC_OPERATIONS.embed : PUBLIC_OPERATIONS.page, signal =>
+				fetchFn(embed ? `${origin}/embed/v1/${data.integrationKey}/__data.json?${query}` : `${origin}/reservar/${data.business}/__data.json?${query}`, { signal }));
 		}
 		await sleep(PUBLIC_READ_INTERVAL_MS);
 	}
@@ -460,21 +496,30 @@ export const nextPhone = phone => '+5491177' + String(Number(phone.slice(-6)) + 
  * and bookings from one address until the limit of three per ten minutes refuses
  * one. Every attempt counts, so the refusal comes by the fourth booking at the
  * latest, sooner when the generator booked in the last ten minutes. Both must act.
+ * The burst runs ten requests at a time, so it falls within one minute of the limit
+ * even where each read takes a second, as on a hosted project.
  */
 export async function runPublicAbuse({ origin, unflatten, parse, phone, fetchFn = fetch, sleep = ms => new Promise(done => setTimeout(done, ms)) }) {
 	const data = practiceData(1);
 	// Start at the beginning of a minute: the read limit counts per minute bucket.
 	while (new Date().getUTCSeconds() > 5) await sleep(1_000);
-	const outcomes = [];
-	for (let request = 0; request < 130; request++) {
-		const { status, body } = await exchange(() => fetchFn(`${origin}/embed/v1/${data.integrationKey}/__data.json?${publicQuery(data, () => 0.5, new Date())}`));
-		// The limit answers 429, as the HTTP status or inside the failed node of a navigation.
-		const refused = status === 429 || nodeError(body)?.status === 429;
-		outcomes.push(refused ? 'refused' : status === 200 && body?.type === 'data' && !nodeError(body) ? 'accepted' : 'other');
-	}
+	const outcomes = new Array(130);
+	const otherReasons = {};
+	let next = 0;
+	await Promise.all(Array.from({ length: 10 }, async () => {
+		while (next < outcomes.length) {
+			const index = next++;
+			const result = await exchange(signal => fetchFn(`${origin}/embed/v1/${data.integrationKey}/__data.json?${publicQuery(data, () => 0.5, new Date())}`, { signal }));
+			const { status, body } = result;
+			// The limit answers 429, as the HTTP status or inside the failed node of a navigation.
+			const refused = status === 429 || nodeError(body)?.status === 429;
+			outcomes[index] = refused ? 'refused' : status === 200 && body?.type === 'data' && !nodeError(body) ? 'accepted' : 'other';
+			if (outcomes[index] === 'other') otherReasons[failureReason(result)] = (otherReasons[failureReason(result)] ?? 0) + 1;
+		}
+	}));
 	const reads = { requests: outcomes.length, accepted: outcomes.filter(outcome => outcome === 'accepted').length,
 		refused: outcomes.filter(outcome => outcome === 'refused').length, firstRefusal: outcomes.indexOf('refused') + 1 || null,
-		other: outcomes.filter(outcome => outcome === 'other').length };
+		other: outcomes.filter(outcome => outcome === 'other').length, otherReasons };
 	const bookings = [];
 	for (let attempt = 0; attempt < 4; attempt++) {
 		const found = await findPublicSlot({ origin, data, random: createRandom(`abuse-${attempt}`), unflatten, fetchFn });
@@ -486,5 +531,7 @@ export async function runPublicAbuse({ origin, unflatten, parse, phone, fetchFn 
 		if (answer.type !== 'redirect') break;
 	}
 	const refusedBooking = bookings.at(-1)?.rateLimited === true && bookings.slice(0, -1).every(booking => booking.type === 'redirect');
-	return { reads, bookings, phone, passed: reads.refused > 0 && reads.other === 0 && reads.firstRefusal > 100 && refusedBooking };
+	// Within one minute the limit admits 120 reads: not far fewer, never more, and refuses the rest.
+	const burstLimited = reads.other === 0 && reads.accepted >= 100 && reads.accepted <= 120 && reads.refused === reads.requests - reads.accepted;
+	return { reads, bookings, phone, passed: burstLimited && refusedBooking };
 }

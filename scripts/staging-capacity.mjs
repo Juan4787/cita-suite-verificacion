@@ -73,9 +73,14 @@ if (operation === 'seed') {
 	// Also before the load: a baseline, and a failure in seconds rather than after the whole measurement.
 	const integrityBefore = JSON.parse(sql(INTEGRITY_SQL + ';'));
 	if (integrityBefore.crossPractice || integrityBefore.overlaps) throw new Error('The seeded scenario already breaks isolation or double booking: ' + JSON.stringify(integrityBefore));
+	// Evidence after every phase: a run cut short by its deadline still keeps what it measured.
+	const result = { origin: STAGING_APP_ORIGIN, practices: PRACTICES, startedAt: new Date().toISOString(), integrityBefore, repetitions: [] };
+	const save = () => writeFileSync(join(evidence, 'staging-capacity-measure.json'), JSON.stringify(result, null, 2) + '\n');
+	// The causes of each operation's errors, for the log: counts only, no data.
+	const causes = summary => Object.fromEntries(Object.entries(summary.byOperation).filter(([, group]) => group.errors > 0)
+		.map(([name, group]) => [name, group.errorReasons]));
 	const jars = [];
 	for (let practice = 1; practice <= PRACTICES; practice++) jars.push(await login(STAGING_APP_ORIGIN, practiceData(practice).email, password));
-	const repetitions = [];
 	for (let repetition = 1; repetition <= 3; repetition++) {
 		const measureFrom = Date.now() + 2 * 60_000;
 		const until = measureFrom + 10 * 60_000;
@@ -83,8 +88,10 @@ if (operation === 'seed') {
 		await Promise.all(jars.map((jar, index) => runVirtualUser({ origin: STAGING_APP_ORIGIN, jar, data: practiceData(index + 1),
 			random: createRandom(`staging-${repetition}-${index + 1}`), measureFrom, until, record: sample => samples.push(sample) })));
 		const summary = summarize(samples);
-		repetitions.push({ repetition, summary, acceptance: evaluateAcceptance(summary) });
-		console.log(`staging-capacity ${repetition} ` + JSON.stringify({ read: summary.read, write: summary.write, acceptance: repetitions.at(-1).acceptance }));
+		result.repetitions.push({ repetition, summary, acceptance: evaluateAcceptance(summary) });
+		save();
+		console.log(`staging-capacity ${repetition} ` + JSON.stringify({ read: summary.read, write: summary.write,
+			acceptance: result.repetitions.at(-1).acceptance, errors: causes(summary) }));
 	}
 	const publicSamples = [];
 	const publicFrom = Date.now() + 2 * 60_000;
@@ -92,20 +99,24 @@ if (operation === 'seed') {
 		measureFrom: publicFrom, until: publicFrom + 10 * 60_000, record: sample => publicSamples.push(sample), unflatten: devalue.unflatten, parse: devalue.parse,
 		phone: '+5491177000000' });
 	const publicSummary = summarize(publicSamples);
+	result.publicBooking = { summary: publicSummary, acceptance: evaluateAcceptance(publicSummary), bookingFailures: generated.failures };
+	save();
+	console.log('staging-capacity-public ' + JSON.stringify({ read: publicSummary.read, write: publicSummary.write,
+		acceptance: result.publicBooking.acceptance, bookingFailures: generated.failures, errors: causes(publicSummary) }));
 	const abuse = await runPublicAbuse({ origin: STAGING_APP_ORIGIN, unflatten: devalue.unflatten, parse: devalue.parse, phone: generated.phone });
+	result.publicBooking.abuse = abuse;
+	save();
+	console.log('staging-capacity-abuse ' + JSON.stringify(abuse));
 	const database = JSON.parse(sql(DATABASE_STATE));
-	const result = { origin: STAGING_APP_ORIGIN, practices: PRACTICES, repetitions,
-		publicBooking: { summary: publicSummary, acceptance: evaluateAcceptance(publicSummary), bookingFailures: generated.failures, abuse },
-		integrity: JSON.parse(sql(INTEGRITY_SQL + ';')),
-		// The counter is the project's since its last reset: what matters is what this measurement added.
-		database: { ...database, deadlocksDuringMeasurement: database.deadlocks - databaseBefore.deadlocks } };
+	result.integrity = JSON.parse(sql(INTEGRITY_SQL + ';'));
+	// The counter is the project's since its last reset: what matters is what this measurement added.
+	result.database = { ...database, deadlocksDuringMeasurement: database.deadlocks - databaseBefore.deadlocks };
 	// One generator, free slots and a different phone each time: every scheduled booking must succeed.
-	result.passed = repetitions.every(item => item.acceptance.passed) && result.publicBooking.acceptance.passed &&
+	result.passed = result.repetitions.every(item => item.acceptance.passed) && result.publicBooking.acceptance.passed &&
 		generated.failures.length === 0 && abuse.passed && result.integrity.crossPractice === 0 && result.integrity.overlaps === 0 &&
 		result.database.deadlocksDuringMeasurement === 0;
-	writeFileSync(join(evidence, 'staging-capacity-measure.json'), JSON.stringify(result, null, 2) + '\n');
-	console.log('staging-capacity-result ' + JSON.stringify({ passed: result.passed, abuse, integrity: result.integrity, database: result.database,
-		public: { read: publicSummary.read, write: publicSummary.write, bookingFailures: generated.failures } }));
+	save();
+	console.log('staging-capacity-result ' + JSON.stringify({ passed: result.passed, integrity: result.integrity, database: result.database }));
 	if (!result.passed) process.exitCode = 1;
 } else {
 	// The cleanup the CI scenarios rehearse on the same data before it runs here.

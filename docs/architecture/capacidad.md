@@ -19,8 +19,8 @@ Se siembra por lotes (500 pacientes, 1.000 turnos), cada uno con su propia sente
 
 | Escenario | Pacientes | Turnos | Base | Tiempo de siembra |
 |---|---:|---:|---:|---:|
-| 5 consultorios | 30.000 | 60.000 | 238 MB | 48–81 s |
-| 25 consultorios | 150.000 | 300.000 | se completa con la corrida completa | |
+| 5 consultorios | 30.000 | 60.000 | 238–240 MB | 48–81 s en CI |
+| 25 consultorios | 150.000 | 300.000 | 1,02 GB | 6,4 min en CI |
 
 ## Carga interna
 
@@ -43,5 +43,5 @@ Después, las pruebas de abuso esperan los rechazos. Una ráfaga de 130 lecturas
 
 ## Límites conocidos
 
-- El escenario alojado de 25 consultorios necesita Supabase Pro (alrededor de 1,1 GB frente a 500 MB): requiere autorización del usuario.
+- El escenario alojado de 25 consultorios necesita Supabase Pro: su base mide 1,02 GB frente a los 500 MB del plan gratuito. Requiere autorización del usuario.
 - La CPU de Workers Free (10 ms documentados) se supera en tareas y páginas comunes; ver [tareas automáticas](tareas-automaticas.md).

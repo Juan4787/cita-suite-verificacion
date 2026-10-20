@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-	ACCEPTANCE, CookieJar, OPERATIONS, classifyResponse, createRandom, evaluateAcceptance, localDate, localDateTime, login,
+	ACCEPTANCE, CookieJar, OPERATIONS, classifyResponse, createRandom, evaluateAcceptance, exchange, failureReason, localDate, localDateTime, login,
 	pickOperation, planOperation, practiceData, runVirtualUser, summarize
 } from './capacity-load.mjs';
 
@@ -49,6 +49,62 @@ test('only the system answers expected by the plan count as successes', () => {
 	assert.equal(classifyResponse(write, 200, { type: 'failure', status: 409 }), 'conflict');
 	assert.equal(classifyResponse(write, 200, { type: 'failure', status: 400 }), 'error');
 	assert.equal(classifyResponse(write, 500, { type: 'error' }), 'error');
+});
+
+test('every error keeps its cause: platform page, server status, failed load, refusal, lost session, timeout or network', { timeout: 5_000 }, async () => {
+	const answer = (status, text, type = 'text/plain') => async () => new Response(text, { status, headers: { 'content-type': type } });
+	const cases = [
+		[answer(503, 'error code: 1102'), 'http-503-cf1102'],
+		[answer(500, '<html><title>Error</title></html>', 'text/html'), 'http-500'],
+		[async () => response(200, { type: 'data', nodes: [{ type: 'data', data: [] }, { type: 'error', status: 503, error: {} }] }), 'node-503'],
+		[async () => response(200, { type: 'redirect', status: 303, location: '/login?next=/odonto' }), 'login'],
+		[async () => response(200, { type: 'failure', status: 400, data: '[]' }), 'failure-400'],
+		[async () => { throw new TypeError('fetch failed'); }, 'network'],
+		// An answer that never comes is cut at the deadline instead of stopping the run.
+		[signal => new Promise((_, reject) => signal.addEventListener('abort', () => reject(signal.reason))), 'timeout']
+	];
+	// The deadline's timer does not hold the event loop; a real hung request holds it with
+	// its socket. A bounded stand-in, so a missing deadline fails instead of waiting forever.
+	const socket = setTimeout(() => {}, 4_000);
+	try {
+		for (const [request, reason] of cases) {
+			const result = await exchange(request, { timeoutMs: 50 });
+			assert.equal(failureReason(result), reason, reason);
+		}
+		// A body cut by the deadline is not a complete answer, even after a 200 status.
+		const stalled = await exchange(async signal => new Response(new ReadableStream({ start(controller) {
+			controller.enqueue(new TextEncoder().encode('{"type":'));
+			signal.addEventListener('abort', () => controller.error(signal.reason));
+		} }), { status: 200 }), { timeoutMs: 50 });
+		assert.deepEqual([stalled.status, failureReason(stalled)], [0, 'timeout']);
+	} finally { clearTimeout(socket); }
+});
+
+test('a hung request fails at its deadline and the virtual user goes on with its work', { timeout: 5_000 }, async () => {
+	let calls = 0;
+	const fake = async (url, init = {}) => {
+		calls++;
+		if (calls === 1) return new Promise((_, reject) => init.signal.addEventListener('abort', () => reject(init.signal.reason)));
+		return response(200, { type: 'data', nodes: [] });
+	};
+	const records = [];
+	let clock = 0;
+	const realNow = Date.now;
+	Date.now = () => clock;
+	// The deadline's timer does not hold the event loop; a real hung request holds it with
+	// its socket. A bounded stand-in, so a missing deadline fails instead of waiting forever.
+	const socket = setTimeout(() => {}, 4_000);
+	try {
+		await runVirtualUser({ origin: 'http://app.test', jar: new CookieJar(), data: practiceData(1), random: createRandom('hung'), measureFrom: 0, until: 60_000,
+			record: sample => records.push(sample), fetchFn: fake, sleep: async ms => { clock += ms; }, requestTimeoutMs: 20 });
+	} finally { Date.now = realNow; clearTimeout(socket); }
+	assert.equal(records[0].outcome, 'error');
+	assert.equal(records[0].reason, 'timeout');
+	assert.ok(records.length > 1 && records.slice(1).some(sample => sample.outcome === 'ok'));
+	// The summary keeps the causes per category and per operation.
+	const summary = summarize(records);
+	assert.equal(summary.all.errorReasons.timeout, 1);
+	assert.equal(summary.byOperation[records[0].operation].errorReasons.timeout, 1);
 });
 
 test('percentiles and the acceptance thresholds of the plan are strict', () => {
@@ -193,7 +249,7 @@ test('the public generator reads both entry points, books once every four minute
 	}
 	assert.equal(result.phone, '+54911770000' + String(bookings.length).padStart(2, '0'));
 	// Only the refused booking is reported, with the app's own answer.
-	assert.deepEqual(result.failures, [{ type: 'failure', status: 400, message: TAKEN }]);
+	assert.deepEqual(result.failures, [{ type: 'failure', status: 400, message: TAKEN, reason: 'failure-400' }]);
 	const reads = calls.filter(call => call.method === 'GET');
 	assert.ok(reads.some(call => call.path.startsWith('/embed/v1/')) && reads.some(call => call.path.startsWith('/reservar/')));
 	assert.ok(reads.length / 12 <= 41, 'public reads stay far below 120 per minute');
@@ -244,8 +300,9 @@ test('the abuse checks find free slots like a person and book until the exact re
 		// Without availability the check cannot run, and says so.
 		const empty = await run({ slotsByDate: {} });
 		assert.deepEqual([empty.result.passed, empty.posts.length, empty.result.bookings.at(-1).outcome], [false, 0, 'no-slot']);
-		// The read limit must act too.
+		// The read limit must act too, and not long before its 120 reads.
 		assert.equal((await run({ readLimit: 1000 })).result.passed, false);
+		assert.equal((await run({ readLimit: 20 })).result.passed, false);
 	} finally { global.Date = realDate; }
 });
 

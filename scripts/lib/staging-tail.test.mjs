@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { jobMeasurement, splitJsonObjects, summarizeJobMeasurements } from './staging-tail.mjs';
+import {
+	jobMeasurement, requestMeasurement, routeTemplate, splitJsonObjects, summarizeJobMeasurements, summarizeRequestMeasurements
+} from './staging-tail.mjs';
 
 const jobEvent = (path, extra = {}) => ({
 	outcome: 'ok', scriptName: 'cita-suite-staging', eventTimestamp: 1_760_000_000_000, cpuTime: 7, wallTime: 1200,
@@ -40,4 +42,35 @@ test('the summary reports outcomes and CPU and wall distributions per job', () =
 		cpuMs: { p50: 5, p99: 12, max: 12 }, wallMs: { p50: 1001, p99: 1003, max: 1003 } });
 	assert.equal(summary.cpuReported, true);
 	assert.equal(summarizeJobMeasurements([{ ...list[4] }]).cpuReported, false);
+});
+
+test('every app request is measured by route template, without identifiers, keys, tokens, queries, headers or logs', () => {
+	assert.equal(routeTemplate('/odonto/pacientes/0b8c2a52-14d0-4f0b-9a0e-1d2c3b4a5f60/__data.json'), '/odonto/pacientes/:id/__data.json');
+	assert.equal(routeTemplate('/embed/v1/0123456789abcdef0123456789abcdef/__data.json'), '/embed/v1/:key/__data.json');
+	assert.equal(routeTemplate('/turno/Xy7_aBcDeFgHiJkLmNoPqRsTuVwXyZ01/push'), '/turno/:token/push');
+	// Long words without digits are route names, not tokens.
+	assert.equal(routeTemplate('/internal/jobs/reconcile-mercadopago'), '/internal/jobs/reconcile-mercadopago');
+	const event = jobEvent('/odonto/pacientes/0b8c2a52-14d0-4f0b-9a0e-1d2c3b4a5f60', { outcome: 'exceededCpu', cpuTime: 11, wallTime: 30,
+		exceptions: [{ name: 'Error', message: 'MESSAGE_SENTINEL' }] });
+	event.event.request.method = 'get';
+	const measurement = requestMeasurement(event);
+	assert.deepEqual(measurement, { at: 1_760_000_000_000, method: 'GET', route: '/odonto/pacientes/:id', outcome: 'exceededCpu', status: 200,
+		cpuTimeMs: 11, wallTimeMs: 30, exceptions: ['Error'] });
+	assert.doesNotMatch(JSON.stringify(measurement), /SENTINEL|0b8c2a52/);
+	assert.equal(requestMeasurement({ event: { cron: '*/5 * * * *' } }), null);
+});
+
+test('the request summary groups outcomes, statuses and CPU per method and route', () => {
+	const at = (path, outcome, status, cpu) => {
+		const event = jobEvent(path, { outcome, cpuTime: cpu });
+		event.event.request.method = 'GET';
+		event.event.response = { status };
+		return requestMeasurement(event);
+	};
+	const summary = summarizeRequestMeasurements([at('/odonto/agenda/__data.json', 'ok', 200, 4), at('/odonto/agenda/__data.json', 'exceededCpu', 503, null),
+		at('/odonto/agenda/__data.json', 'ok', 200, 14), at('/reservar/0b8c2a52-14d0-4f0b-9a0e-1d2c3b4a5f60/__data.json', 'ok', 200, 6)]);
+	assert.deepEqual(summary.outcomes, { ok: 3, exceededCpu: 1 });
+	assert.deepEqual(summary.routes['GET /odonto/agenda/__data.json'], { requests: 3, outcomes: { ok: 2, exceededCpu: 1 }, statuses: { 200: 2, 503: 1 },
+		cpuMs: { p50: 4, p99: 14, max: 14 }, wallMs: { p50: 1200, p99: 1200, max: 1200 } });
+	assert.deepEqual(Object.keys(summary.routes), ['GET /odonto/agenda/__data.json', 'GET /reservar/:id/__data.json']);
 });
