@@ -11,7 +11,8 @@ import { cleanupFixtureResources } from './lib/fixture-cleanup.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
 import { assertPlatformDiagnostics } from './lib/platform-diagnostics.mjs';
 import {
-	createRandom, evaluateAcceptance, login, practiceData, runPublicAbuse, runPublicGenerator, runVirtualUser, summarize, uuidFrom
+	createRandom, describePublicPage, evaluateAcceptance, localDate, login, practiceData, runPublicAbuse, runPublicGenerator, runVirtualUser,
+	summarize, uuidFrom
 } from './lib/capacity-load.mjs';
 
 // Capacity scenarios of the plan on the disposable stack of CI: PostgreSQL with 4 GB
@@ -200,6 +201,17 @@ async function measure(database, practices, password) {
 
 // Public booking on its own: one generator within the limits, then the abuse checks.
 async function measurePublic(practices) {
+	// What each public entry answers for one practice on its next weekday.
+	const data = practiceData(1);
+	let day = 1;
+	while ([0, 6].includes(new Date(localDate(new Date(), day) + 'T12:00:00Z').getUTCDay())) day++;
+	const query = `service_id=${data.services[0]}&professional_id=${data.professionals[0]}&date=${localDate(new Date(), day)}`;
+	const describe = async path => {
+		const response = await fetch(appOrigin + path).catch(() => null);
+		return describePublicPage(response?.status ?? 0, await response?.json().catch(() => null), devalue.unflatten);
+	};
+	const entries = { page: await describe(`/reservar/${data.slug}/__data.json?${query}`), embed: await describe(`/embed/v1/${data.integrationKey}/__data.json?${query}`) };
+	console.log(`capacity-public-entries ${practices} ` + JSON.stringify(entries));
 	const repetitions = [];
 	let phone = '+5491177000000';
 	for (let repetition = 1; repetition <= REPETITIONS; repetition++) {
@@ -214,7 +226,7 @@ async function measurePublic(practices) {
 	}
 	const abuse = await runPublicAbuse({ origin: appOrigin, unflatten: devalue.unflatten, parse: devalue.parse, phone });
 	console.log(`capacity-public-abuse ${practices} ` + JSON.stringify(abuse));
-	return { repetitions, abuse, passed: repetitions.every(item => item.acceptance.passed) && abuse.passed };
+	return { entries, repetitions, abuse, passed: repetitions.every(item => item.acceptance.passed) && abuse.passed };
 }
 
 // Plans of the statements that took longer than 250 ms, logged by auto_explain.

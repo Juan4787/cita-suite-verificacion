@@ -38,6 +38,9 @@ test('only the system answers expected by the plan count as successes', () => {
 	assert.equal(classifyResponse(read, 200, { type: 'data', nodes: [] }), 'ok');
 	assert.equal(classifyResponse(read, 200, { patients: [] }), 'ok');
 	assert.equal(classifyResponse(read, 200, { type: 'redirect', location: '/login' }), 'error');
+	// SvelteKit answers a navigation with 200 and puts a failed load in its node.
+	assert.equal(classifyResponse(read, 200, { type: 'data', nodes: [{ type: 'data', data: [] }, { type: 'error', status: 503, error: {} }] }), 'error');
+	assert.equal(classifyResponse(read, 200, { type: 'data', nodes: [{ type: 'skip' }, { type: 'data', data: [] }] }), 'ok');
 	assert.equal(classifyResponse(read, 401, { message: 'Tu sesión terminó.' }), 'error');
 	assert.equal(classifyResponse(read, 0, null), 'error');
 	assert.equal(classifyResponse(write, 200, { type: 'redirect', status: 303, location: '/odonto/turnos/x' }), 'ok');
@@ -128,6 +131,8 @@ test('public page data is decoded like the SvelteKit client does', () => {
 	const body = { type: 'data', nodes: [{ type: 'data', data: JSON.parse(devalue.stringify({ layout: true })) }, { type: 'data', data: JSON.parse(devalue.stringify({ state: { slots: [{ starts_at: 'x' }] } })) }] };
 	assert.deepEqual(pageData(body, devalue.unflatten), { state: { slots: [{ starts_at: 'x' }] } });
 	assert.equal(pageData({ type: 'redirect', location: '/' }, devalue.unflatten), null);
+	// A failed page never borrows the data of its layout.
+	assert.equal(pageData({ type: 'data', nodes: [{ type: 'data', data: JSON.parse(devalue.stringify({ layout: true })) }, { type: 'error', status: 503 }] }, devalue.unflatten), null);
 	assert.equal(nextPhone('+5491177000009'), '+5491177000010');
 });
 
@@ -165,7 +170,12 @@ test('the abuse checks pass only when the system refuses both bursts', async () 
 		let reads = 0;
 		let bookings = 0;
 		const fake = async (url, init = {}) => {
-			if (url.includes('/embed/v1/')) return (++reads > readLimit) ? response(429, { message: 'Esperá un minuto' }) : dataResponse({ slots: [] });
+			if (url.includes('/embed/v1/')) {
+				if (++reads <= readLimit) return dataResponse({ slots: [] });
+				// The limit inside the failed layout node of a navigation, or as the HTTP status.
+				return reads % 2 ? response(200, { type: 'data', nodes: [{ type: 'error', status: 429, error: { message: 'Esperá un minuto' } }, { type: 'skip' }] })
+					: response(429, { message: 'Esperá un minuto' });
+			}
 			if (init.method === 'POST') {
 				bookings++;
 				return bookings > 1 && bookingRefusal

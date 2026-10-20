@@ -144,11 +144,17 @@ export function planOperation(operation, data, random, state, now = new Date()) 
  * answer of the system, not a technical error; a lost session, a server error or
  * an unexpected answer is.
  */
+/**
+ * A load that failed inside a data response. SvelteKit answers a client navigation
+ * with HTTP 200 and puts each failed load in its node, with its status.
+ */
+export const nodeError = body => Array.isArray(body?.nodes) ? body.nodes.find(node => node?.type === 'error') ?? null : null;
+
 export function classifyResponse(operation, status, body) {
 	if (status >= 500 || status === 0) return 'error';
 	if (operation.category === 'read') {
 		if (status !== 200) return 'error';
-		if (body && typeof body === 'object' && 'type' in body && body.type !== 'data') return 'error';
+		if (body && typeof body === 'object' && 'type' in body && (body.type !== 'data' || nodeError(body))) return 'error';
 		return 'ok';
 	}
 	if (status !== 200 || !body || typeof body !== 'object') return 'error';
@@ -262,11 +268,20 @@ export const PUBLIC_OPERATIONS = Object.freeze({
 export const PUBLIC_WRITE_INTERVAL_MS = 4 * 60_000;
 const PUBLIC_READ_INTERVAL_MS = 1_500;
 
-/** The data SvelteKit sends to a client navigation, decoded like the client does. */
+/** The page's own data in a client navigation (its node is the last), decoded like the client does. */
 export function pageData(body, unflatten) {
 	if (body?.type !== 'data' || !Array.isArray(body.nodes)) return null;
-	const node = [...body.nodes].reverse().find(item => item?.type === 'data');
-	return node ? unflatten(node.data) : null;
+	const node = body.nodes.at(-1);
+	return node?.type === 'data' ? unflatten(node.data) : null;
+}
+
+/** What one public page answers, without personal data: for the run's diagnostics. */
+export function describePublicPage(status, body, unflatten) {
+	const state = pageData(body, unflatten)?.state;
+	return { status, type: body?.type ?? null, location: body?.location ?? null,
+		nodes: Array.isArray(body?.nodes) ? body.nodes.map(node => node?.type === 'error' ? `error:${node.status ?? '?'}:${String(node.error?.message ?? '').slice(0, 120)}` : node?.type) : null,
+		state: state ? { business: Boolean(state.business), services: state.services?.length ?? null, professionals: state.professionals?.length ?? null,
+			days: state.days?.length ?? null, slots: state.slots?.length ?? null, issue: state.issue ?? null } : null };
 }
 
 const publicQuery = (data, random, now) => {
@@ -330,15 +345,17 @@ export async function runPublicAbuse({ origin, unflatten, parse, phone, fetchFn 
 	const data = practiceData(1);
 	// Start at the beginning of a minute: the read limit counts per minute bucket.
 	while (new Date().getUTCSeconds() > 5) await sleep(1_000);
-	const statuses = [];
+	const outcomes = [];
 	for (let request = 0; request < 130; request++) {
 		const response = await fetchFn(`${origin}/embed/v1/${data.integrationKey}/__data.json?${publicQuery(data, () => 0.5, new Date())}`).catch(() => null);
-		statuses.push(response?.status ?? 0);
-		await response?.arrayBuffer().catch(() => null);
+		const body = await response?.json().catch(() => null);
+		// The limit answers 429, as the HTTP status or inside the failed node of a navigation.
+		const refused = response?.status === 429 || nodeError(body)?.status === 429;
+		outcomes.push(refused ? 'refused' : response?.status === 200 && body?.type === 'data' && !nodeError(body) ? 'accepted' : 'other');
 	}
-	const reads = { requests: statuses.length, accepted: statuses.filter(status => status === 200).length,
-		refused: statuses.filter(status => status === 429).length, firstRefusal: statuses.indexOf(429) + 1 || null,
-		other: statuses.filter(status => status !== 200 && status !== 429).length };
+	const reads = { requests: outcomes.length, accepted: outcomes.filter(outcome => outcome === 'accepted').length,
+		refused: outcomes.filter(outcome => outcome === 'refused').length, firstRefusal: outcomes.indexOf('refused') + 1 || null,
+		other: outcomes.filter(outcome => outcome === 'other').length };
 	const bookings = [];
 	for (let attempt = 0; attempt < 4; attempt++) {
 		const query = publicQuery(data, createRandom(`abuse-${attempt}`), new Date());
