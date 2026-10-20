@@ -115,3 +115,72 @@ test('a virtual user logs in once, keeps its session, records only the measured 
 	assert.ok(creates.length > 0 && cancels.length > 0 && cancels.length <= creates.length);
 	assert.ok(cancels.every(call => new URLSearchParams(call.body).get('status') === 'cancelled'));
 });
+
+import { createRequire } from 'node:module';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { PUBLIC_WRITE_INTERVAL_MS, nextPhone, pageData, runPublicAbuse, runPublicGenerator } from './capacity-load.mjs';
+
+const kit = createRequire(createRequire(fileURLToPath(new URL('../../apps/web/package.json', import.meta.url))).resolve('@sveltejs/kit/package.json'));
+const devalue = await import(pathToFileURL(kit.resolve('devalue')).href);
+const dataResponse = state => response(200, { type: 'data', nodes: [{ type: 'skip' }, { type: 'data', data: JSON.parse(devalue.stringify({ state })), uses: {} }] });
+
+test('public page data is decoded like the SvelteKit client does', () => {
+	const body = { type: 'data', nodes: [{ type: 'data', data: JSON.parse(devalue.stringify({ layout: true })) }, { type: 'data', data: JSON.parse(devalue.stringify({ state: { slots: [{ starts_at: 'x' }] } })) }] };
+	assert.deepEqual(pageData(body, devalue.unflatten), { state: { slots: [{ starts_at: 'x' }] } });
+	assert.equal(pageData({ type: 'redirect', location: '/' }, devalue.unflatten), null);
+	assert.equal(nextPhone('+5491177000009'), '+5491177000010');
+});
+
+test('the public generator reads both entry points and books once every four minutes with a different phone', async () => {
+	const calls = [];
+	const fake = async (url, init = {}) => {
+		const path = url.replace('http://app.test', '');
+		calls.push({ path, method: init.method ?? 'GET', body: init.body ? new URLSearchParams(String(init.body)) : null });
+		if (path.includes('?/create_booking')) return response(200, { type: 'redirect', status: 303, location: '/turno/abc' });
+		return dataResponse({ slots: [{ starts_at: '2026-10-25T13:30:00.000Z' }] });
+	};
+	let clock = 0;
+	const realNow = Date.now;
+	Date.now = () => clock;
+	const records = [];
+	let phone;
+	try {
+		phone = await runPublicGenerator({ origin: 'http://app.test', practices: 25, random: createRandom('public'), measureFrom: 0, until: 12 * 60_000,
+			record: sample => records.push(sample), unflatten: devalue.unflatten, phone: '+5491177000000', fetchFn: fake, sleep: async ms => { clock += ms; } });
+	} finally { Date.now = realNow; }
+	const bookings = calls.filter(call => call.method === 'POST');
+	assert.equal(bookings.length, Math.floor((12 * 60_000 - 30_000) / PUBLIC_WRITE_INTERVAL_MS) + 1);
+	assert.equal(new Set(bookings.map(call => call.body.get('patient_phone'))).size, bookings.length);
+	assert.ok(bookings.every(call => call.path.startsWith('/reservar/capacity-') && call.body.get('slot_starts_at') === '2026-10-25T13:30:00.000Z'));
+	assert.equal(phone, '+54911770000' + String(bookings.length).padStart(2, '0'));
+	const reads = calls.filter(call => call.method === 'GET');
+	assert.ok(reads.some(call => call.path.startsWith('/embed/v1/')) && reads.some(call => call.path.startsWith('/reservar/')));
+	assert.ok(reads.length / 12 <= 41, 'public reads stay far below 120 per minute');
+	assert.ok(records.every(sample => sample.outcome === 'ok'));
+});
+
+test('the abuse checks pass only when the system refuses both bursts', async () => {
+	const realDate = global.Date;
+	const run = async ({ readLimit, bookingRefusal }) => {
+		let reads = 0;
+		let bookings = 0;
+		const fake = async (url, init = {}) => {
+			if (url.includes('/embed/v1/')) return (++reads > readLimit) ? response(429, { message: 'Esperá un minuto' }) : dataResponse({ slots: [] });
+			if (init.method === 'POST') {
+				bookings++;
+				return bookings > 1 && bookingRefusal
+					? response(200, { type: 'failure', status: 400, data: devalue.stringify({ message: 'Se alcanzó el máximo de 3 intentos desde esta conexión en 10 minutos. Esperá unos minutos antes de volver a probar.' }) })
+					: response(200, { type: 'redirect', status: 303, location: '/turno/abc' });
+			}
+			return dataResponse({ slots: [0, 1, 2, 3].map(index => ({ starts_at: `2026-10-25T1${index}:00:00.000Z` })) });
+		};
+		return runPublicAbuse({ origin: 'http://app.test', unflatten: devalue.unflatten, parse: devalue.parse, phone: '+5491177000100', fetchFn: fake, sleep: async () => {} });
+	};
+	global.Date = class extends realDate { getUTCSeconds() { return 0; } };
+	try {
+		const refused = await run({ readLimit: 120, bookingRefusal: true });
+		assert.deepEqual([refused.reads.accepted, refused.reads.refused, refused.reads.firstRefusal, refused.passed], [120, 10, 121, true]);
+		assert.equal((await run({ readLimit: 1000, bookingRefusal: true })).passed, false);
+		assert.equal((await run({ readLimit: 120, bookingRefusal: false })).passed, false);
+	} finally { global.Date = realDate; }
+});

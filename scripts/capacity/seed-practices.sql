@@ -50,6 +50,10 @@ from capacity_practice c cross join generate_series(1,3) k cross join generate_s
 insert into public.availability_rules(business_id,professional_id,weekday,start_time,end_time,slot_interval_minutes,break_minutes)
 select c.business_id,md5('capacity-professional-'||c.practice||'-'||k)::uuid,d,'09:00','18:00',30,0
 from capacity_practice c cross join generate_series(1,3) k cross join generate_series(1,5) d;
+-- The site integration a practice's website uses to open its booking (Natalia's path).
+insert into public.booking_integrations(business_id,public_key,name,is_active,is_default,theme,allowed_origins,allowed_modalities,intake_schema)
+select business_id,md5('capacity-integration-'||practice),'Sitio sintético '||tag,true,true,'cita-suite',
+ array['https://sitio-capacidad-'||tag||'.example'],array['in_person'],'[]' from capacity_practice;
 commit;
 
 -- 12,000 appointments per practice out of the weekday slots of twelve months: three

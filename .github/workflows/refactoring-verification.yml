@@ -9,7 +9,7 @@ on:
         type: choice
         required: true
         default: full
-        options: [fast, full, types, sql, browser, capacity, capacity-seed]
+        options: [fast, full, types, sql, browser, capacity, capacity-seed, capacity-quick]
       browser_grep:
         description: Diagnostic selection only; never certifies full verification
         type: string
@@ -82,6 +82,10 @@ jobs:
             capacity-seed)
               echo 'Seeding diagnostic only; this is not a capacity result.'
               node scripts/run-campaign-capacity.mjs --seed-only
+              ;;
+            capacity-quick)
+              echo 'Short capacity diagnostic; this is not a capacity result.'
+              node scripts/run-campaign-capacity.mjs --quick
               ;;
             browser)
               test -n "$BROWSER_GREP"

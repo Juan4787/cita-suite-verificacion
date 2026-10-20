@@ -73,6 +73,8 @@ export function practiceData(practice) {
 	return {
 		practice,
 		email: `capacity-owner-${tag}@example.test`,
+		slug: `capacity-${tag}`,
+		integrationKey: createHash('md5').update(`capacity-integration-${practice}`).digest('hex'),
 		professionals: [1, 2, 3].map(k => uuidFrom(`capacity-professional-${practice}-${k}`)),
 		services: [1, 2, 3, 4, 5].map(k => uuidFrom(`capacity-service-${practice}-${k}`)),
 		patient: index => uuidFrom(`capacity-patient-${practice}-${index}`),
@@ -246,4 +248,114 @@ export async function runVirtualUser({ origin, jar, data, random, measureFrom, u
 		}
 		await sleep(3000 + Math.floor(random() * 5001));
 	}
+}
+
+// Public booking, measured on its own as the plan asks: one generator reads the
+// public pages of the shared link and of the site integration (Natalia's path),
+// within the limits, and books one appointment every four minutes with a different
+// synthetic phone. The limits stay as they are; the abuse checks expect them to act.
+export const PUBLIC_OPERATIONS = Object.freeze({
+	page: { name: 'public_page', category: 'read' },
+	embed: { name: 'public_embed', category: 'read' },
+	booking: { name: 'public_booking', category: 'write' }
+});
+export const PUBLIC_WRITE_INTERVAL_MS = 4 * 60_000;
+const PUBLIC_READ_INTERVAL_MS = 1_500;
+
+/** The data SvelteKit sends to a client navigation, decoded like the client does. */
+export function pageData(body, unflatten) {
+	if (body?.type !== 'data' || !Array.isArray(body.nodes)) return null;
+	const node = [...body.nodes].reverse().find(item => item?.type === 'data');
+	return node ? unflatten(node.data) : null;
+}
+
+const publicQuery = (data, random, now) => {
+	const service = data.services[Math.floor(random() * 5)];
+	const professional = data.professionals[Math.floor(random() * 3)];
+	return `service_id=${service}&professional_id=${professional}&date=${localDate(now, 1 + Math.floor(random() * 30))}`;
+};
+
+export async function runPublicGenerator({ origin, practices, random, measureFrom, until, record, unflatten, phone,
+	fetchFn = fetch, sleep = ms => new Promise(done => setTimeout(done, ms)) }) {
+	let nextWrite = Date.now() + 30_000;
+	const timed = async (operation, request) => {
+		const started = Date.now();
+		let status = 0;
+		let body = null;
+		try {
+			const response = await request();
+			status = response.status;
+			body = await response.json().catch(() => null);
+		} catch {}
+		if (started >= measureFrom && Date.now() <= until)
+			record({ operation: operation.name, category: operation.category, durationMs: Date.now() - started, outcome: classifyResponse(operation, status, body) });
+		return { status, body };
+	};
+	while (Date.now() < until) {
+		const data = practiceData(1 + Math.floor(random() * practices));
+		const query = publicQuery(data, random, new Date());
+		if (Date.now() >= nextWrite) {
+			nextWrite += PUBLIC_WRITE_INTERVAL_MS;
+			const read = await timed(PUBLIC_OPERATIONS.page, () => fetchFn(`${origin}/reservar/${data.slug}/__data.json?${query}`));
+			const slots = pageData(read.body, unflatten)?.state?.slots;
+			const slot = Array.isArray(slots) ? slots[Math.floor(random() * Math.min(slots.length, 6))] : null;
+			const parameters = new URLSearchParams(query);
+			if (slot?.starts_at) await timed(PUBLIC_OPERATIONS.booking, () => fetchFn(`${origin}/reservar/${data.slug}?/create_booking`, {
+				method: 'POST', redirect: 'manual', headers: actionHeaders(origin, new CookieJar()),
+				body: new URLSearchParams({ service_id: parameters.get('service_id'), professional_id: parameters.get('professional_id'),
+					slot_starts_at: slot.starts_at, patient_name: `Reserva pública ${phone.slice(-4)}`, patient_phone: phone,
+					idempotency_key: randomUUID() })
+			}).then(result => { phone = nextPhone(phone); return result; }));
+		} else {
+			const embed = random() < 0.5;
+			await timed(embed ? PUBLIC_OPERATIONS.embed : PUBLIC_OPERATIONS.page, () =>
+				fetchFn(embed ? `${origin}/embed/v1/${data.integrationKey}/__data.json?${query}` : `${origin}/reservar/${data.slug}/__data.json?${query}`));
+		}
+		await sleep(PUBLIC_READ_INTERVAL_MS);
+	}
+	return phone;
+}
+
+// The app's own answer when one address exceeds three bookings in ten minutes.
+const IP_LIMIT_MESSAGE = 'Se alcanzó el máximo de 3 intentos desde esta conexión en 10 minutos.';
+
+/** A different synthetic phone for every public booking. */
+export const nextPhone = phone => '+5491177' + String(Number(phone.slice(-6)) + 1).padStart(6, '0');
+
+/**
+ * Abuse checks: a burst of reads on the site integration beyond its 120 per minute,
+ * and bookings beyond three per ten minutes from one address. Both must be refused.
+ */
+export async function runPublicAbuse({ origin, unflatten, parse, phone, fetchFn = fetch, sleep = ms => new Promise(done => setTimeout(done, ms)) }) {
+	const data = practiceData(1);
+	// Start at the beginning of a minute: the read limit counts per minute bucket.
+	while (new Date().getUTCSeconds() > 5) await sleep(1_000);
+	const statuses = [];
+	for (let request = 0; request < 130; request++) {
+		const response = await fetchFn(`${origin}/embed/v1/${data.integrationKey}/__data.json?${publicQuery(data, () => 0.5, new Date())}`).catch(() => null);
+		statuses.push(response?.status ?? 0);
+		await response?.arrayBuffer().catch(() => null);
+	}
+	const reads = { requests: statuses.length, accepted: statuses.filter(status => status === 200).length,
+		refused: statuses.filter(status => status === 429).length, firstRefusal: statuses.indexOf(429) + 1 || null,
+		other: statuses.filter(status => status !== 200 && status !== 429).length };
+	const bookings = [];
+	for (let attempt = 0; attempt < 4; attempt++) {
+		const query = publicQuery(data, createRandom(`abuse-${attempt}`), new Date());
+		const read = await fetchFn(`${origin}/reservar/${data.slug}/__data.json?${query}`).then(response => response.json()).catch(() => null);
+		const slot = pageData(read, unflatten)?.state?.slots?.[attempt];
+		if (!slot?.starts_at) { bookings.push({ attempt, outcome: 'no-slot' }); continue; }
+		const parameters = new URLSearchParams(query);
+		const response = await fetchFn(`${origin}/reservar/${data.slug}?/create_booking`, { method: 'POST', redirect: 'manual',
+			headers: actionHeaders(origin, new CookieJar()), body: new URLSearchParams({ service_id: parameters.get('service_id'),
+				professional_id: parameters.get('professional_id'), slot_starts_at: slot.starts_at, patient_name: `Abuso ${attempt}`,
+				patient_phone: phone, idempotency_key: randomUUID() }) }).catch(() => null);
+		const body = await response?.json().catch(() => null);
+		let detail = null;
+		try { detail = body?.type === 'failure' && typeof body.data === 'string' ? parse(body.data) : null; } catch {}
+		bookings.push({ attempt, type: body?.type ?? null, status: body?.status ?? response?.status ?? 0,
+			rateLimited: body?.status === 400 && String(detail?.message ?? '').startsWith(IP_LIMIT_MESSAGE) });
+		phone = nextPhone(phone);
+	}
+	return { reads, bookings, phone, passed: reads.refused > 0 && reads.other === 0 && reads.firstRefusal > 100 && bookings.some(booking => booking.rateLimited) };
 }

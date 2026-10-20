@@ -2,14 +2,17 @@ import { spawn, spawnSync } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { fixturePath } from './lib/fixture-path.mjs';
 import { acquireVerificationLock } from './lib/verification-lock.mjs';
 import { cleanupFixtureResources } from './lib/fixture-cleanup.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
 import { assertPlatformDiagnostics } from './lib/platform-diagnostics.mjs';
-import { createRandom, evaluateAcceptance, login, practiceData, runVirtualUser, summarize, uuidFrom } from './lib/capacity-load.mjs';
+import {
+	createRandom, evaluateAcceptance, login, practiceData, runPublicAbuse, runPublicGenerator, runVirtualUser, summarize, uuidFrom
+} from './lib/capacity-load.mjs';
 
 // Capacity scenarios of the plan on the disposable stack of CI: PostgreSQL with 4 GB
 // and two CPUs, real Auth and a PostgREST that runs requests as the hosted platform
@@ -19,9 +22,12 @@ import { createRandom, evaluateAcceptance, login, practiceData, runVirtualUser, 
 // then works for three repetitions of two minutes of warm-up and ten of measurement.
 // Results describe this container, never the capacity of a hosted project.
 const root = fileURLToPath(new URL('../', import.meta.url));
-const seedOnly = process.argv[2] === '--seed-only';
-if (process.argv.length > 3 || (process.argv.length === 3 && !seedOnly))
-	throw new Error('Usage: run-campaign-capacity.mjs [--seed-only]. Seeding alone never counts as a capacity result.');
+const mode = process.argv[2] ?? 'full';
+if (process.argv.length > 3 || !['full', '--seed-only', '--quick'].includes(mode))
+	throw new Error('Usage: run-campaign-capacity.mjs [--seed-only|--quick]. Neither diagnostic counts as a capacity result.');
+const seedOnly = mode === '--seed-only';
+// A short pass over the whole pipeline, with the five-practice scenario only.
+const quick = mode === '--quick';
 assertHostedIntegrationResources();
 const lease = acquireVerificationLock(root);
 const campaignId = process.env.CITA_VERIFICATION_RUN_ID ?? randomUUID();
@@ -30,9 +36,12 @@ const evidence = join(root, '.verification', 'runs', campaignId, 'capacity');
 mkdirSync(evidence, { recursive: true });
 const environment = { ...process.env, CITA_FIXTURE_PROFILE: 'capacity' };
 const appOrigin = 'http://127.0.0.1:8787';
-const WARMUP_MS = 2 * 60_000;
-const MEASURE_MS = 10 * 60_000;
-const REPETITIONS = 3;
+const WARMUP_MS = quick ? 30_000 : 2 * 60_000;
+const MEASURE_MS = quick ? 3 * 60_000 : 10 * 60_000;
+const REPETITIONS = quick ? 1 : 3;
+// SvelteKit's own decoder of page data, resolved through the app's dependency.
+const kitRequire = createRequire(createRequire(join(root, 'apps/web/package.json')).resolve('@sveltejs/kit/package.json'));
+const devalue = await import(pathToFileURL(kitRequire.resolve('devalue')).href);
 let active;
 let interrupted = false;
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
@@ -189,6 +198,25 @@ async function measure(database, practices, password) {
 	return { logins: { count: practices, durationMs: Date.now() - loginStarted }, repetitions, integrity: JSON.parse(psql(database, INTEGRITY)) };
 }
 
+// Public booking on its own: one generator within the limits, then the abuse checks.
+async function measurePublic(practices) {
+	const repetitions = [];
+	let phone = '+5491177000000';
+	for (let repetition = 1; repetition <= REPETITIONS; repetition++) {
+		const measureFrom = Date.now() + WARMUP_MS;
+		const until = measureFrom + MEASURE_MS;
+		const samples = [];
+		phone = await runPublicGenerator({ origin: appOrigin, practices, random: createRandom(`public-${practices}-${repetition}`), measureFrom, until,
+			record: sample => samples.push(sample), unflatten: devalue.unflatten, phone });
+		const summary = summarize(samples);
+		repetitions.push({ repetition, summary, acceptance: evaluateAcceptance(summary) });
+		console.log(`capacity-public ${practices}/${repetition} ` + JSON.stringify({ read: summary.read, write: summary.write, acceptance: repetitions.at(-1).acceptance }));
+	}
+	const abuse = await runPublicAbuse({ origin: appOrigin, unflatten: devalue.unflatten, parse: devalue.parse, phone });
+	console.log(`capacity-public-abuse ${practices} ` + JSON.stringify(abuse));
+	return { repetitions, abuse, passed: repetitions.every(item => item.acceptance.passed) && abuse.passed };
+}
+
 // Plans of the statements that took longer than 250 ms, logged by auto_explain.
 function slowPlans(database) {
 	const logs = spawnSync('docker', ['logs', database], { encoding: 'utf8', maxBuffer: 64 * 1024 ** 2 });
@@ -211,7 +239,8 @@ async function scenario(practices) {
 	let app;
 	let failure;
 	try {
-		await run('node', ['scripts/test-booking-foundation.mjs', '--keep', '--prepare-only']);
+		// The same four services as the integration stack, Storage included.
+		await run('node', ['scripts/test-booking-foundation.mjs', '--real-storage', '--keep', '--prepare-only']);
 		const database = JSON.parse(readFileSync(fixturePath('database.json'), 'utf8')).container;
 		if (!/^cita-booking-test-[a-f0-9]{12}$/.test(database)) throw new Error('Invalid disposable database receipt.');
 		const started = await services(database);
@@ -231,10 +260,12 @@ async function scenario(practices) {
 		if (!seedOnly) {
 			app = await application(started.runtime, practices);
 			Object.assign(result, await measure(database, practices, password));
+			// Public booking is measured once, on the largest scenario of the run.
+			if (practices === 25 || quick) result.publicBooking = await measurePublic(practices);
 			result.slowPlans = slowPlans(database);
 			result.passed = result.repetitions.every(item => item.acceptance.passed) &&
 				result.integrity.crossPractice === 0 && result.integrity.overlaps === 0 &&
-				result.repetitions.every(item => item.database.database.deadlocks === 0);
+				result.repetitions.every(item => item.database.database.deadlocks === 0) && (result.publicBooking?.passed ?? true);
 		}
 		writeFileSync(join(evidence, `scenario-${practices}.json`), JSON.stringify(result, null, 2) + '\n');
 		console.log('capacity-scenario ' + JSON.stringify({ practices, seed, passed: result.passed, integrity: result.integrity }));
@@ -266,13 +297,15 @@ async function scenario(practices) {
 try {
 	if (!seedOnly) await run('pnpm', ['--filter', 'web', 'build:cloudflare'], { env: { ...environment, CITA_BUILD_VERSION: process.env.GITHUB_SHA ?? 'capacity-local' } });
 	const results = [];
-	for (const practices of [5, 25]) results.push(await scenario(practices));
-	const summary = { seedOnly, scenarios: results.map(({ practices, seed, passed, integrity, repetitions }) => ({ practices, seed, passed, integrity,
-		repetitions: repetitions?.map(({ repetition, summary, acceptance, lockWaits }) => ({ repetition, read: summary.read, write: summary.write, acceptance, lockWaits })) })),
+	for (const practices of quick ? [5] : [5, 25]) results.push(await scenario(practices));
+	const summary = { mode, scenarios: results.map(({ practices, seed, passed, integrity, repetitions, publicBooking }) => ({ practices, seed, passed, integrity,
+		repetitions: repetitions?.map(({ repetition, summary, acceptance, lockWaits }) => ({ repetition, read: summary.read, write: summary.write, acceptance, lockWaits })),
+		publicBooking: publicBooking && { passed: publicBooking.passed, abuse: publicBooking.abuse,
+			repetitions: publicBooking.repetitions.map(({ repetition, summary, acceptance }) => ({ repetition, read: summary.read, write: summary.write, acceptance })) } })),
 	scope: 'Disposable CI container: PostgreSQL 4 GB and 2 CPUs, real Auth, PostgREST as authenticator, the production build in workerd. Not hosted capacity.' };
 	writeFileSync(join(evidence, 'summary.json'), JSON.stringify(summary, null, 2) + '\n');
-	if (seedOnly) console.log('Seeding diagnostic completed; this is not a capacity result.');
-	else if (!results.every(result => result.passed)) throw new Error('A capacity scenario did not meet the acceptance criteria of the plan; read summary.json.');
+	if (seedOnly || quick) console.log('Capacity diagnostic completed; this is not a capacity result.');
+	if (!seedOnly && !results.every(result => result.passed)) throw new Error('A capacity scenario did not meet the acceptance criteria of the plan; read summary.json.');
 } catch (error) {
 	console.error(error);
 	process.exitCode = 1;
