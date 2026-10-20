@@ -65,7 +65,11 @@ export class CookieJar {
 	header() { return [...this.#cookies].map(([name, value]) => `${name}=${value}`).join('; '); }
 }
 
-export const uuidFrom = text => createHash('md5').update(text).digest('hex').replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5');
+/** The deterministic ids of the seed: an MD5 shaped as a valid version-4 UUID (pg_temp.capacity_uuid). */
+export const uuidFrom = text => {
+	const hex = createHash('md5').update(text).digest('hex');
+	return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20)}`;
+};
 
 /** The synthetic data a virtual user of practice `practice` works with. */
 export function practiceData(practice) {
@@ -74,6 +78,8 @@ export function practiceData(practice) {
 		practice,
 		email: `capacity-owner-${tag}@example.test`,
 		slug: `capacity-${tag}`,
+		// The shared link /reservar/<slug> redirects here: the canonical public page.
+		business: uuidFrom(`capacity-practice-${practice}`),
 		integrationKey: createHash('md5').update(`capacity-integration-${practice}`).digest('hex'),
 		professionals: [1, 2, 3].map(k => uuidFrom(`capacity-professional-${practice}-${k}`)),
 		services: [1, 2, 3, 4, 5].map(k => uuidFrom(`capacity-service-${practice}-${k}`)),
@@ -311,11 +317,11 @@ export async function runPublicGenerator({ origin, practices, random, measureFro
 		const query = publicQuery(data, random, new Date());
 		if (Date.now() >= nextWrite) {
 			nextWrite += PUBLIC_WRITE_INTERVAL_MS;
-			const read = await timed(PUBLIC_OPERATIONS.page, () => fetchFn(`${origin}/reservar/${data.slug}/__data.json?${query}`));
+			const read = await timed(PUBLIC_OPERATIONS.page, () => fetchFn(`${origin}/reservar/${data.business}/__data.json?${query}`));
 			const slots = pageData(read.body, unflatten)?.state?.slots;
 			const slot = Array.isArray(slots) ? slots[Math.floor(random() * Math.min(slots.length, 6))] : null;
 			const parameters = new URLSearchParams(query);
-			if (slot?.starts_at) await timed(PUBLIC_OPERATIONS.booking, () => fetchFn(`${origin}/reservar/${data.slug}?/create_booking`, {
+			if (slot?.starts_at) await timed(PUBLIC_OPERATIONS.booking, () => fetchFn(`${origin}/reservar/${data.business}?/create_booking`, {
 				method: 'POST', redirect: 'manual', headers: actionHeaders(origin, new CookieJar()),
 				body: new URLSearchParams({ service_id: parameters.get('service_id'), professional_id: parameters.get('professional_id'),
 					slot_starts_at: slot.starts_at, patient_name: `Reserva pública ${phone.slice(-4)}`, patient_phone: phone,
@@ -324,7 +330,7 @@ export async function runPublicGenerator({ origin, practices, random, measureFro
 		} else {
 			const embed = random() < 0.5;
 			await timed(embed ? PUBLIC_OPERATIONS.embed : PUBLIC_OPERATIONS.page, () =>
-				fetchFn(embed ? `${origin}/embed/v1/${data.integrationKey}/__data.json?${query}` : `${origin}/reservar/${data.slug}/__data.json?${query}`));
+				fetchFn(embed ? `${origin}/embed/v1/${data.integrationKey}/__data.json?${query}` : `${origin}/reservar/${data.business}/__data.json?${query}`));
 		}
 		await sleep(PUBLIC_READ_INTERVAL_MS);
 	}
@@ -359,11 +365,11 @@ export async function runPublicAbuse({ origin, unflatten, parse, phone, fetchFn 
 	const bookings = [];
 	for (let attempt = 0; attempt < 4; attempt++) {
 		const query = publicQuery(data, createRandom(`abuse-${attempt}`), new Date());
-		const read = await fetchFn(`${origin}/reservar/${data.slug}/__data.json?${query}`).then(response => response.json()).catch(() => null);
+		const read = await fetchFn(`${origin}/reservar/${data.business}/__data.json?${query}`).then(response => response.json()).catch(() => null);
 		const slot = pageData(read, unflatten)?.state?.slots?.[attempt];
 		if (!slot?.starts_at) { bookings.push({ attempt, outcome: 'no-slot' }); continue; }
 		const parameters = new URLSearchParams(query);
-		const response = await fetchFn(`${origin}/reservar/${data.slug}?/create_booking`, { method: 'POST', redirect: 'manual',
+		const response = await fetchFn(`${origin}/reservar/${data.business}?/create_booking`, { method: 'POST', redirect: 'manual',
 			headers: actionHeaders(origin, new CookieJar()), body: new URLSearchParams({ service_id: parameters.get('service_id'),
 				professional_id: parameters.get('professional_id'), slot_starts_at: slot.starts_at, patient_name: `Abuso ${attempt}`,
 				patient_phone: phone, idempotency_key: randomUUID() }) }).catch(() => null);

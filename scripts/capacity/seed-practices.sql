@@ -11,12 +11,17 @@
 -- identity and booking triggers take advisory locks per row, and one transaction
 -- for a whole scenario would exceed any lock table, unlike every real operation.
 \set ON_ERROR_STOP on
+-- Deterministic ids shaped as valid version-4 UUIDs, like every id gen_random_uuid()
+-- gives in production: the app validates the version and variant digits.
+create function pg_temp.capacity_uuid(p_text text) returns uuid language sql immutable as $$
+ select overlay(overlay(md5(p_text) placing '4' from 13) placing '8' from 17)::uuid
+$$;
 select set_config('cita.capacity.practices', :'practices', false),
  set_config('cita.capacity.owners', :'owners', false);
 
 create temporary table capacity_practice as
 select p as practice,
- md5('capacity-practice-'||p)::uuid as business_id,
+ pg_temp.capacity_uuid('capacity-practice-'||p) as business_id,
  (current_setting('cita.capacity.owners')::jsonb->>(p-1))::uuid as owner_id,
  lpad(p::text,2,'0') as tag
 from generate_series(1,current_setting('cita.capacity.practices')::integer) p;
@@ -39,16 +44,16 @@ from capacity_practice c where s.business_id=c.business_id;
 insert into public.business_users(business_id,user_id,role,status,accepted_at)
 select business_id,owner_id,'owner','active',now()-interval '1 year' from capacity_practice;
 insert into public.professionals(id,business_id,name)
-select md5('capacity-professional-'||c.practice||'-'||k)::uuid,c.business_id,'Profesional '||c.tag||'-'||k
+select pg_temp.capacity_uuid('capacity-professional-'||c.practice||'-'||k),c.business_id,'Profesional '||c.tag||'-'||k
 from capacity_practice c cross join generate_series(1,3) k;
 insert into public.services(id,business_id,name,duration_minutes)
-select md5('capacity-service-'||c.practice||'-'||k)::uuid,c.business_id,(array['Consulta','Control','Limpieza','Urgencia','Seguimiento'])[k],30
+select pg_temp.capacity_uuid('capacity-service-'||c.practice||'-'||k),c.business_id,(array['Consulta','Control','Limpieza','Urgencia','Seguimiento'])[k],30
 from capacity_practice c cross join generate_series(1,5) k;
 insert into public.professional_services(business_id,professional_id,service_id)
-select c.business_id,md5('capacity-professional-'||c.practice||'-'||k)::uuid,md5('capacity-service-'||c.practice||'-'||s)::uuid
+select c.business_id,pg_temp.capacity_uuid('capacity-professional-'||c.practice||'-'||k),pg_temp.capacity_uuid('capacity-service-'||c.practice||'-'||s)
 from capacity_practice c cross join generate_series(1,3) k cross join generate_series(1,5) s;
 insert into public.availability_rules(business_id,professional_id,weekday,start_time,end_time,slot_interval_minutes,break_minutes)
-select c.business_id,md5('capacity-professional-'||c.practice||'-'||k)::uuid,d,'09:00','18:00',30,0
+select c.business_id,pg_temp.capacity_uuid('capacity-professional-'||c.practice||'-'||k),d,'09:00','18:00',30,0
 from capacity_practice c cross join generate_series(1,3) k cross join generate_series(1,5) d;
 -- The site integration a practice's website uses to open its booking (Natalia's path).
 insert into public.booking_integrations(business_id,public_key,name,is_active,is_default,theme,allowed_origins,allowed_modalities,intake_schema)
@@ -84,7 +89,7 @@ begin
   -- 6,000 patients: 40 first names by 50 surnames, with unique documents and phones.
   for batch in 0..11 loop
    insert into public.patients(id,owner_id,business_id,full_name,dni,phone,birth_date,insurance,created_at,updated_at)
-   select md5('capacity-patient-'||c.practice||'-'||i)::uuid,c.owner_id,c.business_id,
+   select pg_temp.capacity_uuid('capacity-patient-'||c.practice||'-'||i),c.owner_id,c.business_id,
     (array['Ana','Bruno','Carla','Diego','Elena','Facundo','Gabriela','Hernán','Inés','Javier','Karina','Lucas','María','Nicolás','Olga','Pablo',
      'Romina','Santiago','Tamara','Ulises','Valeria','Walter','Ximena','Yamila','Zulema','Agustina','Bautista','Camila','Dante','Emilia','Federico',
      'Guadalupe','Hugo','Isabel','Julián','Lorena','Mateo','Natalia','Octavio','Paula'])[1+i%40]||' '||
@@ -105,8 +110,8 @@ begin
   for batch in 0..11 loop
    insert into public.appointments(id,business_id,patient_id,service_id,professional_id,starts_at,ends_at,blocking_starts_at,blocking_ends_at,
     status,source,service_name_snapshot,professional_name_snapshot,duration_minutes_snapshot,confirmed_at,cancelled_at,reschedule_requested_at,created_at,updated_at)
-   select md5('capacity-appointment-'||a.practice||'-'||a.n)::uuid,a.business_id,md5('capacity-patient-'||a.practice||'-'||a.patient)::uuid,
-    md5('capacity-service-'||a.practice||'-'||a.service)::uuid,md5('capacity-professional-'||a.practice||'-'||a.professional)::uuid,
+   select pg_temp.capacity_uuid('capacity-appointment-'||a.practice||'-'||a.n),a.business_id,pg_temp.capacity_uuid('capacity-patient-'||a.practice||'-'||a.patient),
+    pg_temp.capacity_uuid('capacity-service-'||a.practice||'-'||a.service),pg_temp.capacity_uuid('capacity-professional-'||a.practice||'-'||a.professional),
     a.starts_at,a.starts_at+interval '30 minutes',a.starts_at,a.starts_at+interval '30 minutes',
     state.status,case when a.n%10<3 and a.starts_at<now() then 'public_booking' else 'manual' end,
     (array['Consulta','Control','Limpieza','Urgencia','Seguimiento'])[a.service],'Profesional '||c.tag||'-'||a.professional,30,

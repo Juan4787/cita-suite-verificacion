@@ -75,6 +75,10 @@ test('dates follow the practice zone and requests name the synthetic data of the
 	assert.equal(localDateTime(now), '2026-10-19T23:30');
 	const data = practiceData(3);
 	assert.equal(data.email, 'capacity-owner-03@example.test');
+	// The app validates version and variant digits, as every id of gen_random_uuid() has them.
+	const valid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
+	assert.ok([data.business, ...data.professionals, ...data.services, data.patient(0), data.patient(5999), data.appointment(1)].every(id => valid.test(id)));
+	assert.notEqual(data.patient(0), data.patient(1));
 	const random = createRandom('plan');
 	const create = planOperation(OPERATIONS.find(operation => operation.name === 'create_appointment'), data, random, { created: [] }, now);
 	assert.match(create.prepare, /^\/odonto\/disponibilidad\/slots\?service_id=[0-9a-f-]{36}&professional_id=[0-9a-f-]{36}&from=\d{4}-\d{2}-\d{2}&to=/);
@@ -156,7 +160,7 @@ test('the public generator reads both entry points and books once every four min
 	const bookings = calls.filter(call => call.method === 'POST');
 	assert.equal(bookings.length, Math.floor((12 * 60_000 - 30_000) / PUBLIC_WRITE_INTERVAL_MS) + 1);
 	assert.equal(new Set(bookings.map(call => call.body.get('patient_phone'))).size, bookings.length);
-	assert.ok(bookings.every(call => call.path.startsWith('/reservar/capacity-') && call.body.get('slot_starts_at') === '2026-10-25T13:30:00.000Z'));
+	assert.ok(bookings.every(call => /^\/reservar\/[0-9a-f-]{36}\?\/create_booking$/.test(call.path) && call.body.get('slot_starts_at') === '2026-10-25T13:30:00.000Z'));
 	assert.equal(phone, '+54911770000' + String(bookings.length).padStart(2, '0'));
 	const reads = calls.filter(call => call.method === 'GET');
 	assert.ok(reads.some(call => call.path.startsWith('/embed/v1/')) && reads.some(call => call.path.startsWith('/reservar/')));
