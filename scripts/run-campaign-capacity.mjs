@@ -146,10 +146,16 @@ async function application(runtime, practices) {
 		{ cwd: root, env: { ...environment, WRANGLER_SEND_METRICS: 'false' }, stdio: ['ignore', log, log], detached: true });
 	for (let attempt = 0; attempt < 240; attempt++) {
 		if (child.exitCode !== null) break;
-		try {
-			if ((await fetch(appOrigin + '/login', { signal: AbortSignal.timeout(2000) })).ok)
-				return { child, directory, profiler: profiling ? await openProfiler() : null };
-		} catch {}
+		let ready = false;
+		try { ready = (await fetch(appOrigin + '/login', { signal: AbortSignal.timeout(2000) })).ok; } catch {}
+		if (ready) {
+			// A failure of the profiler surfaces as itself, not as an app that never started.
+			try { return { child, directory, profiler: profiling ? await openProfiler() : null }; } catch (error) {
+				await stop(child);
+				rmSync(directory, { recursive: true, force: true });
+				throw error;
+			}
+		}
 		await new Promise(resolve => setTimeout(resolve, 500));
 	}
 	await stop(child);
@@ -160,20 +166,25 @@ async function application(runtime, practices) {
 // The app Worker's inspector, through which the DevTools profiler samples its CPU.
 const INSPECTOR_PORT = 9229;
 async function openProfiler() {
+	const answers = new Map();
 	for (let attempt = 0; attempt < 40; attempt++) {
-		try {
-			const targets = await (await fetch(`http://127.0.0.1:${INSPECTOR_PORT}/json/list`, { signal: AbortSignal.timeout(2000) })).json();
-			const target = targets.find(item => typeof item.webSocketDebuggerUrl === 'string');
-			if (target) {
-				const client = await connectInspector(target.webSocketDebuggerUrl);
-				await client.send('Profiler.enable');
-				await client.send('Profiler.setSamplingInterval', { interval: 1000 });
-				return client;
-			}
-		} catch {}
+		for (const host of ['127.0.0.1', 'localhost', '[::1]']) {
+			try {
+				const response = await fetch(`http://${host}:${INSPECTOR_PORT}/json/list`, { signal: AbortSignal.timeout(2000) });
+				const targets = await response.json().catch(() => null);
+				answers.set(host, `HTTP ${response.status}, ${Array.isArray(targets) ? targets.length + ' targets' : 'no target list'}`);
+				const target = Array.isArray(targets) ? targets.find(item => typeof item.webSocketDebuggerUrl === 'string') : null;
+				if (target) {
+					const client = await connectInspector(target.webSocketDebuggerUrl);
+					await client.send('Profiler.enable');
+					await client.send('Profiler.setSamplingInterval', { interval: 1000 });
+					return client;
+				}
+			} catch (error) { answers.set(host, String(error?.cause?.code ?? error?.name ?? 'error')); }
+		}
 		await new Promise(resolve => setTimeout(resolve, 500));
 	}
-	throw new Error('The workerd inspector offered no target to profile.');
+	throw new Error('The workerd inspector offered no target to profile: ' + JSON.stringify(Object.fromEntries(answers)));
 }
 
 // Profiles one phase from the start of its measured window until its work ends.

@@ -102,8 +102,28 @@ const dateRange = (fromDate: string, toDate: string) => {
 	return dates;
 };
 
+// One formatter per time zone, reused: building an Intl.DateTimeFormat costs far more
+// than formatting with it, and one calculation formats once per date, rule and slot.
+// Workers Free allows 10 ms of CPU per request.
+const offsetFormatters = new Map<string, Intl.DateTimeFormat>();
+const partFormatters = new Map<string, Intl.DateTimeFormat>();
+const weekdayFormatters = new Map<string, Intl.DateTimeFormat>();
+
+const formatterFor = (
+	cache: Map<string, Intl.DateTimeFormat>,
+	timeZone: string,
+	create: () => Intl.DateTimeFormat
+) => {
+	let formatter = cache.get(timeZone);
+	if (!formatter) {
+		formatter = create();
+		cache.set(timeZone, formatter);
+	}
+	return formatter;
+};
+
 const getTimeZoneOffsetMs = (date: Date, timeZone: string) => {
-	const formatter = new Intl.DateTimeFormat('en-US', {
+	const formatter = formatterFor(offsetFormatters, timeZone, () => new Intl.DateTimeFormat('en-US', {
 		timeZone,
 		year: 'numeric',
 		month: '2-digit',
@@ -112,7 +132,7 @@ const getTimeZoneOffsetMs = (date: Date, timeZone: string) => {
 		minute: '2-digit',
 		second: '2-digit',
 		hour12: false
-	});
+	}));
 	const parts = Object.fromEntries(formatter.formatToParts(date).map((part) => [part.type, part.value]));
 	const asUtc = Date.UTC(
 		Number(parts.year),
@@ -134,7 +154,7 @@ export const zonedDateTimeToUtc = (date: string, time: string, timeZone: string)
 };
 
 const zonedDateParts = (date: Date, timeZone: string) => {
-	const formatter = new Intl.DateTimeFormat('en-CA', {
+	const formatter = formatterFor(partFormatters, timeZone, () => new Intl.DateTimeFormat('en-CA', {
 		timeZone,
 		year: 'numeric',
 		month: '2-digit',
@@ -142,7 +162,7 @@ const zonedDateParts = (date: Date, timeZone: string) => {
 		hour: '2-digit',
 		minute: '2-digit',
 		hour12: false
-	});
+	}));
 	const parts = Object.fromEntries(formatter.formatToParts(date).map((part) => [part.type, part.value]));
 	return {
 		date: `${parts.year}-${parts.month}-${parts.day}`,
@@ -152,7 +172,7 @@ const zonedDateParts = (date: Date, timeZone: string) => {
 
 const weekdayForDate = (date: string, timeZone: string) => {
 	const noon = zonedDateTimeToUtc(date, '12:00', timeZone);
-	const value = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short' })
+	const value = formatterFor(weekdayFormatters, timeZone, () => new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short' }))
 		.formatToParts(noon)
 		.find((part) => part.type === 'weekday')?.value;
 	const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
