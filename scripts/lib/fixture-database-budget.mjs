@@ -19,8 +19,11 @@ if (!['', 'capacity'].includes(profile)) throw new Error('CITA_FIXTURE_PROFILE a
 export const capacityProfile = profile === 'capacity';
 export const activeFixtureDatabaseBudget = capacityProfile ? capacityDatabaseBudget : fixtureDatabaseBudget;
 export const fixtureDatabaseResources = Object.freeze(capacityProfile
+	// Statements inside functions are tracked too, and plans of slow ones are logged.
 	? { memory: '4096m', cpus: '2', settings: ['shared_buffers=1GB', 'effective_cache_size=3GB', 'work_mem=16MB',
-		'maintenance_work_mem=256MB', 'shared_preload_libraries=pg_cron,pg_stat_statements'] }
+		'maintenance_work_mem=256MB', 'shared_preload_libraries=pg_cron,pg_stat_statements,auto_explain',
+		'pg_stat_statements.track=all', 'auto_explain.log_min_duration=250', 'auto_explain.log_nested_statements=on',
+		'auto_explain.log_format=json'] }
 	: { memory: '384m', cpus: '1', settings: ['shared_buffers=32MB', 'shared_preload_libraries=pg_cron'] });
 
 export function assertFixtureDatabaseBudget(budget = fixtureDatabaseBudget) {
