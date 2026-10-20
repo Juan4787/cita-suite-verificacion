@@ -3719,6 +3719,20 @@ export type Database = {
         }
         Returns: Json
       }
+      agenda_week_counts: {
+        Args: {
+          p_business_id: string
+          p_from: string
+          p_professional_id?: string
+          p_time_zone: string
+          p_to: string
+        }
+        Returns: {
+          appointments: number
+          local_date: string
+          status: string
+        }[]
+      }
       assert_email_available_for_business: {
         Args: { target_business_id: string; target_email: string }
         Returns: undefined

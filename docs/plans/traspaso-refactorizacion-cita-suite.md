@@ -8,6 +8,10 @@
 
 *Antecedente reemplazado:* la intervención anterior tenía como instrucción cerrar la fase 5, avisar y detenerse antes de fase 6. Ya no está vigente.
 
+## Alcance de lanzamiento vigente (enmienda del usuario del 20 de octubre)
+
+Leer la decisión literal al final del plan. En resumen: no hay usuarios reales y todos los datos son ficticios; el lanzamiento es para dos consultorios sobre Workers Free y Supabase Free; no se contrata nada, ni servicios con cobro variable sin tope. El despliegue gratuito debe demostrar los criterios del plan con dos consultorios antes de publicar, y si un límite del proveedor lo impide, es un impedimento que se informa con alternativas. La capacidad de 5 y 25 consultorios deja de ser condición de cierre, sin rebajar calidad, seguridad ni integridad. Las protecciones de consumo se deciden por mérito y las postergadas se documentan con su riesgo residual. Se siguen corrigiendo los defectos reales de eficiencia, y se distinguen de los límites del proveedor.
+
 ## Punto exacto actual (20 de octubre, Opus 5.5)
 
 1. **Cierre de etapa 5 (hecho, no repetir):** full 39276578152 sobre `6746491` (digest `44fb8645…`, recibo `c0219616-f7d1-4e03-9843-bf6cb72a4cb7`, paquete `.verification/remote-39276578152/`, SHA-256 `b7667aee…`): 15/15 etapas, 37/37 navegador, 2/2 demo, 1.265 servidor, 167 cliente, exportación nativa, SQL/carreras, deadlocks 0, Natalia idéntica. Revisión Impeccable en `.impeccable/review/structure-20261018/round-2/` (primer dictamen `fix`, tres puntajes literales en `verdict-passes.md`, el último `ship`) y documentador sobre `apps/web/DESIGN.md`. Matriz en `docs/architecture/evidencia-etapa5-estructura.md`.

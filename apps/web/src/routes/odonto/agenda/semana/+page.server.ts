@@ -1,10 +1,11 @@
 import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { demoBusinessContext } from '$lib/server/access/public/business';
-import { APPOINTMENT_STATUSES } from '$lib/server/scheduling/public/appointments';
+import { APPOINTMENT_STATUSES, type AppointmentStatus } from '$lib/server/scheduling/public/appointments';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import { zonedDateTimeToUtc } from '$lib/server/scheduling/public/availability';
-import { redirect } from '@sveltejs/kit';
+import { InvalidDataContractError, readChoice, readFiniteNumber, readRecord, readText } from '$lib/contracts/json';
+import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
 const pad = (value: number) => String(value).padStart(2, '0');
@@ -23,17 +24,6 @@ const weekStartFor = (dateValue: string) => {
 	const day = date.getUTCDay();
 	const mondayOffset = day === 0 ? -6 : 1 - day;
 	return addDays(date, mondayOffset);
-};
-
-const localDateFor = (isoDate: string, timeZone: string) => {
-	const formatter = new Intl.DateTimeFormat('en-CA', {
-		timeZone,
-		year: 'numeric',
-		month: '2-digit',
-		day: '2-digit'
-	});
-	const parts = Object.fromEntries(formatter.formatToParts(new Date(isoDate)).map((part) => [part.type, part.value]));
-	return `${parts.year}-${parts.month}-${parts.day}`;
 };
 
 export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
@@ -63,19 +53,17 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 	const rangeStart = zonedDateTimeToUtc(dates[0], '00:00', business.business.timezone);
 	const rangeEnd = zonedDateTimeToUtc(dates[6], '23:59', business.business.timezone);
 
-	// Separate literal selects keep the SDK's relationship inference exact.
-	const appointmentsQuery = selectedProfessionalId
-		? supabase.from('appointments')
-			.select('id, professional_id, starts_at, status, appointment_professionals!inner(professional_id)')
-			.eq('appointment_professionals.professional_id', selectedProfessionalId)
-		: supabase.from('appointments').select('id, professional_id, starts_at, status');
-	const rangedAppointments = appointmentsQuery
-		.eq('business_id', business.business.id)
-		.gte('starts_at', rangeStart.toISOString())
-		.lte('starts_at', rangeEnd.toISOString()).order('starts_at');
-
-	const [{ data: appointments, error: appointmentsError }, { data: professionals }] = await Promise.all([
-		rangedAppointments,
+	// The database counts the week by local day and state under the reader's own rules:
+	// at most seven days by four states, instead of every appointment of the week, which
+	// cost CPU per appointment here and could be cut by the API row limit.
+	const [counts, professionals] = await Promise.all([
+		supabase.rpc('agenda_week_counts', {
+			p_business_id: business.business.id,
+			p_from: rangeStart.toISOString(),
+			p_to: rangeEnd.toISOString(),
+			p_time_zone: business.business.timezone,
+			...(selectedProfessionalId ? { p_professional_id: selectedProfessionalId } : {})
+		}),
 		supabase
 			.from('professionals')
 			.select('id, name, is_active')
@@ -84,31 +72,32 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			.order('sort_order')
 			.order('name')
 	]);
-
-	if (appointmentsError) {
-		logServerFailure('Error cargando agenda semanal', appointmentsError);
+	// An unreadable week is an error, never an empty week or a missing professional filter.
+	if (counts.error || professionals.error) {
+		logServerFailure('agenda.week_unavailable', counts.error ?? professionals.error);
+		error(503, 'No pudimos cargar la agenda de la semana. Volvé a intentar.');
 	}
 
-	const days = dates.map((date) => {
-		const dayAppointments = (appointments ?? []).filter(
-			(appointment) => localDateFor(appointment.starts_at, business.business.timezone) === date
-		);
-		return {
-			date,
-			total: dayAppointments.length,
-			stats: APPOINTMENT_STATUSES.map((status) => ({
-				status,
-				count: dayAppointments.filter((appointment) => appointment.status === status).length
-			}))
-		};
-	});
+	const countsByDate = new Map(dates.map((date) => [date, new Map<AppointmentStatus, number>()]));
+	for (const value of counts.data ?? []) {
+		const row = readRecord(value, 'agendaWeek.count');
+		const day = countsByDate.get(readText(row.local_date, 'agendaWeek.date'));
+		const status = readChoice(row.status, APPOINTMENT_STATUSES, 'agendaWeek.status');
+		const appointments = readFiniteNumber(row.appointments, 'agendaWeek.appointments');
+		if (!day || day.has(status) || !Number.isSafeInteger(appointments) || appointments < 1)
+			throw new InvalidDataContractError('agendaWeek.count');
+		day.set(status, appointments);
+	}
 
 	return {
 		context: business,
 		selectedDate,
 		selectedProfessionalId,
-		days,
-		professionals: professionals ?? [],
+		days: dates.map((date) => {
+			const stats = APPOINTMENT_STATUSES.map((status) => ({ status, count: countsByDate.get(date)?.get(status) ?? 0 }));
+			return { date, total: stats.reduce((sum, item) => sum + item.count, 0), stats };
+		}),
+		professionals: professionals.data ?? [],
 		demo: false
 	};
 };
