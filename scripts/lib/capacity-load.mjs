@@ -311,53 +311,85 @@ const publicQuery = (data, random, now) => {
 	return `service_id=${service}&professional_id=${professional}&date=${localDate(now, 1 + Math.floor(random() * 30))}`;
 };
 
+/** One request and its JSON answer; a network failure is status 0 and no body. */
+async function exchange(request) {
+	let status = 0;
+	let body = null;
+	try {
+		const response = await request();
+		status = response.status;
+		body = await response.json().catch(() => null);
+	} catch {}
+	return { status, body };
+}
+
+/**
+ * A free slot found the way a person finds one: the page first lists the days with
+ * availability of the next two weeks, then the chosen day lists its slots. Null when
+ * the system offers none. `read` performs each page read (the generator measures them).
+ */
+export async function findPublicSlot({ origin, data, random, unflatten, fetchFn = fetch, read = exchange }) {
+	const selection = `service_id=${data.services[Math.floor(random() * 5)]}&professional_id=${data.professionals[Math.floor(random() * 3)]}`;
+	const listed = pageData((await read(() => fetchFn(`${origin}/reservar/${data.business}/__data.json?${selection}`))).body, unflatten);
+	const days = Array.isArray(listed?.state?.days) ? listed.state.days : [];
+	if (!days.length) return null;
+	const query = `${selection}&date=${days[Math.floor(random() * Math.min(days.length, 5))].date}`;
+	const page = pageData((await read(() => fetchFn(`${origin}/reservar/${data.business}/__data.json?${query}`))).body, unflatten);
+	const slots = Array.isArray(page?.state?.slots) ? page.state.slots : [];
+	const slot = slots[Math.floor(random() * Math.min(slots.length, 6))];
+	return slot?.starts_at ? { query, page, slot } : null;
+}
+
+/** What a public booking answered, without personal data: the app's own message when it refused. */
+function bookingAnswer({ status, body }, parse) {
+	let detail = null;
+	try { detail = body?.type === 'failure' && typeof body.data === 'string' ? parse(body.data) : null; } catch {}
+	const message = typeof detail?.message === 'string' ? detail.message.slice(0, 160) : null;
+	return { type: body?.type ?? null, status: body?.status ?? status, message,
+		rateLimited: body?.type === 'failure' && body.status === 400 && String(message ?? '').startsWith(IP_LIMIT_MESSAGE) };
+}
+
+const submitPublicBooking = (origin, data, found, name, phone, fetchFn) => () => fetchFn(`${origin}/reservar/${data.business}?/create_booking`, {
+	method: 'POST', redirect: 'manual', headers: actionHeaders(origin, new CookieJar()),
+	body: new URLSearchParams(publicBookingForm(found.page, found.query, found.slot, name, phone))
+});
+
+/**
+ * Runs the public generator until `until`. Returns the next synthetic phone and the
+ * scheduled bookings that did not succeed, with the app's own answer.
+ */
 export async function runPublicGenerator({ origin, practices, random, measureFrom, until, record, unflatten, parse, phone,
 	fetchFn = fetch, sleep = ms => new Promise(done => setTimeout(done, ms)) }) {
 	let nextWrite = Date.now() + 30_000;
 	const failures = [];
 	const timed = async (operation, request) => {
 		const started = Date.now();
-		let status = 0;
-		let body = null;
-		try {
-			const response = await request();
-			status = response.status;
-			body = await response.json().catch(() => null);
-		} catch {}
+		const result = await exchange(request);
 		if (started >= measureFrom && Date.now() <= until)
-			record({ operation: operation.name, category: operation.category, durationMs: Date.now() - started, outcome: classifyResponse(operation, status, body) });
-		return { status, body };
+			record({ operation: operation.name, category: operation.category, durationMs: Date.now() - started, outcome: classifyResponse(operation, result.status, result.body) });
+		return result;
 	};
 	while (Date.now() < until) {
 		const data = practiceData(1 + Math.floor(random() * practices));
-		const query = publicQuery(data, random, new Date());
 		if (Date.now() >= nextWrite) {
 			nextWrite += PUBLIC_WRITE_INTERVAL_MS;
-			const read = await timed(PUBLIC_OPERATIONS.page, () => fetchFn(`${origin}/reservar/${data.business}/__data.json?${query}`));
-			const page = pageData(read.body, unflatten);
-			const slots = page?.state?.slots;
-			const slot = Array.isArray(slots) ? slots[Math.floor(random() * Math.min(slots.length, 6))] : null;
-			if (slot?.starts_at) await timed(PUBLIC_OPERATIONS.booking, () => fetchFn(`${origin}/reservar/${data.business}?/create_booking`, {
-				method: 'POST', redirect: 'manual', headers: actionHeaders(origin, new CookieJar()),
-				body: new URLSearchParams(publicBookingForm(page, query, slot, syntheticName('Reserva Pública', phone), phone))
-			}).then(result => {
+			const found = await findPublicSlot({ origin, data, random, unflatten, fetchFn, read: request => timed(PUBLIC_OPERATIONS.page, request) });
+			if (!found) failures.push({ outcome: 'no-slot' });
+			else {
+				const answer = bookingAnswer(await timed(PUBLIC_OPERATIONS.booking,
+					submitPublicBooking(origin, data, found, syntheticName('Reserva Pública', phone), phone, fetchFn)), parse);
 				phone = nextPhone(phone);
-				if (result.body?.type !== 'redirect') {
-					let message = null;
-					try { message = typeof result.body?.data === 'string' ? parse(result.body.data)?.message ?? null : null; } catch {}
-					failures.push(`${result.body?.type ?? 'no-json'}:${result.body?.status ?? result.status}:${String(message ?? '').slice(0, 120)}`);
-				}
-				return result;
-			}));
+				if (answer.type !== 'redirect') failures.push({ type: answer.type, status: answer.status, message: answer.message });
+			}
 		} else {
+			const query = publicQuery(data, random, new Date());
 			const embed = random() < 0.5;
 			await timed(embed ? PUBLIC_OPERATIONS.embed : PUBLIC_OPERATIONS.page, () =>
 				fetchFn(embed ? `${origin}/embed/v1/${data.integrationKey}/__data.json?${query}` : `${origin}/reservar/${data.business}/__data.json?${query}`));
 		}
 		await sleep(PUBLIC_READ_INTERVAL_MS);
 	}
-	if (failures.length) console.error('Public bookings that did not succeed: ' + failures.join(', '));
-	return phone;
+	return { phone, failures };
 }
 
 // The app's own answer when one address exceeds three bookings in ten minutes.
@@ -374,7 +406,9 @@ export const nextPhone = phone => '+5491177' + String(Number(phone.slice(-6)) + 
 
 /**
  * Abuse checks: a burst of reads on the site integration beyond its 120 per minute,
- * and bookings beyond three per ten minutes from one address. Both must be refused.
+ * and bookings from one address until the limit of three per ten minutes refuses
+ * one. Every attempt counts, so the refusal comes by the fourth booking at the
+ * latest, sooner when the generator booked in the last ten minutes. Both must act.
  */
 export async function runPublicAbuse({ origin, unflatten, parse, phone, fetchFn = fetch, sleep = ms => new Promise(done => setTimeout(done, ms)) }) {
 	const data = practiceData(1);
@@ -382,33 +416,24 @@ export async function runPublicAbuse({ origin, unflatten, parse, phone, fetchFn 
 	while (new Date().getUTCSeconds() > 5) await sleep(1_000);
 	const outcomes = [];
 	for (let request = 0; request < 130; request++) {
-		const response = await fetchFn(`${origin}/embed/v1/${data.integrationKey}/__data.json?${publicQuery(data, () => 0.5, new Date())}`).catch(() => null);
-		const body = await response?.json().catch(() => null);
+		const { status, body } = await exchange(() => fetchFn(`${origin}/embed/v1/${data.integrationKey}/__data.json?${publicQuery(data, () => 0.5, new Date())}`));
 		// The limit answers 429, as the HTTP status or inside the failed node of a navigation.
-		const refused = response?.status === 429 || nodeError(body)?.status === 429;
-		outcomes.push(refused ? 'refused' : response?.status === 200 && body?.type === 'data' && !nodeError(body) ? 'accepted' : 'other');
+		const refused = status === 429 || nodeError(body)?.status === 429;
+		outcomes.push(refused ? 'refused' : status === 200 && body?.type === 'data' && !nodeError(body) ? 'accepted' : 'other');
 	}
 	const reads = { requests: outcomes.length, accepted: outcomes.filter(outcome => outcome === 'accepted').length,
 		refused: outcomes.filter(outcome => outcome === 'refused').length, firstRefusal: outcomes.indexOf('refused') + 1 || null,
 		other: outcomes.filter(outcome => outcome === 'other').length };
 	const bookings = [];
 	for (let attempt = 0; attempt < 4; attempt++) {
-		const query = publicQuery(data, createRandom(`abuse-${attempt}`), new Date());
-		const read = await fetchFn(`${origin}/reservar/${data.business}/__data.json?${query}`).then(response => response.json()).catch(() => null);
-		const page = pageData(read, unflatten);
-		const slot = page?.state?.slots?.[attempt];
-		if (!slot?.starts_at) { bookings.push({ attempt, outcome: 'no-slot' }); continue; }
-		const response = await fetchFn(`${origin}/reservar/${data.business}?/create_booking`, { method: 'POST', redirect: 'manual',
-			headers: actionHeaders(origin, new CookieJar()),
-			body: new URLSearchParams(publicBookingForm(page, query, slot, syntheticName('Abuso Prueba', phone), phone)) }).catch(() => null);
-		const body = await response?.json().catch(() => null);
-		let detail = null;
-		try { detail = body?.type === 'failure' && typeof body.data === 'string' ? parse(body.data) : null; } catch {}
-		// The app's own message, synthetic data only: a refusal other than the limit must be visible.
-		bookings.push({ attempt, type: body?.type ?? null, status: body?.status ?? response?.status ?? 0,
-			message: typeof detail?.message === 'string' ? detail.message.slice(0, 160) : null,
-			rateLimited: body?.status === 400 && String(detail?.message ?? '').startsWith(IP_LIMIT_MESSAGE) });
+		const found = await findPublicSlot({ origin, data, random: createRandom(`abuse-${attempt}`), unflatten, fetchFn });
+		if (!found) { bookings.push({ attempt, outcome: 'no-slot' }); break; }
+		const answer = bookingAnswer(await exchange(submitPublicBooking(origin, data, found, syntheticName('Abuso Prueba', phone), phone, fetchFn)), parse);
 		phone = nextPhone(phone);
+		// The app's own message, synthetic data only: a refusal other than the limit must be visible.
+		bookings.push({ attempt, ...answer });
+		if (answer.type !== 'redirect') break;
 	}
-	return { reads, bookings, phone, passed: reads.refused > 0 && reads.other === 0 && reads.firstRefusal > 100 && bookings.some(booking => booking.rateLimited) };
+	const refusedBooking = bookings.at(-1)?.rateLimited === true && bookings.slice(0, -1).every(booking => booking.type === 'redirect');
+	return { reads, bookings, phone, passed: reads.refused > 0 && reads.other === 0 && reads.firstRefusal > 100 && refusedBooking };
 }

@@ -219,15 +219,19 @@ async function measurePublic(practices) {
 		const measureFrom = Date.now() + WARMUP_MS;
 		const until = measureFrom + MEASURE_MS;
 		const samples = [];
-		phone = await runPublicGenerator({ origin: appOrigin, practices, random: createRandom(`public-${practices}-${repetition}`), measureFrom, until,
+		const generated = await runPublicGenerator({ origin: appOrigin, practices, random: createRandom(`public-${practices}-${repetition}`), measureFrom, until,
 			record: sample => samples.push(sample), unflatten: devalue.unflatten, parse: devalue.parse, phone });
+		phone = generated.phone;
 		const summary = summarize(samples);
-		repetitions.push({ repetition, summary, acceptance: evaluateAcceptance(summary) });
-		console.log(`capacity-public ${practices}/${repetition} ` + JSON.stringify({ read: summary.read, write: summary.write, acceptance: repetitions.at(-1).acceptance }));
+		repetitions.push({ repetition, summary, acceptance: evaluateAcceptance(summary), bookingFailures: generated.failures });
+		console.log(`capacity-public ${practices}/${repetition} ` + JSON.stringify({ read: summary.read, write: summary.write,
+			acceptance: repetitions.at(-1).acceptance, bookingFailures: generated.failures }));
 	}
 	const abuse = await runPublicAbuse({ origin: appOrigin, unflatten: devalue.unflatten, parse: devalue.parse, phone });
 	console.log(`capacity-public-abuse ${practices} ` + JSON.stringify(abuse));
-	return { entries, repetitions, abuse, passed: repetitions.every(item => item.acceptance.passed) && abuse.passed };
+	// One generator, free slots and a different phone each time: every scheduled booking must succeed.
+	return { entries, repetitions, abuse,
+		passed: repetitions.every(item => item.acceptance.passed && item.bookingFailures.length === 0) && abuse.passed };
 }
 
 // Plans of the statements that took longer than 250 ms, logged by auto_explain.

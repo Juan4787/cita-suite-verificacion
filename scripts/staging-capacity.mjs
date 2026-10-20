@@ -71,19 +71,21 @@ if (operation === 'seed') {
 	}
 	const publicSamples = [];
 	const publicFrom = Date.now() + 2 * 60_000;
-	const phone = await runPublicGenerator({ origin: STAGING_APP_ORIGIN, practices: PRACTICES, random: createRandom('staging-public'),
+	const generated = await runPublicGenerator({ origin: STAGING_APP_ORIGIN, practices: PRACTICES, random: createRandom('staging-public'),
 		measureFrom: publicFrom, until: publicFrom + 10 * 60_000, record: sample => publicSamples.push(sample), unflatten: devalue.unflatten, parse: devalue.parse,
 		phone: '+5491177000000' });
 	const publicSummary = summarize(publicSamples);
-	const abuse = await runPublicAbuse({ origin: STAGING_APP_ORIGIN, unflatten: devalue.unflatten, parse: devalue.parse, phone });
+	const abuse = await runPublicAbuse({ origin: STAGING_APP_ORIGIN, unflatten: devalue.unflatten, parse: devalue.parse, phone: generated.phone });
 	const result = { origin: STAGING_APP_ORIGIN, practices: PRACTICES, repetitions,
-		publicBooking: { summary: publicSummary, acceptance: evaluateAcceptance(publicSummary), abuse },
+		publicBooking: { summary: publicSummary, acceptance: evaluateAcceptance(publicSummary), bookingFailures: generated.failures, abuse },
 		database: JSON.parse(sql(`select jsonb_build_object('databaseBytes',pg_database_size(current_database()),
 			'deadlocks',(select deadlocks from pg_stat_database where datname=current_database()))::text;`)) };
-	result.passed = repetitions.every(item => item.acceptance.passed) && result.publicBooking.acceptance.passed && abuse.passed;
+	// One generator, free slots and a different phone each time: every scheduled booking must succeed.
+	result.passed = repetitions.every(item => item.acceptance.passed) && result.publicBooking.acceptance.passed &&
+		generated.failures.length === 0 && abuse.passed;
 	writeFileSync(join(evidence, 'staging-capacity-measure.json'), JSON.stringify(result, null, 2) + '\n');
 	console.log('staging-capacity-result ' + JSON.stringify({ passed: result.passed, abuse, database: result.database,
-		public: { read: publicSummary.read, write: publicSummary.write } }));
+		public: { read: publicSummary.read, write: publicSummary.write, bookingFailures: generated.failures } }));
 	if (!result.passed) process.exitCode = 1;
 } else {
 	// Integrations restrict deleting their practice; everything else follows by cascade.

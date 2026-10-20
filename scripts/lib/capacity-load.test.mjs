@@ -147,39 +147,62 @@ test('public page data is decoded like the SvelteKit client does', () => {
 	assert.equal(isValidPatientFullName('Reserva pública 0001'), false);
 });
 
-test('the public generator reads both entry points and books once every four minutes with a different phone', async () => {
+// The public page as a person uses it: the days with availability first, then the
+// slots of the chosen day.
+const publicPage = (url, slotsByDate) => {
+	const date = new URL(url).searchParams.get('date');
+	if (!date) return dataResponse({ days: Object.keys(slotsByDate).map(day => ({ date: day, label: day, count: slotsByDate[day].length })), slots: [] });
+	return dataResponse({ days: [], slots: (slotsByDate[date] ?? []).map(starts_at => ({ starts_at })) });
+};
+const IP_REFUSAL = 'Se alcanzó el máximo de 3 intentos desde esta conexión en 10 minutos. Esperá unos minutos antes de volver a probar.';
+const TAKEN = 'Ese horario acaba de ser ocupado. Elegí otro de los horarios disponibles.';
+
+test('the public generator reads both entry points, books once every four minutes with a different phone and reports only real refusals', async () => {
 	const calls = [];
+	let posts = 0;
 	const fake = async (url, init = {}) => {
 		const path = url.replace('http://app.test', '');
 		calls.push({ path, method: init.method ?? 'GET', body: init.body ? new URLSearchParams(String(init.body)) : null });
-		if (path.includes('?/create_booking')) return response(200, { type: 'redirect', status: 303, location: '/turno/abc' });
-		return dataResponse({ slots: [{ starts_at: '2026-10-25T13:30:00.000Z' }] });
+		if (path.includes('?/create_booking')) return ++posts === 2
+			? response(200, { type: 'failure', status: 400, data: devalue.stringify({ message: TAKEN }) })
+			: response(200, { type: 'redirect', status: 303, location: '/turno/abc' });
+		return publicPage(url, { '2026-10-27': ['2026-10-27T13:30:00.000Z'] });
 	};
 	let clock = 0;
 	const realNow = Date.now;
 	Date.now = () => clock;
 	const records = [];
-	let phone;
+	let result;
 	try {
-		phone = await runPublicGenerator({ origin: 'http://app.test', practices: 25, random: createRandom('public'), measureFrom: 0, until: 12 * 60_000,
-			record: sample => records.push(sample), unflatten: devalue.unflatten, phone: '+5491177000000', fetchFn: fake, sleep: async ms => { clock += ms; } });
+		result = await runPublicGenerator({ origin: 'http://app.test', practices: 25, random: createRandom('public'), measureFrom: 0, until: 12 * 60_000,
+			record: sample => records.push(sample), unflatten: devalue.unflatten, parse: devalue.parse, phone: '+5491177000000', fetchFn: fake,
+			sleep: async ms => { clock += ms; } });
 	} finally { Date.now = realNow; }
 	const bookings = calls.filter(call => call.method === 'POST');
 	assert.equal(bookings.length, Math.floor((12 * 60_000 - 30_000) / PUBLIC_WRITE_INTERVAL_MS) + 1);
 	assert.equal(new Set(bookings.map(call => call.body.get('patient_phone'))).size, bookings.length);
-	assert.ok(bookings.every(call => /^\/reservar\/[0-9a-f-]{36}\?\/create_booking$/.test(call.path) && call.body.get('slot_starts_at') === '2026-10-25T13:30:00.000Z'));
-	assert.equal(phone, '+54911770000' + String(bookings.length).padStart(2, '0'));
+	assert.ok(bookings.every(call => /^\/reservar\/[0-9a-f-]{36}\?\/create_booking$/.test(call.path) && call.body.get('slot_starts_at') === '2026-10-27T13:30:00.000Z'));
+	// Each booking follows the day list and then the page of the day the system offered.
+	for (const booking of bookings) {
+		const index = calls.indexOf(booking);
+		assert.ok(!new URL('http://app.test' + calls[index - 2].path).searchParams.has('date'));
+		assert.equal(new URL('http://app.test' + calls[index - 1].path).searchParams.get('date'), '2026-10-27');
+	}
+	assert.equal(result.phone, '+54911770000' + String(bookings.length).padStart(2, '0'));
+	// Only the refused booking is reported, with the app's own answer.
+	assert.deepEqual(result.failures, [{ type: 'failure', status: 400, message: TAKEN }]);
 	const reads = calls.filter(call => call.method === 'GET');
 	assert.ok(reads.some(call => call.path.startsWith('/embed/v1/')) && reads.some(call => call.path.startsWith('/reservar/')));
 	assert.ok(reads.length / 12 <= 41, 'public reads stay far below 120 per minute');
-	assert.ok(records.every(sample => sample.outcome === 'ok'));
+	assert.deepEqual(records.filter(sample => sample.outcome !== 'ok').map(sample => sample.operation), ['public_booking']);
 });
 
-test('the abuse checks pass only when the system refuses both bursts', async () => {
+test('the abuse checks find free slots like a person and book until the exact refusal, by the fourth attempt', async () => {
 	const realDate = global.Date;
-	const run = async ({ readLimit, bookingRefusal }) => {
+	const run = async ({ readLimit = 120, refuseFrom = 4, refusal = IP_REFUSAL,
+		slotsByDate = { '2026-10-27': [0, 1, 2, 3].map(index => `2026-10-27T1${index}:00:00.000Z`) } } = {}) => {
 		let reads = 0;
-		let bookings = 0;
+		const posts = [];
 		const fake = async (url, init = {}) => {
 			if (url.includes('/embed/v1/')) {
 				if (++reads <= readLimit) return dataResponse({ slots: [] });
@@ -188,21 +211,38 @@ test('the abuse checks pass only when the system refuses both bursts', async () 
 					: response(429, { message: 'Esperá un minuto' });
 			}
 			if (init.method === 'POST') {
-				bookings++;
-				return bookings > 1 && bookingRefusal
-					? response(200, { type: 'failure', status: 400, data: devalue.stringify({ message: 'Se alcanzó el máximo de 3 intentos desde esta conexión en 10 minutos. Esperá unos minutos antes de volver a probar.' }) })
+				posts.push(new URLSearchParams(String(init.body)));
+				return posts.length >= refuseFrom
+					? response(200, { type: 'failure', status: 400, data: devalue.stringify({ message: refusal }) })
 					: response(200, { type: 'redirect', status: 303, location: '/turno/abc' });
 			}
-			return dataResponse({ slots: [0, 1, 2, 3].map(index => ({ starts_at: `2026-10-25T1${index}:00:00.000Z` })) });
+			return publicPage(url, slotsByDate);
 		};
-		return runPublicAbuse({ origin: 'http://app.test', unflatten: devalue.unflatten, parse: devalue.parse, phone: '+5491177000100', fetchFn: fake, sleep: async () => {} });
+		const result = await runPublicAbuse({ origin: 'http://app.test', unflatten: devalue.unflatten, parse: devalue.parse, phone: '+5491177000100', fetchFn: fake, sleep: async () => {} });
+		return { result, posts };
 	};
 	global.Date = class extends realDate { getUTCSeconds() { return 0; } };
 	try {
-		const refused = await run({ readLimit: 120, bookingRefusal: true });
-		assert.deepEqual([refused.reads.accepted, refused.reads.refused, refused.reads.firstRefusal, refused.passed], [120, 10, 121, true]);
-		assert.equal((await run({ readLimit: 1000, bookingRefusal: true })).passed, false);
-		assert.equal((await run({ readLimit: 120, bookingRefusal: false })).passed, false);
+		const { result, posts } = await run();
+		assert.deepEqual([result.reads.accepted, result.reads.refused, result.reads.firstRefusal, result.passed], [120, 10, 121, true]);
+		// Three bookings on the only day with availability, then the exact refusal.
+		assert.deepEqual(result.bookings.map(booking => [booking.type, booking.rateLimited]),
+			[['redirect', false], ['redirect', false], ['redirect', false], ['failure', true]]);
+		assert.ok(posts.every(form => form.get('slot_starts_at').startsWith('2026-10-27T1')));
+		assert.equal(new Set(posts.map(form => form.get('patient_phone'))).size, 4);
+		// The generator's bookings count in the same ten minutes: the refusal may come sooner.
+		assert.equal((await run({ refuseFrom: 2 })).result.passed, true);
+		// The limit must act by the fourth attempt, and the attempts stop there.
+		const never = await run({ refuseFrom: 99 });
+		assert.deepEqual([never.result.passed, never.posts.length], [false, 4]);
+		// Any other refusal is not the limit, and nothing else is attempted after it.
+		const other = await run({ refusal: TAKEN, refuseFrom: 1 });
+		assert.deepEqual([other.result.passed, other.posts.length, other.result.bookings[0].message], [false, 1, TAKEN]);
+		// Without availability the check cannot run, and says so.
+		const empty = await run({ slotsByDate: {} });
+		assert.deepEqual([empty.result.passed, empty.posts.length, empty.result.bookings.at(-1).outcome], [false, 0, 'no-slot']);
+		// The read limit must act too.
+		assert.equal((await run({ readLimit: 1000 })).result.passed, false);
 	} finally { global.Date = realDate; }
 });
 
