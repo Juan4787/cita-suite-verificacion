@@ -6,6 +6,23 @@ export const fixtureDatabaseBudget = Object.freeze({
 	auth: 2, storage: 2, rest: 2, restListener: 1, administration: 2
 });
 
+// Capacity scenarios of the plan: PostgreSQL with 4 GB and two CPUs on the hosted
+// runner. Pools follow a small hosted project (60 connections) instead of the
+// minimal verification stack, so the load measures queries rather than queueing.
+export const capacityDatabaseBudget = Object.freeze({
+	maximum: 60, superuserReserved: 3,
+	auth: 5, storage: 2, rest: 10, restListener: 1, administration: 4
+});
+
+const profile = process.env.CITA_FIXTURE_PROFILE ?? '';
+if (!['', 'capacity'].includes(profile)) throw new Error('CITA_FIXTURE_PROFILE accepts only "capacity".');
+export const capacityProfile = profile === 'capacity';
+export const activeFixtureDatabaseBudget = capacityProfile ? capacityDatabaseBudget : fixtureDatabaseBudget;
+export const fixtureDatabaseResources = Object.freeze(capacityProfile
+	? { memory: '4096m', cpus: '2', settings: ['shared_buffers=1GB', 'effective_cache_size=3GB', 'work_mem=16MB',
+		'maintenance_work_mem=256MB', 'shared_preload_libraries=pg_cron,pg_stat_statements'] }
+	: { memory: '384m', cpus: '1', settings: ['shared_buffers=32MB', 'shared_preload_libraries=pg_cron'] });
+
 export function assertFixtureDatabaseBudget(budget = fixtureDatabaseBudget) {
 	for (const value of Object.values(budget)) {
 		if (!Number.isSafeInteger(value) || value <= 0) throw new Error('Every fixture pool requires an explicit positive bound; zero can mean unlimited.');
@@ -16,3 +33,4 @@ export function assertFixtureDatabaseBudget(budget = fixtureDatabaseBudget) {
 	return demand;
 }
 assertFixtureDatabaseBudget();
+assertFixtureDatabaseBudget(capacityDatabaseBudget);

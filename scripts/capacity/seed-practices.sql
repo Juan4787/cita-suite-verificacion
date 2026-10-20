@@ -1,0 +1,127 @@
+-- Deterministic synthetic practices for the capacity scenarios of the plan: per
+-- practice 3 professionals, 5 services, weekday schedules, 6,000 patients and
+-- 12,000 appointments over twelve months (nine past, three ahead), with the states
+-- the system admits today: reserved, confirmed, cancelled and reschedule requested.
+-- The passing of time writes no state, so past appointments stay reserved or
+-- confirmed. Identities are fictitious; every row belongs to a `capacity-` practice.
+-- Run on a disposable database after the migrations, through the real triggers:
+--   psql -v practices=5 -v owners='["<auth user id>", ...]' -f seed-practices.sql
+-- The owners are created first through the Auth admin API, one per practice.
+\set ON_ERROR_STOP on
+select set_config('cita.capacity.practices', :'practices', false),
+ set_config('cita.capacity.owners', :'owners', false);
+
+begin;
+create temporary table capacity_practice on commit drop as
+select p as practice,
+ md5('capacity-practice-'||p)::uuid as business_id,
+ (current_setting('cita.capacity.owners')::jsonb->>(p-1))::uuid as owner_id,
+ lpad(p::text,2,'0') as tag
+from generate_series(1,current_setting('cita.capacity.practices')::integer) p;
+do $$
+begin
+ if (select count(*) from capacity_practice where owner_id is null)>0
+  or jsonb_array_length(current_setting('cita.capacity.owners')::jsonb)<>(select count(*) from capacity_practice) then
+  raise exception 'CAPACITY_OWNERS_MISMATCH';
+ end if;
+ if exists(select 1 from public.businesses where slug like 'capacity-%') then raise exception 'CAPACITY_ALREADY_SEEDED'; end if;
+end $$;
+
+insert into public.businesses(id,name,slug,industry,timezone,min_booking_notice_minutes,max_booking_days_ahead,address)
+select business_id,'Consultorio de capacidad '||tag,'capacity-'||tag,'odontology','America/Argentina/Buenos_Aires',60,180,'Dirección sintética '||practice
+from capacity_practice;
+update public.business_subscriptions s set commercial_access_enabled=true,is_permanent=true,subscription_status='active',
+ paid_until=null,grace_until=null,restricted_until=null,archived_at=null
+from capacity_practice c where s.business_id=c.business_id;
+insert into public.business_users(business_id,user_id,role,status,accepted_at)
+select business_id,owner_id,'owner','active',now()-interval '1 year' from capacity_practice;
+
+insert into public.professionals(id,business_id,name)
+select md5('capacity-professional-'||c.practice||'-'||k)::uuid,c.business_id,'Profesional '||c.tag||'-'||k
+from capacity_practice c cross join generate_series(1,3) k;
+insert into public.services(id,business_id,name,duration_minutes)
+select md5('capacity-service-'||c.practice||'-'||k)::uuid,c.business_id,(array['Consulta','Control','Limpieza','Urgencia','Seguimiento'])[k],30
+from capacity_practice c cross join generate_series(1,5) k;
+insert into public.professional_services(business_id,professional_id,service_id)
+select c.business_id,md5('capacity-professional-'||c.practice||'-'||k)::uuid,md5('capacity-service-'||c.practice||'-'||s)::uuid
+from capacity_practice c cross join generate_series(1,3) k cross join generate_series(1,5) s;
+insert into public.availability_rules(business_id,professional_id,weekday,start_time,end_time,slot_interval_minutes,break_minutes)
+select c.business_id,md5('capacity-professional-'||c.practice||'-'||k)::uuid,d,'09:00','18:00',30,0
+from capacity_practice c cross join generate_series(1,3) k cross join generate_series(1,5) d;
+
+-- 6,000 patients per practice: 40 first names by 50 surnames, with unique documents and phones.
+insert into public.patients(id,owner_id,business_id,full_name,dni,phone,birth_date,insurance,created_at,updated_at)
+select md5('capacity-patient-'||c.practice||'-'||i)::uuid,c.owner_id,c.business_id,
+ (array['Ana','Bruno','Carla','Diego','Elena','Facundo','Gabriela','Hernán','Inés','Javier','Karina','Lucas','María','Nicolás','Olga','Pablo',
+  'Romina','Santiago','Tamara','Ulises','Valeria','Walter','Ximena','Yamila','Zulema','Agustina','Bautista','Camila','Dante','Emilia','Federico',
+  'Guadalupe','Hugo','Isabel','Julián','Lorena','Mateo','Natalia','Octavio','Paula'])[1+i%40]||' '||
+ (array['Acosta','Benítez','Castro','Díaz','Escobar','Fernández','García','Herrera','Ibarra','Juárez','Ledesma','Martínez','Núñez','Ortiz','Pereyra',
+  'Quiroga','Ríos','Sosa','Torres','Urquiza','Vega','Zárate','Álvarez','Blanco','Cabrera','Domínguez','Figueroa','Giménez','Ruiz','Molina',
+  'Navarro','Ojeda','Ponce','Ramos','Suárez','Toledo','Vargas','Aguirre','Bustos','Correa','Duarte','Farías','Gutiérrez','Luna','Medina',
+  'Paz','Rojas','Silva','Villalba','Moreno'])[1+(i/40)%50],
+ (20000000+c.practice*100000+i)::text,'+54911'||lpad((c.practice*100000+i)::text,8,'0'),
+ date '1950-01-01'+((i*7919)%25000),case when i%3=0 then 'OSDE' when i%3=1 then 'Swiss Medical' else null end,
+ now()-interval '1 year'+make_interval(mins=>i*80),now()-interval '1 year'+make_interval(mins=>i*80)
+from capacity_practice c cross join generate_series(0,5999) i;
+
+-- 12,000 appointments per practice out of the weekday slots of twelve months: three
+-- professionals with eighteen 30-minute slots a day, chosen by a fixed hash order
+-- so every day keeps some free slots and no two appointments overlap.
+create temporary table capacity_slot on commit drop as
+select c.practice,c.business_id,c.owner_id,k as professional,d::date as day,s as slot,
+ row_number() over(partition by c.practice order by md5(c.practice||'-'||k||'-'||d::date||'-'||s)) as pick
+from capacity_practice c
+cross join generate_series(date_trunc('day',now())-interval '270 days',date_trunc('day',now())+interval '95 days',interval '1 day') d
+cross join generate_series(1,3) k cross join generate_series(0,17) s
+where extract(isodow from d) between 1 and 5;
+create temporary table capacity_appointment on commit drop as
+select s.*,s.pick as n,
+ ((s.day::timestamp+interval '9 hours'+make_interval(mins=>30*s.slot)) at time zone 'America/Argentina/Buenos_Aires') as starts_at,
+ 1+(s.pick%5) as service,(s.pick*7919)%6000 as patient,('x'||substr(md5('state-'||s.practice||'-'||s.pick),1,7))::bit(28)::integer%100 as roll
+from capacity_slot s where s.pick<=12000;
+do $$
+begin
+ if (select count(*) from capacity_appointment)<>12000*(select count(*) from capacity_practice) then raise exception 'CAPACITY_SLOTS_SHORT'; end if;
+end $$;
+insert into public.appointments(id,business_id,patient_id,service_id,professional_id,starts_at,ends_at,blocking_starts_at,blocking_ends_at,
+ status,source,service_name_snapshot,professional_name_snapshot,duration_minutes_snapshot,confirmed_at,cancelled_at,reschedule_requested_at,created_at,updated_at)
+select md5('capacity-appointment-'||a.practice||'-'||a.n)::uuid,a.business_id,md5('capacity-patient-'||a.practice||'-'||a.patient)::uuid,
+ md5('capacity-service-'||a.practice||'-'||a.service)::uuid,md5('capacity-professional-'||a.practice||'-'||a.professional)::uuid,
+ a.starts_at,a.starts_at+interval '30 minutes',a.starts_at,a.starts_at+interval '30 minutes',
+ state.status,case when a.n%10<3 then 'public_booking' else 'manual' end,
+ (array['Consulta','Control','Limpieza','Urgencia','Seguimiento'])[a.service],'Profesional '||lpad(a.practice::text,2,'0')||'-'||a.professional,30,
+ case when state.status='confirmed' then least(a.starts_at-interval '1 day',now()) end,
+ case when state.status='cancelled' then least(a.starts_at-interval '2 days',now()) end,
+ case when state.status='reschedule_requested' then least(a.starts_at-interval '1 day',now()) end,
+ least(a.starts_at-interval '7 days',now()),least(a.starts_at-interval '1 day',now())
+from capacity_appointment a
+cross join lateral (select case
+  when a.starts_at<now() then case when a.roll<15 then 'cancelled' when a.roll<75 then 'confirmed' else 'reserved' end
+  else case when a.roll<10 then 'cancelled' when a.roll<40 then 'confirmed' when a.roll<45 then 'reschedule_requested' else 'reserved' end
+ end as status) state;
+
+-- Each patient is linked to the professional of their first appointment, and three
+-- in ten past confirmed appointments carry a clinical entry.
+insert into public.professional_patient_links(business_id,professional_id,patient_id,source,is_active,created_by)
+select distinct on (a.business_id,a.patient_id) a.business_id,a.professional_id,a.patient_id,'appointment',true,c.owner_id
+from public.appointments a join capacity_practice c on c.business_id=a.business_id
+order by a.business_id,a.patient_id,a.starts_at;
+insert into public.clinical_entries(business_id,patient_id,owner_id,entry_type,description,created_by_professional_id,created_at,updated_at)
+select a.business_id,a.patient_id,c.owner_id,'Consulta','Control sintético de capacidad',a.professional_id,a.starts_at+interval '30 minutes',a.starts_at+interval '30 minutes'
+from public.appointments a join capacity_practice c on c.business_id=a.business_id
+where a.status='confirmed' and a.starts_at<now() and ('x'||substr(md5(a.id::text),1,7))::bit(28)::integer%10<3;
+commit;
+
+analyze;
+select json_build_object(
+ 'practices',(select count(*) from public.businesses where slug like 'capacity-%'),
+ 'patients',(select count(*) from public.patients p join public.businesses b on b.id=p.business_id where b.slug like 'capacity-%'),
+ 'appointments',(select count(*) from public.appointments a join public.businesses b on b.id=a.business_id where b.slug like 'capacity-%'),
+ 'appointmentStates',(select json_object_agg(status,n) from (select a.status,count(*) n from public.appointments a join public.businesses b on b.id=a.business_id
+   where b.slug like 'capacity-%' group by a.status) s),
+ 'clinicalEntries',(select count(*) from public.clinical_entries e join public.businesses b on b.id=e.business_id where b.slug like 'capacity-%'),
+ 'databaseBytes',pg_database_size(current_database()),
+ 'largestTables',(select json_agg(t order by t.bytes desc) from (select c.relname as table,pg_total_relation_size(c.oid) as bytes
+   from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r'
+   order by pg_total_relation_size(c.oid) desc limit 8) t)
+) as capacity_seed;

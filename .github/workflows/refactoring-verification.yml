@@ -9,7 +9,7 @@ on:
         type: choice
         required: true
         default: full
-        options: [fast, full, types, sql, browser]
+        options: [fast, full, types, sql, browser, capacity, capacity-seed]
       browser_grep:
         description: Diagnostic selection only; never certifies full verification
         type: string
@@ -26,7 +26,8 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 75
+    # The capacity scenarios run three repetitions of twelve minutes for each of two sizes.
+    timeout-minutes: ${{ startsWith(inputs.level, 'capacity') && 240 || 75 }}
     env:
       ASTRO_TELEMETRY_DISABLED: '1'
       NODE_OPTIONS: --max-old-space-size=1536
@@ -77,6 +78,11 @@ jobs:
             fast|full) pnpm "verify:$VERIFICATION_LEVEL" ;;
             types) node scripts/run-campaign-type-generation.mjs ;;
             sql) node scripts/run-campaign-type-generation.mjs --verify-sql ;;
+            capacity) node scripts/run-campaign-capacity.mjs ;;
+            capacity-seed)
+              echo 'Seeding diagnostic only; this is not a capacity result.'
+              node scripts/run-campaign-capacity.mjs --seed-only
+              ;;
             browser)
               test -n "$BROWSER_GREP"
               echo 'Diagnostic browser execution only; this is not full verification.'

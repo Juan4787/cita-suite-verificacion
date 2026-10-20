@@ -7,13 +7,17 @@ import { fileURLToPath } from "node:url";
 import { acquireVerificationLock } from './lib/verification-lock.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
 import { capturePlatformDiagnostics } from './lib/platform-diagnostics.mjs';
-import { fixtureDatabaseBudget } from './lib/fixture-database-budget.mjs';
+import { activeFixtureDatabaseBudget as fixtureDatabaseBudget, capacityProfile } from './lib/fixture-database-budget.mjs';
 const root = fileURLToPath(new URL("../", import.meta.url)).replace(/\/$/, "");
 const db = process.argv[2];
 assertHostedIntegrationResources();
-const realAuth = process.argv[3] === '--real-auth';
+const options = process.argv.slice(3);
+const realAuth = options.includes('--real-auth');
+// The capacity scenarios run the built Worker themselves instead of the dev server.
+const withoutApp = options.includes('--no-app');
 if (
-  (process.argv.length !== 3 && !(process.argv.length === 4 && realAuth)) ||
+  options.some((option) => !['--real-auth', '--no-app'].includes(option)) ||
+  new Set(options).size !== options.length ||
   !/^cita-booking-test-[a-f0-9]{12}$/.test(db ?? "")
 )
   throw new Error(
@@ -160,9 +164,9 @@ try {
     "--network",
     network,
     "--memory",
-    "96m",
+    capacityProfile ? "256m" : "96m",
     "--cpus",
-    "0.5",
+    capacityProfile ? "1" : "0.5",
     "-p",
     "127.0.0.1::3000",
     "-e",
@@ -336,7 +340,7 @@ try {
     };
     docker(['run', '-d', '--name', authContainer, '--label', 'com.cita-suite.booking-fixture=true',
       '--label', 'com.cita-suite.fixture-run=' + fixtureRunId,
-      '--network', network, '--memory', '96m', '--cpus', '0.5',
+      '--network', network, '--memory', capacityProfile ? '128m' : '96m', '--cpus', '0.5',
       ...Object.entries(authEnvironment).flatMap(([name, value]) => ['-e', `${name}=${value}`]), authImage]);
     authCreated = true;
     const address = docker(['inspect', '--format', '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}', authContainer]);
@@ -438,63 +442,66 @@ try {
     }),
     { mode: 0o600 },
   );
-  child = spawn(
-    "pnpm",
-    ["dev", "--host", "127.0.0.1", "--port", "5177", "--strictPort"],
-    {
-      cwd: root + "/apps/web",
-      detached: true,
-      stdio: [
-        "ignore",
-        openSync(fixturePath(`vite-${fixtureRunId}.log`), "w", 0o600),
-        openSync(fixturePath(`vite-errors-${fixtureRunId}.log`), "w", 0o600),
-      ],
-      env: {
-        ...process.env,
-        NODE_OPTIONS: "--max-old-space-size=1024" + (process.env.CITA_VERIFICATION_RUN_ID
-          ? " --import=" + new URL('./lib/ssr-fetch-diagnostics.mjs', import.meta.url).href : ""),
-        ODONTO_SUPABASE_URL: apiOrigin,
-        ODONTO_SUPABASE_ANON_KEY: anon,
-        ODONTO_SUPABASE_SERVICE_ROLE_KEY: service,
-        PUBLIC_ODONTO_SUPABASE_URL: apiOrigin,
-        PUBLIC_ODONTO_SUPABASE_ANON_KEY: anon,
-        PUBLIC_SITE_URL: appOrigin,
-        BOOKING_INTEGRATIONS_ENABLED: "true",
-        BOOKING_CONTEXTS_AVAILABLE: "true",
-        BOOKING_INFORMATION_ENABLED: "true",
-        DEMO_MODE: "false",
-        MASTER_EMAIL: 'master@cita-suite-test.local',
-        GOOGLE_CALENDAR_MANAGED_ENABLED: "false",
-        MP_ACCESS_TOKEN: "",
-        TURNSTILE_SECRET_KEY: "",
-        PUBLIC_TURNSTILE_SITE_KEY: "",
-        VAPID_PUBLIC_KEY: "",
-        VAPID_PRIVATE_KEY: "",
-        RATE_LIMIT_SALT: "cita-disposable-local-only",
-        INTERNAL_JOB_SECRET: internalJobSecret,
-        JOB_BUDGET_PROFILE: "free",
+  if (withoutApp) console.log("READY: local services at " + apiOrigin + " without the application");
+  else {
+    child = spawn(
+      "pnpm",
+      ["dev", "--host", "127.0.0.1", "--port", "5177", "--strictPort"],
+      {
+        cwd: root + "/apps/web",
+        detached: true,
+        stdio: [
+          "ignore",
+          openSync(fixturePath(`vite-${fixtureRunId}.log`), "w", 0o600),
+          openSync(fixturePath(`vite-errors-${fixtureRunId}.log`), "w", 0o600),
+        ],
+        env: {
+          ...process.env,
+          NODE_OPTIONS: "--max-old-space-size=1024" + (process.env.CITA_VERIFICATION_RUN_ID
+            ? " --import=" + new URL('./lib/ssr-fetch-diagnostics.mjs', import.meta.url).href : ""),
+          ODONTO_SUPABASE_URL: apiOrigin,
+          ODONTO_SUPABASE_ANON_KEY: anon,
+          ODONTO_SUPABASE_SERVICE_ROLE_KEY: service,
+          PUBLIC_ODONTO_SUPABASE_URL: apiOrigin,
+          PUBLIC_ODONTO_SUPABASE_ANON_KEY: anon,
+          PUBLIC_SITE_URL: appOrigin,
+          BOOKING_INTEGRATIONS_ENABLED: "true",
+          BOOKING_CONTEXTS_AVAILABLE: "true",
+          BOOKING_INFORMATION_ENABLED: "true",
+          DEMO_MODE: "false",
+          MASTER_EMAIL: 'master@cita-suite-test.local',
+          GOOGLE_CALENDAR_MANAGED_ENABLED: "false",
+          MP_ACCESS_TOKEN: "",
+          TURNSTILE_SECRET_KEY: "",
+          PUBLIC_TURNSTILE_SITE_KEY: "",
+          VAPID_PUBLIC_KEY: "",
+          VAPID_PRIVATE_KEY: "",
+          RATE_LIMIT_SALT: "cita-disposable-local-only",
+          INTERNAL_JOB_SECRET: internalJobSecret,
+          JOB_BUDGET_PROFILE: "free",
+        },
       },
-    },
-  );
-  for (let n = 0; n < 60; n++) {
-    try {
-      const response = await fetch(appOrigin + "/embed/v1/" + key);
-      if (response.ok) {
-        console.log(
-          "READY: local integration at " +
-            appOrigin +
-            "; host " +
-            apiOrigin +
-            "/harness",
-        );
-        break;
+    );
+    for (let n = 0; n < 60; n++) {
+      try {
+        const response = await fetch(appOrigin + "/embed/v1/" + key);
+        if (response.ok) {
+          console.log(
+            "READY: local integration at " +
+              appOrigin +
+              "; host " +
+              apiOrigin +
+              "/harness",
+          );
+          break;
+        }
+        if (n === 59)
+          throw new Error("Application did not load: " + response.status);
+      } catch (error) {
+        if (n === 59) throw error;
       }
-      if (n === 59)
-        throw new Error("Application did not load: " + response.status);
-    } catch (error) {
-      if (n === 59) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
-    await new Promise((resolve) => setTimeout(resolve, 500));
   }
   await new Promise(() => {});
 } catch (error) {

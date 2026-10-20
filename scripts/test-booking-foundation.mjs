@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
 import { writeFileSync, rmSync } from "node:fs";
 import { acquireVerificationLock } from './lib/verification-lock.mjs';
-import { fixtureDatabaseBudget } from './lib/fixture-database-budget.mjs';
+import { activeFixtureDatabaseBudget as fixtureDatabaseBudget, fixtureDatabaseResources } from './lib/fixture-database-budget.mjs';
 // This runner cannot target a supplied URL or existing database. Only its own
 // disposable, portless container is ever mutated. All work is sequential.
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -109,23 +109,20 @@ try {
     "--network",
     localNetwork ?? "none",
     "--memory",
-    "384m",
+    fixtureDatabaseResources.memory,
     "--cpus",
-    "1",
+    fixtureDatabaseResources.cpus,
     "-e",
     "POSTGRES_PASSWORD=cita-disposable-test-only",
     image,
     "postgres",
-    "-c",
-    "shared_buffers=32MB",
+    ...fixtureDatabaseResources.settings.flatMap((setting) => ["-c", setting]),
     "-c",
     `max_connections=${fixtureDatabaseBudget.maximum}`,
     "-c",
     `superuser_reserved_connections=${fixtureDatabaseBudget.superuserReserved}`,
     "-c",
     "listen_addresses=*",
-    "-c",
-    "shared_preload_libraries=pg_cron",
     "-c",
     "cron.database_name=postgres",
   ]);
