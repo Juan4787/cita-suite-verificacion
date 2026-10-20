@@ -951,6 +951,7 @@ describe('load', () => {
 		expect(data.mpSubscription?.status).toBe('authorized');
 		// Tras acreditar se refresca el contexto para mostrar el acceso al día.
 		expect(mocks.resolveActiveBusiness).toHaveBeenCalledTimes(2);
+		expect(mocks.resolveActiveBusiness).toHaveBeenLastCalledWith(expect.objectContaining({ membershipCache: 'fresh' }));
 	});
 
 	it('con ?mp=retorno refresca el contexto aunque el webhook haya acreditado primero (duplicado)', async () => {
@@ -1002,8 +1003,10 @@ describe('load', () => {
 		expect(data.mpReturn.creditedNow).toBe(false);
 		expect(data.mpReturn.subscriptionStatus).toBe('authorized');
 		// Aun sin acreditar acá, el contexto se refresca para mostrar el acceso
-		// que el webhook ya activó.
+		// que el webhook ya activó: una lectura nueva, no la de antes del pago que
+		// el pedido ya tiene.
 		expect(mocks.resolveActiveBusiness).toHaveBeenCalledTimes(2);
+		expect(mocks.resolveActiveBusiness).toHaveBeenLastCalledWith(expect.objectContaining({ membershipCache: 'fresh' }));
 	});
 
 	it('sin retorno devuelve la suscripción relevante y el precio configurado', async () => {

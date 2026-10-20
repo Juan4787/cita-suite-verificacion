@@ -84,9 +84,10 @@ export const load: LayoutServerLoad = async ({
 					cookies,
 					defaultBusinessCreationIp: getClientAddress(),
 					fetch,
-					// Nunca reutilizar entre requests un estado comercial que puede haber
+					// Una lectura por pedido, compartida con la página cuando el pedido no
+					// escribe; nunca entre pedidos, porque el estado comercial puede haber
 					// sido revocado desde otra sesión o por soporte.
-					membershipCache: 'fresh'
+					membershipCache: locals.membershipCache ?? 'fresh'
 				});
 			}
 

@@ -4,6 +4,8 @@ declare global {
 	namespace App {
 		interface Locals {
 			verifiedUser?: { id: string; email: string | null } | null;
+			/** How this request's loads read memberships; set by hooks from the method. */
+			membershipCache?: 'fresh' | 'request';
 			bookingInformationHeadersApplied?: boolean;
 			bookingFrameAncestors?: string[];
 			bookingIntegrationRequest?: { publicKey: string; promise: Promise<import('$lib/server/sites/public/booking-integration-request').ResolvedBookingIntegration> };

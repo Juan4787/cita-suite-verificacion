@@ -82,6 +82,8 @@ describe('/odonto/pago/procesando', () => {
 
 		expect(mocks.confirmMpSubscriptionForBusiness).toHaveBeenCalledTimes(1);
 		expect(mocks.resolveActiveBusiness).toHaveBeenCalledTimes(2);
+		// The refresh reads again instead of reusing this request's read from before the payment.
+		expect(mocks.resolveActiveBusiness).toHaveBeenLastCalledWith(expect.objectContaining({ membershipCache: 'fresh' }));
 		expect(data.activated).toBe(true);
 		expect(data.manualBlock).toBe(false);
 		expect(data.mpReturn).toMatchObject({ creditedNow: true, subscriptionStatus: 'authorized' });

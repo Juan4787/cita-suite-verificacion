@@ -79,7 +79,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 		supabase,
 		accessToken: locals.auth.access_token,
 		cookies,
-		membershipCache: 'fresh'
+		membershipCache: locals.membershipCache ?? 'fresh'
 	});
 	if (!context) throw kitError(500, 'No se pudo resolver el negocio activo');
 	if (context.role === 'professional') throw redirect(303, '/odonto/mis-turnos');

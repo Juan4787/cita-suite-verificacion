@@ -33,8 +33,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 	const { supabase, business, userId } = await getOdontoContext({
 		locals,
 		fetch,
-		cookies,
-		membershipCache: 'fresh'
+		cookies
 	});
 	const { data: links } = await supabase
 		.from('professional_users')

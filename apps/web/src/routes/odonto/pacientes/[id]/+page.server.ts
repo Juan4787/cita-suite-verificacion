@@ -208,7 +208,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, dep
 		supabase,
 		accessToken: locals.auth.access_token,
 		cookies,
-		membershipCache: 'fresh'
+		membershipCache: locals.membershipCache ?? 'fresh'
 	});
 	if (!context) throw kitError(500, 'No se pudo resolver el negocio activo');
 	const admin = await createSupabaseAdminClient('odonto', fetch);

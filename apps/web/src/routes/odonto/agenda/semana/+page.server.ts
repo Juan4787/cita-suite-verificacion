@@ -46,8 +46,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 	const { supabase, business } = await getOdontoContext({
 		locals,
 		fetch,
-		cookies,
-		membershipCache: 'fresh'
+		cookies
 	});
 	if (business.role === 'professional') throw redirect(303, '/odonto/mis-turnos');
 	// Today is the practice's day, and an impossible date in the address shows this week.

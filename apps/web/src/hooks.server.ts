@@ -56,6 +56,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// Assigned only after this request's Auth response is verified. A decoded
 	// cookie payload is not the identity exposed to private request contexts.
 	event.locals.verifiedUser = null;
+	// A request that cannot write lets its layout and page share one membership read;
+	// one that can (an action and the page it renders) reads again each time.
+	event.locals.membershipCache = event.request.method === 'GET' || event.request.method === 'HEAD' ? 'request' : 'fresh';
 	const startedAt = performance.now();
 	let authMs = 0;
 	// HTTP trips to PostgREST and Auth: a fetch counter, not a count of SQL queries.

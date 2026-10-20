@@ -22,7 +22,7 @@ export const getOdontoContext = async ({
 	locals,
 	fetch,
 	cookies,
-	membershipCache = 'fresh'
+	membershipCache = locals.membershipCache ?? 'fresh'
 }: {
 	locals: App.Locals;
 	fetch: typeof globalThis.fetch;
