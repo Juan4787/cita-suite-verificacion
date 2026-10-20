@@ -111,6 +111,16 @@ export async function removeCapacityOwners({ practices, request }) {
 	return removed;
 }
 
+/**
+ * Whether a cleanup removed exactly the synthetic scenario: every practice and owner,
+ * at least the seeded patients and appointments (the load and the public bookings add
+ * their own to the same practices) and nothing of them left behind.
+ */
+export function evaluateCleanup({ practices, removed, ownersRemoved, remaining }) {
+	return removed.practices === practices && removed.patients >= 6000 * practices && removed.appointments >= 12000 * practices &&
+		ownersRemoved === practices && remaining.practices === 0 && remaining.owners === 0;
+}
+
 const SEARCH_TERMS = ['Acosta', 'Benítez', 'García', 'Martínez', 'Pereyra', 'Sosa', 'Torres', 'Vega', 'Ruiz', 'Luna',
 	'Ana', 'Carla', 'Diego', 'María', 'Pablo', 'Valeria', 'Lucas', 'gar', 'mar', 'sos'];
 

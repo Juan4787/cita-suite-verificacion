@@ -126,7 +126,8 @@ test('a virtual user logs in once, keeps its session, records only the measured 
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
-	PUBLIC_WRITE_INTERVAL_MS, nextPhone, pageData, publicBookingForm, removeCapacityOwners, runPublicAbuse, runPublicGenerator, syntheticName, uuidFrom
+	PUBLIC_WRITE_INTERVAL_MS, evaluateCleanup, nextPhone, pageData, publicBookingForm, removeCapacityOwners, runPublicAbuse, runPublicGenerator,
+	syntheticName, uuidFrom
 } from './capacity-load.mjs';
 import { isValidPatientFullName } from '../../apps/web/src/lib/utils/patient-name.ts';
 
@@ -264,6 +265,19 @@ test('the cleanup removes only the synthetic owners, by their deterministic ids 
 	await assert.rejects(run({ [one]: practiceData(1).email, [two]: 'persona@example.com', [three]: practiceData(3).email }, stopped),
 		/not the synthetic owner of practice 2/);
 	assert.deepEqual(stopped, [`GET /users/${one}`, `DELETE /users/${one}`, `GET /users/${two}`]);
+});
+
+test('a cleanup passes only when it removed the whole scenario, including what the load added', () => {
+	const removed = { practices: 5, patients: 30003, appointments: 60009 };
+	const clean = { practices: 5, removed, ownersRemoved: 5, remaining: { practices: 0, owners: 0 } };
+	// The public bookings and the load add their own patients and appointments to the same practices.
+	assert.equal(evaluateCleanup(clean), true);
+	assert.equal(evaluateCleanup({ ...clean, removed: { ...removed, practices: 4 } }), false);
+	assert.equal(evaluateCleanup({ ...clean, removed: { ...removed, patients: 29999 } }), false);
+	assert.equal(evaluateCleanup({ ...clean, removed: { ...removed, appointments: 59999 } }), false);
+	assert.equal(evaluateCleanup({ ...clean, ownersRemoved: 4 }), false);
+	assert.equal(evaluateCleanup({ ...clean, remaining: { practices: 1, owners: 0 } }), false);
+	assert.equal(evaluateCleanup({ ...clean, remaining: { practices: 0, owners: 1 } }), false);
 });
 
 test('a public booking echoes the hidden fields the page sent, like the confirmation form', () => {

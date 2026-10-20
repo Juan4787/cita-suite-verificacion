@@ -99,6 +99,15 @@ jobs:
           CITA_STAGING_SERVICE_ROLE_KEY: ${{ secrets.CITA_STAGING_SERVICE_ROLE_KEY }}
           OPERATION: ${{ inputs.operation }}
         run: node scripts/staging-capacity.mjs "${OPERATION#capacity-}"
+      # Synthetic data and aggregated measurements only; kept also when the measurement fails.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always() && (inputs.operation == 'capacity-seed' || inputs.operation == 'capacity-measure')
+        with:
+          name: staging-${{ inputs.operation }}-${{ github.run_id }}
+          path: .verification/staging-capacity-*.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
       # The management link of the device check is read on the local machine only.
       - name: Operate the real-device push check of one run
         if: startsWith(inputs.operation, 'device-')

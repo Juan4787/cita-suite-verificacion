@@ -11,8 +11,8 @@ import { cleanupFixtureResources } from './lib/fixture-cleanup.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
 import { assertPlatformDiagnostics } from './lib/platform-diagnostics.mjs';
 import {
-	createRandom, describePublicPage, evaluateAcceptance, localDate, login, practiceData, removeCapacityOwners, runPublicAbuse, runPublicGenerator,
-	runVirtualUser, summarize, uuidFrom
+	createRandom, describePublicPage, evaluateAcceptance, evaluateCleanup, localDate, login, practiceData, removeCapacityOwners, runPublicAbuse,
+	runPublicGenerator, runVirtualUser, summarize, uuidFrom
 } from './lib/capacity-load.mjs';
 
 // Capacity scenarios of the plan on the disposable stack of CI: PostgreSQL with 4 GB
@@ -269,8 +269,7 @@ async function cleanup(database, runtime, practices) {
 	const ownersRemoved = await removeCapacityOwners({ practices, request: (path, init = {}) => fetch(runtime.apiOrigin + '/auth/v1/admin' + path,
 		{ ...init, signal: AbortSignal.timeout(10_000), headers: { authorization: 'Bearer ' + runtime.service, apikey: runtime.service } }) });
 	const result = { guards, ...removed, ownersRemoved, remaining: JSON.parse(psql(database, REMAINING)), durationMs: Math.round(performance.now() - started) };
-	result.passed = guards.foreignMember && guards.unknownPractice && removed.practices === practices && removed.patients === 6000 * practices &&
-		removed.appointments >= 12000 * practices && ownersRemoved === practices && result.remaining.practices === 0 && result.remaining.owners === 0;
+	result.passed = guards.foreignMember && guards.unknownPractice && evaluateCleanup({ practices, removed, ownersRemoved, remaining: result.remaining });
 	console.log('capacity-cleanup ' + JSON.stringify(result));
 	return result;
 }
