@@ -46,12 +46,13 @@ $$;
 revoke all on function public.user_patient_reader_business_ids(),public.user_linked_patient_ids() from public,anon;
 grant execute on function public.user_patient_reader_business_ids(),public.user_linked_patient_ids() to authenticated,service_role;
 
--- The parenthesized call is an InitPlan, evaluated once per statement; the pairs are
--- a non-correlated subquery that PostgreSQL hashes once.
+-- The scalar subquery is an InitPlan, evaluated once per statement (the cast keeps
+-- ANY on the array instead of its subquery form); the pairs are a non-correlated
+-- subquery that PostgreSQL hashes once.
 drop policy patients_role_scoped_select on public.patients;
 create policy patients_role_scoped_select on public.patients for select to authenticated
 using (
- business_id=any((select public.user_patient_reader_business_ids()))
+ business_id=any((select public.user_patient_reader_business_ids())::uuid[])
  or (business_id,id) in (select linked.business_id,linked.patient_id from public.user_linked_patient_ids() linked)
 );
 
