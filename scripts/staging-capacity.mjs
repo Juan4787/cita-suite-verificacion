@@ -43,10 +43,14 @@ mkdirSync(evidence, { recursive: true });
 if (operation === 'seed') {
 	// Supabase Free turns a project read-only past 500 MB. The scenario added 238 MB to
 	// a fresh database in CI: seed only with a wide margin left below the limit.
-	const before = Number(sql('select pg_database_size(current_database());'));
-	if (!Number.isSafeInteger(before) || before + 250_000_000 > 450_000_000)
-		throw new Error(`The staging database holds ${before} bytes; the scenario would leave too little margin below 500 MB. Nothing was done.`);
-	console.log('staging-capacity-before ' + JSON.stringify({ databaseBytes: before }));
+	// The Realtime partitions too: a broadcast from a trigger that finds no partition for its day is
+	// lost with a warning, as the first hosted seed showed.
+	const before = JSON.parse(sql(`select jsonb_build_object('databaseBytes',pg_database_size(current_database()),
+ 'realtimePartitions',(select coalesce(jsonb_agg(c.relname order by c.relname),'[]') from pg_inherits i join pg_class c on c.oid=i.inhrelid
+  where i.inhparent=to_regclass('realtime.messages')))::text;`));
+	if (!Number.isSafeInteger(before.databaseBytes) || before.databaseBytes + 250_000_000 > 450_000_000)
+		throw new Error(`The staging database holds ${before.databaseBytes} bytes; the scenario would leave too little margin below 500 MB. Nothing was done.`);
+	console.log('staging-capacity-before ' + JSON.stringify(before));
 	for (const [index, id] of owners.entries()) {
 		const response = await admin('/users', { method: 'POST',
 			body: JSON.stringify({ id, email: practiceData(index + 1).email, password, email_confirm: true }) });
