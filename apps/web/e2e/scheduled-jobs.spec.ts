@@ -13,6 +13,22 @@ const secret = process.env.INTERNAL_JOB_SECRET ?? '';
 const notConfigured = new Set(['push', 'reviews', 'calendar']);
 
 test.describe('tareas programadas sobre los servicios descartables', () => {
+	// Without the guard the receipts below would pass whatever the functions contain.
+	// The server role cannot update this table: without safeupdate the request would
+	// be refused for permissions (42501), so nothing is written either way.
+	test('PostgREST rechaza un UPDATE sin filtro, como el alojado', async ({ request }) => {
+		const api = process.env.ODONTO_SUPABASE_URL ?? '';
+		const key = process.env.ODONTO_SUPABASE_SERVICE_ROLE_KEY ?? '';
+		const response = await request.patch(`${api}/rest/v1/clinical_storage_budget`, {
+			headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+			data: { updated_at: new Date().toISOString() }
+		});
+		expect({ status: response.status(), body: await response.json() }).toMatchObject({
+			status: 400,
+			body: { code: '21000', message: 'UPDATE requires a WHERE clause' }
+		});
+	});
+
 	test('cada categoría completa su ejecución y devuelve su recibo', async ({ request }) => {
 		expect(secret, 'the integration run provides the internal job secret').toMatch(/^[0-9a-f]{64}$/);
 		for (const kind of SCHEDULED_JOB_KINDS) {

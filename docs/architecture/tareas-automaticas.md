@@ -83,12 +83,15 @@ Con el presupuesto Free de 40 llamadas por cadena (incluida la del Service Bindi
 
 ### Evidencia
 
-SQL 39330239590 (`scheduled_job_batches.sql` 6/6, par de actualización 5/5, todas las suites y carreras); unidades locales de cada módulo. Las verificaciones completas, la medición desplegada y la transición se registran en el [registro](../plans/registro-refactorizacion-cita-suite.md).
+- SQL 39362184325 y full 39362532843 (`9852251`): `scheduled_job_batches.sql` 7/7, escenarios de colas 6/6 (calendario con Free: todo consultorio empieza dentro de 10 minutos), todas las suites y carreras, navegador, demo y Natalia.
+- Staging (20 de octubre): migraciones aplicadas, app `cita-suite-staging` desplegada desde el artefacto verificado. La llamada autorizada a cada categoría encontró que la reconciliación de almacenamiento falla bajo el guardia `safeupdate` del PostgREST alojado; se reprodujo en CI (SQL 39364542587) y se corrigió con `20261020010000_reconciliation_request_guard.sql`. `wrangler tail` informa CPU y tiempo total por invocación.
+- El detalle de cada corrida, la medición desplegada y la transición se registran en el [registro](../plans/registro-refactorizacion-cita-suite.md).
 
 ### Pendiente de esta etapa
 
-1. Full positivo de la revisión exacta.
-2. Staging: desplegar app y programador, colas sintéticas (cinco pendientes por consultorio y escenario desigual), medir CPU p50/p99, subrequests y antigüedad por consultorio, y fijar el lote de Free por CPU si hace falta.
-3. Transición según la secuencia de publicación del plan, con los triggers de Free prestados a staging durante una ventana acotada.
+1. Full positivo de la corrección (39364962358) y migración nueva aplicada en staging.
+2. Programador de staging desplegado; escenario de colas sembrado en staging (25 consultorios con cinco pendientes y uno con 150), CPU p50/p99 y tiempo total por invocación, viajes a base y proveedores, y antigüedad por consultorio; lote de Free acotado por CPU si hace falta.
+3. Entrega Web Push real a un teléfono (FCM) con el emisor nuevo: prueba, recordatorio y acuse.
+4. Transición según la secuencia de publicación del plan, con los triggers de Free prestados a staging durante una ventana acotada.
 
 Restricción de cuenta: Workers Free admite cinco Cron Triggers **por cuenta**. Staging y producción no pueden tener sus cinco triggers activos al mismo tiempo. La validación desplegada en staging usará la cuota durante una ventana acotada y la liberará antes de activar producción; se documentará el orden exacto.

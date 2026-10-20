@@ -1,22 +1,36 @@
 import { randomBytes } from 'node:crypto';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { psqlDiagnostics, stagingConnection, stagingPsql } from './lib/staging-database.mjs';
-import { STAGING_APP_ORIGIN } from './lib/staging-deploy.mjs';
+import { STAGING_PROJECT_REF, psqlDiagnostics, stagingConnection, stagingPsql } from './lib/staging-database.mjs';
+import { STAGING_APP_ORIGIN, stagingSupabaseKey } from './lib/staging-deploy.mjs';
 
 // Real-device Web Push check on staging: one synthetic practice with an appointment
 // three hours ahead, so its 24 h reminder is due on the next push run. The person
 // opens the management link on the phone and enables notifications; the report reads
 // the delivery stages the service worker acknowledged. Only this run's rows are
-// touched, and the link is printed locally only: it manages the appointment.
+// touched. Seed, report and cleanup run in the staging workflow; the management link
+// is read on the local machine only (`link`), never in a public log.
 const root = fileURLToPath(new URL('../', import.meta.url));
 const [operation, runArgument] = process.argv.slice(2);
-if (!['seed', 'report', 'cleanup'].includes(operation)) throw new Error('Usage: staging-device-push.mjs seed|report <run>|cleanup <run>');
+if (!['seed', 'link', 'report', 'cleanup'].includes(operation))
+	throw new Error('Usage: staging-device-push.mjs seed|link <run>|report <run>|cleanup <run>');
 const run = operation === 'seed' ? randomBytes(6).toString('hex') : runArgument;
 if (!/^[a-f0-9]{12}$/.test(run ?? '')) throw new Error('A run identifier of 12 hexadecimal characters is required.');
-const url = stagingConnection(process.env.CITA_STAGING_DATABASE_URL);
 const slug = `staging-device-${run}`;
+
+if (operation === 'link') {
+	const key = stagingSupabaseKey(JSON.parse(readFileSync(join(homedir(), '.config/cita-suite/staging/api-keys.json'), 'utf8')), 'service_role');
+	const rest = `https://${STAGING_PROJECT_REF}.supabase.co/rest/v1/appointments?select=confirmation_token,businesses!inner(slug)&businesses.slug=eq.${slug}`;
+	const response = await fetch(rest, { headers: { apikey: key, authorization: `Bearer ${key}` } });
+	const rows = response.ok ? await response.json() : null;
+	if (!Array.isArray(rows) || rows.length !== 1 || !/^[a-f0-9]{64}$/.test(rows[0]?.confirmation_token ?? ''))
+		throw new Error(`The synthetic appointment of run ${run} was not found (HTTP ${response.status}).`);
+	console.log(`${STAGING_APP_ORIGIN}/turno/${rows[0].confirmation_token}`);
+	process.exit(0);
+}
+const url = stagingConnection(process.env.CITA_STAGING_DATABASE_URL);
 const options = '-c application_name=cita_suite_staging_device_push';
 const execute = (sql, args = ['-q']) => {
 	const result = stagingPsql(url, [...args, '-f', '-'], { input: sql, options });
@@ -25,7 +39,7 @@ const execute = (sql, args = ['-q']) => {
 };
 
 if (operation === 'seed') {
-	const token = execute(`begin;
+	execute(`begin;
 do $$
 declare
  v_owner uuid:=gen_random_uuid(); v_business uuid; v_service uuid; v_professional uuid; v_patient uuid;
@@ -45,10 +59,8 @@ begin
  values(v_business,v_patient,v_service,v_professional,v_starts,v_starts+interval '30 minutes',v_starts,v_starts+interval '30 minutes',
   'reserved','manual','Consulta','Profesional sintético',30);
 end $$;
-commit;
-select a.confirmation_token from public.appointments a join public.businesses b on b.id=a.business_id where b.slug='${slug}';`, ['-Atq']);
-	if (!/^[A-Za-z0-9_-]{16,}$/.test(token)) throw new Error('The synthetic appointment has no management link.');
-	console.log(JSON.stringify({ run, link: `${STAGING_APP_ORIGIN}/turno/${token}` }));
+commit;`);
+	console.log(JSON.stringify({ run, practice: slug }));
 }
 
 // Endpoints are capabilities: only their host is reported.

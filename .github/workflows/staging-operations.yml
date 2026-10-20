@@ -10,9 +10,9 @@ on:
         description: Staging operation
         type: choice
         required: true
-        options: [artifact, migrations, queue-seed, queue-report, queue-cleanup]
+        options: [artifact, migrations, queue-seed, queue-report, queue-cleanup, device-seed, device-report, device-cleanup]
       run_id:
-        description: Queue scenario run, for report and cleanup
+        description: Run of the queue scenario or the device check, for report and cleanup
         type: string
         required: false
         default: ''
@@ -89,3 +89,11 @@ jobs:
           OPERATION: ${{ inputs.operation }}
           RUN_ID: ${{ inputs.run_id }}
         run: node scripts/staging-queue-scenario.mjs "${OPERATION#queue-}" "$RUN_ID"
+      # The management link of the device check is read on the local machine only.
+      - name: Operate the real-device push check of one run
+        if: startsWith(inputs.operation, 'device-')
+        env:
+          CITA_STAGING_DATABASE_URL: ${{ secrets.CITA_STAGING_DATABASE_URL }}
+          OPERATION: ${{ inputs.operation }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: node scripts/staging-device-push.mjs "${OPERATION#device-}" "$RUN_ID"
