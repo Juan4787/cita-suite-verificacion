@@ -49,6 +49,15 @@ describe('getOdontoContext onboarding errors', () => {
 		expect(mocks.resolveActiveBusiness).toHaveBeenCalledWith(expect.objectContaining({ verifiedUserId: 'user-1', membershipCache: 'fresh' }));
 	});
 
+	it('shares the membership read of a request that cannot write and reads again in one that can', async () => {
+		mocks.resolveActiveBusiness.mockResolvedValue({ business: { id: 'business-1' }, role: 'owner' });
+		for (const membershipCache of ['request', 'fresh'] as const) {
+			const request = options();
+			await getOdontoContext({ ...request, locals: { ...request.locals, membershipCache } } as never);
+			expect(mocks.resolveActiveBusiness).toHaveBeenLastCalledWith(expect.objectContaining({ membershipCache }));
+		}
+	});
+
 	it('sin identidad de hooks valida Auth en vez de decodificar el token', async () => {
 		const getUser = vi.fn().mockResolvedValue({ data: { user: null }, error: new Error('invalid token') });
 		mocks.createSupabaseServerClient.mockResolvedValueOnce({ auth: { getUser } });

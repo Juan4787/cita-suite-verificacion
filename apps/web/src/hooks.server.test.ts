@@ -227,6 +227,17 @@ describe('hooks auth validation', () => {
 		expect(event.locals).toMatchObject({ verifiedUser: user, auth: { access_token: 'new-access', refresh_token: 'new-refresh' } });
 	});
 
+	it.each([['GET', 'request'], ['HEAD', 'request'], ['POST', 'fresh']])(
+		'a %s request lets its loads share one membership read only when it cannot write', async (method, expected) => {
+		const event = { ...makeEvent(), request: new Request('https://app.test/odonto/agenda', { method }) };
+		event.url = new URL('https://app.test/odonto/agenda');
+		mocks.createSupabaseServerClient.mockResolvedValue({ auth: {
+			getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'owner-id', email: 'owner@example.test' } }, error: null })
+		} });
+		await handle({ event, resolve: vi.fn(async () => new Response('ok')) } as never);
+		expect(event.locals).toMatchObject({ membershipCache: expected });
+	});
+
 	it.each(['GET', 'POST'])('el módulo administrativo sigue inaccesible por %s antes de resolver una ruta', async (method) => {
 		const event = { ...makeEvent(), request: new Request('https://app.test/administrativo/expedientes', { method }) };
 		event.url = new URL('https://app.test/administrativo/expedientes');

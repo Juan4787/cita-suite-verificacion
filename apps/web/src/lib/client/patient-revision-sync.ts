@@ -45,16 +45,20 @@ export const startPatientRevisionSync = ({
 	let client: SupabaseClient<Database> | null = null;
 	let channel: RealtimeChannel | null = null;
 	let subscribedTopic = '';
+	let live = false;
 	let safetyTimer: number | null = null;
 	let fallbackTimer: number | null = null;
+	let fallbackDelay = FALLBACK_CHECK_MS;
 	let verification: Promise<void> | null = null;
 	let reverifyRequested = false;
 	let realtimeAuthReady: Promise<void> = Promise.resolve();
 
+	const isVisible = () => document.visibilityState === 'visible';
+
 	const stopFallback = () => {
-		if (!fallbackTimer) return;
-		window.clearInterval(fallbackTimer);
+		if (fallbackTimer) window.clearTimeout(fallbackTimer);
 		fallbackTimer = null;
+		fallbackDelay = FALLBACK_CHECK_MS;
 	};
 
 	const notifyAndVerify = () => {
@@ -63,9 +67,18 @@ export const startPatientRevisionSync = ({
 		void refreshRevision(true);
 	};
 
+	// Sin Realtime verifica antes unas pocas veces (5, 10 y 20 s) y después queda la
+	// verificación de seguridad: una pestaña no consulta cada pocos segundos por tiempo
+	// indefinido, y una oculta no consulta.
 	const startFallback = () => {
-		if (fallbackTimer || stopped) return;
-		fallbackTimer = window.setInterval(() => void refreshRevision(), FALLBACK_CHECK_MS);
+		const delay = fallbackDelay;
+		if (fallbackTimer || stopped || delay >= SAFETY_CHECK_MS) return;
+		fallbackTimer = window.setTimeout(() => {
+			fallbackTimer = null;
+			fallbackDelay = delay * 2;
+			if (isVisible()) void refreshRevision();
+			startFallback();
+		}, delay);
 	};
 
 	const removeCurrentChannel = async () => {
@@ -99,14 +112,18 @@ export const startPatientRevisionSync = ({
 			.subscribe((status) => {
 				if (stopped) return;
 				if (status === 'SUBSCRIBED') {
+					live = true;
 					stopFallback();
 					// Cierra la carrera entre la verificación HTTP y la suscripción.
 					void refreshRevision(true);
 					return;
 				}
 				if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+					// Verifica al perder la conexión; los reintentos fallidos del cliente, cada
+					// pocos segundos, no agregan nada a la verificación de respaldo.
+					if (live) notifyAndVerify();
+					live = false;
 					startFallback();
-					notifyAndVerify();
 				}
 			});
 	};
@@ -148,7 +165,7 @@ export const startPatientRevisionSync = ({
 	}
 
 	const verifyAfterReturning = () => {
-		if (document.visibilityState !== 'visible') return;
+		if (!isVisible()) return;
 		if (verification) return;
 		markPatientRevisionUnverified(businessId);
 		onRevisionChanged();
@@ -171,7 +188,9 @@ export const startPatientRevisionSync = ({
 	document.addEventListener('visibilitychange', verifyAfterReturning);
 	window.addEventListener('focus', verifyAfterReturning);
 	window.addEventListener('online', verifyAfterReturning);
-	safetyTimer = window.setInterval(() => void refreshRevision(), SAFETY_CHECK_MS);
+	safetyTimer = window.setInterval(() => {
+		if (isVisible()) void refreshRevision();
+	}, SAFETY_CHECK_MS);
 	void refreshRevision();
 
 	return () => {
