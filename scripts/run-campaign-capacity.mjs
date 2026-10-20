@@ -11,8 +11,8 @@ import { cleanupFixtureResources } from './lib/fixture-cleanup.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
 import { assertPlatformDiagnostics } from './lib/platform-diagnostics.mjs';
 import {
-	createRandom, describePublicPage, evaluateAcceptance, localDate, login, practiceData, runPublicAbuse, runPublicGenerator, runVirtualUser,
-	summarize, uuidFrom
+	createRandom, describePublicPage, evaluateAcceptance, localDate, login, practiceData, removeCapacityOwners, runPublicAbuse, runPublicGenerator,
+	runVirtualUser, summarize, uuidFrom
 } from './lib/capacity-load.mjs';
 
 // Capacity scenarios of the plan on the disposable stack of CI: PostgreSQL with 4 GB
@@ -234,6 +234,47 @@ async function measurePublic(practices) {
 		passed: repetitions.every(item => item.acceptance.passed && item.bookingFailures.length === 0) && abuse.passed };
 }
 
+// The cleanup of the hosted rehearsal, rehearsed here on the same data first: it
+// removes the synthetic practices and their owners completely and nothing else.
+const REMAINING = `select jsonb_build_object('practices',(select count(*) from public.businesses where slug like 'capacity-%'),
+ 'owners',(select count(*) from auth.users where email like 'capacity-owner-%@example.test'))::text`;
+
+// Its scope guards act before anything is removed: a member who is not the synthetic
+// owner, or a `capacity-` practice that is not one of the seed's, stops it.
+function rehearseCleanupGuards(database, script) {
+	const refused = (setup, teardown, code) => {
+		psql(database, setup);
+		let message = '';
+		try { psql(database, script); } catch (error) { message = error.message; }
+		psql(database, teardown);
+		return message.includes(code);
+	};
+	const foreign = uuidFrom('capacity-foreign-member');
+	return {
+		foreignMember: refused(`insert into auth.users(id,email) values('${foreign}','capacity-foreign@example.test');
+insert into public.business_users(business_id,user_id,role,status,accepted_at) select id,'${foreign}','reception','active',now() from public.businesses where slug='capacity-01';`,
+		`delete from public.business_users where user_id='${foreign}'; delete from auth.users where id='${foreign}';`, 'CAPACITY_CLEANUP_FOREIGN_MEMBER'),
+		unknownPractice: refused(`update public.businesses set slug='capacity-01-copia' where slug='capacity-01';`,
+			`update public.businesses set slug='capacity-01' where slug='capacity-01-copia';`, 'CAPACITY_CLEANUP_UNKNOWN_PRACTICE')
+	};
+}
+
+async function cleanup(database, runtime, practices) {
+	const started = performance.now();
+	const script = readFileSync(join(root, 'scripts/capacity/cleanup-practices.sql'), 'utf8');
+	const guards = rehearseCleanupGuards(database, script);
+	const marked = psql(database, script).split('\n').find(line => line.startsWith('capacity-cleanup '));
+	if (!marked) throw new Error('The capacity cleanup printed no result.');
+	const removed = JSON.parse(marked.slice('capacity-cleanup '.length));
+	const ownersRemoved = await removeCapacityOwners({ practices, request: (path, init = {}) => fetch(runtime.apiOrigin + '/auth/v1/admin' + path,
+		{ ...init, signal: AbortSignal.timeout(10_000), headers: { authorization: 'Bearer ' + runtime.service, apikey: runtime.service } }) });
+	const result = { guards, ...removed, ownersRemoved, remaining: JSON.parse(psql(database, REMAINING)), durationMs: Math.round(performance.now() - started) };
+	result.passed = guards.foreignMember && guards.unknownPractice && removed.practices === practices && removed.patients === 6000 * practices &&
+		removed.appointments >= 12000 * practices && ownersRemoved === practices && result.remaining.practices === 0 && result.remaining.owners === 0;
+	console.log('capacity-cleanup ' + JSON.stringify(result));
+	return result;
+}
+
 // Plans of the statements that took longer than 250 ms, logged by auto_explain.
 function slowPlans(database) {
 	const logs = spawnSync('docker', ['logs', database], { encoding: 'utf8', maxBuffer: 64 * 1024 ** 2 });
@@ -284,6 +325,9 @@ async function scenario(practices) {
 				result.integrity.crossPractice === 0 && result.integrity.overlaps === 0 &&
 				result.repetitions.every(item => item.database.database.deadlocks === 0) && (result.publicBooking?.passed ?? true);
 		}
+		result.cleanup = await cleanup(database, started.runtime, practices);
+		if (!seedOnly) result.passed &&= result.cleanup.passed;
+		else if (!result.cleanup.passed) throw new Error('The capacity cleanup did not remove exactly the synthetic scenario: ' + JSON.stringify(result.cleanup));
 		writeFileSync(join(evidence, `scenario-${practices}.json`), JSON.stringify(result, null, 2) + '\n');
 		console.log('capacity-scenario ' + JSON.stringify({ practices, seed, passed: result.passed, integrity: result.integrity }));
 		return result;
@@ -315,10 +359,11 @@ try {
 	if (!seedOnly) await run('pnpm', ['--filter', 'web', 'build:cloudflare'], { env: { ...environment, CITA_BUILD_VERSION: process.env.GITHUB_SHA ?? 'capacity-local' } });
 	const results = [];
 	for (const practices of quick ? [5] : [5, 25]) results.push(await scenario(practices));
-	const summary = { mode, scenarios: results.map(({ practices, seed, passed, integrity, repetitions, publicBooking }) => ({ practices, seed, passed, integrity,
+	const summary = { mode, scenarios: results.map(({ practices, seed, passed, integrity, repetitions, publicBooking, cleanup }) => ({ practices, seed, passed, integrity,
 		repetitions: repetitions?.map(({ repetition, summary, acceptance, lockWaits }) => ({ repetition, read: summary.read, write: summary.write, acceptance, lockWaits })),
 		publicBooking: publicBooking && { passed: publicBooking.passed, abuse: publicBooking.abuse,
-			repetitions: publicBooking.repetitions.map(({ repetition, summary, acceptance }) => ({ repetition, read: summary.read, write: summary.write, acceptance })) } })),
+			repetitions: publicBooking.repetitions.map(({ repetition, summary, acceptance, bookingFailures }) =>
+				({ repetition, read: summary.read, write: summary.write, acceptance, bookingFailures })) }, cleanup })),
 	scope: 'Disposable CI container: PostgreSQL 4 GB and 2 CPUs, real Auth, PostgREST as authenticator, the production build in workerd. Not hosted capacity.' };
 	// Growth with other practices: every practice holds the same data in both scenarios,
 	// so a statement much slower with 25 than with 5 is not scoped to its practice.

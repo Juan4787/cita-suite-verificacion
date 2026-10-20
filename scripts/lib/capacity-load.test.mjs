@@ -125,7 +125,9 @@ test('a virtual user logs in once, keeps its session, records only the measured 
 
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { PUBLIC_WRITE_INTERVAL_MS, nextPhone, pageData, publicBookingForm, runPublicAbuse, runPublicGenerator, syntheticName } from './capacity-load.mjs';
+import {
+	PUBLIC_WRITE_INTERVAL_MS, nextPhone, pageData, publicBookingForm, removeCapacityOwners, runPublicAbuse, runPublicGenerator, syntheticName, uuidFrom
+} from './capacity-load.mjs';
 import { isValidPatientFullName } from '../../apps/web/src/lib/utils/patient-name.ts';
 
 const kit = createRequire(createRequire(fileURLToPath(new URL('../../apps/web/package.json', import.meta.url))).resolve('@sveltejs/kit/package.json'));
@@ -244,6 +246,24 @@ test('the abuse checks find free slots like a person and book until the exact re
 		// The read limit must act too.
 		assert.equal((await run({ readLimit: 1000 })).result.passed, false);
 	} finally { global.Date = realDate; }
+});
+
+test('the cleanup removes only the synthetic owners, by their deterministic ids and emails', async () => {
+	const run = (accounts, calls) => removeCapacityOwners({ practices: 3, request: async (path, init = {}) => {
+		calls.push(`${init.method ?? 'GET'} ${path}`);
+		const id = path.slice('/users/'.length);
+		if (!(id in accounts)) return response(404, { error_code: 'user_not_found' });
+		return init.method === 'DELETE' ? response(200, {}) : response(200, { id, email: accounts[id] });
+	} });
+	const [one, two, three] = [1, 2, 3].map(practice => uuidFrom('capacity-owner-' + practice));
+	const calls = [];
+	assert.equal(await run({ [one]: practiceData(1).email, [three]: practiceData(3).email }, calls), 2);
+	assert.deepEqual(calls, [`GET /users/${one}`, `DELETE /users/${one}`, `GET /users/${two}`, `GET /users/${three}`, `DELETE /users/${three}`]);
+	// An account that is not the synthetic owner of its practice stops the cleanup before it is removed.
+	const stopped = [];
+	await assert.rejects(run({ [one]: practiceData(1).email, [two]: 'persona@example.com', [three]: practiceData(3).email }, stopped),
+		/not the synthetic owner of practice 2/);
+	assert.deepEqual(stopped, [`GET /users/${one}`, `DELETE /users/${one}`, `GET /users/${two}`]);
 });
 
 test('a public booking echoes the hidden fields the page sent, like the confirmation form', () => {

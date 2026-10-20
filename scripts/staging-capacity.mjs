@@ -6,7 +6,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { STAGING_PROJECT_REF, psqlDiagnostics, stagingConnection, stagingPsql } from './lib/staging-database.mjs';
 import { STAGING_APP_ORIGIN } from './lib/staging-deploy.mjs';
 import {
-	createRandom, evaluateAcceptance, login, practiceData, runPublicAbuse, runPublicGenerator, runVirtualUser, summarize, uuidFrom
+	createRandom, evaluateAcceptance, login, practiceData, removeCapacityOwners, runPublicAbuse, runPublicGenerator, runVirtualUser, summarize,
+	uuidFrom
 } from './lib/capacity-load.mjs';
 
 // The five-practice capacity scenario on the deployed staging, from an external
@@ -40,6 +41,12 @@ const evidence = join(root, '.verification');
 mkdirSync(evidence, { recursive: true });
 
 if (operation === 'seed') {
+	// Supabase Free turns a project read-only past 500 MB. The scenario added 238 MB to
+	// a fresh database in CI: seed only with a wide margin left below the limit.
+	const before = Number(sql('select pg_database_size(current_database());'));
+	if (!Number.isSafeInteger(before) || before + 250_000_000 > 450_000_000)
+		throw new Error(`The staging database holds ${before} bytes; the scenario would leave too little margin below 500 MB. Nothing was done.`);
+	console.log('staging-capacity-before ' + JSON.stringify({ databaseBytes: before }));
 	for (const [index, id] of owners.entries()) {
 		const response = await admin('/users', { method: 'POST',
 			body: JSON.stringify({ id, email: practiceData(index + 1).email, password, email_confirm: true }) });
@@ -88,17 +95,13 @@ if (operation === 'seed') {
 		public: { read: publicSummary.read, write: publicSummary.write, bookingFailures: generated.failures } }));
 	if (!result.passed) process.exitCode = 1;
 } else {
-	// Integrations restrict deleting their practice; everything else follows by cascade.
-	sql(`begin;
-delete from public.booking_integrations i using public.businesses b where b.id=i.business_id and b.slug like 'capacity-%';
-delete from public.businesses where slug like 'capacity-%';
-commit;`);
-	for (const id of owners) {
-		const response = await admin('/users/' + id, { method: 'DELETE' });
-		if (!response.ok && response.status !== 404) throw new Error(`Could not remove staging capacity owner ${id} (HTTP ${response.status}).`);
-	}
+	// The cleanup the CI scenarios rehearse on the same data before it runs here.
+	const marked = sql(readFileSync(join(root, 'scripts/capacity/cleanup-practices.sql'), 'utf8')).split('\n').find(line => line.startsWith('capacity-cleanup '));
+	if (!marked) throw new Error('The staging capacity cleanup printed no result.');
+	const removed = JSON.parse(marked.slice('capacity-cleanup '.length));
+	const ownersRemoved = await removeCapacityOwners({ practices: PRACTICES, request: admin });
 	const remaining = JSON.parse(sql(`select jsonb_build_object('practices',(select count(*) from public.businesses where slug like 'capacity-%'),
-		'owners',(select count(*) from auth.users where email like 'capacity-owner-%@example.test'))::text;`));
+		'owners',(select count(*) from auth.users where email like 'capacity-owner-%@example.test'),'databaseBytes',pg_database_size(current_database()))::text;`));
 	if (remaining.practices || remaining.owners) throw new Error('The staging capacity cleanup left rows of the scenario: ' + JSON.stringify(remaining));
-	console.log('staging-capacity-cleanup ' + JSON.stringify({ cleaned: true }));
+	console.log('staging-capacity-cleanup ' + JSON.stringify({ ...removed, ownersRemoved, remaining }));
 }

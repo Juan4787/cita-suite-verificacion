@@ -88,6 +88,29 @@ export function practiceData(practice) {
 	};
 }
 
+/**
+ * Removes the synthetic owners of the capacity practices through the Auth admin API,
+ * once their practices are gone. Each id is the deterministic one of its practice,
+ * and an account is removed only while it carries that practice's synthetic email.
+ * `request(path, init)` calls the admin API under /auth/v1/admin.
+ */
+export async function removeCapacityOwners({ practices, request }) {
+	let removed = 0;
+	for (let practice = 1; practice <= practices; practice++) {
+		const id = uuidFrom('capacity-owner-' + practice);
+		const found = await request('/users/' + id);
+		if (found.status === 404) continue;
+		const user = await found.json().catch(() => null);
+		if (!found.ok || user?.id !== id) throw new Error(`Could not read capacity owner ${practice} (HTTP ${found.status}).`);
+		if (user.email !== practiceData(practice).email)
+			throw new Error(`The account ${id} is not the synthetic owner of practice ${practice}; stopped before removing it.`);
+		const deleted = await request('/users/' + id, { method: 'DELETE' });
+		if (!deleted.ok && deleted.status !== 404) throw new Error(`Could not remove capacity owner ${practice} (HTTP ${deleted.status}).`);
+		removed++;
+	}
+	return removed;
+}
+
 const SEARCH_TERMS = ['Acosta', 'Benítez', 'García', 'Martínez', 'Pereyra', 'Sosa', 'Torres', 'Vega', 'Ruiz', 'Luna',
 	'Ana', 'Carla', 'Diego', 'María', 'Pablo', 'Valeria', 'Lucas', 'gar', 'mar', 'sos'];
 
