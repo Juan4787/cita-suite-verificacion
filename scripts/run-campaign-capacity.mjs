@@ -1,12 +1,13 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fixturePath } from './lib/fixture-path.mjs';
 import { acquireVerificationLock } from './lib/verification-lock.mjs';
 import { cleanupFixtureResources } from './lib/fixture-cleanup.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
+import { assertPlatformDiagnostics } from './lib/platform-diagnostics.mjs';
 
 // Capacity scenarios of the plan on the disposable stack of CI: PostgreSQL with 4 GB
 // and two CPUs, real Auth and a PostgREST that runs requests as the hosted platform
@@ -91,6 +92,7 @@ async function scenario(practices) {
 	const runId = randomUUID();
 	environment.CITA_FIXTURE_RUN_ID = runId;
 	let platform;
+	let failure;
 	try {
 		await run('node', ['scripts/test-booking-foundation.mjs', '--keep', '--prepare-only']);
 		const database = JSON.parse(readFileSync(fixturePath('database.json'), 'utf8')).container;
@@ -109,12 +111,30 @@ async function scenario(practices) {
 		writeFileSync(join(evidence, `scenario-${practices}.json`), JSON.stringify(result, null, 2) + '\n');
 		console.log('capacity-scenario ' + JSON.stringify(result));
 		return result;
+	} catch (error) {
+		failure = error;
+		throw error;
 	} finally {
-		if (platform) {
+		// Stop the services and let them clean their own containers before the
+		// owned-resource cleanup; a cleanup problem never hides an earlier failure.
+		if (platform && platform.exitCode === null && platform.signalCode === null) {
 			platform.kill('SIGTERM');
-			await new Promise(resolve => setTimeout(resolve, 2000));
+			await Promise.race([new Promise(resolve => platform.once('exit', resolve)), new Promise(resolve => setTimeout(resolve, 15000))]);
+			if (platform.exitCode === null && platform.signalCode === null) platform.kill('SIGKILL');
 		}
-		cleanupFixtureResources(runId);
+		const problems = [];
+		const state = fixturePath(`platform-state-${runId}.json`);
+		try {
+			if (existsSync(state)) {
+				copyFileSync(state, join(evidence, `platform-state-${practices}.json`));
+				assertPlatformDiagnostics(JSON.parse(readFileSync(state, 'utf8')));
+			} else if (platform) problems.push(new Error('The platform diagnostics of this scenario are missing.'));
+		} catch (error) { problems.push(error); }
+		try { cleanupFixtureResources(runId); } catch (error) { problems.push(error); }
+		if (problems.length) {
+			if (failure) for (const problem of problems) console.error('After the failure above: ' + problem.message);
+			else throw new AggregateError(problems, `Capacity scenario ${practices} did not close cleanly.`);
+		}
 	}
 }
 
@@ -124,6 +144,9 @@ try {
 	const summary = { seedOnly, scenarios: results, scope: 'Disposable CI container (PostgreSQL 4 GB, 2 CPUs). Not hosted capacity.' };
 	writeFileSync(join(evidence, 'summary.json'), JSON.stringify(summary, null, 2) + '\n');
 	if (seedOnly) console.log('Seeding diagnostic completed; this is not a capacity result.');
+} catch (error) {
+	console.error(error);
+	process.exitCode = 1;
 } finally {
 	lease.release();
 }

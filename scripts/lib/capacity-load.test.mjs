@@ -1,0 +1,117 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+	ACCEPTANCE, CookieJar, OPERATIONS, classifyResponse, createRandom, evaluateAcceptance, localDate, localDateTime, login,
+	pickOperation, planOperation, practiceData, runVirtualUser, summarize
+} from './capacity-load.mjs';
+
+const response = (status, body, cookies = []) => {
+	const headers = new Headers({ 'content-type': 'application/json' });
+	for (const cookie of cookies) headers.append('set-cookie', cookie);
+	return new Response(body === undefined ? null : JSON.stringify(body), { status, headers });
+};
+
+test('the mix is 80 % reads and 20 % writes, and a seed always gives the same choices', () => {
+	const share = category => OPERATIONS.filter(operation => operation.category === category).reduce((sum, operation) => sum + operation.weight, 0);
+	assert.deepEqual([share('read'), share('write')], [80, 20]);
+	const first = createRandom('practice-3');
+	const second = createRandom('practice-3');
+	assert.deepEqual(Array.from({ length: 20 }, () => pickOperation(first).name), Array.from({ length: 20 }, () => pickOperation(second).name));
+	const random = createRandom('distribution');
+	const draws = Array.from({ length: 20000 }, () => pickOperation(random).category);
+	const reads = draws.filter(category => category === 'read').length / draws.length;
+	assert.ok(reads > 0.78 && reads < 0.82, `read share ${reads}`);
+});
+
+test('the cookie jar keeps the session like a browser and drops expired cookies', () => {
+	const jar = new CookieJar();
+	jar.absorb(response(200, {}, ['sb-access-token=abc; Path=/; HttpOnly', 'sb-module=odonto; Path=/', 'other=1; Max-Age=0']));
+	assert.equal(jar.header(), 'sb-access-token=abc; sb-module=odonto');
+	jar.absorb(response(200, {}, ['sb-access-token=def; Path=/', 'sb-module=; Max-Age=0']));
+	assert.equal(jar.header(), 'sb-access-token=def');
+	assert.equal(jar.has('sb-module'), false);
+});
+
+test('only the system answers expected by the plan count as successes', () => {
+	const read = OPERATIONS.find(operation => operation.name === 'agenda_day');
+	const write = OPERATIONS.find(operation => operation.name === 'create_appointment');
+	assert.equal(classifyResponse(read, 200, { type: 'data', nodes: [] }), 'ok');
+	assert.equal(classifyResponse(read, 200, { patients: [] }), 'ok');
+	assert.equal(classifyResponse(read, 200, { type: 'redirect', location: '/login' }), 'error');
+	assert.equal(classifyResponse(read, 401, { message: 'Tu sesión terminó.' }), 'error');
+	assert.equal(classifyResponse(read, 0, null), 'error');
+	assert.equal(classifyResponse(write, 200, { type: 'redirect', status: 303, location: '/odonto/turnos/x' }), 'ok');
+	assert.equal(classifyResponse(write, 200, { type: 'success', status: 200 }), 'ok');
+	assert.equal(classifyResponse(write, 200, { type: 'redirect', status: 303, location: '/login' }), 'error');
+	assert.equal(classifyResponse(write, 200, { type: 'failure', status: 409 }), 'conflict');
+	assert.equal(classifyResponse(write, 200, { type: 'failure', status: 400 }), 'error');
+	assert.equal(classifyResponse(write, 500, { type: 'error' }), 'error');
+});
+
+test('percentiles and the acceptance thresholds of the plan are strict', () => {
+	const samples = [
+		...Array.from({ length: 99 }, (_, i) => ({ operation: 'agenda_day', category: 'read', durationMs: 100 + i, outcome: 'ok' })),
+		{ operation: 'agenda_day', category: 'read', durationMs: 1999, outcome: 'ok' },
+		...Array.from({ length: 100 }, (_, i) => ({ operation: 'add_clinical_entry', category: 'write', durationMs: 200 + i, outcome: 'ok' }))
+	];
+	const summary = summarize(samples);
+	assert.deepEqual([summary.read.p50, summary.read.p95, summary.read.p99, summary.read.max], [149, 194, 198, 1999]);
+	assert.equal(evaluateAcceptance(summary).passed, true);
+	const slow = summarize(samples.map(sample => sample.category === 'read' && sample.durationMs > 190 ? { ...sample, durationMs: ACCEPTANCE.read.p95 } : sample));
+	assert.equal(evaluateAcceptance(slow).readP95, false);
+	const failing = summarize([...samples, { operation: 'agenda_day', category: 'read', durationMs: 5, outcome: 'error' },
+		{ operation: 'agenda_day', category: 'read', durationMs: 5, outcome: 'error' }, { operation: 'agenda_day', category: 'read', durationMs: 5, outcome: 'error' }]);
+	assert.equal(evaluateAcceptance(failing).errorRate, false);
+	assert.equal(evaluateAcceptance(summarize([])).passed, false);
+});
+
+test('dates follow the practice zone and requests name the synthetic data of the practice', () => {
+	const now = new Date('2026-10-20T02:30:00Z');
+	assert.equal(localDate(now), '2026-10-19');
+	assert.equal(localDate(now, 1), '2026-10-20');
+	assert.equal(localDateTime(now), '2026-10-19T23:30');
+	const data = practiceData(3);
+	assert.equal(data.email, 'capacity-owner-03@example.test');
+	const random = createRandom('plan');
+	const create = planOperation(OPERATIONS.find(operation => operation.name === 'create_appointment'), data, random, { created: [] }, now);
+	assert.match(create.prepare, /^\/odonto\/disponibilidad\/slots\?service_id=[0-9a-f-]{36}&professional_id=[0-9a-f-]{36}&from=\d{4}-\d{2}-\d{2}&to=/);
+	const form = create.form({ date: '2026-10-25', time: '10:30' });
+	assert.equal(form.patient_mode, 'existing');
+	assert.ok(data.professionals.includes(form.professional_id) && data.services.includes(form.service_id));
+	assert.match(form.idempotency_key, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+	const cancel = OPERATIONS.find(operation => operation.name === 'cancel_appointment');
+	assert.equal(planOperation(cancel, data, random, { created: [] }, now).substitute, 'appointment_detail');
+	assert.equal(planOperation(cancel, data, random, { created: ['id-1'] }, now).path, '/odonto/turnos/id-1?/update_status');
+});
+
+test('a virtual user logs in once, keeps its session, records only the measured window and cancels what it created', async () => {
+	const calls = [];
+	const created = '11111111-2222-4333-8444-555555555555';
+	const fake = async (url, init = {}) => {
+		const path = url.replace('http://app.test', '');
+		calls.push({ path, method: init.method ?? 'GET', cookie: init.headers?.cookie ?? '', body: init.body ? String(init.body) : '' });
+		if (path === '/login?/login') return response(200, { type: 'redirect', status: 303, location: '/odonto' }, ['sb-access-token=token; Path=/', 'sb-module=odonto; Path=/']);
+		if (path.startsWith('/odonto/disponibilidad/slots')) return response(200, { slots: [{ date: '2026-10-25', time: '10:30' }] });
+		if (path === '/odonto/agenda?/create_appointment') return response(200, { type: 'redirect', status: 303, location: `/odonto/turnos/${created}?date=2026-10-25` });
+		if (path.includes('?/')) return response(200, { type: 'success', status: 200 });
+		return response(200, { type: 'data', nodes: [] });
+	};
+	const jar = await login('http://app.test', 'capacity-owner-01@example.test', 'secret', fake);
+	assert.equal(new URLSearchParams(calls[0].body).get('email'), 'capacity-owner-01@example.test');
+	let clock = 1_000;
+	const realNow = Date.now;
+	Date.now = () => clock;
+	const records = [];
+	try {
+		await runVirtualUser({ origin: 'http://app.test', jar, data: practiceData(1), random: createRandom('vu-1'), measureFrom: 30_000, until: 400_000,
+			record: sample => records.push(sample), fetchFn: fake, sleep: async ms => { clock += ms; } });
+	} finally { Date.now = realNow; }
+	const requests = calls.slice(1);
+	assert.ok(requests.length > 50 && requests.every(call => call.cookie === 'sb-access-token=token; sb-module=odonto'));
+	assert.ok(records.length > 0 && records.length < requests.length, 'requests before the measured window are not recorded');
+	assert.ok(records.every(sample => sample.outcome === 'ok'));
+	const creates = requests.filter(call => call.path === '/odonto/agenda?/create_appointment');
+	const cancels = requests.filter(call => call.path === `/odonto/turnos/${created}?/update_status`);
+	assert.ok(creates.length > 0 && cancels.length > 0 && cancels.length <= creates.length);
+	assert.ok(cancels.every(call => new URLSearchParams(call.body).get('status') === 'cancelled'));
+});

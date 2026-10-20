@@ -100,12 +100,8 @@ cross join lateral (select case
   else case when a.roll<10 then 'cancelled' when a.roll<40 then 'confirmed' when a.roll<45 then 'reschedule_requested' else 'reserved' end
  end as status) state;
 
--- Each patient is linked to the professional of their first appointment, and three
+-- The appointment trigger already linked each patient to their professionals. Three
 -- in ten past confirmed appointments carry a clinical entry.
-insert into public.professional_patient_links(business_id,professional_id,patient_id,source,is_active,created_by)
-select distinct on (a.business_id,a.patient_id) a.business_id,a.professional_id,a.patient_id,'appointment',true,c.owner_id
-from public.appointments a join capacity_practice c on c.business_id=a.business_id
-order by a.business_id,a.patient_id,a.starts_at;
 insert into public.clinical_entries(business_id,patient_id,owner_id,entry_type,description,created_by_professional_id,created_at,updated_at)
 select a.business_id,a.patient_id,c.owner_id,'Consulta','Control sintético de capacidad',a.professional_id,a.starts_at+interval '30 minutes',a.starts_at+interval '30 minutes'
 from public.appointments a join capacity_practice c on c.business_id=a.business_id
