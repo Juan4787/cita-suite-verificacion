@@ -36,6 +36,24 @@ Se mide aparte, como pide el plan. Un único generador lee las páginas del enla
 
 Después, las pruebas de abuso esperan los rechazos. Una ráfaga de 130 lecturas debe recibir 429 desde la 121. Las reservas desde una misma dirección siguen hasta que la app responde con su mensaje exacto del límite por IP. Como cada intento cuenta, ese rechazo tiene que llegar a más tardar en la cuarta reserva, antes si el generador reservó en los últimos diez minutos. Una cuarta reserva aceptada, otro rechazo o la falta de franjas hacen fallar la prueba. Turnstile está desactivado en CI porque no hay clave; en producción la verificación anti-bots sigue vigente.
 
+## Ensayo alojado de 5 consultorios (staging, planes gratuitos)
+
+El Worker `cita-suite-staging` (Workers Free, ubicado en `aws:us-west-2`) y su proyecto de Supabase Free, con la siembra de 5 consultorios, las tres repeticiones, la fase pública y el abuso desde un runner de GitHub. `wrangler tail`, desde la sesión local de la cuenta, registra el resultado de plataforma y la CPU de cada pedido por ruta normalizada, sin datos. `capacity-report` lee `pg_stat_statements` de staging, en modo lectura.
+
+| Repetición | Errores en lecturas | Errores en escrituras | Lecturas completas p95 / p99 |
+|---|---:|---:|---:|
+| 1 | 30 % | 12 % | 1.656 ms / 18,0 s |
+| 2 | 44 % | 36 % | 979 ms / 2,8 s |
+| 3 | 56 % | 30 % | 972 ms / 3,3 s |
+
+Todos los errores son HTTP 503. La fase pública tuvo 70 % de errores y ninguna reserva, y la ráfaga de abuso falló antes de llegar al límite. Aislamiento, doble reserva e interbloqueos: 0.
+
+**Causa dominante, medida por la plataforma: el límite de CPU de Workers Free.** De 891 pedidos observados, Cloudflare cortó 241 por CPU (`exceededCpu`). Durante los dos primeros minutos no cortó ninguno; desde entonces, entre 15 % y 52 % por minuto, cada uno detenido cerca de los 10 ms. Los pedidos completos usaron p50 11 ms y p99 222 ms de CPU; la agenda semanal, p50 116 ms. El límite documentado de Free es de 10 ms, y la tolerancia inicial no lo cambia.
+
+**La base gratuita también es más lenta**, aunque los datos caben en memoria (aciertos de caché 1,0000): `work_mem` es de 2 MB y los ordenamientos van a disco (2,7 GB en archivos temporales), las sentencias de la carga tardan de 5 a 20 veces más que en CI y hubo dos atascos de unos 40 s. Dentro del Worker, los pedidos completos tienen p50 de 260 ms y p95 de 1,26 s.
+
+Conclusión: con los planes gratuitos, el escenario de 5 consultorios no cumple el plan, y producción usa el mismo plan de Workers. Workers Paid elimina los cortes de CPU; con él hay que volver a medir la latencia sobre Supabase. Desde esta medición, el perfil de capacidad de CI usa la memoria por consulta de Supabase (`work_mem`, `shared_buffers` y `effective_cache_size` medidos en staging), para que los planes que allí van a disco aparezcan también en CI.
+
 ## Hallazgos
 
 1. **Lectura de pacientes evaluada fila por fila** (corregido en `20261020020000_patient_read_set_based.sql`). La política de `patients` y las funciones de lista y conteo evaluaban `user_can_read_basic_patient`, cinco consultas, por cada paciente del consultorio. Con 6.000 pacientes, listar o buscar tardaba 2,9 s, con p95 de lecturas de 3,3 s. Las mismas reglas se evalúan ahora una vez por sentencia: p95 151 ms. `supabase/tests/patient_read_set_based.sql` demuestra la equivalencia exacta para cada rol y que una lectura completa no evalúa la regla por fila; sin la corrección, falló con 35 evaluaciones para 12 pacientes.
@@ -44,4 +62,4 @@ Después, las pruebas de abuso esperan los rechazos. Una ráfaga de 130 lecturas
 ## Límites conocidos
 
 - El escenario alojado de 25 consultorios necesita Supabase Pro: su base mide 1,02 GB frente a los 500 MB del plan gratuito. Requiere autorización del usuario.
-- La CPU de Workers Free (10 ms documentados) se supera en tareas y páginas comunes; ver [tareas automáticas](tareas-automaticas.md).
+- La CPU de Workers Free (10 ms documentados) se supera en tareas y páginas comunes, y bajo la carga de 5 consultorios Cloudflare corta entre 15 % y 52 % de los pedidos (ver arriba y [tareas automáticas](tareas-automaticas.md)). Workers Paid lo resuelve y requiere la autorización del usuario.

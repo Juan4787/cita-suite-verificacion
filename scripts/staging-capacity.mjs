@@ -132,7 +132,7 @@ if (operation === 'seed') {
  'database',(select to_jsonb(d) from (select xact_commit,xact_rollback,deadlocks,blks_hit,blks_read,temp_files,temp_bytes,stats_reset
    from pg_stat_database where datname=current_database()) d),
  'settings',(select jsonb_object_agg(name,setting||coalesce(unit,'')) from pg_settings
-   where name in ('shared_buffers','effective_cache_size','work_mem','max_connections','statement_timeout','server_version')),
+   where name in ('shared_buffers','effective_cache_size','work_mem','maintenance_work_mem','max_connections','statement_timeout','server_version')),
  'databaseBytes',pg_database_size(current_database()))::text;`));
 	writeFileSync(join(evidence, 'staging-capacity-report.json'), JSON.stringify(report, null, 2) + '\n');
 	console.log('staging-capacity-report ' + JSON.stringify(report));

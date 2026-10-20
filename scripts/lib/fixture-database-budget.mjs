@@ -19,8 +19,11 @@ if (!['', 'capacity'].includes(profile)) throw new Error('CITA_FIXTURE_PROFILE a
 export const capacityProfile = profile === 'capacity';
 export const activeFixtureDatabaseBudget = capacityProfile ? capacityDatabaseBudget : fixtureDatabaseBudget;
 export const fixtureDatabaseResources = Object.freeze(capacityProfile
-	// Statements inside functions are tracked too, and plans of slow ones are logged.
-	? { memory: '4096m', cpus: '2', settings: ['shared_buffers=1GB', 'effective_cache_size=3GB', 'work_mem=16MB',
+	// Memory per query as the hosted Supabase project reports it (staging, 20 October:
+	// work_mem 2184kB, shared_buffers 286728kB, effective_cache_size 491528kB), so a plan
+	// that spills to disk there spills here too. Statements inside functions are
+	// tracked, and plans of slow ones are logged.
+	? { memory: '4096m', cpus: '2', settings: ['shared_buffers=286728kB', 'effective_cache_size=491528kB', 'work_mem=2184kB',
 		'maintenance_work_mem=256MB', 'shared_preload_libraries=pg_cron,pg_stat_statements,auto_explain',
 		'pg_stat_statements.track=all', 'auto_explain.log_min_duration=250', 'auto_explain.log_nested_statements=on',
 		'auto_explain.log_format=json'] }
