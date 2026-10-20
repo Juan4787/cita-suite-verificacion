@@ -139,17 +139,17 @@ async function application(runtime, practices) {
 	throw new Error('The built application did not start in workerd. Read the application log of this scenario.');
 }
 
-const DATABASE_STATISTICS = `select json_build_object(
- 'statements',(select coalesce(json_agg(s),'[]'::json) from (select left(regexp_replace(query,'\\s+',' ','g'),400) as query,calls,
+const DATABASE_STATISTICS = `select jsonb_build_object(
+ 'statements',(select coalesce(jsonb_agg(s),'[]'::jsonb) from (select left(regexp_replace(query,'\\s+',' ','g'),400) as query,calls,
    round(total_exec_time::numeric,1) as total_ms,round(mean_exec_time::numeric,3) as mean_ms,round(max_exec_time::numeric,1) as max_ms,rows
    from extensions.pg_stat_statements where dbid=(select oid from pg_database where datname=current_database())
    order by total_exec_time desc limit 25) s),
- 'database',(select row_to_json(d) from (select xact_commit,xact_rollback,deadlocks,temp_files,temp_bytes,blks_read,blks_hit
+ 'database',(select to_jsonb(d) from (select xact_commit,xact_rollback,deadlocks,temp_files,temp_bytes,blks_read,blks_hit
    from pg_stat_database where datname=current_database()) d))`;
 
 // Isolation and double booking after the load: every appointment the virtual users
 // created belongs to their own practice and no active appointments of a professional overlap.
-const INTEGRITY = `select json_build_object(
+const INTEGRITY = `select jsonb_build_object(
  'crossPractice',(select count(*) from public.appointments a join public.business_users u on u.user_id=a.created_by_user_id
    where a.created_at>now()-interval '2 hours' and u.role='owner' and u.business_id<>a.business_id),
  'overlaps',(select count(*) from public.appointments a join public.appointments b on b.business_id=a.business_id
@@ -221,7 +221,9 @@ async function scenario(practices) {
 		const seedStarted = performance.now();
 		const output = psql(database, readFileSync(join(root, 'scripts/capacity/seed-practices.sql'), 'utf8'),
 			{ practices: String(practices), owners: JSON.stringify(owners) });
-		const seed = JSON.parse(output.split('\n').at(-1));
+		const marked = output.split('\n').find(line => line.startsWith('capacity-seed '));
+		if (!marked) throw new Error('The capacity seed printed no result.');
+		const seed = JSON.parse(marked.slice('capacity-seed '.length));
 		seed.durationMs = Math.round(performance.now() - seedStarted);
 		if (seed.practices !== practices || seed.patients !== 6000 * practices || seed.appointments !== 12000 * practices)
 			throw new Error('The capacity seed does not match its scenario: ' + JSON.stringify(seed));

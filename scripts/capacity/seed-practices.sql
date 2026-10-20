@@ -129,16 +129,17 @@ end $$;
 call pg_temp.capacity_seed();
 
 analyze;
-select json_build_object(
+-- One line, marked, whatever else psql printed before it.
+select 'capacity-seed '||jsonb_build_object(
  'practices',(select count(*) from public.businesses where slug like 'capacity-%'),
  'patients',(select count(*) from public.patients p join public.businesses b on b.id=p.business_id where b.slug like 'capacity-%'),
  'appointments',(select count(*) from public.appointments a join public.businesses b on b.id=a.business_id where b.slug like 'capacity-%'),
- 'appointmentStates',(select json_object_agg(status,n) from (select a.status,count(*) n from public.appointments a join public.businesses b on b.id=a.business_id
+ 'appointmentStates',(select jsonb_object_agg(status,n) from (select a.status,count(*) n from public.appointments a join public.businesses b on b.id=a.business_id
    where b.slug like 'capacity-%' group by a.status) s),
  'professionalLinks',(select count(*) from public.professional_patient_links l join public.businesses b on b.id=l.business_id where b.slug like 'capacity-%'),
  'clinicalEntries',(select count(*) from public.clinical_entries e join public.businesses b on b.id=e.business_id where b.slug like 'capacity-%'),
  'databaseBytes',pg_database_size(current_database()),
- 'largestTables',(select json_agg(t order by t.bytes desc) from (select c.relname as table,pg_total_relation_size(c.oid) as bytes
+ 'largestTables',(select jsonb_agg(t order by t.bytes desc) from (select c.relname as table,pg_total_relation_size(c.oid) as bytes
    from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r'
    order by pg_total_relation_size(c.oid) desc limit 8) t)
-) as capacity_seed;
+)::text;
