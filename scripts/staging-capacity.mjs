@@ -72,7 +72,8 @@ if (operation === 'seed') {
 	const publicSamples = [];
 	const publicFrom = Date.now() + 2 * 60_000;
 	const phone = await runPublicGenerator({ origin: STAGING_APP_ORIGIN, practices: PRACTICES, random: createRandom('staging-public'),
-		measureFrom: publicFrom, until: publicFrom + 10 * 60_000, record: sample => publicSamples.push(sample), unflatten: devalue.unflatten, phone: '+5491177000000' });
+		measureFrom: publicFrom, until: publicFrom + 10 * 60_000, record: sample => publicSamples.push(sample), unflatten: devalue.unflatten, parse: devalue.parse,
+		phone: '+5491177000000' });
 	const publicSummary = summarize(publicSamples);
 	const abuse = await runPublicAbuse({ origin: STAGING_APP_ORIGIN, unflatten: devalue.unflatten, parse: devalue.parse, phone });
 	const result = { origin: STAGING_APP_ORIGIN, practices: PRACTICES, repetitions,

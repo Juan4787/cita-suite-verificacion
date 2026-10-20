@@ -290,13 +290,28 @@ export function describePublicPage(status, body, unflatten) {
 			days: state.days?.length ?? null, slots: state.slots?.length ?? null, issue: state.issue ?? null } : null };
 }
 
+/**
+ * The confirmation form as PublicBookingConfirmation.svelte submits it: the hidden
+ * fields echo what the page sent (integration revision, quote and schema hashes and
+ * the request id that makes the booking idempotent).
+ */
+export function publicBookingForm(page, query, slot, patientName, patientPhone) {
+	const parameters = new URLSearchParams(query);
+	return {
+		...(page?.integration ? { integration_revision: String(page.integration.revision), modality: 'in_person' } : {}),
+		service_id: parameters.get('service_id'), booking_mode: 'individual', professional_id: parameters.get('professional_id'),
+		slot_starts_at: slot.starts_at, price_quote_hash: page?.priceQuote?.hash ?? '', patient_schema_hash: page?.patientFields?.hash ?? '',
+		idempotency_key: page?.bookingRequestId ?? randomUUID(), patient_name: patientName, patient_phone: patientPhone
+	};
+}
+
 const publicQuery = (data, random, now) => {
 	const service = data.services[Math.floor(random() * 5)];
 	const professional = data.professionals[Math.floor(random() * 3)];
 	return `service_id=${service}&professional_id=${professional}&date=${localDate(now, 1 + Math.floor(random() * 30))}`;
 };
 
-export async function runPublicGenerator({ origin, practices, random, measureFrom, until, record, unflatten, phone,
+export async function runPublicGenerator({ origin, practices, random, measureFrom, until, record, unflatten, parse, phone,
 	fetchFn = fetch, sleep = ms => new Promise(done => setTimeout(done, ms)) }) {
 	let nextWrite = Date.now() + 30_000;
 	const failures = [];
@@ -319,17 +334,19 @@ export async function runPublicGenerator({ origin, practices, random, measureFro
 		if (Date.now() >= nextWrite) {
 			nextWrite += PUBLIC_WRITE_INTERVAL_MS;
 			const read = await timed(PUBLIC_OPERATIONS.page, () => fetchFn(`${origin}/reservar/${data.business}/__data.json?${query}`));
-			const slots = pageData(read.body, unflatten)?.state?.slots;
+			const page = pageData(read.body, unflatten);
+			const slots = page?.state?.slots;
 			const slot = Array.isArray(slots) ? slots[Math.floor(random() * Math.min(slots.length, 6))] : null;
-			const parameters = new URLSearchParams(query);
 			if (slot?.starts_at) await timed(PUBLIC_OPERATIONS.booking, () => fetchFn(`${origin}/reservar/${data.business}?/create_booking`, {
 				method: 'POST', redirect: 'manual', headers: actionHeaders(origin, new CookieJar()),
-				body: new URLSearchParams({ service_id: parameters.get('service_id'), professional_id: parameters.get('professional_id'),
-					slot_starts_at: slot.starts_at, patient_name: syntheticName('Reserva Pública', phone), patient_phone: phone,
-					idempotency_key: randomUUID() })
+				body: new URLSearchParams(publicBookingForm(page, query, slot, syntheticName('Reserva Pública', phone), phone))
 			}).then(result => {
 				phone = nextPhone(phone);
-				if (result.body?.type !== 'redirect') failures.push(String(result.body?.type ?? result.status));
+				if (result.body?.type !== 'redirect') {
+					let message = null;
+					try { message = typeof result.body?.data === 'string' ? parse(result.body.data)?.message ?? null : null; } catch {}
+					failures.push(`${result.body?.type ?? 'no-json'}:${result.body?.status ?? result.status}:${String(message ?? '').slice(0, 120)}`);
+				}
 				return result;
 			}));
 		} else {
@@ -378,13 +395,12 @@ export async function runPublicAbuse({ origin, unflatten, parse, phone, fetchFn 
 	for (let attempt = 0; attempt < 4; attempt++) {
 		const query = publicQuery(data, createRandom(`abuse-${attempt}`), new Date());
 		const read = await fetchFn(`${origin}/reservar/${data.business}/__data.json?${query}`).then(response => response.json()).catch(() => null);
-		const slot = pageData(read, unflatten)?.state?.slots?.[attempt];
+		const page = pageData(read, unflatten);
+		const slot = page?.state?.slots?.[attempt];
 		if (!slot?.starts_at) { bookings.push({ attempt, outcome: 'no-slot' }); continue; }
-		const parameters = new URLSearchParams(query);
 		const response = await fetchFn(`${origin}/reservar/${data.business}?/create_booking`, { method: 'POST', redirect: 'manual',
-			headers: actionHeaders(origin, new CookieJar()), body: new URLSearchParams({ service_id: parameters.get('service_id'),
-				professional_id: parameters.get('professional_id'), slot_starts_at: slot.starts_at, patient_name: syntheticName('Abuso Prueba', phone),
-				patient_phone: phone, idempotency_key: randomUUID() }) }).catch(() => null);
+			headers: actionHeaders(origin, new CookieJar()),
+			body: new URLSearchParams(publicBookingForm(page, query, slot, syntheticName('Abuso Prueba', phone), phone)) }).catch(() => null);
 		const body = await response?.json().catch(() => null);
 		let detail = null;
 		try { detail = body?.type === 'failure' && typeof body.data === 'string' ? parse(body.data) : null; } catch {}

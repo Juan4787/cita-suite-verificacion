@@ -220,7 +220,7 @@ async function measurePublic(practices) {
 		const until = measureFrom + MEASURE_MS;
 		const samples = [];
 		phone = await runPublicGenerator({ origin: appOrigin, practices, random: createRandom(`public-${practices}-${repetition}`), measureFrom, until,
-			record: sample => samples.push(sample), unflatten: devalue.unflatten, phone });
+			record: sample => samples.push(sample), unflatten: devalue.unflatten, parse: devalue.parse, phone });
 		const summary = summarize(samples);
 		repetitions.push({ repetition, summary, acceptance: evaluateAcceptance(summary) });
 		console.log(`capacity-public ${practices}/${repetition} ` + JSON.stringify({ read: summary.read, write: summary.write, acceptance: repetitions.at(-1).acceptance }));

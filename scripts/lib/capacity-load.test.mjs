@@ -125,7 +125,7 @@ test('a virtual user logs in once, keeps its session, records only the measured 
 
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { PUBLIC_WRITE_INTERVAL_MS, nextPhone, pageData, runPublicAbuse, runPublicGenerator, syntheticName } from './capacity-load.mjs';
+import { PUBLIC_WRITE_INTERVAL_MS, nextPhone, pageData, publicBookingForm, runPublicAbuse, runPublicGenerator, syntheticName } from './capacity-load.mjs';
 import { isValidPatientFullName } from '../../apps/web/src/lib/utils/patient-name.ts';
 
 const kit = createRequire(createRequire(fileURLToPath(new URL('../../apps/web/package.json', import.meta.url))).resolve('@sveltejs/kit/package.json'));
@@ -204,4 +204,17 @@ test('the abuse checks pass only when the system refuses both bursts', async () 
 		assert.equal((await run({ readLimit: 1000, bookingRefusal: true })).passed, false);
 		assert.equal((await run({ readLimit: 120, bookingRefusal: false })).passed, false);
 	} finally { global.Date = realDate; }
+});
+
+test('a public booking echoes the hidden fields the page sent, like the confirmation form', () => {
+	const query = 'service_id=s-1&professional_id=p-1&date=2026-10-25';
+	const page = { integration: { publicKey: 'k', revision: 3 }, priceQuote: { hash: 'q'.repeat(64) }, patientFields: { hash: 'f'.repeat(64) },
+		bookingRequestId: '11111111-2222-4333-8444-555555555555' };
+	assert.deepEqual(publicBookingForm(page, query, { starts_at: '2026-10-25T13:30:00.000Z' }, 'Reserva Pública Abcd', '+5491177000123'), {
+		integration_revision: '3', modality: 'in_person', service_id: 's-1', booking_mode: 'individual', professional_id: 'p-1',
+		slot_starts_at: '2026-10-25T13:30:00.000Z', price_quote_hash: 'q'.repeat(64), patient_schema_hash: 'f'.repeat(64),
+		idempotency_key: '11111111-2222-4333-8444-555555555555', patient_name: 'Reserva Pública Abcd', patient_phone: '+5491177000123' });
+	const plain = publicBookingForm({}, query, { starts_at: 'x' }, 'Reserva Pública Abcd', '+5491177000123');
+	assert.equal('integration_revision' in plain || 'modality' in plain, false);
+	assert.match(plain.idempotency_key, /^[0-9a-f-]{36}$/);
 });
