@@ -55,7 +55,11 @@ test('every error keeps its cause: platform page, server status, failed load, re
 	const answer = (status, text, type = 'text/plain') => async () => new Response(text, { status, headers: { 'content-type': type } });
 	const cases = [
 		[answer(503, 'error code: 1102'), 'http-503-cf1102'],
-		[answer(500, '<html><title>Error</title></html>', 'text/html'), 'http-500'],
+		// Cloudflare's HTML page separates the word from the code with markup.
+		[answer(503, '<title>Worker exceeded resource limits | x.workers.dev</title><span class="cf-error-type">Error</span>\n<span class="cf-error-code">1102</span>', 'text/html'), 'http-503-cf1102'],
+		[answer(500, '<html><title>Error</title></html>', 'text/html'), 'http-500-not-json'],
+		// The app's own JSON error keeps only its status.
+		[async () => response(503, { type: 'error', error: { message: 'No pudimos cargar las reservas.' } }), 'http-503'],
 		[async () => response(200, { type: 'data', nodes: [{ type: 'data', data: [] }, { type: 'error', status: 503, error: {} }] }), 'node-503'],
 		[async () => response(200, { type: 'redirect', status: 303, location: '/login?next=/odonto' }), 'login'],
 		[async () => response(200, { type: 'failure', status: 400, data: '[]' }), 'failure-400'],

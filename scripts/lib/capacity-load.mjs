@@ -205,8 +205,13 @@ export const nodeError = body => Array.isArray(body?.nodes) ? body.nodes.find(no
 /** How long one request may take before it counts as failed: a hung answer must not stop a run. */
 export const REQUEST_TIMEOUT_MS = 30_000;
 
-/** The code of a Cloudflare error page (`error code: 1102`), which is the platform's answer, not the app's. */
-const cloudflareCode = text => /error(?: code)?:?\s*(1\d{3})\b/i.exec(text)?.[1] ?? null;
+/**
+ * The code of a Cloudflare error page, which is the platform's answer and not the app's:
+ * plain (`error code: 1102`) or HTML, where markup separates the word from the code.
+ * Only the code is kept; the page itself (with the client's address) is never stored.
+ */
+const cloudflareCode = text => /cf-error-code[^>]*>\s*(1\d{3})\s*</i.exec(text)?.[1] ?? /error code:?\s*(1\d{3})\b/i.exec(text)?.[1] ??
+	(/Worker exceeded resource limits/i.test(text) ? '1102' : null);
 
 /**
  * One request with a deadline: its status, its JSON body and, without JSON, a hint of
@@ -237,7 +242,8 @@ export async function exchange(request, { timeoutMs = REQUEST_TIMEOUT_MS, onResp
 /** Why a response counts as an error, in a few words and without data, for the run's evidence. */
 export function failureReason({ status, body, hint }) {
 	if (status === 0) return hint ?? 'network';
-	if (status !== 200) return `http-${status}` + (hint?.startsWith('cf') ? '-' + hint : '');
+	// The hint tells a platform page (`cf1102`) or another answer without JSON from the app's own JSON error.
+	if (status !== 200) return `http-${status}` + (hint ? '-' + hint : '');
 	if (!body || typeof body !== 'object') return hint ?? 'not-json';
 	if (body.type === 'redirect') return String(body.location).startsWith('/login') ? 'login' : 'redirect';
 	const node = nodeError(body);

@@ -11,7 +11,7 @@ on:
         type: choice
         required: true
         options: [artifact, migrations, queue-seed, queue-seed-abandoned, queue-report, queue-cleanup, device-seed, device-report, device-cleanup,
-          capacity-seed, capacity-measure, capacity-cleanup]
+          capacity-seed, capacity-measure, capacity-report, capacity-cleanup]
       run_id:
         description: Run of the queue scenario or the device check, for report and cleanup
         type: string
@@ -101,7 +101,7 @@ jobs:
         run: node scripts/staging-capacity.mjs "${OPERATION#capacity-}"
       # Synthetic data and aggregated measurements only; kept also when the measurement fails.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always() && (inputs.operation == 'capacity-seed' || inputs.operation == 'capacity-measure')
+        if: always() && (inputs.operation == 'capacity-seed' || inputs.operation == 'capacity-measure' || inputs.operation == 'capacity-report')
         with:
           name: staging-${{ inputs.operation }}-${{ github.run_id }}
           path: .verification/staging-capacity-*.json

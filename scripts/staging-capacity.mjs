@@ -17,8 +17,8 @@ import {
 // one. Every row belongs to a `capacity-` practice and `cleanup` removes them all.
 const root = fileURLToPath(new URL('../', import.meta.url));
 const [operation] = process.argv.slice(2);
-if (!['seed', 'measure', 'cleanup'].includes(operation) || process.argv.length !== 3)
-	throw new Error('Usage: staging-capacity.mjs seed|measure|cleanup');
+if (!['seed', 'measure', 'report', 'cleanup'].includes(operation) || process.argv.length !== 3)
+	throw new Error('Usage: staging-capacity.mjs seed|measure|report|cleanup');
 const PRACTICES = 5;
 const url = stagingConnection(process.env.CITA_STAGING_DATABASE_URL);
 const serviceKey = process.env.CITA_STAGING_SERVICE_ROLE_KEY ?? '';
@@ -118,6 +118,24 @@ if (operation === 'seed') {
 	save();
 	console.log('staging-capacity-result ' + JSON.stringify({ passed: result.passed, integrity: result.integrity, database: result.database }));
 	if (!result.passed) process.exitCode = 1;
+} else if (operation === 'report') {
+	// Read only: what the hosted database spent its time on. Statements run at least 20
+	// times, so one-off work such as the seed does not hide the load; normalized texts
+	// carry parameters, not values. Cache hits against disk reads tell whether the data
+	// the load touches fits in the instance's memory.
+	const report = JSON.parse(sql(`select jsonb_build_object(
+ 'statements',(select coalesce(jsonb_agg(s),'[]'::jsonb) from (select left(regexp_replace(query,'\\s+',' ','g'),300) as query,calls,
+   round(total_exec_time::numeric,1) as total_ms,round(mean_exec_time::numeric,2) as mean_ms,round(max_exec_time::numeric,1) as max_ms,rows,
+   shared_blks_hit,shared_blks_read,temp_blks_written
+   from extensions.pg_stat_statements where dbid=(select oid from pg_database where datname=current_database()) and calls>=20
+   order by total_exec_time desc limit 25) s),
+ 'database',(select to_jsonb(d) from (select xact_commit,xact_rollback,deadlocks,blks_hit,blks_read,temp_files,temp_bytes,stats_reset
+   from pg_stat_database where datname=current_database()) d),
+ 'settings',(select jsonb_object_agg(name,setting||coalesce(unit,'')) from pg_settings
+   where name in ('shared_buffers','effective_cache_size','work_mem','max_connections','statement_timeout','server_version')),
+ 'databaseBytes',pg_database_size(current_database()))::text;`));
+	writeFileSync(join(evidence, 'staging-capacity-report.json'), JSON.stringify(report, null, 2) + '\n');
+	console.log('staging-capacity-report ' + JSON.stringify(report));
 } else {
 	// The cleanup the CI scenarios rehearse on the same data before it runs here.
 	const marked = sql(readFileSync(join(root, 'scripts/capacity/cleanup-practices.sql'), 'utf8')).split('\n').find(line => line.startsWith('capacity-cleanup '));
