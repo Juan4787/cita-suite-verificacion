@@ -31,6 +31,7 @@ const extras = [
 	'.github/workflows/refactoring-verification.yml', '.github/workflows/staging-connectivity.yml',
 	'.github/workflows/staging-operations.yml', 'apps/web/wrangler.staging.jsonc',
 	'scripts/inspect-staging-database.mjs', 'scripts/apply-staging-migrations.mjs', 'scripts/staging-queue-scenario.mjs',
+	'scripts/deploy-staging-workers.mjs', 'scripts/staging-tail-metrics.mjs', 'scripts/staging-device-push.mjs',
 	'scripts/staging/push-sink/supabase/config.toml', 'scripts/staging/push-sink/supabase/functions/push-sink/index.ts',
 	'docs/plans/refactorizacion-cita-suite.md', 'docs/plans/refactorizacion-cita-suite.integridad.json',
 	'docs/plans/registro-refactorizacion-cita-suite.md',

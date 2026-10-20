@@ -91,6 +91,18 @@ Las conexiones de staging se guardan con permisos 0600 en `~/.config/cita-suite/
 
 El workflow manual `staging-connectivity.yml` ejecuta sólo una inspección SQL de lectura en el proyecto exacto autorizado, con `default_transaction_read_only=on`, tiempo acotado y sin imprimir cadenas o errores del driver. Comparte exclusión con las verificaciones de campaña. El único secreto configurado en el repositorio auxiliar es `CITA_STAGING_DATABASE_URL`, exclusivo de ese staging. Este workflow no aplica migraciones, despliega, carga datos ni acredita capacidad o release.
 
+### Despliegue y medición de tareas en staging
+
+El workflow manual `staging-operations.yml` comparte la misma exclusión y sólo opera sobre ese staging:
+
+- `artifact` construye la app para Cloudflare con `CITA_BUILD_VERSION` igual al commit del snapshot y la empaqueta con `wrangler deploy --dry-run --config wrangler.staging.jsonc`, sin desplegar. Publica el empaquetado, la salida de SvelteKit y un manifiesto con tamaño y SHA-256 de cada archivo, con retención de tres días.
+- `migrations` aplica las migraciones versionadas en orden (`scripts/apply-staging-migrations.mjs`). Exige que la historia remota sea un prefijo de la local y deja un recibo con el hash de cada archivo.
+- `queue-seed`, `queue-report` y `queue-cleanup` operan una corrida del escenario de colas del plan (`scripts/staging-queue-scenario.mjs`): 25 consultorios sintéticos con cinco recordatorios y uno con 150 que vencen primero, contra el receptor push sintético del proyecto de staging. Todo pertenece a la corrida por slug y endpoint, y la limpieza comprueba que no quede nada suyo.
+
+El despliegue se hace en la máquina local con la sesión de Wrangler de la cuenta esperada, sin compilar: `node scripts/deploy-staging-workers.mjs app <artefacto descargado>` sube el empaquetado tal cual. Antes rechaza un artefacto que no coincida exactamente con su manifiesto, una configuración que no sea la del Worker `cita-suite-staging` (nombre, cuenta, proyecto Supabase, sin rutas ni crons), claves de Supabase de otro proyecto o rol y un directorio de assets que publique el bundle del servidor. Después comprueba que staging sirva la revisión. `node scripts/deploy-staging-workers.mjs scheduler` despliega `cita-suite-scheduler-staging` sólo si sus fuentes coinciden con el último snapshot verificado. Los secretos se leen de `~/.config/cita-suite/staging/` y viajan en un archivo temporal 0600 que se borra al terminar. `scripts/lib/staging-deploy.test.mjs` prueba esos rechazos.
+
+`node scripts/staging-tail-metrics.mjs <corrida> <minutos>` observa el Worker de staging durante un tiempo acotado y conserva sólo resultado, CPU y tiempo total cuando la plataforma los informa, la ruta de la tarea y su registro de conteos (`.verification/staging-tail-<corrida>*.json*`). Encabezados, consultas, otros registros y otro tráfico se descartan al llegar (`scripts/lib/staging-tail.test.mjs`).
+
 
 ## Unidades sin omisiones y apertura nativa de exportaciones
 
