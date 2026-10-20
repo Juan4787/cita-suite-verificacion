@@ -83,15 +83,20 @@ Con el presupuesto Free de 40 llamadas por cadena (incluida la del Service Bindi
 
 ### Evidencia
 
-- SQL 39362184325 y full 39362532843 (`9852251`): `scheduled_job_batches.sql` 7/7, escenarios de colas 6/6 (calendario con Free: todo consultorio empieza dentro de 10 minutos), todas las suites y carreras, navegador, demo y Natalia.
-- Staging (20 de octubre): migraciones aplicadas, app `cita-suite-staging` desplegada desde el artefacto verificado. La llamada autorizada a cada categoría encontró que la reconciliación de almacenamiento falla bajo el guardia `safeupdate` del PostgREST alojado; se reprodujo en CI (SQL 39364542587) y se corrigió con `20261020010000_reconciliation_request_guard.sql`. `wrangler tail` informa CPU y tiempo total por invocación.
-- El detalle de cada corrida, la medición desplegada y la transición se registran en el [registro](../plans/registro-refactorizacion-cita-suite.md).
+- SQL 39362184325 y fulls 39362532843, 39364962358 y 39366010644: `scheduled_job_batches.sql` 7/7, escenarios de colas 6/6 (calendario con Free: todo consultorio empieza dentro de 10 minutos), `hosted_request_guards.sql` 10/10, todas las suites y carreras, navegador 40/40 con el PostgREST como en el alojado, demo y Natalia.
+- **Staging desplegado (20 de octubre):** app `cita-suite-staging` y programador `cita-suite-scheduler-staging` con los cinco cron. Escenario del plan con 26 consultorios: 275/275 recordatorios, los 25 ordinarios empezaron en la primera ejecución (209 s después de sembrar), ordinarios completos en 18–24 minutos y la cola de 150 en 48,5 minutos, sin intentos fallidos. Cada categoría corrió en su minuto. La llamada autorizada a cada categoría encontró la reconciliación de almacenamiento fallando bajo `safeupdate`; se reprodujo en CI (SQL 39364542587) y se corrigió con `20261020010000_reconciliation_request_guard.sql`.
+- **Entrega real a un teléfono** (Samsung con Chrome, FCM): prueba recibida y mostrada a los 0,8 s y confirmada por la persona; el recordatorio de 24 h salió en la ejecución programada siguiente y se mostró a los 0,94 s.
+- El detalle de cada corrida está en el [registro](../plans/registro-refactorizacion-cita-suite.md).
+
+### CPU medida y perfil de Workers
+
+`wrangler tail` informa CPU y tiempo total por invocación. Push con 28 envíos: 38 de 40 llamadas, **64–124 ms de CPU** (unos 2,7 ms por envío) y 1,3–2,2 s en total; ejecuciones vacías 7–26 ms; calendario, reseñas y cargas sin trabajo, p50 de 5, 9 y 13 ms. Ninguna invocación fue cortada. Cloudflare documenta 10 ms de CPU por invocación en Free: el presupuesto de llamadas se cumple, pero la CPU no, y la tolerancia observada no es una garantía. Si el límite se aplicara, cada ejecución se cortaría después de reclamar y los recordatorios no saldrían. **La ampliación medida es Workers Paid** (30 s de CPU por omisión), con `JOB_BUDGET_PROFILE=paid`: 100 recordatorios por ejecución, unos 280 ms de CPU. Requiere la autorización del usuario.
+
+Cada ejecución usa una sola hora lógica para reclamar, revalidar y registrar: el desfase con el reloj real es como mucho el plazo de la ejecución (20 s). Por eso el TTL puede ser hasta 20 s mayor, y la aceptación del proveedor queda registrada a la hora de inicio. Recepción y visualización llevan la hora real del teléfono.
 
 ### Pendiente de esta etapa
 
-1. Full positivo de la corrección (39364962358) y migración nueva aplicada en staging.
-2. Programador de staging desplegado; escenario de colas sembrado en staging (25 consultorios con cinco pendientes y uno con 150), CPU p50/p99 y tiempo total por invocación, viajes a base y proveedores, y antigüedad por consultorio; lote de Free acotado por CPU si hace falta.
-3. Entrega Web Push real a un teléfono (FCM) con el emisor nuevo: prueba, recordatorio y acuse.
-4. Transición según la secuencia de publicación del plan, con los triggers de Free prestados a staging durante una ventana acotada.
+1. Decisión del usuario sobre Workers Paid antes de activar el programador en producción.
+2. Transición según la secuencia de publicación del plan: liberar los cron de staging, detener el programador anterior (interruptor de base), activar el nuevo y verificar sus eventos reales.
 
 Restricción de cuenta: Workers Free admite cinco Cron Triggers **por cuenta**. Staging y producción no pueden tener sus cinco triggers activos al mismo tiempo. La validación desplegada en staging usará la cuota durante una ventana acotada y la liberará antes de activar producción; se documentará el orden exacto.

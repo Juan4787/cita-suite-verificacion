@@ -10,7 +10,7 @@ on:
         description: Staging operation
         type: choice
         required: true
-        options: [artifact, migrations, queue-seed, queue-report, queue-cleanup, device-seed, device-report, device-cleanup]
+        options: [artifact, migrations, queue-seed, queue-seed-abandoned, queue-report, queue-cleanup, device-seed, device-report, device-cleanup]
       run_id:
         description: Run of the queue scenario or the device check, for report and cleanup
         type: string

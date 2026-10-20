@@ -8,10 +8,15 @@ import { STAGING_PROJECT_REF, psqlDiagnostics, stagingConnection, stagingPsql } 
 // five due reminders each plus one practice with 150 that are due first. Every row
 // belongs to one run (slug and endpoint prefix), so the report and the cleanup touch
 // only that run. Reminders go to the synthetic push sink of the staging project.
+// `seed-abandoned` also simulates, in the same transaction, a run that claimed every
+// reminder 15 minutes ago and died without results: whatever is sent afterwards was
+// recovered by the scheduled runs.
 const root = fileURLToPath(new URL('../', import.meta.url));
 const [operation, runArgument] = process.argv.slice(2);
-if (!['seed', 'report', 'cleanup'].includes(operation)) throw new Error('Usage: staging-queue-scenario.mjs seed|report <run>|cleanup <run>');
-const run = operation === 'seed' ? randomBytes(6).toString('hex') : runArgument;
+if (!['seed', 'seed-abandoned', 'report', 'cleanup'].includes(operation))
+	throw new Error('Usage: staging-queue-scenario.mjs seed|seed-abandoned|report <run>|cleanup <run>');
+const seeding = operation.startsWith('seed');
+const run = seeding ? randomBytes(6).toString('hex') : runArgument;
 if (!/^[a-f0-9]{12}$/.test(run ?? '')) throw new Error('A run identifier of 12 hexadecimal characters is required.');
 const url = stagingConnection(process.env.CITA_STAGING_DATABASE_URL);
 const sink = `https://${STAGING_PROJECT_REF}.supabase.co/functions/v1/push-sink/${run}`;
@@ -24,7 +29,7 @@ const execute = (sql, args = ['-q']) => {
 	return result.stdout.trim();
 };
 
-if (operation === 'seed') {
+if (seeding) {
 	// A valid browser key pair: encryption is real, only the push service is synthetic.
 	const browser = createECDH('prime256v1');
 	browser.generateKeys();
@@ -57,6 +62,23 @@ begin
   end loop;
  end loop;
 end $$;
+${operation === 'seed-abandoned' ? `do $$
+declare v_claimed integer; v_total integer:=0;
+begin
+ -- The claim is not scoped to a practice: refuse if anything else is due.
+ if exists(select 1 from public.push_subscriptions s join public.businesses b on b.id=s.business_id
+  join public.appointments a on a.business_id=s.business_id and a.id=s.appointment_id
+  where b.slug not like '${slug}%' and (s.push_24h_sent_at is null or s.push_2h_sent_at is null)
+  and a.starts_at>now() and a.starts_at<=now()+interval '24 hours') then
+  raise exception 'STAGING_SCENARIO_FOREIGN_DUE_REMINDERS';
+ end if;
+ loop
+  select count(*) into v_claimed from public.claim_push_reminder_batch(now()-interval '15 minutes',100,gen_random_uuid());
+  v_total:=v_total+v_claimed;
+  exit when v_claimed=0;
+ end loop;
+ if v_total<>275 then raise exception 'STAGING_SCENARIO_ABANDON_INCOMPLETE %',v_total; end if;
+end $$;` : ''}
 commit;`);
 }
 
