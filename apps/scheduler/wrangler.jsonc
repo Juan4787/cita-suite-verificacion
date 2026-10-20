@@ -10,5 +10,15 @@
 		"crons": ["*/5 * * * *", "1-59/5 * * * *", "2-59/10 * * * *", "3-59/15 * * * *", "17 */3 * * *"]
 	},
 	"services": [{ "binding": "APP", "service": "app" }],
-	"observability": { "enabled": true }
+	"observability": { "enabled": true },
+	"env": {
+		"staging": {
+			"name": "cita-suite-scheduler-staging",
+			"triggers": {
+				"crons": ["*/5 * * * *", "1-59/5 * * * *", "2-59/10 * * * *", "3-59/15 * * * *", "17 */3 * * *"]
+			},
+			"services": [{ "binding": "APP", "service": "cita-suite-staging" }],
+			"observability": { "enabled": true }
+		}
+	}
 }

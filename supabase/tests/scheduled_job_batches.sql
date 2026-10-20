@@ -7,7 +7,7 @@
 begin;
 -- Metadata-only Storage rows, as in the other clinical file suites.
 set local storage.allow_delete_query='true';
-select extensions.plan(6);
+select extensions.plan(7);
 
 create temporary table batch_fixture(label text primary key,business uuid not null,service uuid not null,professional uuid not null,owner uuid not null);
 create temporary table batch_push(label text primary key,business uuid not null,appointment uuid not null,subscription uuid not null,endpoint text not null);
@@ -596,7 +596,98 @@ begin
 end $$;
 select extensions.pass('push telemetry keeps 90 days through its own database schedule');
 
--- 6. Least privilege -------------------------------------------------------------
+-- 6. Rotation between claims ------------------------------------------------------
+-- Inside a claim every practice gets one turn; between claims, a practice still
+-- waiting goes before the practices served by the previous claim, even when their
+-- next items are more urgent. Ordered by turn and urgency alone, the third practice
+-- of each queue would wait behind the other two. This section runs in its own
+-- window, 20 days ahead, before the windows of the previous sections, so none of
+-- their remaining items is due here.
+do $$
+declare
+ v_t timestamptz:=date_trunc('minute',statement_timestamp())+interval '20 days';
+ v_now timestamptz:=v_t-interval '18 hours';
+ v_token uuid:=gen_random_uuid(); v_next jsonb; v_prepared jsonb; v_results jsonb; v_ids uuid[];
+ v_items jsonb; v_label text; v_app uuid; v_event uuid; v_connection uuid; v_claimed record;
+begin
+ -- Push: RP and RQ have two reminders each; RR has one, for a later appointment.
+ perform pg_temp.batch_business('RP'); perform pg_temp.batch_business('RQ'); perform pg_temp.batch_business('RR');
+ perform pg_temp.batch_reminder('RP','RP0',v_t,10); perform pg_temp.batch_reminder('RP','RP1',v_t+interval '10 minutes',10);
+ perform pg_temp.batch_reminder('RQ','RQ0',v_t,10); perform pg_temp.batch_reminder('RQ','RQ1',v_t+interval '10 minutes',10);
+ perform pg_temp.batch_reminder('RR','RR0',v_t+interval '3 hours',10);
+ -- First run: claim, prepare and deliver, as the scheduled job does.
+ select coalesce(jsonb_agg(jsonb_build_object('subscription_id',c.subscription_id,'kind',c.reminder_kind,
+  'receipt_token_hash',encode(sha256(convert_to(c.subscription_id::text,'UTF8')),'hex'))),'[]'::jsonb)
+ into v_next from public.claim_push_reminder_batch(v_now,2,v_token) c;
+ if coalesce((select array_agg(x->>'subscription_id' order by x->>'subscription_id') from jsonb_array_elements(v_next) x)
+  is distinct from (select array_agg(p.subscription::text order by p.subscription::text) from batch_push p where p.label in ('RP0','RQ0')),true) then
+  raise exception 'TEST_ROTATION_PUSH_FIRST_CLAIM %',v_next;
+ end if;
+ v_prepared:=public.advance_push_reminder_batch(v_token,v_now,'[]',v_next)->'prepared';
+ select coalesce(jsonb_agg(jsonb_build_object('subscription_id',p->>'subscription_id','kind',p->>'kind',
+  'delivery_id',p->>'delivery_id','outcome','accepted','status_code',201)),'[]'::jsonb)
+ into v_results from jsonb_array_elements(v_prepared) p;
+ if coalesce((public.advance_push_reminder_batch(v_token,v_now,v_results,'[]',true)->>'completed')::integer<>2,true) then
+  raise exception 'TEST_ROTATION_PUSH_FIRST_RUN %',v_results;
+ end if;
+ -- Second run: RR goes before the second reminders of RP and RQ.
+ select array_agg(c.subscription_id) into v_ids from public.claim_push_reminder_batch(v_now+interval '5 minutes',2,gen_random_uuid()) c;
+ if coalesce(cardinality(v_ids)<>2 or not pg_temp.sub('RR0')=any(v_ids),true) then
+  raise exception 'TEST_ROTATION_PUSH_WAITING_PRACTICE_SKIPPED %',v_ids;
+ end if;
+
+ -- Calendar: CP and CQ have two pending events each; CR has one that became due later.
+ perform pg_temp.batch_business('CP'); perform pg_temp.batch_business('CQ'); perform pg_temp.batch_business('CR');
+ insert into public.google_calendar_connections(oauth_client_key,google_subject,refresh_token_ciphertext)
+ values(repeat('k',64),'subject-'||gen_random_uuid(),'ciphertext-'||repeat('r',20)) returning id into v_connection;
+ foreach v_label in array array['CP0','CP1','CQ0','CQ1','CR0'] loop
+  v_app:=pg_temp.batch_appointment(left(v_label,2),v_t+make_interval(mins=>30*right(v_label,1)::integer),30);
+  insert into public.appointment_google_calendar_events(business_id,appointment_id,connection_id,sync_status,next_attempt_at,created_at)
+  values((select business from batch_fixture where label=left(v_label,2)),v_app,v_connection,'pending_create',
+   v_now-case when v_label='CR0' then interval '1 minute' when right(v_label,1)='0' then interval '30 minutes' else interval '20 minutes' end,v_now)
+  returning id into v_event;
+  insert into batch_calendar values(v_label,(select business from batch_fixture where label=left(v_label,2)),v_app,v_event);
+ end loop;
+ v_token:=gen_random_uuid();
+ v_items:=public.claim_google_calendar_sync_batch(v_now,2,v_token);
+ if coalesce((select array_agg(i->>'event_row_id' order by i->>'event_row_id') from jsonb_array_elements(v_items) i)
+  is distinct from (select array_agg(c.event::text order by c.event::text) from batch_calendar c where c.label in ('CP0','CQ0')),true) then
+  raise exception 'TEST_ROTATION_CALENDAR_FIRST_CLAIM %',v_items;
+ end if;
+ v_items:=public.complete_google_calendar_sync_batch(v_token,v_now,(select jsonb_agg(jsonb_build_object('event_row_id',i->>'event_row_id',
+  'outcome','synced','google_event_id','evt'||md5(i->>'event_row_id'),'synced_sequence',0)) from jsonb_array_elements(v_items) i),true);
+ if coalesce((select count(*) from jsonb_array_elements(v_items->'results') r where r->>'status'='active')<>2,true) then
+  raise exception 'TEST_ROTATION_CALENDAR_FIRST_RUN %',v_items;
+ end if;
+ v_items:=public.claim_google_calendar_sync_batch(v_now+interval '5 minutes',2,gen_random_uuid());
+ if coalesce(jsonb_array_length(v_items)<>2
+  or not exists(select 1 from jsonb_array_elements(v_items) i where (i->>'event_row_id')::uuid=pg_temp.calendar_event('CR0')),true) then
+  raise exception 'TEST_ROTATION_CALENDAR_WAITING_PRACTICE_SKIPPED %',v_items;
+ end if;
+
+ -- Reviews: VP and VQ have two due requests each; VR has one, scheduled later.
+ perform pg_temp.batch_business('VP'); perform pg_temp.batch_business('VQ'); perform pg_temp.batch_business('VR');
+ insert into public.google_review_settings(business_id,enabled,review_url)
+ select f.business,true,'https://g.page/r/test/review' from batch_fixture f where f.label in ('VP','VQ','VR');
+ perform pg_temp.batch_reminder('VP','VP0',v_t-interval '20 hours',30); perform pg_temp.batch_reminder('VP','VP1',v_t-interval '19 hours',30);
+ perform pg_temp.batch_reminder('VQ','VQ0',v_t-interval '20 hours',30); perform pg_temp.batch_reminder('VQ','VQ1',v_t-interval '19 hours',30);
+ perform pg_temp.batch_reminder('VR','VR0',v_t-interval '15 hours',30);
+ select count(*) as total,
+  count(*) filter (where c.business_id=(select business from batch_fixture where label='VP')) as vp,
+  count(*) filter (where c.business_id=(select business from batch_fixture where label='VQ')) as vq
+ into v_claimed from public.claim_google_review_request_batch(v_t,2) c;
+ if coalesce(v_claimed.total<>2 or v_claimed.vp<>1 or v_claimed.vq<>1,true) then
+  raise exception 'TEST_ROTATION_REVIEWS_FIRST_CLAIM %',row_to_json(v_claimed);
+ end if;
+ select count(*) as total,count(*) filter (where c.business_id=(select business from batch_fixture where label='VR')) as vr
+ into v_claimed from public.claim_google_review_request_batch(v_t+interval '1 minute',2) c;
+ if coalesce(v_claimed.total<>2 or v_claimed.vr<>1,true) then
+  raise exception 'TEST_ROTATION_REVIEWS_WAITING_PRACTICE_SKIPPED %',row_to_json(v_claimed);
+ end if;
+end $$;
+select extensions.pass('between claims, a practice still waiting goes before the practices served by the previous claim');
+
+-- 7. Least privilege -------------------------------------------------------------
 select extensions.ok(
  not exists(
   select 1 from unnest(array[
@@ -617,12 +708,13 @@ select extensions.ok(
   select 1 from unnest(array[
    'private.legacy_job_entrypoints_enabled()','private.push_reminder_kind(timestamptz,timestamptz)',
    'private.claim_google_review_requests(timestamptz,integer)','private.claim_expired_clinical_uploads(uuid,integer)',
-   'private.prune_push_delivery_telemetry()']) fn
+   'private.prune_push_delivery_telemetry()','private.record_job_queue_turns(text,uuid[],timestamptz)']) fn
   cross join unnest(array['anon','authenticated','service_role']) api_role
   where has_function_privilege(api_role,fn,'execute'))
  and not exists(
   select 1 from unnest(array['anon','authenticated','service_role']) api_role
-  where has_table_privilege(api_role,'private.scheduled_job_settings','select,insert,update,delete')),
+  cross join unnest(array['private.scheduled_job_settings','private.job_queue_rotation']) private_table
+  where has_table_privilege(api_role,private_table,'select,insert,update,delete')),
  'scheduled job batches are executable only by the server role and the switch only through its function');
 
 select * from extensions.finish();

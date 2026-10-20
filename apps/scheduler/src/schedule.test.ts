@@ -36,4 +36,15 @@ describe('programación versionada', () => {
 		assert.deepEqual(config.triggers.crons, Object.keys(CRON_SCHEDULE));
 		assert.equal(config.triggers.crons.length, 5);
 	});
+
+	it('staging usa la misma programación y llama sólo a la app de staging', () => {
+		type Environment = { name: string; triggers: { crons: string[] }; services: { binding: string; service: string }[] };
+		const config: Environment & { env: { staging: Environment } } = JSON.parse(
+			readFileSync(join(import.meta.dirname, '..', 'wrangler.jsonc'), 'utf8')
+		);
+		assert.deepEqual(config.env.staging.triggers.crons, Object.keys(CRON_SCHEDULE));
+		assert.deepEqual(config.services, [{ binding: 'APP', service: 'app' }]);
+		assert.deepEqual(config.env.staging.services, [{ binding: 'APP', service: 'cita-suite-staging' }]);
+		assert.notEqual(config.env.staging.name, config.name);
+	});
 });

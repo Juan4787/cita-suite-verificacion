@@ -1,0 +1,6 @@
+# Isolated project directory of the staging push sink. Not the application project.
+project_id = "cita-suite-staging-push-sink"
+
+[functions.push-sink]
+# Push services authenticate senders with VAPID, not a Supabase JWT.
+verify_jwt = false

@@ -1,7 +1,9 @@
 -- Stage 6: every scheduled event runs one job category inside a measured budget.
--- Batch claims share the queue fairly between practices (one turn per practice,
--- most urgent first), carry a claim token so that only their owner records the
--- results, back off persistently after a failure and group context and writes.
+-- Batch claims share the queue fairly between practices: inside a claim every
+-- practice gets one turn before any gets a second, and between claims the practice
+-- served longest ago goes first. They carry a claim token so that only their owner
+-- records the results, back off persistently after a failure and group context and
+-- writes.
 -- The legacy entry points keep their signatures behind a transition switch, so the
 -- previous scheduler can be stopped without access to the host that runs it.
 begin;
@@ -38,6 +40,30 @@ begin
  update private.scheduled_job_settings set legacy_entrypoints_enabled=p_enabled,updated_at=clock_timestamp() where singleton;
  return p_enabled;
 end $$;
+
+-- Rotation between practices across claims. The turn of a practice is computed
+-- inside each claim only, so without this memory a practice served in the previous
+-- claim would compete again on equal terms with practices that are still waiting.
+create table private.job_queue_rotation(
+ queue text not null check(queue in ('push','calendar','reviews')),
+ business_id uuid not null references public.businesses(id) on delete cascade,
+ last_claimed_at timestamptz not null,
+ primary key(queue,business_id)
+);
+revoke all on table private.job_queue_rotation from public,anon,authenticated,service_role;
+
+-- Records one turn for every practice served by a claim, once and at the end of the
+-- claim, in practice order: concurrent claims lock the rotation rows in the same
+-- order and cannot deadlock on them.
+create function private.record_job_queue_turns(p_queue text,p_business_ids uuid[],p_at timestamptz) returns void
+language sql security definer set search_path=pg_catalog,pg_temp as $$
+ insert into private.job_queue_rotation as rotation(queue,business_id,last_claimed_at)
+ select p_queue,served.business_id,p_at from (select distinct unnest(p_business_ids) as business_id) served
+ order by served.business_id
+ on conflict(queue,business_id) do update
+  set last_claimed_at=greatest(rotation.last_claimed_at,excluded.last_claimed_at)
+$$;
+revoke all on function private.record_job_queue_turns(text,uuid[],timestamptz) from public,anon,authenticated,service_role;
 
 -- 2. Push reminders --------------------------------------------------------------
 
@@ -178,12 +204,13 @@ $$;
 revoke all on function private.push_reminder_kind(timestamptz,timestamptz) from public,anon,authenticated,service_role;
 
 -- Fair claim: the first pending reminder of every practice, then the second, ...;
--- inside a turn the earliest appointment first. Returns no endpoint or keys: the
--- context is read when each chunk is prepared, right before the external effect.
+-- inside a turn the practice served longest ago, then the earliest appointment.
+-- Returns no endpoint or keys: the context is read when each chunk is prepared,
+-- right before the external effect.
 create function public.claim_push_reminder_batch(p_now timestamptz,p_limit integer,p_claim_token uuid)
 returns table(subscription_id uuid,reminder_kind text,business_id uuid,business_turn integer)
 language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
-declare v record; v_claimed integer:=0;
+declare v record; v_claimed integer:=0; v_served uuid[]:='{}';
 begin
  if p_now is null or p_claim_token is null or p_limit is null or p_limit not between 1 and 100 then
   raise exception 'PUSH_BATCH_CLAIM_INVALID';
@@ -211,7 +238,8 @@ begin
   select c.id,c.business_id,c.kind,c.starts_at,
    row_number() over(partition by c.business_id order by c.starts_at,c.id)::integer as turn
   from claimable c
-  order by turn,c.starts_at,c.id
+  left join private.job_queue_rotation r on r.queue='push' and r.business_id=c.business_id
+  order by turn,r.last_claimed_at nulls first,c.starts_at,c.id
   limit p_limit*2
  loop
   exit when v_claimed>=p_limit;
@@ -230,10 +258,12 @@ begin
    or (v.kind='2h' and s.push_2h_sent_at is null
     and (s.push_2h_claimed_at is null or s.push_2h_claimed_at<p_now-interval '10 minutes')));
   if not found then continue; end if;
+  v_served:=v_served||v.business_id;
   v_claimed:=v_claimed+1;
   subscription_id:=v.id; reminder_kind:=v.kind; business_id:=v.business_id; business_turn:=v.turn;
   return next;
  end loop;
+ perform private.record_job_queue_turns('push',v_served,p_now);
 end $$;
 
 -- Records the results of the chunk just sent and prepares the next one in one trip.
@@ -439,7 +469,7 @@ create function public.claim_google_calendar_sync_batch(p_now timestamptz,p_limi
 returns jsonb
 language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
 declare v record; v_event public.appointment_google_calendar_events%rowtype; v_connection record;
- v_items jsonb:='[]'::jsonb; v_claimed integer:=0;
+ v_items jsonb:='[]'::jsonb; v_claimed integer:=0; v_served uuid[]:='{}';
 begin
  if p_now is null or p_claim_token is null or p_limit is null or p_limit not between 1 and 100 then
   raise exception 'GOOGLE_CALENDAR_BATCH_CLAIM_INVALID';
@@ -448,9 +478,10 @@ begin
   select e.id,row_number() over(partition by e.business_id order by e.next_attempt_at,e.created_at,e.id)::integer as turn,
    e.next_attempt_at,e.created_at
   from public.appointment_google_calendar_events e
+  left join private.job_queue_rotation r on r.queue='calendar' and r.business_id=e.business_id
   where e.sync_status in ('pending_create','pending_update','pending_delete') and e.next_attempt_at<=p_now
    and (e.claimed_at is null or e.claimed_at<p_now-interval '10 minutes')
-  order by turn,e.next_attempt_at,e.created_at,e.id
+  order by turn,r.last_claimed_at nulls first,e.next_attempt_at,e.created_at,e.id
   limit p_limit*2
  loop
   exit when v_claimed>=p_limit;
@@ -464,6 +495,7 @@ begin
   if not found then continue; end if;
   select c.refresh_token_ciphertext,c.revoked_at into v_connection
   from public.google_calendar_connections c where c.id=v_event.connection_id;
+  v_served:=v_served||v_event.business_id;
   v_claimed:=v_claimed+1;
   v_items:=v_items||jsonb_build_array(jsonb_build_object(
    'event_row_id',v_event.id,'business_id',v_event.business_id,'appointment_id',v_event.appointment_id,
@@ -472,6 +504,7 @@ begin
    'business_turn',v.turn,'refresh_token_ciphertext',v_connection.refresh_token_ciphertext,
    'connection_revoked_at',v_connection.revoked_at));
  end loop;
+ perform private.record_job_queue_turns('calendar',v_served,p_now);
  return v_items;
 end $$;
 
@@ -535,7 +568,8 @@ end $$;
 -- 4. Google review requests ------------------------------------------------------
 
 -- One implementation for the legacy and the batch claim. The only change to the
--- previous body is the order: one turn per practice, then the scheduled time.
+-- previous body is the order: one turn per practice, then the practice served
+-- longest ago, then the scheduled time.
 create function private.claim_google_review_requests(
  claim_now timestamptz,
  claim_limit integer
@@ -562,6 +596,7 @@ declare
  v_state public.google_review_patient_delivery_state%rowtype;
  v_claim_token uuid;
  v_claimed integer := 0;
+ v_served uuid[] := '{}';
 begin
  if claim_now is null then
   raise exception 'GOOGLE_REVIEW_CLAIM_TIME_REQUIRED';
@@ -570,17 +605,19 @@ begin
  for v_candidate in
   select ranked.id
   from (
-   select request.id, request.scheduled_for, request.created_at,
+   select request.id, request.scheduled_for, request.created_at, rotation.last_claimed_at,
     row_number() over (
      partition by request.business_id
      order by request.scheduled_for, request.created_at, request.id
     ) as turn
    from public.google_review_requests request
+   left join private.job_queue_rotation rotation
+    on rotation.queue = 'reviews' and rotation.business_id = request.business_id
    where request.status = 'pending'
     and request.scheduled_for <= claim_now
     and (request.next_attempt_at is null or request.next_attempt_at <= claim_now)
   ) ranked
-  order by ranked.turn, ranked.scheduled_for, ranked.created_at, ranked.id
+  order by ranked.turn, ranked.last_claimed_at nulls first, ranked.scheduled_for, ranked.created_at, ranked.id
   limit greatest(claim_limit, 1) * 4
  loop
   exit when v_claimed >= greatest(claim_limit, 1);
@@ -730,6 +767,7 @@ begin
    updated_at = claim_now
   where request.id = v_context.id;
 
+  v_served := v_served || v_context.business_id;
   v_claimed := v_claimed + 1;
   request_id := v_context.id;
   claim_token := v_claim_token;
@@ -745,6 +783,7 @@ begin
   confirmation_token := v_context.confirmation_token;
   return next;
  end loop;
+ perform private.record_job_queue_turns('reviews', v_served, claim_now);
 end;
 $$;
 

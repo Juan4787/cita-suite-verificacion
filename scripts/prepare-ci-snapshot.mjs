@@ -29,7 +29,9 @@ const rootFiles = new Set(['.env.example', '.gitignore', '.npmrc', 'AGENTS.md', 
 	'.dependency-cruiser.cjs', '.node-version', '.prettierignore']);
 const extras = [
 	'.github/workflows/refactoring-verification.yml', '.github/workflows/staging-connectivity.yml',
-	'scripts/inspect-staging-database.mjs',
+	'.github/workflows/staging-operations.yml', 'apps/web/wrangler.staging.jsonc',
+	'scripts/inspect-staging-database.mjs', 'scripts/apply-staging-migrations.mjs', 'scripts/staging-queue-scenario.mjs',
+	'scripts/staging/push-sink/supabase/config.toml', 'scripts/staging/push-sink/supabase/functions/push-sink/index.ts',
 	'docs/plans/refactorizacion-cita-suite.md', 'docs/plans/refactorizacion-cita-suite.integridad.json',
 	'docs/plans/registro-refactorizacion-cita-suite.md',
 	'docs/architecture/base-de-campana.md', 'docs/architecture/verificacion.md',

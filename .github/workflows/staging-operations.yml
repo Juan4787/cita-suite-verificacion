@@ -1,0 +1,91 @@
+name: Operaciones de staging de Cita Suite
+
+# Manual only. Builds and bundles the Cloudflare artifact without deploying it, and
+# operates only on the dedicated staging project. Production credentials are never
+# available to this workflow; deployment to Cloudflare is done outside it.
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Staging operation
+        type: choice
+        required: true
+        options: [artifact, migrations, queue-seed, queue-report, queue-cleanup]
+      run_id:
+        description: Queue scenario run, for report and cleanup
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cita-refactoring-verification
+  cancel-in-progress: false
+
+jobs:
+  operate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      ASTRO_TELEMETRY_DISABLED: '1'
+      NODE_OPTIONS: --max-old-space-size=3072
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .node-version
+      - name: Install pinned package manager and dependencies
+        if: inputs.operation == 'artifact'
+        run: |
+          npm install --global pnpm@10.13.1
+          pnpm install --frozen-lockfile --network-concurrency=1
+      - name: Build and bundle the staging Worker without deploying it
+        if: inputs.operation == 'artifact'
+        env:
+          CITA_BUILD_VERSION: ${{ github.sha }}
+        run: |
+          pnpm --filter web build:cloudflare
+          cd apps/web
+          pnpm exec wrangler deploy --dry-run --config wrangler.staging.jsonc --outdir ../../.verification/cloudflare-bundle
+          cd ../..
+          node --input-type=module - <<'JS'
+          import { createHash } from 'node:crypto';
+          import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+          import { join, relative } from 'node:path';
+          const files = [];
+          const walk = directory => { for (const name of readdirSync(directory)) { const path = join(directory, name); statSync(path).isDirectory() ? walk(path) : files.push(path); } };
+          walk('.verification/cloudflare-bundle');
+          walk('apps/web/.svelte-kit/cloudflare');
+          const manifest = { revision: process.env.CITA_BUILD_VERSION, version: JSON.parse(readFileSync('apps/web/.svelte-kit/output/client/_app/version.json', 'utf8')).version,
+            files: files.sort().map(path => ({ path, bytes: statSync(path).size, sha256: createHash('sha256').update(readFileSync(path)).digest('hex') })) };
+          if (manifest.version !== manifest.revision) throw new Error('The built version does not name the snapshot revision.');
+          writeFileSync('.verification/cloudflare-bundle-manifest.json', JSON.stringify(manifest, null, 2) + '\n');
+          console.log(JSON.stringify({ revision: manifest.revision, files: manifest.files.length, bundle: manifest.files.filter(file => file.path.startsWith('.verification/')) }, null, 2));
+          JS
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: inputs.operation == 'artifact'
+        with:
+          name: cloudflare-staging-${{ github.sha }}
+          path: |
+            apps/web/.svelte-kit/cloudflare
+            .verification/cloudflare-bundle
+            .verification/cloudflare-bundle-manifest.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+      - name: Apply the versioned migrations to staging
+        if: inputs.operation == 'migrations'
+        env:
+          CITA_STAGING_DATABASE_URL: ${{ secrets.CITA_STAGING_DATABASE_URL }}
+        run: node scripts/apply-staging-migrations.mjs
+      - name: Operate the queue scenario of one run
+        if: startsWith(inputs.operation, 'queue-')
+        env:
+          CITA_STAGING_DATABASE_URL: ${{ secrets.CITA_STAGING_DATABASE_URL }}
+          OPERATION: ${{ inputs.operation }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: node scripts/staging-queue-scenario.mjs "${OPERATION#queue-}" "$RUN_ID"

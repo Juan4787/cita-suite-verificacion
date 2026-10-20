@@ -1,0 +1,30 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "cita-suite-staging",
+	"account_id": "52b358653379c162b5a07b10ae5e84b3",
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	"assets": {
+		"binding": "ASSETS",
+		"directory": ".svelte-kit/cloudflare"
+	},
+	"compatibility_date": "2026-05-03",
+	"compatibility_flags": ["nodejs_compat"],
+	"placement": {
+		"region": "aws:us-west-2"
+	},
+	"workers_dev": true,
+	"preview_urls": false,
+	"observability": { "enabled": true },
+	"vars": {
+		"PUBLIC_SITE_URL": "https://cita-suite-staging.cita-suite.workers.dev",
+		"ODONTO_SUPABASE_URL": "https://ikaudqoilclfnztkxubz.supabase.co",
+		"PUBLIC_ODONTO_SUPABASE_URL": "https://ikaudqoilclfnztkxubz.supabase.co",
+		"BOOKING_CONTEXTS_AVAILABLE": "true",
+		"BOOKING_INTEGRATIONS_ENABLED": "true",
+		"BOOKING_INFORMATION_ENABLED": "true",
+		"JOB_BUDGET_PROFILE": "free",
+		"VAPID_SUBJECT": "mailto:staging@example.com",
+		"DEMO_MODE": "false"
+	},
+	"keep_vars": false
+}
