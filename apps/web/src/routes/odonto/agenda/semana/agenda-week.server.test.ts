@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ getOdontoContext: vi.fn(), from: vi.fn(), rpc: vi.fn() }));
 
@@ -39,12 +39,12 @@ const counts = [
 ];
 const professionals = [{ id: 'p1', name: 'Profesional Uno', is_active: true }];
 
-const event = () =>
+const event = (search = '?date=2026-10-28') =>
 	({
 		locals: { auth: { access_token: 'test-token' } },
 		fetch: vi.fn(),
 		cookies: { get: vi.fn() },
-		url: new URL('http://localhost/odonto/agenda/semana?date=2026-10-28')
+		url: new URL(`http://localhost/odonto/agenda/semana${search}`)
 	}) as never;
 
 type Day = { date: string; total: number; stats: Array<{ status: string; count: number }> };
@@ -70,6 +70,21 @@ describe('weekly agenda load', () => {
 		expect([days[0].total, count(days[0], 'reserved'), count(days[0], 'confirmed'), count(days[0], 'cancelled')]).toEqual([4, 2, 1, 1]);
 		expect([days[1].total, days[2].total, count(days[2], 'reschedule_requested')]).toEqual([0, 1, 1]);
 		expect(result.professionals).toEqual(professionals);
+		// Monday 00:00 to Sunday 23:59 in Buenos Aires (UTC-3), without a professional filter.
+		expect(mocks.rpc).toHaveBeenCalledWith('agenda_week_counts', {
+			p_business_id: businessId,
+			p_from: '2026-10-26T03:00:00.000Z',
+			p_to: '2026-11-02T02:59:00.000Z',
+			p_time_zone: timeZone
+		});
+	});
+
+	it('counts only the selected professional when the filter is set', async () => {
+		const professionalId = '00000000-0000-4000-8000-000000000002';
+		mocks.from.mockImplementation(() => query({ data: professionals, error: null }));
+		mocks.rpc.mockReturnValue(query({ data: [], error: null }));
+		await load(event(`?date=2026-10-28&professional_id=${professionalId}`));
+		expect(mocks.rpc).toHaveBeenCalledWith('agenda_week_counts', expect.objectContaining({ p_professional_id: professionalId }));
 	});
 
 	it('fails explicitly instead of showing an empty week when the week cannot be read', async () => {
@@ -84,5 +99,34 @@ describe('weekly agenda load', () => {
 		mocks.from.mockImplementation((table: string) => query(table === 'appointments' ? { data: appointments, error: null } : failure));
 		mocks.rpc.mockReturnValue(query({ data: counts, error: null }));
 		await expect(load(event())).rejects.toMatchObject({ status: 503 });
+	});
+
+	describe('on Sunday 22:30 in Buenos Aires, already Monday in UTC', () => {
+		beforeEach(() => {
+			vi.useFakeTimers({ toFake: ['Date'] });
+			vi.setSystemTime(new Date('2026-11-02T01:30:00.000Z'));
+			mocks.from.mockImplementation(() => query({ data: professionals, error: null }));
+			mocks.rpc.mockReturnValue(query({ data: [], error: null }));
+		});
+		afterEach(() => vi.useRealTimers());
+
+		it('takes the current week from the practice time zone, not from UTC', async () => {
+			const result = (await load(event(''))) as { selectedDate: string; days: Day[] };
+			expect([result.selectedDate, result.days[0].date, result.days[6].date]).toEqual(['2026-11-01', '2026-10-26', '2026-11-01']);
+		});
+
+		it('shows the current week instead of failing when the address carries an impossible date', async () => {
+			for (const search of ['?date=hoy', '?date=2026-13-01', '?date=2026-02-31']) {
+				const result = (await load(event(search))) as { selectedDate: string; days: Day[] };
+				expect([search, result.selectedDate, result.days[0].date]).toEqual([search, '2026-11-01', '2026-10-26']);
+			}
+		});
+	});
+
+	it('refuses a malformed professional filter instead of reporting the week as unavailable', async () => {
+		mocks.from.mockImplementation(() => query({ data: professionals, error: null }));
+		mocks.rpc.mockReturnValue(query({ data: [], error: null }));
+		await expect(load(event('?date=2026-10-28&professional_id=no-es-un-id'))).rejects.toMatchObject({ status: 400 });
+		expect(mocks.rpc).not.toHaveBeenCalled();
 	});
 });
