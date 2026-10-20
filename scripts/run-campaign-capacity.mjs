@@ -303,6 +303,14 @@ try {
 		publicBooking: publicBooking && { passed: publicBooking.passed, abuse: publicBooking.abuse,
 			repetitions: publicBooking.repetitions.map(({ repetition, summary, acceptance }) => ({ repetition, read: summary.read, write: summary.write, acceptance })) } })),
 	scope: 'Disposable CI container: PostgreSQL 4 GB and 2 CPUs, real Auth, PostgREST as authenticator, the production build in workerd. Not hosted capacity.' };
+	// Growth with other practices: every practice holds the same data in both scenarios,
+	// so a statement much slower with 25 than with 5 is not scoped to its practice.
+	const statements = practices => new Map((results.find(result => result.practices === practices)?.repetitions?.at(-1)?.database?.statements ?? [])
+		.map(statement => [statement.query, statement]));
+	const [small, large] = [statements(5), statements(25)];
+	summary.growth = [...large].filter(([query]) => small.has(query)).map(([query, statement]) => ({ query,
+		meanMs5: Number(small.get(query).mean_ms), meanMs25: Number(statement.mean_ms), calls25: Number(statement.calls),
+		ratio: Number(statement.mean_ms) / Math.max(Number(small.get(query).mean_ms), 0.001) })).sort((a, b) => b.ratio - a.ratio);
 	writeFileSync(join(evidence, 'summary.json'), JSON.stringify(summary, null, 2) + '\n');
 	if (seedOnly || quick) console.log('Capacity diagnostic completed; this is not a capacity result.');
 	if (!seedOnly && !results.every(result => result.passed)) throw new Error('A capacity scenario did not meet the acceptance criteria of the plan; read summary.json.');

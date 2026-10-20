@@ -10,7 +10,8 @@ on:
         description: Staging operation
         type: choice
         required: true
-        options: [artifact, migrations, queue-seed, queue-seed-abandoned, queue-report, queue-cleanup, device-seed, device-report, device-cleanup]
+        options: [artifact, migrations, queue-seed, queue-seed-abandoned, queue-report, queue-cleanup, device-seed, device-report, device-cleanup,
+          capacity-seed, capacity-measure, capacity-cleanup]
       run_id:
         description: Run of the queue scenario or the device check, for report and cleanup
         type: string
@@ -27,7 +28,8 @@ concurrency:
 jobs:
   operate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    # The hosted capacity measurement runs three twelve-minute repetitions and the public phase.
+    timeout-minutes: ${{ inputs.operation == 'capacity-measure' && 90 || 45 }}
     env:
       ASTRO_TELEMETRY_DISABLED: '1'
       NODE_OPTIONS: --max-old-space-size=3072
@@ -39,7 +41,7 @@ jobs:
         with:
           node-version-file: .node-version
       - name: Install pinned package manager and dependencies
-        if: inputs.operation == 'artifact'
+        if: inputs.operation == 'artifact' || inputs.operation == 'capacity-measure'
         run: |
           npm install --global pnpm@10.13.1
           pnpm install --frozen-lockfile --network-concurrency=1
@@ -89,6 +91,14 @@ jobs:
           OPERATION: ${{ inputs.operation }}
           RUN_ID: ${{ inputs.run_id }}
         run: node scripts/staging-queue-scenario.mjs "${OPERATION#queue-}" "$RUN_ID"
+      # Five-practice capacity scenario against the deployed staging, from this runner.
+      - name: Operate the hosted capacity scenario
+        if: startsWith(inputs.operation, 'capacity-')
+        env:
+          CITA_STAGING_DATABASE_URL: ${{ secrets.CITA_STAGING_DATABASE_URL }}
+          CITA_STAGING_SERVICE_ROLE_KEY: ${{ secrets.CITA_STAGING_SERVICE_ROLE_KEY }}
+          OPERATION: ${{ inputs.operation }}
+        run: node scripts/staging-capacity.mjs "${OPERATION#capacity-}"
       # The management link of the device check is read on the local machine only.
       - name: Operate the real-device push check of one run
         if: startsWith(inputs.operation, 'device-')
