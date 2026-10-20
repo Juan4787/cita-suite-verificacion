@@ -5127,6 +5127,14 @@ export type Database = {
         }
         Returns: string
       }
+      user_allocated_appointment_ids: {
+        Args: never
+        Returns: {
+          appointment_id: string
+          business_id: string
+        }[]
+      }
+      user_appointment_reader_business_ids: { Args: never; Returns: string[] }
       user_business_role: {
         Args: { target_business_id: string }
         Returns: string
