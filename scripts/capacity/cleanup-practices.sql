@@ -35,9 +35,11 @@ create temporary table capacity_cleanup_counts on commit drop as select
  (select count(*) from capacity_cleanup) as practices,
  (select count(*) from public.patients p join capacity_cleanup c on c.id=p.business_id) as patients,
  (select count(*) from public.appointments a join capacity_cleanup c on c.id=a.business_id) as appointments;
-delete from public.appointments a using capacity_cleanup c where a.business_id=c.id;
+-- Practice by practice, one statement each and all in this transaction: a hosted
+-- project limits how long one statement runs.
+select format('delete from public.appointments where business_id=%L',id) from capacity_cleanup order by id \gexec
 delete from public.booking_integrations i using capacity_cleanup c where i.business_id=c.id;
-delete from public.businesses b using capacity_cleanup c where b.id=c.id;
+select format('delete from public.businesses where id=%L',id) from capacity_cleanup order by id \gexec
 -- Nothing of these practices remains in any table that names its practice.
 do $$
 declare r record; v_count bigint; v_left jsonb:='{}';

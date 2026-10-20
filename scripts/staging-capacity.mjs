@@ -107,5 +107,11 @@ if (operation === 'seed') {
 	const remaining = JSON.parse(sql(`select jsonb_build_object('practices',(select count(*) from public.businesses where slug like 'capacity-%'),
 		'owners',(select count(*) from auth.users where email like 'capacity-owner-%@example.test'),'databaseBytes',pg_database_size(current_database()))::text;`));
 	if (remaining.practices || remaining.owners) throw new Error('The staging capacity cleanup left rows of the scenario: ' + JSON.stringify(remaining));
+	// Staging only, never production: the space of the removed rows goes back to the
+	// project, so repeated rehearsals do not bring the free plan near its 500 MB. The
+	// tables are nearly empty again and each rewrite takes seconds.
+	sql(`vacuum (full, analyze) public.appointments,public.appointment_professionals,public.patients,public.professional_patient_links,
+ public.business_data_revisions,public.clinical_entries,public.appointment_booking_contexts,public.appointment_patient_information_contexts;`);
+	remaining.databaseBytesAfterVacuum = Number(sql('select pg_database_size(current_database());'));
 	console.log('staging-capacity-cleanup ' + JSON.stringify({ ...removed, ownersRemoved, remaining }));
 }
