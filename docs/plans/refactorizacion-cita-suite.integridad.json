@@ -4,7 +4,7 @@
   "originalPlanCharacters": 28290,
   "originalPlanSha256": "67ab8f5726aaeaaae7025e3538d4ded7e24c7f9ea043ec7032dc377645faf5bd",
   "executionInstructionSha256": "b5cdc724c1958546811caee41c80ab219d985c64c35a3d5f32b113edc02ff97f",
-  "documentSha256": "12e4d1455d3b60f74998e2a256be6c18aa6cb30b9e68ffbb1277ba6c67f3c054",
+  "documentSha256": "796853d3fca1d82dfe3a8c0129d80f937180948cb0a75a24518c1721d20e60b9",
   "originalCopiedDocumentSha256": "e2d1642b0c44fe920bdbd895f7199c7be4894dd460dad426b3304e1122a9df07",
   "continuityAddendumSha256": "408ea142d4867f2a46de54c57119a7e4710cb48e547382b6db023daeb4702245",
   "continuityRevisionNote": "Preserved the additional continuity directive already present in the workspace. Original approved plan and execution instruction hashes remain unchanged; only formatting in these two sections was restored.",
@@ -19,6 +19,12 @@
       "heading": "# Autorización adicional del usuario: producción y pruebas masivas",
       "source": "Autorización explícita del usuario del 2026-10-17; transcripción íntegra y aplicación compatible con las garantías previas.",
       "sha256": "10e07f229e04f402a7c334fdbb67ed257b96ac7bd6c71ace3b61bdca4f5d216c"
+    },
+    {
+      "heading": "# Decisión del usuario: lanzamiento con dos consultorios, infraestructura gratuita y control de consumo",
+      "source": "Instrucción explícita del usuario del 2026-10-20 (alcance de lanzamiento, infraestructura gratuita y control de consumo); transcripción íntegra y aplicación a la campaña.",
+      "sha256": "a747d2907e407e87d11d0be214e80c5757978918fc17a739213d6ce1610545f6",
+      "documentBeforeSha256": "12e4d1455d3b60f74998e2a256be6c18aa6cb30b9e68ffbb1277ba6c67f3c054"
     }
   ],
   "documentBeforeProductionAuthorizationSha256": "8b7db1745438b552a09be8e2e75c7bb55f3201f73bedfaa8ef1d32714ef5ca81"

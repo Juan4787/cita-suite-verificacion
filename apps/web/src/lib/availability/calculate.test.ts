@@ -51,16 +51,40 @@ const twoWeeks = () =>
     publicOnly: true,
   });
 
+// Counts the formatters built while delegating to the real constructor, so the
+// calculation behaves exactly as it would without the count.
+const countFormatters = () => {
+  const counter = { built: 0 };
+  const DateTimeFormat = new Proxy(Intl.DateTimeFormat, {
+    construct(target, args) {
+      counter.built++;
+      return Reflect.construct(target, args);
+    },
+    apply(target, thisArg, args) {
+      counter.built++;
+      return Reflect.apply(target, thisArg, args);
+    },
+  });
+  vi.stubGlobal(
+    "Intl",
+    new Proxy(Intl, {
+      get: (target, key) =>
+        key === "DateTimeFormat" ? DateTimeFormat : Reflect.get(target, key),
+    }),
+  );
+  return counter;
+};
+
 describe("Time zone formatting cost of the shared availability calculator", () => {
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => vi.unstubAllGlobals());
   it("builds each formatter of a time zone once, however many dates, rules and slots it formats", () => {
-    const built = vi.spyOn(Intl, "DateTimeFormat");
+    const counter = countFormatters();
     const slots = twoWeeks();
     expect(slots.length).toBeGreaterThan(300);
     // One per shape and time zone at most: offset, local parts and weekday.
-    expect(built.mock.calls.length).toBeLessThanOrEqual(3);
-    built.mockClear();
+    expect(counter.built).toBeLessThanOrEqual(3);
+    counter.built = 0;
     expect(twoWeeks()).toEqual(slots);
-    expect(built.mock.calls.length).toBe(0);
+    expect(counter.built).toBe(0);
   });
 });

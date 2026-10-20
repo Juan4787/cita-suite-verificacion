@@ -20,8 +20,13 @@ export function assertApprovedPlan(original, metadata) {
 			digest(original.slice(start, end)) === amendments[i].sha256;
 	}
 	if (metadata.documentBeforeProductionAuthorizationSha256) {
-		valid &&= indexes.length === 2 &&
+		valid &&= indexes.length >= 2 &&
 			digest(original.slice(0, indexes[1])) === metadata.documentBeforeProductionAuthorizationSha256;
+	}
+	// A later amendment names the whole document it was appended to.
+	for (let i = 0; i < indexes.length; i++) {
+		if (amendments[i].documentBeforeSha256 !== undefined)
+			valid &&= digest(original.slice(0, indexes[i])) === amendments[i].documentBeforeSha256;
 	}
 	if (!valid) throw new Error('The approved plan or execution instructions changed. Restore the original; record implementation decisions separately.');
 }

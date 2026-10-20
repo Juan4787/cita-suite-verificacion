@@ -527,3 +527,134 @@ Las pruebas de producción emplearán consultorios y datos sintéticos identific
 Workers permanece en Free por confirmación expresa del usuario; no se autorizaron contrataciones ni cambios a planes pagos. Cualquier límite comercial que impida demostrar un criterio deberá quedar medido y expuesto, sin fingir su cumplimiento. La computadora local conserva pruebas livianas secuenciales, sin bases/navegadores/cargas pesadas ni procesos pesados concurrentes.
 
 El cierre exige la auditoría punto por punto, corrección y repetición de los casos fallidos. No se declarará ausencia de deuda por omitir pruebas, ocultar incertidumbres o posponer defectos dentro del alcance aprobado.
+
+---
+
+# Decisión del usuario: lanzamiento con dos consultorios, infraestructura gratuita y control de consumo
+
+## Pedido original íntegro — 20 de octubre de 2026
+
+Continuá con la refactorización de Cita Suite desde el último estado realmente verificado, respetando el plan aprobado, sus objetivos arquitectónicos, los criterios de calidad y las instrucciones previamente establecidas.
+
+Quiero establecer algunas decisiones importantes sobre infraestructura, escalabilidad y control de costos, pero **dejando a tu mejor criterio técnico determinar qué conviene implementar ahora y qué conviene postergar**.
+
+### 1. Situación actual y contratación
+
+Actualmente Cita Suite **NO tiene usuarios ni consultorios reales**. Todos los usuarios, pacientes, turnos y datos utilizados hasta ahora son ficticios.
+
+Sin embargo, estamos preparando la aplicación para su lanzamiento y posteriormente sí habrá clientes reales. Por lo tanto, las decisiones actuales deben contemplar las consecuencias que podrían tener cuando la aplicación esté operando en producción.
+
+**Por ahora NO voy a contratar Cloudflare Workers Paid, Supabase Pro ni ninguna otra plataforma de hosting paga.**
+
+Mi intención es utilizar infraestructura gratuita para los primeros dos consultorios y comenzar a pagar Supabase Pro y una plataforma de hosting a partir del tercer consultorio activo.
+
+Esta previsión no constituye una autorización anticipada para contratar servicios, cambiar planes o migrar de plataforma. El proveedor de hosting pago todavía no está decidido.
+
+### 2. Escalabilidad y prioridades
+
+**No quiero optimizar ahora la aplicación para soportar 25 consultorios simultáneos.**
+
+El objetivo inmediato es ofrecer una experiencia sólida, segura, eficiente y confiable para dos consultorios, utilizando la infraestructura gratuita disponible.
+
+No obstante, quiero que escalar posteriormente a 5, 10, 25 o más consultorios sea natural y no exija rehacer componentes centrales.
+
+Preservá una arquitectura modular, extensible y mantenible, sin introducir deuda técnica estructural ni sobreingeniería innecesaria.
+
+No confundas la decisión de postergar capacidad adicional con una autorización para postergar correcciones de calidad, seguridad, integridad o funcionamiento.
+
+### 3. Control de consumo y riesgos de facturación
+
+Este punto requiere especialmente tu criterio.
+
+Cuando contratemos infraestructura paga, quiero minimizar al máximo posible el riesgo de que bugs, bucles, reintentos descontrolados, operaciones duplicadas, ataques o configuraciones incorrectas produzcan facturas extraordinarias.
+
+Para ello debemos aprovechar tanto las protecciones que pueden implementarse desde el código como los controles independientes que ofrezca el proveedor.
+
+**No confío en que el código sea infalible, pero eso NO significa que debamos prescindir de sus protecciones.** Son una parte fundamental de la defensa y deberán complementarse con otras capas cuando estén disponibles.
+
+Ahora bien, **NO te estoy ordenando implementar todas esas protecciones inmediatamente, ni tampoco postergarlas todas hasta contratar servicios pagos**.
+
+Quiero que evalúes cada medida según su mérito técnico.
+
+Por ejemplo:
+
+- Si un problema representa un riesgo importante para clientes reales, puede provocar fallos graves, pérdida de datos, operaciones duplicadas o consumo descontrolado, y conviene solucionarlo antes del lanzamiento, hacelo ahora.
+- Si una protección está estrechamente relacionada con la arquitectura actual y agregarla después implicaría modificaciones profundas, regresiones o deuda técnica considerable, puede ser preferible implementarla ahora.
+- Si una mejora es sencilla, tiene un beneficio claro y previene errores difíciles de diagnosticar posteriormente, evaluá incorporarla desde ahora.
+- Si una protección solo adquiere sentido con un servicio pago específico que todavía no elegimos, probablemente sea más razonable postergarla.
+- Si una optimización está destinada exclusivamente a soportar decenas de consultorios y no aporta valor relevante a la operación inicial ni a la calidad arquitectónica, no hace falta implementarla ahora.
+- Si la implementación preventiva introduce más complejidad, mantenimiento o riesgo de regresiones que el problema que pretende evitar, considerá dejarla para una etapa posterior.
+
+**Estos ejemplos son criterios de razonamiento, no reglas mecánicas ni una lista exhaustiva.**
+
+Quiero que utilices tu mejor juicio de ingeniería para decidir.
+
+En particular, considerá:
+
+1. La probabilidad de que el problema ocurra.
+2. La gravedad de sus consecuencias, especialmente cuando existan usuarios reales.
+3. El costo y la complejidad de prevenirlo ahora.
+4. El costo y los riesgos de corregirlo posteriormente.
+5. Su impacto en la arquitectura, el rendimiento y la mantenibilidad.
+6. Si depende de un proveedor o plan que todavía no contratamos.
+7. Si existe una solución más simple y suficientemente eficaz.
+
+**El objetivo es anticiparnos a los problemas que realmente conviene prevenir, no intentar resolver hoy todos los problemas posibles del futuro.**
+
+### 4. Pruebas, rendimiento y limitaciones actuales
+
+Conservá y documentá los resultados de las pruebas ya realizadas, incluido el ensayo alojado de cinco consultorios.
+
+Ya sabemos que Cloudflare Workers Free presenta límites de CPU incompatibles con determinadas cargas. No quiero que dediques esfuerzos desproporcionados a microoptimizar la aplicación exclusivamente para hacer que escenarios de cinco o veinticinco consultorios funcionen dentro de límites gratuitos que probablemente abandonaremos al crecer.
+
+Sin embargo, **sí quiero que sigas corrigiendo los defectos reales de eficiencia y rendimiento que detectes**, especialmente si podrían perjudicar también a los clientes reales o persistir en infraestructura paga.
+
+Distinguí entre defectos propios de la aplicación y limitaciones demostradas del proveedor.
+
+Las pruebas deben seguir siendo objetivas, reproducibles y sensibles a fallos reales. No declares aprobados requisitos incumplidos ni reduzcas los estándares para acomodarlos a las limitaciones gratuitas.
+
+Antes del lanzamiento con clientes reales, la configuración elegida deberá demostrar que satisface los requisitos de confiabilidad, seguridad e integridad correspondientes a la operación inicial. Si una limitación de infraestructura impide garantizarlo, señalala claramente como impedimento para publicar y presentá alternativas fundamentadas.
+
+No hace falta demostrar ahora capacidad para 25 consultorios si esa escala no forma parte del lanzamiento inicial.
+
+### 5. Autonomía técnica y documentación
+
+**Tenés libertad para decidir qué implementar ahora y qué postergar**, dentro de los objetivos y restricciones anteriores.
+
+No quiero que busques una interpretación literal que te obligue a implementar absolutamente todo ni una que te permita omitir mejoras importantes.
+
+Quiero decisiones de ingeniería justificadas.
+
+Cuando identifiques una mejora o protección relevante:
+
+- Evaluá sus beneficios, riesgos y costos.
+- Decidí si corresponde implementarla ahora o dejarla pendiente.
+- Implementala y verificá su funcionamiento si corresponde hacerla ahora.
+- Si decidís postergarla, documentá brevemente por qué, qué riesgo residual implica y bajo qué circunstancias convendría retomarla.
+
+No hace falta convertir cada decisión menor en un informe extenso ni interrumpir continuamente la refactorización para solicitar autorización. Reservá las consultas para decisiones que requieran gastos, cambios importantes de alcance o compromisos que me correspondan.
+
+Continuá desde el último punto verificado, actualizando el plan de refactorización, el registro de ejecución, el documento de traspaso y las instrucciones obsoletas que correspondan.
+
+Mantené las verificaciones rigurosas, la prevención de regresiones y la revisión de documentación después de cada compactación.
+
+### Objetivo final
+
+Quiero lanzar Cita Suite con la menor deuda técnica razonablemente posible, funcionando correctamente para sus primeros clientes reales, preparada para crecer de manera natural y con una arquitectura que facilite implementar protecciones más exigentes cuando contratemos infraestructura paga.
+
+**No quiero ni sobreingeniería prematura ni postergaciones irresponsables. Quiero que utilices tu mejor criterio técnico para determinar qué vale la pena resolver ahora y qué es más inteligente resolver después.**
+
+La prioridad es el funcionamiento confiable del producto, la calidad de su arquitectura y la prevención proporcional de riesgos reales, tanto técnicos como económicos.
+
+Continuá.
+
+## Aplicación a la campaña
+
+Esta decisión cambia el alcance de lanzamiento y la condición de cierre de capacidad; no elimina etapas, garantías ni criterios de calidad, seguridad o integridad. Se aplica así:
+
+1. **Lanzamiento.** Cita Suite no tiene usuarios ni consultorios reales: todos sus datos son ficticios. El lanzamiento inicial es para dos consultorios sobre la infraestructura gratuita vigente (Cloudflare Workers Free y Supabase Free). Antes de publicar para clientes reales, el despliegue gratuito debe demostrar los criterios del plan con dos consultorios bajo el modelo de carga de la sección 4: lecturas p95 menor a 1 s y p99 menor a 2 s, escrituras p95 menor a 1,5 s y p99 menor a 3 s, errores técnicos menores al 1 %, ninguna violación de aislamiento, doble reserva o cuotas, disponibilidad completa o error explícito, y push y calendario dentro de diez minutos. Si un límite del proveedor lo impide, es un impedimento para publicar, que se informa con alternativas fundamentadas. Los criterios no se rebajan.
+2. **Escala.** Los escenarios de 5 y 25 consultorios dejan de ser condición de cierre de este lanzamiento. Se conservan como evidencia los ya medidos, incluido el ensayo alojado de cinco consultorios en planes gratuitos, que no cumplió por la CPU de Workers Free, y las herramientas para repetirlos. La arquitectura debe permitir crecer a 5, 10, 25 o más consultorios sin rehacer componentes centrales. Los defectos de escalabilidad del sistema se siguen corrigiendo, porque afectan a cualquier escala y plataforma.
+3. **Contrataciones.** Ninguna sin autorización explícita: ni Workers Paid, ni Supabase Pro, ni hosting pago. La previsión de pagar Supabase Pro y un hosting desde el tercer consultorio activo no autoriza contratar, cambiar de plan ni migrar, y el proveedor de hosting no está decidido. Tampoco se aceptan servicios con cobro variable sin tope (decisión del 20 de octubre).
+4. **Control de consumo.** Cada protección se evalúa por probabilidad, gravedad, costo y riesgo de prevenir ahora o después, dependencia de un proveedor no elegido y existencia de una solución más simple. Las justificadas se implementan y verifican ahora; las postergadas quedan documentadas con su riesgo residual y la circunstancia en que conviene retomarlas.
+5. **Rendimiento.** Se corrigen los defectos reales de eficiencia de la aplicación, que persistirían en cualquier plataforma. No se microoptimiza sólo para que 5 o 25 consultorios entren en los límites gratuitos. Se distinguen siempre los defectos propios de las limitaciones demostradas del proveedor.
+6. **Cierre.** El resto del plan sigue vigente: matriz de regresiones, auditoría transversal, publicación con respaldo y reversión ensayados, y auditoría final punto por punto. Para este lanzamiento, la condición «demuestre los escenarios de cinco y veinticinco consultorios» se reemplaza por la demostración de los dos consultorios en el despliegue gratuito, la evidencia de CI ya obtenida y una arquitectura que permita ampliar recursos sin cambiar el modelo multiempresa.
