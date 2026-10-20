@@ -2,8 +2,13 @@
 -- row that belongs to them, in one transaction, and nothing else. A practice is
 -- synthetic when its slug is `capacity-NN` and its id is the deterministic id the
 -- seed gives that slug; a member other than its synthetic owner stops everything.
--- Integrations restrict deleting their practice; the rest follows by cascade. The
--- owners are removed afterwards through the Auth admin API.
+-- The order follows the restrictions the schema keeps on purpose: a public
+-- booking's context and the patient's answers restrict deleting its integration
+-- and its patient, so the appointments go first and take them along; then the
+-- integrations, which restrict deleting their practice; then the practice, whose
+-- remaining rows follow by cascade. Documents keep objects in Storage and their
+-- accounting, which SQL does not remove: a practice with documents is refused.
+-- The owners are removed afterwards through the Auth admin API.
 --   psql -f cleanup-practices.sql
 \set ON_ERROR_STOP on
 begin;
@@ -21,11 +26,16 @@ begin
   left join auth.users a on a.id=u.user_id where a.email is distinct from 'capacity-owner-'||substr(b.slug,10)||'@example.test') then
   raise exception 'CAPACITY_CLEANUP_FOREIGN_MEMBER';
  end if;
+ if exists(select 1 from public.patient_radiographs r join capacity_cleanup c on c.id=r.business_id)
+  or exists(select 1 from public.clinical_upload_slots s join capacity_cleanup c on c.id=s.business_id) then
+  raise exception 'CAPACITY_CLEANUP_HAS_DOCUMENTS';
+ end if;
 end $$;
 create temporary table capacity_cleanup_counts on commit drop as select
  (select count(*) from capacity_cleanup) as practices,
  (select count(*) from public.patients p join capacity_cleanup c on c.id=p.business_id) as patients,
  (select count(*) from public.appointments a join capacity_cleanup c on c.id=a.business_id) as appointments;
+delete from public.appointments a using capacity_cleanup c where a.business_id=c.id;
 delete from public.booking_integrations i using capacity_cleanup c where i.business_id=c.id;
 delete from public.businesses b using capacity_cleanup c where b.id=c.id;
 -- Nothing of these practices remains in any table that names its practice.
