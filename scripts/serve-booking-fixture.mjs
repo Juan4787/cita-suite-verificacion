@@ -1,7 +1,7 @@
 import { fixturePath } from './lib/fixture-path.mjs';
 import { createServer } from "node:http";
 import { spawnSync, spawn } from "node:child_process";
-import { createHmac } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { writeFileSync, openSync, rmSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { acquireVerificationLock } from './lib/verification-lock.mjs';
@@ -166,11 +166,13 @@ try {
     "-p",
     "127.0.0.1::3000",
     "-e",
-    "PGRST_DB_URI=postgres://supabase_admin:cita-disposable-test-only@" +
+    // As on the hosted platform: PostgREST logs in as authenticator, whose sessions
+    // preload safeupdate, and exposes only public.
+    "PGRST_DB_URI=postgres://authenticator:cita-disposable-test-only@" +
       db +
       ":5432/postgres",
     "-e",
-    "PGRST_DB_SCHEMAS=public,private",
+    "PGRST_DB_SCHEMAS=public",
     "-e",
     "PGRST_DB_ANON_ROLE=anon",
     "-e",
@@ -400,6 +402,7 @@ try {
   );
   const anon = jwt("anon"),
     service = jwt("service_role");
+  const internalJobSecret = randomBytes(32).toString("hex");
   const sessions = {};
   if (realAuth) for (const [role, email] of [['owner', 'e2e-owner@example.test'], ['doctor', 'e2e-doctor@example.test']]) {
     const response = await fetch(authOrigin + '/token?grant_type=password', {
@@ -422,6 +425,7 @@ try {
       professionalId,
       anon,
       service,
+      internalJobSecret,
       ownerToken: sessions.owner?.access_token ?? jwt("authenticated", "90000000-0000-4000-8000-000000000004"),
       doctorToken: sessions.doctor?.access_token ?? jwt("authenticated", "90000000-0000-4000-8000-000000000007"),
       ownerRefreshToken: sessions.owner?.refresh_token,
@@ -467,6 +471,8 @@ try {
         VAPID_PUBLIC_KEY: "",
         VAPID_PRIVATE_KEY: "",
         RATE_LIMIT_SALT: "cita-disposable-local-only",
+        INTERNAL_JOB_SECRET: internalJobSecret,
+        JOB_BUDGET_PROFILE: "free",
       },
     },
   );

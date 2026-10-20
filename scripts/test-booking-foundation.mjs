@@ -170,6 +170,9 @@ try {
       : platform,
   );
   sql("alter role supabase_admin password 'cita-disposable-test-only';");
+  // The hosted platform's PostgREST login role: its sessions reject an UPDATE or
+  // DELETE without WHERE, also inside the functions a request calls.
+  sql("alter role authenticator password 'cita-disposable-test-only'; alter role authenticator set session_preload_libraries = 'safeupdate';");
   if (realStorage) {
     const storageImage = "public.ecr.aws/supabase/storage-api:v1.70.3";
     command(["image", "inspect", storageImage]);

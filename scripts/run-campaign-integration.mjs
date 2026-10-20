@@ -107,7 +107,7 @@ try {
 		E2E_LOCAL_BOOKING_FIXTURE_PATH: fixturePath('runtime.json'), DEMO_MODE: 'false',
 		ODONTO_SUPABASE_URL: runtime.apiOrigin, PUBLIC_ODONTO_SUPABASE_URL: runtime.apiOrigin,
 		ODONTO_SUPABASE_ANON_KEY: runtime.anon, PUBLIC_ODONTO_SUPABASE_ANON_KEY: runtime.anon,
-		ODONTO_SUPABASE_SERVICE_ROLE_KEY: runtime.service,
+		ODONTO_SUPABASE_SERVICE_ROLE_KEY: runtime.service, INTERNAL_JOB_SECRET: runtime.internalJobSecret,
 		SUPABASE_DB_URL: `postgresql://supabase_admin:cita-disposable-test-only@${ip}:5432/postgres`,
 		ADMIN_SUPABASE_URL: '', ADMIN_SUPABASE_ANON_KEY: '', ADMIN_SUPABASE_SERVICE_ROLE_KEY: '',
 		E2E_EMAIL: 'e2e-owner@example.test', CITA_SUITE_TEST_EMAIL: 'e2e-owner@example.test',
