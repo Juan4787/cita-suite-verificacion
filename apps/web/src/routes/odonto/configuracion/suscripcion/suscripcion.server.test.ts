@@ -86,10 +86,11 @@ const createDbMock = (
 					calls.push({ table, method, args });
 					return q;
 				};
-			for (const method of ['select', 'eq', 'in', 'order', 'limit', 'upsert', 'update', 'insert']) {
+			for (const method of ['select', 'eq', 'in', 'order', 'limit', 'upsert', 'update', 'insert', 'retry']) {
 				q[method] = vi.fn(chain(method));
 			}
-			q.maybeSingle = vi.fn(async () => result);
+			// Like the SDK, the single-row builder can be awaited or configured further.
+			q.maybeSingle = vi.fn(() => q);
 			(q as { then?: unknown }).then = (
 				resolve: (value: unknown) => unknown,
 				reject: (reason: unknown) => unknown

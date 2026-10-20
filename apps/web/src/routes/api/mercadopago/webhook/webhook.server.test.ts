@@ -43,7 +43,11 @@ const createAdminMock = (opts?: {
 		from: vi.fn((table: string) => ({
 			select: () => ({
 				eq: () => ({
-					maybeSingle: async () => tableDefaults[table] ?? { data: null, error: null }
+					// Like the SDK, the builder can be awaited or configured further.
+					maybeSingle: () => {
+						const result = Promise.resolve(tableDefaults[table] ?? { data: null, error: null });
+						return { retry: () => result, then: result.then.bind(result) };
+					}
 				})
 			}),
 			upsert: async () => ({ error: null }),
