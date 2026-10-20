@@ -10,16 +10,19 @@ import {
 	summarize, uuidFrom
 } from './lib/capacity-load.mjs';
 
-// The five-practice capacity scenario on the deployed staging, from an external
-// runner: the Worker `cita-suite-staging` and its own Supabase project. The same
+// The capacity scenario on the deployed staging, from an external runner: the Worker
+// `cita-suite-staging` and its own Supabase project. Two practices by default, the
+// launch of the 20 October decision; five repeats the earlier rehearsal. The same
 // generator, virtual users and public generator as the CI scenarios; the hosted
-// database of the free plan holds this scenario (about 240 MB), not the 25-practice
-// one. Every row belongs to a `capacity-` practice and `cleanup` removes them all.
+// database of the free plan holds up to five practices (about 240 MB), not 25.
+// Every row belongs to a `capacity-` practice and `cleanup` removes them all.
 const root = fileURLToPath(new URL('../', import.meta.url));
 const [operation] = process.argv.slice(2);
 if (!['seed', 'measure', 'report', 'cleanup'].includes(operation) || process.argv.length !== 3)
 	throw new Error('Usage: staging-capacity.mjs seed|measure|report|cleanup');
-const PRACTICES = 5;
+const PRACTICES = Number(process.env.CITA_STAGING_CAPACITY_PRACTICES || 2);
+const MAX_PRACTICES = 5;
+if (PRACTICES !== 2 && PRACTICES !== MAX_PRACTICES) throw new Error('The staging capacity scenario has 2 or 5 practices. Nothing was done.');
 const url = stagingConnection(process.env.CITA_STAGING_DATABASE_URL);
 const serviceKey = process.env.CITA_STAGING_SERVICE_ROLE_KEY ?? '';
 if (!/^ey[\w-]+\.[\w-]+\.[\w-]+$/.test(serviceKey)) throw new Error('The staging service key is required. Nothing was done.');
@@ -43,14 +46,14 @@ const evidence = join(root, '.verification');
 mkdirSync(evidence, { recursive: true });
 
 if (operation === 'seed') {
-	// Supabase Free turns a project read-only past 500 MB. The scenario added 238 MB to
+	// Supabase Free turns a project read-only past 500 MB. Five practices added 238 MB to
 	// a fresh database in CI: seed only with a wide margin left below the limit.
 	// The Realtime partitions too: a broadcast from a trigger that finds no partition for its day is
 	// lost with a warning, as the first hosted seed showed.
 	const before = JSON.parse(sql(`select jsonb_build_object('databaseBytes',pg_database_size(current_database()),
  'realtimePartitions',(select coalesce(jsonb_agg(c.relname order by c.relname),'[]') from pg_inherits i join pg_class c on c.oid=i.inhrelid
   where i.inhparent=to_regclass('realtime.messages')))::text;`));
-	if (!Number.isSafeInteger(before.databaseBytes) || before.databaseBytes + 250_000_000 > 450_000_000)
+	if (!Number.isSafeInteger(before.databaseBytes) || before.databaseBytes + PRACTICES * 50_000_000 > 450_000_000)
 		throw new Error(`The staging database holds ${before.databaseBytes} bytes; the scenario would leave too little margin below 500 MB. Nothing was done.`);
 	console.log('staging-capacity-before ' + JSON.stringify(before));
 	for (const [index, id] of owners.entries()) {
@@ -141,7 +144,8 @@ if (operation === 'seed') {
 	const marked = sql(readFileSync(join(root, 'scripts/capacity/cleanup-practices.sql'), 'utf8')).split('\n').find(line => line.startsWith('capacity-cleanup '));
 	if (!marked) throw new Error('The staging capacity cleanup printed no result.');
 	const removed = JSON.parse(marked.slice('capacity-cleanup '.length));
-	const ownersRemoved = await removeCapacityOwners({ practices: PRACTICES, request: admin });
+	// Every owner a scenario of either size may have created, whichever was seeded.
+	const ownersRemoved = await removeCapacityOwners({ practices: MAX_PRACTICES, request: admin });
 	const remaining = JSON.parse(sql(`select jsonb_build_object('practices',(select count(*) from public.businesses where slug like 'capacity-%'),
 		'owners',(select count(*) from auth.users where email like 'capacity-owner-%@example.test'),'databaseBytes',pg_database_size(current_database()))::text;`));
 	if (remaining.practices || remaining.owners) throw new Error('The staging capacity cleanup left rows of the scenario: ' + JSON.stringify(remaining));

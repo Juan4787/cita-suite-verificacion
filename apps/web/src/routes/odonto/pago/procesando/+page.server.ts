@@ -32,10 +32,12 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 		try {
 			const admin = await createSupabaseAdminClient('odonto', fetch);
 			mpReturn = await confirmMpSubscriptionForBusiness(admin, fetch, context.business.id);
+			// Una lectura nueva: el pedido ya tiene la de antes de confirmar el pago.
 			const refreshed = await resolveActiveBusiness({
 				supabase,
 				accessToken: locals.auth.access_token,
-				cookies
+				cookies,
+				membershipCache: 'fresh'
 			});
 			if (refreshed) context = refreshed;
 		} catch (error) {

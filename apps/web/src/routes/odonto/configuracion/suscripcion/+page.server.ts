@@ -106,10 +106,12 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			// El contexto se refresca siempre tras confirmar: si el webhook ganó
 			// la carrera y acreditó primero (outcome duplicado), el acceso al día
 			// igual tiene que verse en esta carga.
+			// Una lectura nueva: el pedido ya tiene la de antes de confirmar el pago.
 			const refreshed = await resolveActiveBusiness({
 				supabase,
 				accessToken: locals.auth.access_token,
-				cookies
+				cookies,
+				membershipCache: 'fresh'
 			});
 			if (refreshed) context = refreshed;
 		} catch (error) {
