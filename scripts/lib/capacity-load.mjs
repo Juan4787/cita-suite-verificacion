@@ -112,6 +112,24 @@ export async function removeCapacityOwners({ practices, request }) {
 }
 
 /**
+ * Isolation and double booking after the load, over the synthetic practices: every
+ * appointment their owners created belongs to the owner's own practice, and no active
+ * appointment of a professional starts before an earlier one of theirs has ended. An
+ * ordered window instead of a pairwise join, so it stays short on a hosted project.
+ */
+export const INTEGRITY_SQL = `with capacity as (select id from public.businesses where slug like 'capacity-%'),
+active as (select a.blocking_starts_at,max(a.blocking_ends_at) over (partition by a.business_id,a.professional_id
+  order by a.blocking_starts_at,a.id rows between unbounded preceding and 1 preceding) as previous_end
+ from public.appointments a where a.business_id in (select id from capacity) and a.status in ('reserved','confirmed','reschedule_requested'))
+select jsonb_build_object(
+ 'crossPractice',(select count(*) from public.appointments a join public.business_users u on u.user_id=a.created_by_user_id
+   where a.created_at>now()-interval '2 hours' and u.role='owner' and u.business_id in (select id from capacity) and u.business_id<>a.business_id),
+ 'overlaps',(select count(*) from active where previous_end>blocking_starts_at),
+ 'createdByLoad',(select count(*) from public.appointments where business_id in (select id from capacity)
+   and created_at>now()-interval '2 hours' and created_by_user_id is not null),
+ 'entriesByLoad',(select count(*) from public.clinical_entries where business_id in (select id from capacity) and description='Control de capacidad'))::text`;
+
+/**
  * Whether a cleanup removed exactly the synthetic scenario: every practice and owner,
  * at least the seeded patients and appointments (the load and the public bookings add
  * their own to the same practices) and nothing of them left behind.

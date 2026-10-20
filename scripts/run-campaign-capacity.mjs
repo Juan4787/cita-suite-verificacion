@@ -11,8 +11,8 @@ import { cleanupFixtureResources } from './lib/fixture-cleanup.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
 import { assertPlatformDiagnostics } from './lib/platform-diagnostics.mjs';
 import {
-	createRandom, describePublicPage, evaluateAcceptance, evaluateCleanup, localDate, login, practiceData, removeCapacityOwners, runPublicAbuse,
-	runPublicGenerator, runVirtualUser, summarize, uuidFrom
+	INTEGRITY_SQL, createRandom, describePublicPage, evaluateAcceptance, evaluateCleanup, localDate, login, practiceData, removeCapacityOwners,
+	runPublicAbuse, runPublicGenerator, runVirtualUser, summarize, uuidFrom
 } from './lib/capacity-load.mjs';
 
 // Capacity scenarios of the plan on the disposable stack of CI: PostgreSQL with 4 GB
@@ -157,17 +157,6 @@ const DATABASE_STATISTICS = `select jsonb_build_object(
  'database',(select to_jsonb(d) from (select xact_commit,xact_rollback,deadlocks,temp_files,temp_bytes,blks_read,blks_hit
    from pg_stat_database where datname=current_database()) d))`;
 
-// Isolation and double booking after the load: every appointment the virtual users
-// created belongs to their own practice and no active appointments of a professional overlap.
-const INTEGRITY = `select jsonb_build_object(
- 'crossPractice',(select count(*) from public.appointments a join public.business_users u on u.user_id=a.created_by_user_id
-   where a.created_at>now()-interval '2 hours' and u.role='owner' and u.business_id<>a.business_id),
- 'overlaps',(select count(*) from public.appointments a join public.appointments b on b.business_id=a.business_id
-   and b.professional_id=a.professional_id and b.id>a.id and tstzrange(b.blocking_starts_at,b.blocking_ends_at,'[)')&&tstzrange(a.blocking_starts_at,a.blocking_ends_at,'[)')
-   where a.status in ('reserved','confirmed','reschedule_requested') and b.status in ('reserved','confirmed','reschedule_requested')),
- 'createdByLoad',(select count(*) from public.appointments where created_at>now()-interval '2 hours' and created_by_user_id is not null),
- 'entriesByLoad',(select count(*) from public.clinical_entries where description='Control de capacidad'))`;
-
 async function measure(database, practices, password) {
 	psql(database, 'create extension if not exists pg_stat_statements with schema extensions;');
 	const jars = [];
@@ -196,7 +185,7 @@ async function measure(database, practices, password) {
 			database: JSON.parse(psql(database, DATABASE_STATISTICS)) });
 		console.log(`capacity-repetition ${practices}/${repetition} ` + JSON.stringify({ read: summary.read, write: summary.write, acceptance: repetitions.at(-1).acceptance }));
 	}
-	return { logins: { count: practices, durationMs: Date.now() - loginStarted }, repetitions, integrity: JSON.parse(psql(database, INTEGRITY)) };
+	return { logins: { count: practices, durationMs: Date.now() - loginStarted }, repetitions, integrity: JSON.parse(psql(database, INTEGRITY_SQL)) };
 }
 
 // Public booking on its own: one generator within the limits, then the abuse checks.

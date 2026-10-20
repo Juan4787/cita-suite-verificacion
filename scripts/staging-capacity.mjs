@@ -6,8 +6,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { STAGING_PROJECT_REF, psqlDiagnostics, stagingConnection, stagingPsql } from './lib/staging-database.mjs';
 import { STAGING_APP_ORIGIN } from './lib/staging-deploy.mjs';
 import {
-	createRandom, evaluateAcceptance, login, practiceData, removeCapacityOwners, runPublicAbuse, runPublicGenerator, runVirtualUser, summarize,
-	uuidFrom
+	INTEGRITY_SQL, createRandom, evaluateAcceptance, login, practiceData, removeCapacityOwners, runPublicAbuse, runPublicGenerator, runVirtualUser,
+	summarize, uuidFrom
 } from './lib/capacity-load.mjs';
 
 // The five-practice capacity scenario on the deployed staging, from an external
@@ -37,6 +37,8 @@ const sql = (text, variables = {}) => {
 const admin = (path, init = {}) => fetch(api + '/auth/v1/admin' + path, { ...init, signal: AbortSignal.timeout(15_000),
 	headers: { apikey: serviceKey, authorization: 'Bearer ' + serviceKey, 'content-type': 'application/json', ...init.headers } });
 const owners = Array.from({ length: PRACTICES }, (_, index) => uuidFrom('capacity-owner-' + (index + 1)));
+const DATABASE_STATE = `select jsonb_build_object('databaseBytes',pg_database_size(current_database()),
+ 'deadlocks',(select deadlocks from pg_stat_database where datname=current_database()))::text;`;
 const evidence = join(root, '.verification');
 mkdirSync(evidence, { recursive: true });
 
@@ -67,6 +69,10 @@ if (operation === 'seed') {
 } else if (operation === 'measure') {
 	const kitRequire = createRequire(createRequire(join(root, 'apps/web/package.json')).resolve('@sveltejs/kit/package.json'));
 	const devalue = await import(pathToFileURL(kitRequire.resolve('devalue')).href);
+	const databaseBefore = JSON.parse(sql(DATABASE_STATE));
+	// Also before the load: a baseline, and a failure in seconds rather than after the whole measurement.
+	const integrityBefore = JSON.parse(sql(INTEGRITY_SQL + ';'));
+	if (integrityBefore.crossPractice || integrityBefore.overlaps) throw new Error('The seeded scenario already breaks isolation or double booking: ' + JSON.stringify(integrityBefore));
 	const jars = [];
 	for (let practice = 1; practice <= PRACTICES; practice++) jars.push(await login(STAGING_APP_ORIGIN, practiceData(practice).email, password));
 	const repetitions = [];
@@ -87,15 +93,18 @@ if (operation === 'seed') {
 		phone: '+5491177000000' });
 	const publicSummary = summarize(publicSamples);
 	const abuse = await runPublicAbuse({ origin: STAGING_APP_ORIGIN, unflatten: devalue.unflatten, parse: devalue.parse, phone: generated.phone });
+	const database = JSON.parse(sql(DATABASE_STATE));
 	const result = { origin: STAGING_APP_ORIGIN, practices: PRACTICES, repetitions,
 		publicBooking: { summary: publicSummary, acceptance: evaluateAcceptance(publicSummary), bookingFailures: generated.failures, abuse },
-		database: JSON.parse(sql(`select jsonb_build_object('databaseBytes',pg_database_size(current_database()),
-			'deadlocks',(select deadlocks from pg_stat_database where datname=current_database()))::text;`)) };
+		integrity: JSON.parse(sql(INTEGRITY_SQL + ';')),
+		// The counter is the project's since its last reset: what matters is what this measurement added.
+		database: { ...database, deadlocksDuringMeasurement: database.deadlocks - databaseBefore.deadlocks } };
 	// One generator, free slots and a different phone each time: every scheduled booking must succeed.
 	result.passed = repetitions.every(item => item.acceptance.passed) && result.publicBooking.acceptance.passed &&
-		generated.failures.length === 0 && abuse.passed;
+		generated.failures.length === 0 && abuse.passed && result.integrity.crossPractice === 0 && result.integrity.overlaps === 0 &&
+		result.database.deadlocksDuringMeasurement === 0;
 	writeFileSync(join(evidence, 'staging-capacity-measure.json'), JSON.stringify(result, null, 2) + '\n');
-	console.log('staging-capacity-result ' + JSON.stringify({ passed: result.passed, abuse, database: result.database,
+	console.log('staging-capacity-result ' + JSON.stringify({ passed: result.passed, abuse, integrity: result.integrity, database: result.database,
 		public: { read: publicSummary.read, write: publicSummary.write, bookingFailures: generated.failures } }));
 	if (!result.passed) process.exitCode = 1;
 } else {
