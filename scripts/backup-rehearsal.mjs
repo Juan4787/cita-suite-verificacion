@@ -24,6 +24,14 @@ const project = join(work, 'project');
 const projectId = 'cita-backup-rehearsal-' + randomBytes(4).toString('hex');
 const receipt = { projectRef: STAGING_PROJECT_REF, target: 'Supabase CLI local stack (pinned CLI)', startedAt: new Date().toISOString(), ok: false };
 let started = false;
+// A synthetic stored file in a bucket of its own, so the file path of the backup is exercised
+// whether or not staging holds clinical files. It is removed at the end, whatever happens.
+const rehearsalBucket = 'cita-backup-rehearsal';
+const rehearsalObject = `rehearsal/${projectId}.txt`;
+let rehearsalFileCreated = false;
+const stagingStorage = (path, init = {}) => fetch(`${storageOrigin}/storage/v1/${path}`, {
+	...init, headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey, ...init.headers }, redirect: 'error', signal: AbortSignal.timeout(30_000)
+});
 // No output of a failed command may carry the connection: it is removed before any message.
 const redact = (text) => String(text ?? '').replaceAll(url.href, '[staging-url]').replaceAll(decodeURIComponent(url.password), '[secret]').slice(-4000);
 const sha256 = (path) => createHash('sha256').update(readFileSync(path)).digest('hex');
@@ -39,6 +47,17 @@ const cli = (args) => run('pnpm', ['exec', 'supabase', ...args, '--workdir', pro
 // The new project's database, reached inside its own container as the CLI names it.
 const database = `supabase_db_${projectId}`;
 const restoredSql = (sql) => docker(['exec', '-i', '-e', 'PGPASSWORD=postgres', database, 'psql', '-X', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-Atq'], sql).trim();
+// Policies and triggers the migrations add to the schemas the platform manages (Storage's
+// objects, Realtime's messages): a schema dump that leaves those schemas out would restore the
+// clinical files without their row security.
+const managedObjectsSql = `select json_build_object(
+	'policies', (select coalesce(json_agg(schemaname || '.' || tablename || ':' || policyname order by 1), '[]'::json)
+		from pg_policies where schemaname in ('storage', 'realtime', 'auth')),
+	'triggers', (select coalesce(json_agg(n.nspname || '.' || c.relname || ':' || t.tgname order by 1), '[]'::json)
+		from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace n on n.oid = c.relnamespace
+		join pg_proc f on f.oid = t.tgfoid join pg_namespace fn on fn.oid = f.pronamespace
+		where not t.tgisinternal and n.nspname in ('storage', 'realtime', 'auth') and fn.nspname in ('public', 'private'))
+)::text;`;
 function stagingJson(sql) {
 	const result = stagingPsql(url, ['-Atq', '-f', '-'], {
 		input: `begin transaction read only;\n${sql}\ncommit;\n`,
@@ -49,6 +68,14 @@ function stagingJson(sql) {
 }
 
 try {
+	const bucket = await stagingStorage('bucket', { method: 'POST', headers: { 'content-type': 'application/json' },
+		body: JSON.stringify({ id: rehearsalBucket, name: rehearsalBucket, public: false }) });
+	if (!bucket.ok && bucket.status !== 409 && bucket.status !== 400) throw new Error(`The rehearsal bucket could not be created (${bucket.status}).`);
+	const upload = await stagingStorage(`object/${rehearsalBucket}/${rehearsalObject}`, { method: 'POST',
+		headers: { 'content-type': 'text/plain' }, body: `Archivo sintético del ensayo de respaldo ${projectId}.\n`.repeat(32) });
+	if (!upload.ok) throw new Error(`The rehearsal file could not be stored (${upload.status}).`);
+	rehearsalFileCreated = true;
+
 	// 1. Backup, with the commands of the Supabase guide.
 	const files = { roles: join(work, 'roles.sql'), schema: join(work, 'schema.sql'), data: join(work, 'data.sql') };
 	const dumpStarted = performance.now();
@@ -62,6 +89,7 @@ try {
 	receipt.tables = Object.keys(dumped).length;
 	receipt.rows = Object.values(dumped).reduce((sum, count) => sum + count, 0);
 	if (!receipt.tables) throw new Error('The data dump holds no table.');
+	const managedSource = stagingJson(managedObjectsSql);
 	const source = stagingJson(`select json_build_object(
 		'migrations', (select coalesce(json_agg(version order by version), '[]'::json) from supabase_migrations.schema_migrations),
 		'objects', (select coalesce(json_agg(json_build_object('bucket', bucket_id, 'name', name, 'size', (metadata->>'size')::bigint) order by bucket_id, name), '[]'::json) from storage.objects)
@@ -148,6 +176,11 @@ try {
 	receipt.migrations = { source: source.migrations.length, inDump: restoredMigrations !== null,
 		same: restoredMigrations === null || JSON.stringify(restoredMigrations) === JSON.stringify(source.migrations) };
 	receipt.migrationHistory = source.migrations;
+	const managedRestored = JSON.parse(restoredSql(managedObjectsSql));
+	receipt.managedSchemaObjects = {
+		source: { policies: managedSource.policies.length, triggers: managedSource.triggers.length },
+		missing: [...managedSource.policies, ...managedSource.triggers].filter((name) => ![...managedRestored.policies, ...managedRestored.triggers].includes(name))
+	};
 
 	// 4. Stored files: every object the database records downloads whole, uploads to the new
 	// project as the guide's script does and reads back with the same fingerprint.
@@ -178,12 +211,19 @@ try {
 	receipt.restoredFileMismatches = [...downloads].filter(([key, file]) => restoredFiles.get(key)?.sha256 !== file.sha256).map(([key]) => key);
 
 	receipt.ok = receipt.rowMismatches.length === 0 && receipt.migrations.same && receipt.objectMismatches.length === 0
-		&& receipt.restoredFileMismatches.length === 0;
+		&& receipt.restoredFileMismatches.length === 0 && receipt.managedSchemaObjects.missing.length === 0;
 	if (!receipt.ok) process.exitCode = 1;
 } catch (error) {
 	receipt.error = redact(error.message);
 	process.exitCode = 1;
 } finally {
+	if (rehearsalFileCreated) {
+		const removed = await stagingStorage(`object/${rehearsalBucket}`, { method: 'DELETE', headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ prefixes: [rehearsalObject] }) }).catch(() => null);
+		const bucketRemoved = await stagingStorage(`bucket/${rehearsalBucket}`, { method: 'DELETE' }).catch(() => null);
+		receipt.rehearsalFileRemoved = Boolean(removed?.ok) && Boolean(bucketRemoved?.ok);
+		if (!receipt.rehearsalFileRemoved) { receipt.ok = false; process.exitCode = 1; }
+	}
 	// Only the new project this run created, with its volumes.
 	if (started) spawnSync('pnpm', ['exec', 'supabase', 'stop', '--no-backup', '--workdir', project], { cwd: root, encoding: 'utf8', timeout: 300_000 });
 	rmSync(work, { recursive: true, force: true });
