@@ -219,15 +219,23 @@ try {
 	const restoredFiles = new Map();
 	let objectBytes = 0;
 	const objectPath = (bucket, name) => `${encodeURIComponent(bucket)}/${name.split('/').map(encodeURIComponent).join('/')}`;
+	// A transient answer (network, 429, 5xx) is retried twice with a growing pause; any other
+	// failure is recorded with its status, never skipped in silence.
 	const storage = async (origin, key, path, init = {}) => {
-		const response = await fetch(`${origin}/storage/v1/object/${path}`, {
-			...init, headers: { Authorization: `Bearer ${key}`, apikey: key, ...init.headers }, redirect: 'error', signal: AbortSignal.timeout(30_000)
-		});
-		if (!response.ok) throw new Error(`Storage ${init.method ?? 'GET'} answered ${response.status}.`);
-		return response;
+		for (let attempt = 1; ; attempt++) {
+			const response = await fetch(`${origin}/storage/v1/object/${path}`, {
+				...init, headers: { Authorization: `Bearer ${key}`, apikey: key, ...init.headers }, redirect: 'error', signal: AbortSignal.timeout(30_000)
+			}).catch((error) => ({ ok: false, status: 0, error }));
+			if (response.ok) return response;
+			if (attempt >= 3 || (response.status !== 0 && response.status !== 429 && response.status < 500))
+				throw new Error(`Storage ${init.method ?? 'GET'} answered ${response.status || 'without response'}.`);
+			await new Promise((resolve) => setTimeout(resolve, attempt * 2000));
+		}
 	};
+	receipt.downloadFailures = [];
 	for (const { bucket, name } of source.objects) {
-		const response = await storage(storageOrigin, serviceKey, `authenticated/${objectPath(bucket, name)}`).catch(() => null);
+		const response = await storage(storageOrigin, serviceKey, `authenticated/${objectPath(bucket, name)}`)
+			.catch((error) => { receipt.downloadFailures.push({ object: `${bucket}/${name}`, reason: error.message }); return null; });
 		if (!response) continue;
 		const body = Buffer.from(await response.arrayBuffer());
 		const contentType = response.headers.get('content-type') ?? 'application/octet-stream';
