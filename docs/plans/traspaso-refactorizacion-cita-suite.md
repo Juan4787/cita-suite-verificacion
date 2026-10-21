@@ -2,7 +2,7 @@
 
 ## Estado de este documento
 
-**Actualizado por Opus 5.5 — 21 de octubre de 2026, ~16:00 UTC.** La **etapa 5 está cerrada** sobre `674649108bc2caa87e82c8bca25d93f82d584d51` (full 39276578152, dictamen independiente `ship`, DESIGN.md documentado) y se avisó al usuario. La **etapa 6 está cerrada** (ver abajo). La campaña completa **no** está terminada.
+**Actualizado por Opus 5.5 — 21 de octubre de 2026, ~20:30 UTC.** La **etapa 5 está cerrada** sobre `674649108bc2caa87e82c8bca25d93f82d584d51` (full 39276578152, dictamen independiente `ship`, DESIGN.md documentado) y se avisó al usuario. La **etapa 6 está cerrada** (ver abajo). La campaña completa **no** está terminada.
 
 **Alcance vigente (instrucción del usuario del 19 de octubre al retomar con Opus 5.5):** completar y verificar íntegramente la fase 5, avisar al usuario cuando esté realmente cerrada y **continuar automáticamente con la fase 6 y todas las etapas restantes** hasta terminar la campaña, incluida la auditoría transversal, release, publicación y comprobaciones posteriores según las autorizaciones vigentes. Esta instrucción sustituye la restricción anterior de «detenerse antes de fase 6», que se conserva abajo sólo como antecedente de la intervención de GPT-6.1 Sol. Cambia únicamente el punto de detención: no reduce requisitos, garantías, controles ni procedimientos de seguridad.
 
@@ -28,45 +28,32 @@ Leer la decisión literal al final del plan. En resumen: no hay usuarios reales 
    - **Siguiente:** cerrar la matriz de regresiones (`docs/architecture/matriz-regresiones.md`). Después, la auditoría transversal, con estos pendientes: historiales sin depurar, el 503 público sin registro de causa, los tres `as unknown as`, la agenda diaria que muestra un día vacío ante un error de lectura, copias del cálculo de fecha local y del patrón UUID, `getAuthUserId` repetido en `patient-list.ts` y la deuda de interfaz del punto 5. Luego el release.
    - **Release: correo de Auth.** Producción tiene `mailer_autoconfirm` activo, pero el restablecimiento de contraseña necesita correo, y el SMTP integrado de Supabase sólo entrega a miembros del equipo (2 por hora). Comprobar si producción tiene SMTP propio. Si no, es un impedimento para clientes reales y una decisión del usuario, porque requiere una cuenta de correo transaccional.
    - **Realtime alojado, para el release:** la primera siembra de staging mostró que allí las difusiones de `realtime.send` desde triggers se pierden por falta de la partición diaria de `realtime.messages` (una advertencia por fila). Comprobar en producción, en modo lectura, las particiones y el transporte antes de dar por verificada la sincronización de revisiones de pacientes. Con la corrección del 21 de octubre, sin Realtime la lista se actualiza en unos 30 s.
-3d. **Punto exacto (21 de octubre, ~16:00 UTC).** Reemplaza a 3b y 3c; el detalle de cada tanda está en el registro.
-   - **Ensayo de dos consultorios, en staging: cerrado.**
-     - Workers Free cumple.
-     - Supabase Free no cumple p95 ni p99. Las demoras se acumulan dentro de PostgreSQL, pero su causa (CPU o disco de la instancia, o bloqueos) no está atribuida.
-     - La publicación está frenada hasta la decisión del usuario.
-   - **Análisis externo aportado por el usuario.** Se adopta su secuencia: antes de decidir, medir la producción de São Paulo en Free con datos ficticios. La medición registra:
-     - eventos de espera de PostgreSQL;
-     - fotografías de `pg_stat_statements`;
-     - métricas del servidor, si Free las expone;
-     - tiempos separados de punta a punta, del Worker y de PostgreSQL.
-
-     El Worker de producción ya se ubica en `aws:sa-east-1`. No se contrata nada.
-   - **Auditoría transversal en cadena.** Cada fast verifica la tanda anterior, ya aplicada, y reproduce la siguiente; las correcciones esperan en `.verification/pending-audit-fixes-20261021/rN/`. El inventario de hallazgos está en `auditoria-inventario.md`, en esa carpeta.
-     - **Verificado hasta `r17`:**
-       - `r13`: historial atómico en TypeScript;
-       - `r14`: UUID;
-       - `r15`: la ayuda guarda las reseñas con el cliente del usuario;
-       - `r16`: costo con centavos, fechas sin partir y marcadores dibujados;
-       - `r17`: `20261021070000` concede `EXECUTE` sobre `private.is_google_review_url`. Sin ese permiso, ni el dueño, ni la ayuda, ni el backend podían guardar la configuración de reseñas; producción tiene 0 filas;
-       - la tanda de interfaz del punto 5.
-
-       Las evidencias son la sql 39625073683, con 123 migraciones y tipos oficiales idénticos (`5053328b…`), y la fast 39626429287 sobre `9e3a433`, con 96 guardas, 1.382 de servidor y 171 de cliente.
-     - **En curso: `r18`, alta atómica del consultorio desde el panel maestro.** La ruta escribía correo, consultorio, dueño o invitación y acceso en pedidos separados, y compensaba borrando sin comprobar el borrado.
-       - **Reproducciones:** fast 39627102129 sobre `ff154a4`, donde deben fallar exactamente las 4 pruebas nuevas de `create_business`; y sql 39626436682, donde `business_creation_atomic.sql` falla porque la función todavía no existe.
-       - **Corrección preparada** en `r18/`: la migración `20261021080000_create_business_with_owner.sql` y la ruta.
-       - **Orden de aplicación:** primero la migración y una sql que genere los tipos oficiales con la RPC nueva; después incorporar esos tipos y aplicar la ruta; por último, una fast verde.
-   - **Producción:** toda consulta va dentro de `begin transaction read only`, porque el pooler no reenvía `PGOPTIONS`.
-   - **Siguiente:**
-     1. Cerrar `r18`.
-     2. Correr un full con capturas e inspeccionar la tanda de interfaz a 320, 390, 768, 1280 y 1600.
-     3. Hacer el release:
-        - ensayo de respaldo y restauración;
-        - migraciones de staging `20261021010000` a `080000`;
-        - repetir la consulta de privilegios de producción después de migrar;
-        - correo de Auth;
-        - Realtime;
-        - transición de identidad;
-        - la medición de producción.
-   - **Postergado con riesgo documentado:** los comparadores de parámetros de ruta (`[id=uuid]`).
+3e. **Punto exacto (21 de octubre, ~20:30 UTC).** Reemplaza a 3b, 3c y 3d; el detalle está en el registro.
+   - **Auditoría transversal: cerrada** sobre `7fea901`, full 39667993859, todo aprobado. Se avisó al usuario.
+   - **Ensayo de dos consultorios, en staging: cerrado.** Workers Free cumple. Supabase Free no cumple p95 ni p99, y la causa dentro de la instancia no está atribuida. La publicación para clientes reales está frenada hasta la decisión del usuario.
+     - Por el análisis externo que aportó, antes de decidir se mide la producción de São Paulo en Free, con datos ficticios.
+     - La medición registra los eventos de espera de PostgreSQL, fotografías de `pg_stat_statements`, las métricas del servidor si Free las expone, y tiempos separados de punta a punta, del Worker y de PostgreSQL.
+     - No se contrata nada.
+   - **Release, en preparación.**
+     - **Producción tiene 97 migraciones** y quedan 27 pendientes, compatibles con la versión servida. El análisis está en el registro.
+       - El Worker `app` sirve `9b2df65c…`, que casi seguro es `313355a` (`origin/main`).
+       - `origin/main` tiene builds automáticos de Cloudflare: desactivarlos antes de publicar y no empujar a `main`.
+     - **Credenciales de producción:** quedan en la configuración local, y `psql` corre liviano desde la máquina. Toda consulta va dentro de `begin transaction read only`, porque el pooler no reenvía `PGOPTIONS`.
+     - **Respaldos:** Free no tiene respaldos diarios administrados. Hacen falta una exportación propia, una restauración ensayada en un entorno aislado, y que el usuario decida el destino de las copias de datos reales.
+     - **Decisiones del usuario que siguen pendientes:**
+       - el destino de los respaldos;
+       - la cuenta de correo transaccional para restablecer contraseñas;
+       - el plan de Supabase después de medir producción.
+     - **Siguiente:**
+       1. Manifiesto exacto del release.
+       2. Ensayo de respaldo y restauración.
+       3. Staging: migraciones de `20261021010000` a `080000`, despliegue y comprobaciones.
+       4. `verify:release`.
+       5. Comprobar en producción, en lectura, el SMTP y las particiones de Realtime.
+       6. Transición de identidad.
+       7. Publicar en producción, con su secuencia y reversión, y medir dos consultorios en producción.
+     - **Teléfono Samsung:** pedírselo al usuario cuando haga falta para el push real.
+   - **Postergado con riesgo documentado:** los comparadores de parámetros de ruta (`guia-nuevas-funciones.md`).
 4. **Copias antiguas retiradas por el usuario (resuelto el 19 de octubre):** `https://cita-suite.netlify.app` servía una copia completa de la aplicación con endpoint de tareas. El usuario desactivó ese proyecto y también pausó `https://cita-suite-app.vercel.app`, otra copia que no figuraba en el inventario. Comprobado por HTTP a las 21:12 UTC: Netlify responde 404 y Vercel 503. Ambas están en el inventario de `identidad-cita-suite.md`. El interruptor de base de la migración sigue siendo parte de la transición: neutraliza cualquier llamador antiguo (por ejemplo cron-job.org contra el Worker) sin depender de esas cuentas. Antes de activar el programador nuevo, volver a comprobar que las dos copias siguen fuera de servicio.
 5. **Pendiente para la auditoría transversal** (debe corregirse ahí): con el criterio de retención de la sección 4, revisar las tablas de historia que no se depuran (`audit_logs`, `mp_webhook_events`, `patient_profile_change_events`, `whatsapp_webhook_events`) y decidir cuáles son historia del producto y cuáles registros; `public_booking_attempts` ya se conserva 7 días (`20261020040000`). La carga pública (`defaultIntegration` en `/reservar` y `readBookingIntegrationRequest`) convierte cualquier excepción en 503 sin registrar la causa. Tres `as unknown as` en producción (transporte `ws` del cliente Supabase de servidor, `configuracion/negocio/+page.svelte` y `patient-export.worker.ts`); deuda de interfaz preexistente no canonizada por el documentador (kickers/eyebrows, glifos como íconos en `.ux-tab-marker`, 14 tamaños literales, `truncate` en superficies no cubiertas, pesos 650–900 con Inter cargada en 400–700, `ThemeToggle.svelte` sin uso, fechas «4 de / noviembre» partidas a 320 y costo «$ 125,5»). Detalle en el registro. Resueltos en etapa 6: los casts de errores de `push.ts` (ahora `PushServiceError` y el error tipado del SDK) y la auditoría de las tareas fuera del `fetch` presupuestado (`insertAuditLog` recibe el cliente de la tarea).
 

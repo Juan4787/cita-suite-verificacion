@@ -26,6 +26,15 @@ Una tabla, vista o secuencia nueva en `public` no recibe permisos por sí sola. 
 
 Las relaciones entre entidades de consultorios llevan integridad compuesta cuando corresponda. Las funciones privilegiadas declaran search_path seguro y privilegios explícitos; comprobar llamadas directas que eviten la UI. Si la regla necesita una autoridad estable mientras escribe, definir sus bloqueos y su orden. No esperar una llamada a Storage/proveedor dentro de una transacción abierta. Un NOWAIT deliberado debe traducirse a una recuperación clara y tener prueba de concurrencia, no un bucle de reintentos inmediato.
 
+Una función usada en una restricción, un valor por defecto, una política o una vista se ejecuta con los privilegios de quien lee o escribe la fila. Todo rol que pueda usar la tabla necesita `EXECUTE` sobre ella; lo comprueba `write_expression_privileges.sql`.
+
+Un identificador de la URL o del formulario se valida con `isUuid` de `@cita-suite/shared/uuid` antes de consultar, y uno mal formado responde 404, nunca 500 ni 503. La guarda `uuid-pattern.test.mjs` impide copias propias del patrón.
+
+**Postergado: comparadores de parámetros de ruta (`[id=uuid]`).**
+- **Por qué:** hoy cada ruta valida su identificador y responde 404. Pasar las 22 carpetas `[param]` a comparadores cambia nombres de rutas, importaciones y pruebas, y no agrega comportamiento.
+- **Riesgo residual:** una ruta nueva que olvide validar deja llegar un identificador mal formado a PostgreSQL (22P02) y responde un error en vez de 404. No expone datos: los permisos y RLS siguen aplicando.
+- **Retomar:** al reorganizar las rutas o cuando se agreguen varias rutas nuevas con identificadores.
+
 ## Mantener controladores y UI comprensibles
 
 Una ruta lee parámetros y contexto, verifica el acceso pertinente, llama la operación y traduce su resultado HTTP. Las reglas compartidas no se duplican entre el endpoint público, el interno, el preview y la pantalla. PostgreSQL confirma reservas/precios/cuotas; el calculador TS compartido produce opciones; el cliente valida de manera orientativa y presenta estados.

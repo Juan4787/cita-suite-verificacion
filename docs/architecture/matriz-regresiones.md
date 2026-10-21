@@ -86,7 +86,7 @@ Lecturas, escrituras, identificadores manipulados y funciones llamadas directame
 
 ## 12. Vistas de 320, 390, 768, 1280 y 1600 píxeles, contenido largo y teclado
 
-- **Guardas de diseño** sobre todas las vistas (`scripts/lib`): `font-weights.test.mjs` (sólo pesos cargados), `heading-kickers.test.mjs` (sin rótulos sobre los títulos), `glyph-icons.test.mjs` (íconos dibujados, no emojis ni glifos), `type-scale.test.mjs` (tamaños de la escala, no literales) y `text-truncation.test.mjs` (el texto de la tarea ajusta; los recortes revisados se declaran).
+- **Guardas de diseño** sobre todas las vistas (`scripts/lib`): `font-weights.test.mjs` (sólo pesos cargados), `heading-kickers.test.mjs` (sin rótulos sobre los títulos), `glyph-icons.test.mjs` (íconos dibujados, no emojis ni glifos), `type-scale.test.mjs` (tamaños de la escala, no literales) y `text-truncation.test.mjs` (el texto de la tarea ajusta; los recortes revisados se declaran). En el navegador, `layoutIssues` reporta además un texto de ayuda más ancho que el espacio de su campo (`clipped-placeholder`), y `login-register-ux.spec.ts` y `patients-real-ux-audit.spec.ts` lo comprueban a 320 y 390 px.
 - **Navegador:** `patient-structure-ux.spec.ts` (los cinco anchos, contenido largo y teclado por rol), `access-recovery-ui.spec.ts` (los cinco anchos y teclado), `booking-embed.spec.ts` (cinco anchos en las tareas profesionales y la reserva nativa), `clinical-storage-policy.spec.ts`, `layout-usability.spec.ts` (el detector de palabras comprimidas), `mobile-navigation-ux.spec.ts`, `roles-agenda-regression.spec.ts`. Las matrices visuales usan `layoutIssues` y `alignTaskForCapture` según la [guía de verificación](verificacion.md).
 
 ## Observabilidad

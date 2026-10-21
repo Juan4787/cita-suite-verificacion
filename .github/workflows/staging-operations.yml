@@ -11,7 +11,7 @@ on:
         type: choice
         required: true
         options: [artifact, migrations, queue-seed, queue-seed-abandoned, queue-report, queue-cleanup, device-seed, device-report, device-cleanup,
-          capacity-seed, capacity-measure, capacity-report, capacity-cleanup]
+          capacity-seed, capacity-measure, capacity-report, capacity-cleanup, backup-rehearsal]
       practices:
         description: Practices of the hosted capacity scenario (2, the launch; 5, the earlier rehearsal)
         type: choice
@@ -47,7 +47,7 @@ jobs:
         with:
           node-version-file: .node-version
       - name: Install pinned package manager and dependencies
-        if: inputs.operation == 'artifact' || inputs.operation == 'capacity-measure'
+        if: inputs.operation == 'artifact' || inputs.operation == 'capacity-measure' || inputs.operation == 'backup-rehearsal'
         run: |
           npm install --global pnpm@10.13.1
           pnpm install --frozen-lockfile --network-concurrency=1
@@ -115,6 +115,16 @@ jobs:
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 7
+      # The Free plan has no managed daily backups: rehearse the documented dump and restore
+      # of staging into an isolated, empty database of the hosted version on this runner.
+      - name: Rehearse the backup and restore of staging in an isolated database
+        if: inputs.operation == 'backup-rehearsal'
+        env:
+          CITA_STAGING_DATABASE_URL: ${{ secrets.CITA_STAGING_DATABASE_URL }}
+          CITA_STAGING_SERVICE_ROLE_KEY: ${{ secrets.CITA_STAGING_SERVICE_ROLE_KEY }}
+        run: |
+          node scripts/prepare-ci-services.mjs
+          node scripts/backup-rehearsal.mjs
       # The management link of the device check is read on the local machine only.
       - name: Operate the real-device push check of one run
         if: startsWith(inputs.operation, 'device-')

@@ -19,8 +19,9 @@ Después de cada compactación y antes de cada etapa: releer íntegramente el pl
 | 4. Disponibilidad, reservas y aranceles | Cerrada en entorno descartable: cierre funcional/UI39090572628 y corrección de concurrencia comprobada en39093599146 contra reproducción negativa39093073514. Once carreras, dos inserciones con FK reales/revisión+2 sin retry y cero deadlocks. Sin migraciones alojadas.                                                                                                                                                                                                                |
 | 5. Áreas e interfaz                     | Cerrada sobre `6746491`: full 39276578152 (15/15 etapas, 37/37 navegador, 2/2 demo, 1.265/167/1 unidades, SQL y carreras, deadlocks 0, Natalia idéntica), barrera de legibilidad con sensibilidad demostrada (39213353905, 39213414834, 39275879477), dictamen independiente `ship` y DESIGN.md documentado. Deuda de interfaz preexistente asignada a la auditoría transversal. |
 | 6. Tareas automáticas                   | Cerrada el 20 de octubre: fulls 39364962358 y 39366010644 sobre `c0f883d` (40/40 navegador, `hosted_request_guards.sql` 10/10, escenarios de colas 6/6). En staging desplegado, recuperación de reclamaciones abandonadas, inicio de los 25 consultorios ordinarios a los 209 s, cinco cron en su minuto y entrega real por FCM a un teléfono. La ampliación por CPU quedó medida y documentada: push usa 64–124 ms por ejecución frente a los 10 ms de Free, y la solución medida es Workers Paid, que requiere la decisión del usuario. La transición en producción se ejecuta en la secuencia de publicación. |
-| Capacidad y matriz de regresiones       | En curso desde el 20 de octubre (escenarios de colas ya demostrados en CI y staging). Desde la enmienda del usuario del 20 de octubre, la condición de lanzamiento es demostrar los criterios con dos consultorios en el despliegue gratuito. Conservados como evidencia: CI de 5 consultorios dentro de criterios (lecturas p95 159 ms tras las correcciones de lectura por conjunto) y el ensayo alojado de 5 en planes gratuitos, que no cumplió por la CPU de Workers Free (cortes de 15 a 52 % por minuto). Corregidos dos defectos de escalabilidad del sistema (lectura de pacientes y de turnos fila por fila) y dos de eficiencia (formateadores del calculador y agenda semanal). |
-| Auditoría transversal y entrega         | No iniciada. Publicación y pruebas masivas en producción autorizadas el 17 de octubre, después de cumplir las comprobaciones previas; aún no ejecutadas.                                                                                                                                                                                                                                                                                                                                   |
+| Capacidad y matriz de regresiones       | **Matriz de regresiones cerrada** el 21 de octubre ([matriz](../architecture/matriz-regresiones.md); evidencia de conjunto: full 39667993859 sobre `7fea901`). **Capacidad del lanzamiento, dos consultorios en staging:** Workers Free cumple; Supabase Free no cumple p95 ni p99 (2 ensayos y 6 repeticiones) y la causa dentro de la instancia no está atribuida. Impedimento de publicación informado; por el análisis que aportó el usuario, antes de decidir se mide la producción de São Paulo en Free con eventos de espera. Se conservan como evidencia el CI de 5 y 25 consultorios y el ensayo alojado de 5, que no cumplió por la CPU de Workers Free. |
+| Auditoría transversal                   | **Cerrada el 21 de octubre** sobre `7fea901`: full 39667993859, 17 de 17 etapas: 97 guardas, 1.384 servidor, 171 cliente, 124 migraciones con todas las suites y carreras, 40/40 navegador, 2/2 demo y Natalia con un cambio declarado. Tandas `r1` a `r18`, cada una reproducida antes de corregirse, más la tanda de interfaz del punto 5 y los textos de ayuda recortados. Postergados con riesgo documentado: los comparadores de parámetros de ruta. |
+| Release, publicación y comprobaciones   | En preparación desde el 21 de octubre: 27 migraciones pendientes en producción, compatibles con la versión servida (`313355a`); respaldo y restauración, staging, auditoría de release y medición de producción. Publicación para clientes reales frenada hasta la decisión del usuario sobre Supabase Free. Publicación y pruebas masivas en producción autorizadas el 17 de octubre. |
 
 ## Cambios efectuados
 
@@ -1107,3 +1108,29 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
   - **Prueba del detector:** caso sintético en `layout-usability.spec.ts`. Un campo lleno o con lugar suficiente no se reporta.
   - **Prueba de la lista de pacientes:** busca el campo por su nombre accesible y comprueba el texto de ayuda a 320 y 390 px.
   - **Reproducción:** diagnóstico de navegador 39665245843 sobre `4bed46a`, sin límite de fallas, sobre todas las matrices que usan la comprobación general.
+  - **Reproducción:** diagnóstico 39665245843 sobre `4bed46a`, 10 pruebas, 3 fallas.
+    - «Buscar por nombre, DNI o teléfono» en la lista de pacientes, a 320 px, con 157 px disponibles: es el hallazgo de la inspección.
+    - «Vacaciones, feriado, trámite...» en el motivo de una excepción del editor de profesional, a 320 px: ocupa 242 px y hay 206, en los dos temas.
+    - Un error mío en la prueba sintética: no conté el borde de 2 px del campo, así que había 116 px y no 120. Se fija `border: 0`.
+    - Las demás matrices de anchos no tienen ningún texto de ayuda recortado.
+  - **Login:** su prueba se amplió a 320 y 390 px en los dos modos. Diagnóstico 39666188013 sobre `ba03292`: aprobaron 13 y el login reprodujo el recorte, «Ingresá tu contraseña» con 177 px para 146 junto al botón «Ver».
+  - **Correcciones:**
+    - lista de pacientes: «Nombre, DNI o teléfono». Además el campo reserva 64 px en vez de 80: el indicador de carga, su separación y el botón de limpiar necesitan 62;
+    - excepción de horario: «Vacaciones, feriado…»;
+    - login: «Tu contraseña», «Creala» y «Repetila». Las etiquetas ya nombran cada campo. «Nueva contraseña» todavía ocupaba 149 px para 146 (diagnóstico 39666920300).
+    - Las dos pruebas que buscaban el buscador por su texto de ayuda ahora lo buscan por su nombre accesible, «Buscar pacientes».
+  - **Verificación:** diagnóstico 39667500475 sobre `7fea901`, login aprobado. El full 39667993859 sobre `7fea901` es el cierre de la auditoría.
+- **Auditoría transversal: cerrada (21 de octubre, ~20:20 UTC).**
+  - **Full 39667993859 sobre `7fea9010d85894f56ae13a2f3d593c4c5c7197d6`:** aprobado entero, con digest de fuente `4d6d3d8a…` y paquete SHA-256 `9ce4664b…`, en `.verification/remote-39667993859/`.
+    - `svelte-check` sin errores, 97 guardas, 11 pruebas del programador, 1.384 de servidor, 171 de cliente y la exportación nativa.
+    - 124 migraciones con todas las suites y carreras.
+    - 40 de 40 en el navegador, ahora con el detector de textos de ayuda recortados en las matrices, y 2 de 2 en la demo.
+    - Natalia con el cambio declarado.
+  - **Contraste con el plan (sección 5, auditoría):**
+    - **Rutas alternativas que evitan permisos, cuotas o contratos:** inventario de la clave de servicio; Seguimientos y el alta del consultorio pasaron a transacciones SQL; los guardados de la ayuda pasaron al cliente del usuario; identidad única del pedido; permisos explícitos y alineados con producción; guarda de funciones en expresiones.
+    - **Clientes sin tipar y conversiones:** guarda `type-escapes`.
+    - **Reglas duplicadas e importaciones privadas:** UUID y fecha local únicos; reglas de dependencias.
+    - **Paginación, truncamiento y vacíos que esconden errores:** tandas `r2`, `R7` y `r11`.
+    - **Consultorio nuevo sin configuración manual:** `business_creation_atomic.sql`, control 2.
+  - **Quedan para el release** los recorridos sobre los artefactos construidos (`verify:release`) y el ensayo de cambio de recursos.
+  - **Postergado, con riesgo documentado** en `guia-nuevas-funciones.md`: los comparadores de parámetros de ruta.
