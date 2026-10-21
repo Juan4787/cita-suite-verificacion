@@ -1,4 +1,5 @@
-import { isUuid } from './uuid';
+// Imports carry their extension: the integration CLI runs this module natively in Node.
+import { isUuid } from './uuid.ts';
 
 /** Public host contract. New booking steps and database shapes are deliberately private. */
 export const BOOKING_EMBED_PROTOCOL = 'cita-suite.booking' as const;

@@ -22,10 +22,13 @@ begin
  insert into assistance_fixture values('business',b),('owner',u_owner),('support',u_support),('stranger',u_stranger);
 end $$;
 
+-- Why a review settings save was refused, printed after the checks as diagnostics.
+create temporary table review_refusals(actor text, message text);
+
 -- Whether the actor sees the practice, whether a settings save returns its row, and
 -- whether it saves the review settings the way their page does (an upsert).
 create function pg_temp.settings_access(p_actor text) returns text language plpgsql as $$
-declare v_business uuid:=(select id from assistance_fixture where label='business'); v_reads boolean; v_saved uuid; v_review uuid;
+declare v_business uuid:=(select id from assistance_fixture where label='business'); v_reads boolean; v_saved uuid; v_review uuid; v_refusal text;
 begin
  perform set_config('request.jwt.claim.sub',(select id::text from assistance_fixture where label=p_actor),true);
  perform set_config('request.jwt.claim.role','authenticated',true);
@@ -37,10 +40,11 @@ begin
   on conflict (business_id) do update set enabled = excluded.enabled
   returning business_id into v_review;
  exception when insufficient_privilege then
-  raise notice 'review settings save refused for %: %', p_actor, sqlerrm;
+  v_refusal:=sqlerrm;
   v_review:=null;
  end;
  execute 'reset role';
+ if v_refusal is not null then insert into review_refusals values(p_actor, v_refusal); end if;
  return case when v_reads then 'reads' else 'hidden' end||' '||case when v_saved is not null then 'saves' else 'cannot save' end
   ||' '||case when v_review is not null then 'saves reviews' else 'cannot save reviews' end;
 end $$;
@@ -58,6 +62,8 @@ update public.account_assistance_grants set expires_at=now()-interval '1 minute'
  where business_id=(select id from assistance_fixture where label='business');
 select extensions.is(pg_temp.settings_access('support'), 'hidden cannot save cannot save reviews',
  'an expired assistance neither reads nor saves the practice');
+
+select extensions.diag(actor || ' review settings refused: ' || message) from review_refusals;
 
 select * from extensions.finish();
 rollback;
