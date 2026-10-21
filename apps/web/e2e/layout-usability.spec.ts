@@ -49,6 +49,7 @@ test('layout usability detector reports squeezed ordinary words and accepts legi
 			<div class="ux-choice" id="truncated-choice" style="width: 120px">
 				<span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">E2E Consulta sintética larga</span>
 			</div>
+			<div id="clipped-placeholder"><input type="search" style="font: inherit; box-sizing: border-box; width: 240px; padding: 0 80px 0 40px" placeholder="Buscar por nombre, DNI o teléfono"></div>
 		</section>
 		<section id="legitimate">
 			<p style="width: 120px">Paciente ${longName}</p>
@@ -67,6 +68,8 @@ test('layout usability detector reports squeezed ordinary words and accepts legi
 			<div class="ux-choice" style="width: 120px"><span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Corto</span></div>
 			<p data-truncation="allowed" style="width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Excepción revisada y documentada</p>
 			<button class="ux-control-trigger" style="width: 150px"><span>Sólo las seleccionadas</span></button>
+			<input style="font: inherit; width: 300px; padding: 0 8px" placeholder="Nombre, DNI o teléfono">
+			<input style="font: inherit; width: 120px; padding: 0 8px" placeholder="Buscar por nombre, DNI o teléfono" value="Julia">
 		</section>
 	</main></body></html>`);
 	const words = async (scope: string) => (await brokenOrdinaryWords(page, scope)).map(({ word }) => word);
@@ -85,6 +88,10 @@ test('layout usability detector reports squeezed ordinary words and accepts legi
 	expect((await textIssues(page, '#split-counter')).map(({ check }) => check)).toEqual(['split-quantity']);
 	expect((await textIssues(page, '#dangling-separator')).map(({ check }) => check)).toEqual(['dangling-separator']);
 	expect((await textIssues(page, '#truncated-choice')).map(({ check }) => check)).toEqual(['truncated-value']);
+	// A hint wider than the room its field leaves is shown cut; a filled field hides its hint.
+	expect(await textIssues(page, '#clipped-placeholder')).toEqual([
+		{ check: 'clipped-placeholder', placeholder: 'Buscar por nombre, DNI o teléfono', width: expect.any(Number), available: 120 }
+	]);
 	expect(await textIssues(page, '#legitimate')).toEqual([]);
 	expect(await textIssues(page, '#chrome')).toEqual([]);
 	expect(await layoutIssues(page, '#legitimate p', '#legitimate')).toEqual([]);

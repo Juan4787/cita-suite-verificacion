@@ -11,7 +11,8 @@ export type TextIssue =
 	| { check: 'wrapped-control'; label: string; lines: number; width: number }
 	| { check: 'split-quantity'; text: string }
 	| { check: 'dangling-separator'; text: string }
-	| { check: 'truncated-value'; tag: string; width: number };
+	| { check: 'truncated-value'; tag: string; width: number }
+	| { check: 'clipped-placeholder'; placeholder: string; width: number; available: number };
 export type LayoutIssue =
 	| { check: 'zoom-blocked' | 'document-overflow' | 'framework-overlay' }
 	| { check: 'control'; tag: string; name: string | null; left: number; right: number; width: number }
@@ -35,6 +36,9 @@ export type LayoutIssue =
  * - truncated-value: text inside the page content (`main` or a dialog) cut with an
  *   ellipsis, which hides what was chosen or who is involved. Header/navigation
  *   names and reviewed exceptions (`data-truncation="allowed"`) are not reported.
+ * - clipped-placeholder: the hint of an empty input wider than the room its padding
+ *   leaves for text, so the field shows it cut ("…DNI o teléfc"). An input cannot
+ *   wrap its hint: the copy has to fit.
  * Hidden, sr-only and transparent text, native options and textareas are ignored.
  */
 export async function textIssues(page: Page, scope = 'body'): Promise<TextIssue[]> {
@@ -45,8 +49,11 @@ export async function textIssues(page: Page, scope = 'body'): Promise<TextIssue[
 				| { check: 'wrapped-control'; label: string; lines: number; width: number }
 				| { check: 'split-quantity'; text: string }
 				| { check: 'dangling-separator'; text: string }
-				| { check: 'truncated-value'; tag: string; width: number };
+				| { check: 'truncated-value'; tag: string; width: number }
+				| { check: 'clipped-placeholder'; placeholder: string; width: number; available: number };
 			const issues: Found[] = [];
+			const measure = document.createElement('canvas').getContext('2d');
+			if (!measure) throw new Error('No canvas context to measure input hints.');
 			const visible = (element: Element) => {
 				if (!element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) return false;
 				const box = element.getBoundingClientRect();
@@ -151,6 +158,21 @@ export async function textIssues(page: Page, scope = 'body'): Promise<TextIssue[
 						tag: element.tagName.toLowerCase(),
 						width: Math.round(element.getBoundingClientRect().width)
 					});
+				}
+				for (const field of root.querySelectorAll('input[placeholder]')) {
+					if (!(field instanceof HTMLInputElement) || !field.placeholder || field.value || !visible(field)) continue;
+					const style = getComputedStyle(field);
+					measure.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+					measure.letterSpacing = style.letterSpacing === 'normal' ? '0px' : style.letterSpacing;
+					const width = measure.measureText(field.placeholder).width;
+					const available = field.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+					if (width > available + 1)
+						issues.push({
+							check: 'clipped-placeholder',
+							placeholder: field.placeholder,
+							width: Math.round(width),
+							available: Math.round(available)
+						});
 				}
 			}
 			return issues;
