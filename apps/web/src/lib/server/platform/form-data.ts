@@ -1,7 +1,7 @@
 /** Bounded HTTP body reading shared by operations; no reservation or provider dependency. */
 
 /** The body's bytes, or null once it passes `maxBytes`: the rest is never read. */
-export async function readBoundedBytes(request: Request, maxBytes: number): Promise<Uint8Array | null> {
+export async function readBoundedBytes(request: Request, maxBytes: number): Promise<Uint8Array<ArrayBuffer> | null> {
 	const reader = request.body?.getReader();
 	if (!reader) return new Uint8Array();
 	const chunks: Uint8Array[] = [];
