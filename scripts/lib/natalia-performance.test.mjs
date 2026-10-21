@@ -73,3 +73,44 @@ test('added JS, altered bytecode or extra transfer cannot be reported as unchang
 		assert.throws(() => assertNataliaComparison(report));
 	}
 });
+test('a declared change is accepted only with its reason, its exact artifact and a consistent transfer', () => {
+	const change = {
+		reason: 'synthetic: the catalogue validates ids like the application',
+		baseline: { name: 'public.hash.js', bytes: 1000, sha256: 'synthetic-content-hash' },
+		candidate: { name: 'public.next.js', bytes: 990, sha256: 'synthetic-next-hash' }
+	};
+	const declared = () => {
+		const report = valid();
+		for (const sample of report.filter((item) => item.label === 'candidate')) {
+			sample.artifacts.scripts = [{ ...change.candidate }];
+			sample.scripts = [
+				{ path: '/_astro/public.next.js', encodedBodyBytes: 495, decodedBodyBytes: 990, browserTransferBytes: 795 }
+			];
+		}
+		return report;
+	};
+	assert.equal(assertNataliaComparison(declared(), [change]), 12);
+	assert.throws(() => assertNataliaComparison(declared()), /JS artifacts changed/);
+	const mutations = [
+		[(report) => report, { ...change, reason: ' ' }],
+		[(report) => report, { ...change, candidate: { ...change.candidate, sha256: 'other-hash' } }],
+		[(report) => report, { ...change, baseline: { ...change.baseline, sha256: 'stale-baseline-hash' } }],
+		[
+			(report) => {
+				report[11].scripts[0].encodedBodyBytes++;
+			},
+			change
+		],
+		[
+			(report) => {
+				report[11].artifacts.inlineSourceBytes++;
+			},
+			change
+		]
+	];
+	for (const [mutate, declaration] of mutations) {
+		const report = declared();
+		mutate(report);
+		assert.throws(() => assertNataliaComparison(report, [declaration]));
+	}
+});

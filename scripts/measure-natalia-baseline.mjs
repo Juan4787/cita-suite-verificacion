@@ -26,6 +26,9 @@ import { assertNataliaComparison } from './lib/natalia-performance.mjs';
 assertHostedIntegrationResources();
 const root = fileURLToPath(new URL('../', import.meta.url));
 const baseline = 'c0129e492051a38d5b8025158fb996a81da0e871';
+// Deliberate changes to Natalia's JS since the baseline, each with its reason and exact
+// artifacts; anything else still fails the comparison.
+const declaredChanges = JSON.parse(readFileSync(join(root, 'scripts/natalia-declared-changes.json'), 'utf8'));
 const runId = process.env.CITA_VERIFICATION_RUN_ID;
 assert.match(runId ?? '', /^[a-f0-9-]{36}$/);
 const output = join(root, '.verification/runs', runId, 'natalia-performance');
@@ -38,6 +41,7 @@ const result = {
 		'Two pinned Astro builds using the same installed toolchain; real local HTTP and Chromium. Synthetic public contact/catalogue only. No hosted application or database.',
 	baselineRevision: baseline,
 	baselineDescription: 'Last verified UI baseline before stage 5 (full39090572628).',
+	declaredChanges,
 	measurements: [],
 	passed: false
 };
@@ -241,7 +245,7 @@ try {
 	browser = await chromium.launch({ headless: true, args: ['--disable-dev-shm-usage'] });
 	await measure('baseline', resolve(app, 'dist'));
 	await measure('candidate', resolve(root, 'apps/natalia/dist'));
-	assertNataliaComparison(result.measurements);
+	assertNataliaComparison(result.measurements, declaredChanges);
 	result.passed = true;
 } finally {
 	await browser?.close();

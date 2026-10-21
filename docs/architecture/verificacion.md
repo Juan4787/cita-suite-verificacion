@@ -49,6 +49,8 @@ La demo usa un servidor y archivo de datos propios. Los perfiles funcionales pue
 
 El perfil local excluye los dos recorridos que dependen de cuentas Google externas. Sus contratos/proveedores tienen pruebas separadas, pero el login Google real no se considera aprobado por sustitución. La reserva nativa de Natalia y la integración embebida compatible tienen perfiles explícitos: Natalia no usa el embed para su navegación actual.
 
+La comparación de Natalia (`measure-natalia-baseline.mjs`) construye la versión de referencia `c0129e4` y la candidata con las mismas herramientas, y mide doce cargas frías. Exige que no haya hidratación nueva y que el JavaScript de la candidata sea idéntico al de la referencia, salvo los cambios declarados en `scripts/natalia-declared-changes.json`. Cada declaración lleva su motivo y los artefactos exactos de ambas versiones: nombre, bytes y SHA-256. Cualquier otro cambio, o una declaración que ya no coincide con la referencia, hace fallar la comparación. Un cambio deliberado de Natalia se declara en el mismo lote que lo introduce, con las huellas medidas por el full.
+
 ## Staging y CI
 
 `CITA_STAGING_DESCRIPTOR` apunta a un descriptor explícito con origen de Cita Suite, origen de Natalia, otro proyecto Supabase, revisión completa, integración de reserva, consultorio sintético e identidades `.test`. Las credenciales se suministran únicamente mediante variables `CITA_STAGING_*`; no se toman de `.env`. El descriptor también debe incluir las huellas de los archivos reales de Natalia al comprobar los artefactos desplegados.

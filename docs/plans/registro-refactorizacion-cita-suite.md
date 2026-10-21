@@ -1059,6 +1059,21 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
     - un correo de otro consultorio se rechaza sin dejar consultorio, correo habilitado ni acceso;
     - los nombres repetidos dan slugs distintos y ninguno tiene forma de identificador;
     - sólo el backend puede ejecutarla.
-  - **Verificación en curso:** sql 39661668404 sobre `a5ef6af`. Los tipos oficiales que genere, con la RPC nueva, se incorporan antes de la fast.
+  - **sql 39661668404 sobre `a5ef6af`: aprobada.** 124 migraciones, todas las suites y carreras, y `business_creation_atomic.sql` 7 de 7. Tipos oficiales reproducibles (`3757d31f…`) con sólo la RPC nueva, 19 líneas, incorporados a `packages/shared/src/database.types.ts`.
+  - **Full 39662127414 sobre `ac35613`, en curso.** Verifica la ruta con los tipos oficiales y toda la campaña junta, y trae las capturas para inspeccionar la tanda de interfaz.
   - **Otras compensaciones desde HTTP:** no hay. El borrado de excepciones de horario es la operación misma, bajo RLS, y el de calendario limpia intentos vencidos sin afectar el resultado.
 - **Matriz de regresiones actualizada** con las pruebas y guardas de la auditoría transversal ya verificadas.
+- **Otras clases de permisos, producción en una transacción de sólo lectura verificada** (`.verification/sequence-trigger-privileges-production-20261021.json`):
+  - ninguna tabla escribible por la API toma un valor por defecto de una secuencia, así que no depende del permiso `USAGE`;
+  - los 10 disparadores que corren con los privilegios de quien escribe sólo ajustan `updated_at` o impiden modificar el historial de accesos, sin leer otras tablas.
+- **Preparación del release: estado de producción y compatibilidad (21 de octubre, en sólo lectura verificada).**
+  - **Migraciones:** producción tiene 97, la historia es un prefijo exacto del árbol (124) y quedan **27 pendientes**, de `20261016010000` a `20261021080000`, ninguna ajena.
+  - **Versión servida:** el Worker `app` sirve la versión `9b2df65c…`, desplegada el 15 de octubre a las 06:28–06:29 UTC. `origin/main` de `Juan4787/dashboard` es `313355a`, de las 06:25 UTC, con builds automáticos de Cloudflare conectados, así que producción sirve casi seguro ese código. El `main` local (`e3887e4`, 28 de agosto) está desactualizado y no sirve de referencia.
+  - **Compatibilidad de las 27 migraciones con `313355a` mientras convivan:**
+    - **Permisos revocados a `authenticated`** (`20261021060000`): las políticas de producción sólo permiten, de lo revocado, las escrituras del maestro en `allowed_emails` y el acceso a `professional_patient_links`. `313355a` usa esas dos tablas en 22 lugares, todos con la clave de servicio, que no cambia.
+    - **Permisos revocados a `anon`** (`20261021020000`): las rutas públicas de `313355a` no consultan tablas con la clave pública; el navegador sólo la usa para Realtime y Auth.
+    - **Funciones eliminadas o cerradas** que `313355a` llama: hay dos.
+      - `create_appointment_with_patient_identity` queda sólo para `service_role`, y la agenda la llama con la clave de servicio.
+      - `set_patient_archive_state_safely(uuid, uuid, boolean)` conserva `EXECUTE` para `authenticated`.
+    - **Cambios de esquema:** `clinical_upload_slots.business_id` se completa antes de pasar a `not null`, y las cargas las crea una función SQL que la misma cadena actualiza, como prueban las suites de documentos. Las políticas reemplazadas son las de lectura por conjuntos de la etapa anterior.
+  - **Respaldos:** Supabase Free no tiene respaldos diarios administrados; la documentación oficial los reserva a Pro, Team y Enterprise y recomienda que los proyectos gratuitos exporten sus datos (`supabase db dump`) con copias fuera de la plataforma ([respaldos](https://supabase.com/docs/guides/platform/backups)). El release necesita una exportación propia y una restauración ensayada. El destino de las copias de datos reales es una decisión del usuario.
