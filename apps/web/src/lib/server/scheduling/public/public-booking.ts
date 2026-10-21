@@ -284,10 +284,12 @@ export const summarizeSlotsByDate = (
 		.map(([date, count]) => ({
 			date,
 			count,
+			// The day and month stay together, so a narrow screen breaks after the weekday.
 			label: formatter
 				.format(new Date(`${date}T12:00:00.000Z`))
 				.replace(',', '')
 				.replace(/^./, (letter) => letter.toUpperCase())
+				.replace(/(\d+) de (\S+)$/, '$1\u00a0de\u00a0$2')
 		}));
 };
 

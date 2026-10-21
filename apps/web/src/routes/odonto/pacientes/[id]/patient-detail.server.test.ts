@@ -412,10 +412,9 @@ describe('patient detail migrated actions', () => {
 		expect(mocks.admin.from).not.toHaveBeenCalled();
 	});
 
-	it('lets a linked professional edit patient data and records a visible change event', async () => {
+	it('lets a linked professional edit patient data and records its visible change event in the same call', async () => {
 		makeProfessionalContext();
-		const eventInsertBuilder = makeQueryBuilder({ result: { error: null } });
-		mockAdminBuilders([
+		const calls = mockAdminBuilders([
 			makeQueryBuilder({
 				maybeSingleResult: {
 					data: { professional_id: 'prof-1', professionals: { name: 'Dra. Test' } },
@@ -451,8 +450,7 @@ describe('patient detail migrated actions', () => {
 					},
 					error: null
 				}
-			}),
-			eventInsertBuilder
+			})
 		]);
 
 		const form = new FormData();
@@ -471,20 +469,15 @@ describe('patient detail migrated actions', () => {
 				p_phone: '112233',
 				p_update_clinical_profile: true,
 				p_expected_patient_updated_at: '2026-08-31T12:00:00.000Z',
-				p_expected_clinical_profile_updated_at: '2026-08-31T12:00:00.000Z'
+				p_expected_clinical_profile_updated_at: '2026-08-31T12:00:00.000Z',
+				p_changed_fields: ['nombre', 'teléfono'],
+				p_change_summary: 'Se modificó: nombre y teléfono.',
+				p_changed_by_professional_id: 'prof-1',
+				p_changed_by_name: 'Dra. Test'
 			})
 		);
-		expect(eventInsertBuilder.insert).toHaveBeenCalledWith(
-			expect.objectContaining({
-				business_id: businessId,
-				patient_id: patientId,
-				changed_by_user_id: ownerId,
-				changed_by_professional_id: 'prof-1',
-				changed_by_name: 'Dra. Test',
-				changed_fields: ['nombre', 'teléfono'],
-				summary: 'Se modificó: nombre y teléfono.'
-			})
-		);
+		// The history line is written by the same SQL transaction, never by a second insert.
+		expect(calls.map((call) => call.table)).not.toContain('patient_profile_change_events');
 	});
 
 	it('does not report success when the patient disappeared between read and update', async () => {

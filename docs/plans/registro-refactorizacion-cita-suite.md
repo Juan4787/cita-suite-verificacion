@@ -964,3 +964,56 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
   - **`r14`:** la definición única pasa a `packages/shared/src/uuid.ts` (`@cita-suite/shared/uuid`) y las 23 importaciones de la app la usan. `$lib/contracts/uuid.ts` se elimina.
   - **Excepciones:** `BOOKING_REQUEST_ID_PATTERN` es un contrato distinto, porque los identificadores de solicitud de reserva son versión 4 aleatoria. La copia que lo repetía usa ahora la constante. Natalia, despliegue aparte sin el paquete compartido, conserva una copia alineada a la forma canónica y comentada.
   - **Guarda nueva `scripts/lib/uuid-pattern.test.mjs`:** recorre la app, Natalia, el programador y el paquete compartido. Reprodujo localmente las 9 copias (`.verification/uuid-pattern-reproduction-20261021.txt`) y con `r14` aprueba.
+- **R13, fast 39586441835 sobre `c5aebfe`:** falló la guarda de Node de la CLI de integraciones. `packages/shared/src/booking-integration.ts` importaba `./uuid` sin extensión, y Node ejecuta ese módulo de forma nativa (`ERR_MODULE_NOT_FOUND`). Error mío de `r14`. Corrección: `./uuid.ts`, con `allowImportingTsExtensions` en `packages/shared/tsconfig.json` y un comentario. Como la corrida se detuvo antes de las pruebas de servidor, las reproducciones de `r13` (historial atómico en TypeScript) y `r15` (reseñas de la ayuda) no se vieron: se restauraron desde `c5aebfe` las versiones anteriores de `patient-profile.ts` y `resena-google/+page.server.ts` para reproducirlas.
+- **S9, sql 39585106765 sobre `a0f2473`:** `security_definer_resolution.sql`, control 9. La sobrecarga nueva del historial fijaba `search_path` sin `pg_temp`, contra la regla de endurecimiento de `20261016012000`. Error mío, corregido a `public, extensions, pg_catalog, pg_temp`. **sql 39585611597 sobre `9185275`: aprobada**, con el historial atómico `20261021050000` y los tipos oficiales incorporados.
+- **Reseñas de la ayuda, base reconstruida.** `assistance_business_settings.sql` amplió su control a la configuración de reseñas, guardada como la página (upsert). sql 39586457236 sobre `c5aebfe` y 39617370869 sobre `83cd212`: la ayuda lee y guarda el consultorio, pero no las reseñas (`reads saves cannot save reviews`). Un `NOTICE` de diagnóstico no aparecía en el registro porque psql lo manda a stderr; se cambió por `extensions.diag`. Hasta conocer la causa, `r15` no se aplicó.
+- **R13b, fast 39618281546 sobre `b2ccf14`:** exactamente las 3 fallas esperadas: `patient-profile.test.ts` (historial atómico) y dos de `google-review-settings.server.test.ts` (la ayuda lee y guarda con sus propias reglas). `svelte-check` sin errores, 91 guardas, 11 del programador y 1.379 de servidor aprobadas: verifica `r14` con la corrección del import. Después se aplicó `r13` en TypeScript.
+- **Permisos de producción alineados con las migraciones (preparado, sin aplicar).** Lectura del catálogo de producción en `.verification/api-privileges-production-20261021.json`: los permisos automáticos antiguos dan a `anon` y `authenticated` `TRUNCATE`, `REFERENCES`, `TRIGGER` y `MAINTAIN` sobre todas las tablas, y escrituras que ninguna migración declara sobre 13 tablas. RLS ya negaba lo que permiten y la app no los usa. `20261021060000_align_api_privileges.sql` los revoca, y `api_exposure_explicit.sql` suma el control 4, aprobado desde sql 39586457236. Las tablas que existen sólo en producción (`landing_*`, `business_limits`, `business_rate_limits`, `platform_rate_limits`, `rate_limit_counters` y `audit_event_counters`) no dan ningún permiso a esos roles y no se tocan.
+- **S13, sql 39618149541 sobre `f542c94`: la causa.** `support review settings refused: permission denied for function is_google_review_url`. Las políticas aprueban a la ayuda; lo que falla es la restricción del enlace.
+- **Defecto nuevo, más amplio que la ayuda: nadie podía guardar la configuración de reseñas de Google.**
+  - La restricción `CHECK` del enlace (`20260824023000`) llama a `private.is_google_review_url`, y esa migración le quitó `EXECUTE` a `public`, `anon` y `authenticated`. Una restricción se evalúa con los privilegios de quien escribe la fila, y PostgreSQL comprueba el permiso al preparar la expresión, aunque el enlace sea nulo.
+  - Fallaban el dueño, que guarda con su propio cliente, la ayuda y el backend: `service_role` tampoco tiene `EXECUTE`, así que la versión anterior de la ayuda, con la clave de servicio, tampoco guardaba.
+  - **Producción, en una transacción de sólo lectura verificada** (`.verification/expression-privileges-production-20261021.json`): la función tiene ACL `{postgres=X/postgres}` y `google_review_settings` tiene 0 filas, así que nadie la guardó nunca. Es el único caso entre todas las tablas públicas, con tres combinaciones: la configuración para `authenticated` y `service_role`, y las solicitudes para `service_role`.
+  - **Guarda nueva `supabase/tests/write_expression_privileges.sql`.** Todo rol que puede usar una tabla pública debe poder ejecutar las funciones que llaman sus restricciones, sus valores por defecto, sus políticas (salvo para un rol que omite RLS) y sus vistas. Su bloque, ejecutado en sólo lectura sobre producción, falló con los tres casos (`.verification/write-expression-privileges-reproduction-20261021.txt`).
+  - **`assistance_business_settings.sql`, ahora con 5 controles:**
+    - el dueño guarda la configuración y las reseñas con un enlace de Google;
+    - un enlace fuera de Google sigue rechazado para el dueño;
+    - la ayuda activa guarda;
+    - quien no tiene membresía ni ayuda, o tiene una ayuda vencida, no lee ni guarda.
+  - **Reproducción en CI, sql 39624024055 sobre `8baa77a`:** fallan exactamente los controles 1 a 3, con `owner review settings refused: permission denied for function is_google_review_url`; el 4 y el 5 aprueban.
+  - **Corrección (`r17`), aplicada:** `20261021070000_review_link_check_privileges.sql` concede `EXECUTE` a `authenticated` y `service_role`. Es una validación inmutable que no lee datos y queda en `private`, fuera de la Data API. No se quita la restricción ni se duplica la expresión regular en las dos tablas.
+  - **`r15`, aplicada:** con la causa conocida, la ayuda lee y guarda las reseñas con el cliente del usuario, bajo las políticas, como el negocio y la reserva en línea. `clave-de-servicio.md` ya lo describía así; con `r15` y la migración pasa a ser cierto.
+- **Corrección de afirmaciones del registro y de evidencias: el modo de sólo lectura en producción.**
+  - Las consultas a producción del 21 de octubre usaron el pooler de transacciones (puerto 6543), que no reenvía `PGOPTIONS`. Por eso `default_transaction_read_only` no quedó activo, aunque las evidencias digan `mode: default_transaction_read_only=on`.
+  - Se revisaron los 10 archivos SQL usados: sólo contienen `select`, y ninguna consulta escribió.
+  - Desde ahora cada consulta a producción va dentro de `begin transaction read only` y muestra `transaction_read_only=on` en su salida.
+- **Corrección de una afirmación del diagnóstico de dos consultorios.** «Son pausas de la instancia gratuita» es más de lo demostrado.
+  - **Demostrado:** los pedidos lentos llegan en ráfagas que afectan a la vez a rutas no relacionadas, con 6 a 27 ms de CPU del Worker. `pg_stat_statements`, que mide la ejecución dentro de PostgreSQL, registra máximos de 3,4 a 5,7 s en sentencias de 20 ms de media. Eso descarta la red, PostgREST y las conexiones para esas sentencias.
+  - **No demostrado:** que no sean esperas por bloqueos ni la causa precisa del lado de la instancia, porque no se registraron eventos de espera ni métricas del servidor. Es compatible con el cómputo Nano, pero no está atribuido.
+- **Análisis externo aportado por el usuario (21 de octubre, ~15:20 UTC), no una decisión.** Recomienda:
+  - no contratar todavía y caracterizar la producción de São Paulo en Free con datos ficticios, identificando en qué componente nace la espera;
+  - mantener las garantías de integridad;
+  - registrar p95 y p99 como incumplidos si siguen así;
+  - si se lanza, hacerlo como excepción de rendimiento aceptada expresamente, con monitoreo y criterios para reconsiderar;
+  - priorizar el correo de recuperación y la restauración comprobada de respaldos, porque Free no incluye respaldos diarios administrados.
+
+  **Se adopta su secuencia de medición.** La recomendación pasa a «medir producción primero», con:
+  - muestreo de eventos de espera;
+  - fotografías de `pg_stat_statements`;
+  - métricas del servidor, si Free las expone;
+  - tiempos separados de punta a punta, del Worker y de PostgreSQL.
+
+  El Worker de producción ya se ubica en `aws:sa-east-1` junto a su base. Medir desde los ejecutores de GitHub en EE. UU. suma ese tramo a cada pedido y da un resultado pesimista. La decisión de publicar sigue siendo del usuario.
+- **Tanda de interfaz del punto 5 (21 de octubre), aplicada y reproducida con guardas livianas locales:**
+  - **Pesos** (`font-weights.test.mjs`): `font-black` y `font-extrabold` pasan a `font-bold` en 24 archivos, y los pesos CSS 650, 750, 800 y 900 a 700. Inter y Hanken se cargan de 400 a 700, así que esos pesos se veían como 700. Se ajustaron DESIGN.md y su archivo complementario.
+  - **Rótulos sobre los títulos** (`heading-kickers.test.mjs`, 31 reproducidos): se quitaron 26. Los estados pasan debajo del título o se integran a él, y `DismissibleNotice` pierde `eyebrow`.
+  - **Íconos** (`glyph-icons.test.mjs`, 15 reproducidos): `Icon.svelte`, de trazo único, reemplaza emojis y los glifos ✓ ⚠ ○.
+  - **Escala** (`type-scale.test.mjs`, 46 reproducidos): roles `micro`, `caption`, `supporting`, `body` y `cta` en `tailwind.config.js`, documentados en DESIGN.md.
+  - **Recortes** (`text-truncation.test.mjs`, 31 reproducidos):
+    - las excepciones revisadas llevan `data-truncation="allowed"`: cabecera, navegación y vistas previas que se expanden;
+    - el resto del texto ajusta con `break-words`;
+    - la navegación semanal dice «Anterior» y «Siguiente» en móvil, el texto completo desde `sm`, con `aria-label`.
+  - **`ThemeToggle.svelte`, eliminado:** no tenía usos.
+  - **Evidencias:** `.verification/{font-weights,heading-kickers,glyph-icons,type-scale,text-truncation}-reproduction-20261021.txt`.
+  - **Verificación en CI:** la primera es la fast 39624049558 sobre `8baa77a`.
+  - **`r16`, preparada de nuevo sobre el árbol actual:** la copia anterior de `PatientHistoryPanel.svelte` revertía la escala y los recortes; ahora sólo cambia el formateador del costo.
