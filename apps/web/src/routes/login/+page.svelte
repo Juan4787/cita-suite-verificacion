@@ -106,7 +106,7 @@
 						name="password"
 						type={showPassword ? 'text' : 'password'}
 						class="ux-input pr-16"
-						placeholder={mode === 'register' ? 'Nueva contraseña' : 'Tu contraseña'}
+						placeholder={mode === 'register' ? 'Creala' : 'Tu contraseña'}
 						required
 						bind:value={password}
 						oninput={clearLocalMessage}
