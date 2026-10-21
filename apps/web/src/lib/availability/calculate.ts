@@ -170,6 +170,12 @@ const zonedDateParts = (date: Date, timeZone: string) => {
 	};
 };
 
+/** The calendar date (YYYY-MM-DD) on which `date` falls in `timeZone`. */
+export const zonedDate = (date: Date, timeZone: string) => zonedDateParts(date, timeZone).date;
+
+/** Today in `timeZone`: a practice's day, never the server's. */
+export const todayInTimeZone = (timeZone: string) => zonedDate(new Date(), timeZone);
+
 const weekdayForDate = (date: string, timeZone: string) => {
 	const noon = zonedDateTimeToUtc(date, '12:00', timeZone);
 	const value = formatterFor(weekdayFormatters, timeZone, () => new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short' }))

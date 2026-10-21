@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import { logServerFailure } from '$lib/server/platform/logging';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { env } from '$env/dynamic/private';
@@ -7,7 +8,6 @@ import { createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { json, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_SNAPSHOT_RESULTS = 400;
 
 const empty = () => json({ appointments: [] });
@@ -21,7 +21,7 @@ export const GET: RequestHandler = async ({ locals, fetch, cookies, setHeaders }
 	let businessId = cookieBusinessId;
 	let supabase: CitaSupabaseClient;
 
-	if (UUID_PATTERN.test(cookieBusinessId)) {
+	if (isUuid(cookieBusinessId)) {
 		supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);
 	} else {
 		const context = await getOdontoContext({

@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { Buffer } from 'node:buffer';
 import type { CitaSupabaseClient } from '$lib/types/database';
@@ -136,11 +137,7 @@ export class PatientExportError extends Error {
 	}
 }
 
-const UUID_PATTERN =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export const isUuid = (value: unknown): value is string =>
-	typeof value === 'string' && UUID_PATTERN.test(value);
+export { isUuid };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === 'object' && value !== null && !Array.isArray(value);

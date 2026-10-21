@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { readRecord } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
@@ -17,7 +18,6 @@ import type { RequestHandler } from './$types';
 const PAGE_SIZE = 30;
 
 type Cursor = { createdAt: string; id: string };
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const timestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/;
 
 const decodeCursor = (value: string | null): Cursor | null => {
@@ -30,7 +30,7 @@ const decodeCursor = (value: string | null): Cursor | null => {
 			!timestampPattern.test(parsed.createdAt) ||
 			Number.isNaN(Date.parse(parsed.createdAt)) ||
 			typeof parsed.id !== 'string' ||
-			!uuidPattern.test(parsed.id)
+			!isUuid(parsed.id)
 		) {
 			return null;
 		}

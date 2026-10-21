@@ -22,6 +22,9 @@ import { countTomorrowUncovered } from '$lib/server/scheduling/public/reminders'
 import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import { processAppointmentGoogleCalendarSync } from '$lib/server/integrations/public/google-calendar';
 import { createdAppointmentDetailUrl } from '$lib/scheduling/agenda-navigation';
+import { todayInTimeZone } from '$lib/availability/calculate';
+import { isAvailabilityDate } from '$lib/availability/windows';
+import { isUuid } from '$lib/contracts/uuid';
 import {
 	ACTIVE_APPOINTMENT_STATUSES,
 	isActiveAppointmentStatus
@@ -33,21 +36,6 @@ import type { AvailabilitySnapshot } from '$lib/availability/snapshot';
 import { error, fail, redirect, isRedirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
-const today = () => new Date().toISOString().slice(0, 10);
-
-const todayForTimezone = (timeZone: string) => {
-	const parts = Object.fromEntries(
-		new Intl.DateTimeFormat('en-CA', {
-			timeZone,
-			year: 'numeric',
-			month: '2-digit',
-			day: '2-digit'
-		})
-			.formatToParts(new Date())
-			.map((part) => [part.type, part.value])
-	);
-	return `${parts.year}-${parts.month}-${parts.day}`;
-};
 
 const APPOINTMENT_COLUMNS =
 	'id, patient_id, service_id, professional_id, starts_at, ends_at, status, source, service_name_snapshot, professional_name_snapshot, internal_note, cancelled_reason, patients(full_name, phone_e164, dni, email)';
@@ -55,7 +43,6 @@ const APPOINTMENT_COLUMNS =
 // Tope de próximos turnos al buscar con "Cualquier día".
 const ANY_DAY_LIMIT = 100;
 
-const isIsoDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 	if (!locals.auth) throw redirect(303, '/login');
@@ -63,7 +50,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 	if (env.DEMO_MODE === 'true') {
 		return {
 			context: demoBusinessContext(),
-			date: today(),
+			date: todayInTimeZone(demoBusinessContext().business.timezone),
 			anyDay: false,
 			anyDayLimited: false,
 			selectedProfessionalId: '',
@@ -95,8 +82,9 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 	if (business.role === 'professional') throw redirect(303, '/odonto/mis-turnos');
 	const dateParam = String(url.searchParams.get('date') ?? '').trim();
 	const anyDay = dateParam === 'any';
-	// Las fechas malformadas caen en "hoy" (antes rompían zonedDateTimeToUtc).
-	const date = !anyDay && isIsoDate(dateParam) ? dateParam : todayForTimezone(business.business.timezone);
+	// A date that does not exist falls back to the practice's today: JavaScript would
+	// silently move "2026-02-31" to March, listing another day under its label.
+	const date = !anyDay && isAvailabilityDate(dateParam) ? dateParam : todayInTimeZone(business.business.timezone);
 	const professionalId = url.searchParams.get('professional_id') ?? '';
 	const requestedStatus = url.searchParams.get('status') ?? '';
 	const status = anyDay && !isActiveAppointmentStatus(requestedStatus) ? '' : requestedStatus;
@@ -334,11 +322,7 @@ export const actions: Actions = {
 				values
 			});
 		}
-		if (
-			!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-				idempotencyKey
-			)
-		) {
+		if (!isUuid(idempotencyKey)) {
 			return fail(400, {
 				message:
 					'La sesión para crear el turno venció. Cerrá el asistente, abrilo nuevamente y volvé a confirmar.',
@@ -510,7 +494,8 @@ export const actions: Actions = {
 		const form = await request.formData();
 		const appointmentId = String(form.get('appointment_id') ?? '').trim();
 		const status = String(form.get('status') ?? '').trim();
-		const date = String(form.get('date') ?? today()).trim();
+		const requestedDate = String(form.get('date') ?? '').trim();
+		const date = isAvailabilityDate(requestedDate) ? requestedDate : todayInTimeZone(business.business.timezone);
 		const professionalId = String(form.get('professional_id') ?? '').trim();
 		const selectedStatus = String(form.get('selected_status') ?? '').trim();
 		const serviceId = String(form.get('service_id') ?? '').trim();

@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import {
 	isRecord,
 	readRecord,
@@ -46,7 +47,7 @@ export async function registerPatient(
 	const patientId = readText(row.patientId, 'patients.registration.id');
 	const duplicate = readBoolean(row.duplicate, 'patients.registration.duplicate');
 	if (
-		!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(patientId) ||
+		!isUuid(patientId) ||
 		(!duplicate && patientId !== id) ||
 		(duplicate && !input.dni)
 	)

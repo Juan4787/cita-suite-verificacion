@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { demoBusinessContext } from '$lib/server/access/public/business';
@@ -10,7 +11,6 @@ import { InvalidDataContractError, readChoice, readFiniteNumber, readRecord, rea
 import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const pad = (value: number) => String(value).padStart(2, '0');
 
@@ -53,7 +53,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 	const requestedDate = url.searchParams.get('date') ?? '';
 	const selectedDate = isAvailabilityDate(requestedDate) ? requestedDate : todayForBusiness(business.business);
 	const selectedProfessionalId = url.searchParams.get('professional_id') ?? '';
-	if (selectedProfessionalId && !UUID_PATTERN.test(selectedProfessionalId))
+	if (selectedProfessionalId && !isUuid(selectedProfessionalId))
 		error(400, 'El profesional elegido no es válido. Volvé a la agenda de la semana.');
 	const weekStart = weekStartFor(selectedDate);
 	const dates = Array.from({ length: 7 }, (_, index) => toDateString(addDays(weekStart, index)));

@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import { logServerFailure } from '$lib/server/platform/logging';
 import {
 	CLINICAL_FILES_BUCKET,
@@ -14,7 +15,6 @@ import type { RequestHandler } from './$types';
 
 const PAGE_SIZE = 30;
 type Cursor = { deletedAt: string; id: string };
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const timestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/;
 
 const decodeCursor = (value: string | null): Cursor | null => {
@@ -27,7 +27,7 @@ const decodeCursor = (value: string | null): Cursor | null => {
 			!timestampPattern.test(parsed.deletedAt) ||
 			Number.isNaN(Date.parse(parsed.deletedAt)) ||
 			typeof parsed.id !== 'string' ||
-			!uuidPattern.test(parsed.id)
+			!isUuid(parsed.id)
 		) return null;
 		return { deletedAt: parsed.deletedAt, id: parsed.id };
 	} catch {

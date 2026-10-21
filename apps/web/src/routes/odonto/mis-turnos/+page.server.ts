@@ -1,3 +1,4 @@
+import { todayInTimeZone } from '$lib/availability/calculate';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { demoBusinessContext } from '$lib/server/access/public/business';
@@ -6,17 +7,6 @@ import { zonedDateTimeToUtc } from '$lib/server/scheduling/public/availability';
 import { ACTIVE_APPOINTMENT_STATUSES } from '$lib/utils/appointment-visibility';
 import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-
-const todayForTimezone = (timeZone: string) => {
-	const formatter = new Intl.DateTimeFormat('en-CA', {
-		timeZone,
-		year: 'numeric',
-		month: '2-digit',
-		day: '2-digit'
-	});
-	const parts = Object.fromEntries(formatter.formatToParts(new Date()).map((part) => [part.type, part.value]));
-	return `${parts.year}-${parts.month}-${parts.day}`;
-};
 
 export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 	if (!locals.auth) throw redirect(303, '/login');
@@ -55,7 +45,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			? [selectedProfessionalId]
 			: professionalIds;
 
-	const today = todayForTimezone(business.business.timezone);
+	const today = todayInTimeZone(business.business.timezone);
 	const dayStart = zonedDateTimeToUtc(today, '00:00', business.business.timezone);
 	const dayEnd = zonedDateTimeToUtc(today, '23:59', business.business.timezone);
 

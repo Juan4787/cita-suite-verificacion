@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import { parsePriceAdjustments } from '$lib/scheduling/price-contracts';
 import { env } from "$env/dynamic/private";
 import { getOdontoContext } from "$lib/server/access/public/odonto-context";
@@ -9,6 +10,7 @@ import type { RequestEvent } from "@sveltejs/kit";
 async function contextForPrice(event: RequestEvent) {
   const context = await getOdontoContext(event);
   const id = String(event.params.professionalId ?? "");
+  if (!isUuid(id)) error(404, "No encontramos ese profesional.");
   if (!context.business.canManage) {
     const { data, error: cause } = await context.supabase
       .from("professional_users")

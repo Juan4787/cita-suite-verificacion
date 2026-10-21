@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import { logServerFailure } from '$lib/server/platform/logging';
 import {
 	BUSINESS_INDUSTRIES,
@@ -82,6 +83,13 @@ export const actions: Actions = {
 		}
 		if (!slug) {
 			return fail(400, { message: 'El nombre del enlace público es obligatorio.', values: Object.fromEntries(form) });
+		}
+		// The booking link reads an identifier-shaped value as the practice id.
+		if (isUuid(slug)) {
+			return fail(400, {
+				message: 'El nombre del enlace público no puede tener forma de código. Usá palabras, como el nombre del consultorio.',
+				values: Object.fromEntries(form)
+			});
 		}
 		if (!isBusinessIndustry(industry)) {
 			return fail(400, { message: 'La industria seleccionada no es válida.', values: Object.fromEntries(form) });

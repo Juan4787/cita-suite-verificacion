@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import type { BusinessContext } from '$lib/access/contracts';
 import { readPatientHistoryEntry } from '$lib/patients/history-contract';
@@ -16,11 +17,10 @@ export function parsePatientHistoryCursor(
 ): PatientHistoryCursor | null {
 	if (!createdAt && !id) return null;
 	const timestamp = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2}))?$/;
-	const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 	if (
 		!timestamp.test(createdAt) ||
 		!Number.isFinite(Date.parse(createdAt)) ||
-		(id && !(demo ? /^[\w-]{1,100}$/.test(id) : uuid.test(id)))
+		(id && !(demo ? /^[\w-]{1,100}$/.test(id) : isUuid(id)))
 	) {
 		throw new PatientOperationError(
 			'invalid',

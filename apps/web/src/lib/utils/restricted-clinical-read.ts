@@ -1,3 +1,5 @@
+import { isUuid } from '$lib/contracts/uuid';
+
 type RestrictedClinicalReadContext = {
 	role?: string | null;
 	commercialStatus?: string | null;
@@ -5,8 +7,7 @@ type RestrictedClinicalReadContext = {
 	canEnterApp?: boolean | null;
 };
 
-const PATIENT_DETAIL_PATH =
-	/^\/odonto\/pacientes\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const PATIENT_DETAIL_PREFIX = '/odonto/pacientes/';
 
 /**
  * The restricted commercial window is read-only, not archived. Owners and
@@ -25,6 +26,6 @@ export function allowsRestrictedClinicalRead(
 		pathname === '/odonto/exportar-datos' ||
 		pathname === '/odonto/pacientes' ||
 		pathname === '/odonto/pacientes/papelera' ||
-		PATIENT_DETAIL_PATH.test(pathname)
+		(pathname.startsWith(PATIENT_DETAIL_PREFIX) && isUuid(pathname.slice(PATIENT_DETAIL_PREFIX.length)))
 	);
 }

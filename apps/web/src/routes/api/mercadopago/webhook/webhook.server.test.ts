@@ -139,6 +139,38 @@ describe('POST /api/mercadopago/webhook', () => {
 		expect(inserts).toHaveLength(0);
 	});
 
+	it('rechaza sin firma válida antes de leer el cuerpo, que un anónimo puede inflar', async () => {
+		const { request, url } = buildSignedRequest({ dataId: '111', topic: 'payment', valid: false });
+
+		const response = await callPost(request, url, vi.fn() as unknown as typeof fetch);
+
+		expect(response.status).toBe(401);
+		expect(request.bodyUsed).toBe(false);
+	});
+
+	it('procesa una notificación firmada con un cuerpo enorme sin guardarlo: el cuerpo es sólo informativo', async () => {
+		const { admin, inserts } = createAdminMock();
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin);
+		const mpFetch = vi.fn(
+			async (_input: RequestInfo | URL) =>
+				new Response(
+					JSON.stringify({ id: 111, status: 'approved', external_reference: BUSINESS_ID, transaction_amount: 50000 }),
+					{ status: 200 }
+				)
+		);
+		const { request, url } = buildSignedRequest({
+			dataId: '111',
+			topic: 'payment',
+			body: { action: 'payment.updated', live_mode: true, padding: 'x'.repeat(70_000) }
+		});
+
+		const response = await callPost(request, url, mpFetch as unknown as typeof fetch);
+
+		expect(response.status).toBe(200);
+		expect(inserts).toHaveLength(1);
+		expect(inserts[0].payload).toMatchObject({ processing_status: 'processed', raw: null, action: null });
+	});
+
 	it('acredita un pago aprobado con firma válida y registra el evento como processed', async () => {
 		const { admin, inserts, rpcCalls } = createAdminMock();
 		mocks.createSupabaseAdminClient.mockResolvedValue(admin);

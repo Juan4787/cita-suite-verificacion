@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import {listBusinessRoleAccess} from '$lib/server/access/public/team-access';
 import { boolFromForm, scheduleBlocksFromForm, professionalSchedulePayload } from '$lib/team/professional-form';
 import type { BusinessContext } from '$lib/access/contracts';
@@ -395,6 +396,7 @@ export async function loadProfessionalEditor(
 	professionalId: string,
 	tab: string
 ): Promise<SaveResult<ProfessionalEditorData>> {
+	if (!isUuid(professionalId)) return { ok: false, status: 404, message: 'Profesional no encontrado' };
 	const businessId = business.business.id;
 	const { data: revisionRow, error: revisionError } = await supabase
 		.from('businesses')

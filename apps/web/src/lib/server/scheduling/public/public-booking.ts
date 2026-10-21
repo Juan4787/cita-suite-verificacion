@@ -13,6 +13,8 @@ import {
 	addMinutes,
 	calculateAvailabilitySlots,
 	getAvailabilitySlots,
+	todayInTimeZone,
+	zonedDate,
 	type AvailabilitySlot
 } from '$lib/server/scheduling/public/availability';
 import {
@@ -34,6 +36,7 @@ import type { IntegratedAvailabilityRows } from '$lib/availability/rows';
 import { AVAILABILITY_WINDOW_DAYS, isAvailabilityDate } from '$lib/availability/windows';
 import { InvalidDataContractError } from '$lib/contracts/json';
 import { isRecord } from '$lib/contracts/json';
+import { isUuid } from '$lib/contracts/uuid';
 
 export type PublicService = {
 	id: string;
@@ -116,16 +119,7 @@ export const PUBLIC_ACTIVE_FUTURE_APPOINTMENT_LIMIT = 4;
 
 const pad = (value: number) => String(value).padStart(2, '0');
 
-export const localDateParts = (date: Date, timeZone: string) => {
-	const formatter = new Intl.DateTimeFormat('en-CA', {
-		timeZone,
-		year: 'numeric',
-		month: '2-digit',
-		day: '2-digit'
-	});
-	const parts = Object.fromEntries(formatter.formatToParts(date).map((part) => [part.type, part.value]));
-	return `${parts.year}-${parts.month}-${parts.day}`;
-};
+export const localDateParts = (date: Date, timeZone: string) => zonedDate(date, timeZone);
 
 export const addDaysToDateString = (date: string, days: number) => {
 	const value = new Date(`${date}T00:00:00.000Z`);
@@ -133,8 +127,7 @@ export const addDaysToDateString = (date: string, days: number) => {
 	return `${value.getUTCFullYear()}-${pad(value.getUTCMonth() + 1)}-${pad(value.getUTCDate())}`;
 };
 
-export const todayForBusiness = (business: Pick<Business, 'timezone'>) =>
-	localDateParts(new Date(), business.timezone);
+export const todayForBusiness = (business: Pick<Business, 'timezone'>) => todayInTimeZone(business.timezone);
 
 export const publicHash = (value?: string | null) => {
 	const normalized = String(value ?? '').trim();
@@ -191,7 +184,7 @@ export const getPublicBusinessBySlug = async (
 	supabase: CitaSupabaseClient,
 	slug: string
 ): Promise<PublicBookingBusiness | null> => {
-	const isBusinessId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(slug);
+	const isBusinessId = isUuid(slug);
 	const { data, error } = await supabase
 		.from('businesses')
 		.select(PUBLIC_BUSINESS_SELECT)
@@ -445,11 +438,7 @@ export const loadPublicBookingState = async (
 	}
 ): Promise<PublicBookingState> => {
 	const normalizedSlug = input.slug.trim().toLowerCase();
-	const businessIdFromSlug = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-		normalizedSlug
-	)
-		? normalizedSlug
-		: null;
+	const businessIdFromSlug = isUuid(normalizedSlug) ? normalizedSlug : null;
 	const loadBusiness = () =>
 		cachedScan(businessScanCache, `business-lookup:${normalizedSlug}`, STRUCTURE_SCAN_CACHE_TTL_MS, () =>
 			getPublicBusinessBySlug(supabase, input.slug)

@@ -110,7 +110,12 @@ describe('team editor operations with real typed SDK and simulated HTTP', () => 
 	);
 
 	it('answers not found for an identifier that is not one, without querying', async () => {
-		const { client, calls } = sdk(() => Response.json({ booking_availability_revision: 42 }));
+		// As PostgREST answers a malformed uuid: before the check this surfaced as a 503.
+		const { client, calls } = sdk((path) =>
+			path.endsWith('/professionals')
+				? Response.json({ code: '22P02', message: 'invalid input syntax for type uuid' }, { status: 400 })
+				: Response.json({ booking_availability_revision: 42 })
+		);
 		const context = demoBusinessContext();
 		context.business.id = businessId;
 		expect(await loadProfessionalEditor(client, context, 'actor-one', 'no-es-un-id', 'perfil')).toEqual({

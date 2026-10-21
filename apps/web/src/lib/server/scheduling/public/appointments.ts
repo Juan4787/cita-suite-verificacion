@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import type { CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
 import { isRecord } from '$lib/contracts/json';
 import type { IntegratedBookingInput } from '$lib/server/sites/public/booking-integrations';
@@ -266,8 +267,6 @@ export type AtomicAppointmentInput = {
 	bookingInformation?: BookingPatientInformationInput;
 };
 
-const APPOINTMENT_IDEMPOTENCY_KEY_PATTERN =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type AtomicAppointmentResult = {
 	id: string;
@@ -292,7 +291,7 @@ const runAtomicAppointmentRpc = async (
 	if (new Set(professionalIds).size !== professionalIds.length) {
 		throw new Error('JOINT_APPOINTMENT_DUPLICATE_PROFESSIONAL');
 	}
-	if (!APPOINTMENT_IDEMPOTENCY_KEY_PATTERN.test(input.idempotencyKey)) {
+	if (!isUuid(input.idempotencyKey)) {
 		throw new Error('APPOINTMENT_IDEMPOTENCY_KEY_INVALID');
 	}
 

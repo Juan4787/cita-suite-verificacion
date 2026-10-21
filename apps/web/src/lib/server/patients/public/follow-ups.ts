@@ -2,6 +2,7 @@ import type { CitaSupabaseClient, CitaRow } from '$lib/types/database';
 import { readArray, readChoice, readRecord, readText } from '$lib/contracts/json';
 import type { BusinessRole } from '$lib/server/access/public/business';
 import { ilikeContains } from '$lib/server/platform/postgrest-filters';
+import { zonedDate } from '$lib/availability/calculate';
 
 // Seguimientos: recordar volver a contactar a un paciente. Sin recurrencia.
 // Visibilidad por rol de sistema; asignación a un perfil profesional atendible.
@@ -84,21 +85,8 @@ export const getFollowUpErrorStatus = (code: string): number => {
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** Día local del negocio como YYYY-MM-DD. Única fuente de "hoy"; nunca tz del server. */
-export const businessTodayISO = (timezone: string, now: Date = new Date()): string => {
-	const fmt = (tz?: string) =>
-		new Intl.DateTimeFormat('en-CA', {
-			...(tz ? { timeZone: tz } : {}),
-			year: 'numeric',
-			month: '2-digit',
-			day: '2-digit'
-		}).format(now);
-	try {
-		return fmt(timezone);
-	} catch {
-		return fmt();
-	}
-};
+/** Día local del negocio como YYYY-MM-DD; nunca la zona del servidor. */
+export const businessTodayISO = (timezone: string, now: Date = new Date()): string => zonedDate(now, timezone);
 
 export const isValidISODate = (value: string): boolean => {
 	if (!ISO_DATE_RE.test(value)) return false;

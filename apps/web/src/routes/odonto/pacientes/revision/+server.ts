@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import type { BusinessRole } from '$lib/server/access/public/business';
@@ -40,7 +41,7 @@ export const GET: RequestHandler = async ({ locals, fetch, setHeaders, url }) =>
 	}
 
 	const requestedBusinessId = String(url.searchParams.get('business_id') ?? '').trim();
-	if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedBusinessId)) {
+	if (!isUuid(requestedBusinessId)) {
 		return json({ message: 'No se pudo verificar el consultorio activo.' }, { status: 400 });
 	}
 

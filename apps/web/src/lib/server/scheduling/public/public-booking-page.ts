@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { readBoundedBookingForm } from '$lib/server/platform/form-data';
 import { isRecord } from '$lib/contracts/json';
@@ -285,9 +286,7 @@ export const submitPublicBookingPage = async ({ request, params, fetch, url, get
 			});
 		}
 		if (
-			!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-				idempotencyKey
-			)
+			!isUuid(idempotencyKey)
 		) {
 			return fail(400, {
 				message:

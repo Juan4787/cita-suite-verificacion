@@ -1,9 +1,9 @@
+import { isUuid } from '$lib/contracts/uuid';
 import { isRecord } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
 import crypto from 'node:crypto';
 
 const VERSION = 1;
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const timestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/;
 
 export type PatientListCursor = {
@@ -74,7 +74,7 @@ export const decodePatientListCursor = (
 			!timestampPattern.test(parsed.activityAt) ||
 			Number.isNaN(Date.parse(parsed.snapshotAt)) ||
 			Number.isNaN(Date.parse(parsed.activityAt)) ||
-			!uuidPattern.test(parsed.id)
+			!isUuid(parsed.id)
 		) {
 			return null;
 		}

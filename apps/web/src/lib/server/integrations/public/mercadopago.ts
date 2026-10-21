@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import type { CitaSupabaseClient } from '$lib/types/database';
@@ -19,10 +20,6 @@ export const SIGNATURE_TS_TOLERANCE_SECONDS = 600;
 
 type FetchLike = typeof fetch;
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export const isUuid = (value: unknown): value is string =>
-	typeof value === 'string' && UUID_RE.test(value.trim());
 
 // ---------------------------------------------------------------------------
 // Firma x-signature

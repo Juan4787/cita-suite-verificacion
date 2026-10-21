@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import {
 	PATIENT_EXPORT_DATASETS,
 	PATIENT_EXPORT_SCHEMA_VERSION,
@@ -164,8 +165,6 @@ export type PreparedPatientExport = {
 	scope: PatientExportScope;
 };
 
-const UUID_PATTERN =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CURSOR_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -298,7 +297,7 @@ const parseSession = (
 		!isRecord(value) ||
 		typeof value.reused !== 'boolean' ||
 		typeof value.export_id !== 'string' ||
-		!UUID_PATTERN.test(value.export_id) ||
+		!isUuid(value.export_id) ||
 		value.scope !== scope ||
 		value.patient_id !== patientId ||
 		value.schema_version !== PATIENT_EXPORT_SCHEMA_VERSION ||
@@ -421,7 +420,7 @@ const runAttempt = async (
 	const fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
 	const patientId = options.scope === 'patient' ? (options.patientId ?? null) : null;
 	if (
-		(options.scope === 'patient' && (typeof patientId !== 'string' || !UUID_PATTERN.test(patientId))) ||
+		(options.scope === 'patient' && !isUuid(patientId)) ||
 		(options.scope === 'all_patients' && options.patientId != null)
 	) {
 		throw new PatientExportOrchestrationError('EXPORT_INVALID_REQUEST');

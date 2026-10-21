@@ -1,11 +1,10 @@
+import { isUuid } from '$lib/contracts/uuid';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { error as kitError, redirect } from '@sveltejs/kit';
 import { canExportPatientData } from '$lib/server/patients/public/patient-permissions';
 import { createSupabaseServerClient } from '$lib/server/platform/supabase';
 import type { PageServerLoad } from './$types';
 
-const UUID_PATTERN =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const load: PageServerLoad = async ({ parent, url, locals, fetch }) => {
 	if (!locals.auth) throw redirect(303, '/login');
@@ -28,7 +27,7 @@ export const load: PageServerLoad = async ({ parent, url, locals, fetch }) => {
 		};
 	}
 
-	if (!UUID_PATTERN.test(patientId)) {
+	if (!isUuid(patientId)) {
 		throw kitError(400, 'No pudimos identificar al paciente. Volvé a su ficha e intentá nuevamente.');
 	}
 

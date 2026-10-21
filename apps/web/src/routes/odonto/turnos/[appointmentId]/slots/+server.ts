@@ -1,18 +1,10 @@
+import { todayInTimeZone } from '$lib/availability/calculate';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { getAvailabilitySlots } from '$lib/server/scheduling/public/availability';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import { json, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-
-const todayForTimezone = (timeZone: string) => {
-	const parts = Object.fromEntries(
-		new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' })
-			.formatToParts(new Date())
-			.map((part) => [part.type, part.value])
-	);
-	return `${parts.year}-${parts.month}-${parts.day}`;
-};
 
 // Horarios reales disponibles del profesional del turno para una fecha, excluyendo
 // el propio turno del cálculo (si no, el turno se bloquearía a sí mismo).
@@ -43,7 +35,7 @@ export const GET: RequestHandler = async ({ params, url, locals, fetch, cookies 
 			{ status: 400 }
 		);
 	}
-	if (date < todayForTimezone(business.business.timezone)) {
+	if (date < todayInTimeZone(business.business.timezone)) {
 		return json({ slots: [] });
 	}
 

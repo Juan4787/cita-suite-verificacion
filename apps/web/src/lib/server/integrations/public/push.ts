@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import { logServerFailure } from '$lib/server/platform/logging';
 import {
 	readArray,
@@ -150,10 +151,7 @@ const isKnownPushServiceHost = (hostname: string) =>
 	hostname.endsWith('.notify.windows.com') ||
 	hostname.endsWith('.wns.windows.com');
 
-export const isValidPushDeliveryId = (value: string) =>
-	/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-		value
-	);
+export const isValidPushDeliveryId = (value: string) => isUuid(value);
 
 export const isValidPushTestRequestKey = (value: string) =>
 	/^[A-Za-z0-9:_-]{16,180}$/.test(value);

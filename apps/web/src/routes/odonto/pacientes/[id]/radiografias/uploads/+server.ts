@@ -1,3 +1,4 @@
+import { isUuid } from '$lib/contracts/uuid';
 import { logServerFailure } from '$lib/server/platform/logging';
 import {
 	clinicalFileCacheHeaders,
@@ -16,7 +17,6 @@ import { enforceRateLimits, radiographUploadRateLimitRules } from '$lib/server/p
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const checksumPattern = /^[0-9a-f]{64}$/i;
 
 export const POST: RequestHandler = async (event) => {
@@ -41,7 +41,7 @@ export const POST: RequestHandler = async (event) => {
 		const takenAt = normalizeClinicalDate(body.takenAt);
 		const note = normalizeClinicalNote(body.note);
 
-		if (!uuidPattern.test(clientRequestId) || !originalFilename || !checksumPattern.test(sha256)) {
+		if (!isUuid(clientRequestId) || !originalFilename || !checksumPattern.test(sha256)) {
 			return json(
 				{ code: 'INVALID_METADATA', message: 'Revisá los datos del archivo.' },
 				{ status: 400 }

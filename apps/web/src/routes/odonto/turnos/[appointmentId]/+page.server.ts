@@ -1,3 +1,4 @@
+import { todayInTimeZone } from '$lib/availability/calculate';
 import { logServerFailure } from '$lib/server/platform/logging';
 import {readBoundedBookingForm} from '$lib/server/platform/form-data';
 import { env } from '$env/dynamic/private';
@@ -39,17 +40,6 @@ const localDateFor = (isoDate: string, timeZone: string) => {
 		day: '2-digit'
 	});
 	const parts = Object.fromEntries(formatter.formatToParts(new Date(isoDate)).map((part) => [part.type, part.value]));
-	return `${parts.year}-${parts.month}-${parts.day}`;
-};
-
-const todayForTimezone = (timeZone: string) => {
-	const formatter = new Intl.DateTimeFormat('en-CA', {
-		timeZone,
-		year: 'numeric',
-		month: '2-digit',
-		day: '2-digit'
-	});
-	const parts = Object.fromEntries(formatter.formatToParts(new Date()).map((part) => [part.type, part.value]));
 	return `${parts.year}-${parts.month}-${parts.day}`;
 };
 
@@ -117,7 +107,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
 		? await loadAppointmentIntakeForPatient(supabase, business.business.id, data.id, data.patient_id) : null;
 
 	const appointmentLocalDate = localDateFor(data.starts_at, business.business.timezone);
-	const minReprogramDate = todayForTimezone(business.business.timezone);
+	const minReprogramDate = todayInTimeZone(business.business.timezone);
 	// Dates from the address are used only when they are real dates.
 	const requestedReprogramDate = url.searchParams.get('reprogram_date') ?? '';
 	const reprogramDate = isAvailabilityDate(requestedReprogramDate)
@@ -317,7 +307,7 @@ export const actions: Actions = {
 					'Elegí una fecha y uno de los horarios que muestra la agenda antes de confirmar la reprogramación.'
 			});
 		}
-		if (reprogramDate < todayForTimezone(business.business.timezone)) {
+		if (reprogramDate < todayInTimeZone(business.business.timezone)) {
 			return fail(400, {
 				message:
 					'No se puede mover un turno a una fecha pasada. Elegí hoy o una fecha futura y seleccioná un horario disponible.'
