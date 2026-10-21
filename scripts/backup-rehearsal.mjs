@@ -79,21 +79,23 @@ try {
 	const localApi = local.API_URL;
 	const localKey = local.SERVICE_ROLE_KEY ?? local.SECRET_KEY;
 	if (!localApi || !localKey) throw new Error('The new project did not report its API and service key.');
-	// A new project already defines the platform's roles (Realtime's supabase_realtime_admin,
-	// for one), and their settings are the platform's: a role statement that names only roles
-	// the new project already has is skipped. Statements that create the project's own roles
-	// stay. The schema gets the fix the guide lists for supabase_admin ownership.
+	// A new project defines the platform's roles itself, and their settings are the platform's.
+	// A role statement is skipped when it names only platform roles: those the new project
+	// already has, and the reserved supabase_* and pg_* roles (the dump creates Realtime's
+	// supabase_realtime_admin, which the CLI does not reserve). Statements about the project's
+	// own roles stay. The schema gets the fix the guide lists for supabase_admin ownership.
 	const existingRoles = new Set(JSON.parse(restoredSql("select json_agg(rolname)::text from pg_roles;")));
 	const skippedRoles = new Set();
 	const rolesLines = readFileSync(files.roles, 'utf8').split('\n').map((line) => {
-		// The roles a statement names: ALTER ROLE "x" …, or GRANT "a" TO "b" [GRANTED BY "c"].
+		// The roles a statement names: CREATE or ALTER ROLE "x" …, or GRANT "a" TO "b".
 		const identifier = '"((?:[^"]|"")+)"';
-		const altered = new RegExp(`^ALTER ROLE ${identifier}`).exec(line);
+		const altered = new RegExp(`^(?:CREATE|ALTER) ROLE ${identifier}`).exec(line);
 		const granted = new RegExp(`^GRANT ${identifier} TO ${identifier}(?: WITH [A-Z ]+? OPTION)?(?: GRANTED BY ${identifier})?`).exec(line);
 		const match = altered ?? granted;
 		if (!match) return line;
 		const named = match.slice(1).filter(Boolean).map((role) => role.replaceAll('""', '"'));
-		if (!named.length || !named.every((role) => existingRoles.has(role))) return line;
+		const platform = (role) => existingRoles.has(role) || /^(supabase_|pg_)/.test(role);
+		if (!named.length || !named.every(platform)) return line;
 		named.forEach((role) => skippedRoles.add(role));
 		return '-- ' + line;
 	});
@@ -102,8 +104,9 @@ try {
 	const ownershipFixes = schemaLines.filter((line) => /^ALTER .* OWNER TO "supabase_admin";$/.test(line)).length;
 	writeFileSync(files.schema, schemaLines.map((line) => (/^ALTER .* OWNER TO "supabase_admin";$/.test(line) ? '-- ' + line : line)).join('\n'));
 	receipt.restoreFixes = {
-		platformRoleStatements: rolesLines.filter((line) => line.startsWith('-- ALTER ROLE ') || line.startsWith('-- GRANT ')).length,
+		platformRoleStatements: rolesLines.filter((line) => /^-- (CREATE ROLE|ALTER ROLE|GRANT) /.test(line)).length,
 		platformRoles: [...skippedRoles].sort(),
+		ownRoleStatements: rolesLines.filter((line) => /^(CREATE ROLE|ALTER ROLE|GRANT) /.test(line)).length,
 		supabaseAdminOwnership: ownershipFixes
 	};
 	for (const [name, path] of Object.entries(files)) docker(['cp', path, `${database}:/tmp/${name}.sql`]);
