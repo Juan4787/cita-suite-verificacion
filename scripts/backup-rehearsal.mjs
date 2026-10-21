@@ -105,6 +105,16 @@ try {
 	dump(['-f', files.schema]);
 	dump(['-f', files.data, '--use-copy', '--data-only', '-x', 'storage.buckets_vectors', '-x', 'storage.vector_indexes']);
 	writeFileSync(files.managed, stagingJson(managedDefinitionsSql).statements.join('\n') + '\n');
+	// The CLI's migration history stays out of the dump with the platform schemas: the backup
+	// records it in a file of its own, which the restore applies as the CLI keeps it.
+	const history = stagingJson(`select coalesce(json_agg(json_build_array(version, name) order by version), '[]'::json)::text
+		from supabase_migrations.schema_migrations;`);
+	files.history = join(work, 'history.sql');
+	const literalValue = (text) => (text === null ? 'null' : `'${String(text).replaceAll("'", "''")}'`);
+	writeFileSync(files.history, ['create schema if not exists supabase_migrations;',
+		'create table if not exists supabase_migrations.schema_migrations (version text not null primary key, statements text[], name text);',
+		...history.map(([version, name]) => `insert into supabase_migrations.schema_migrations (version, name) values (${literalValue(version)}, ${literalValue(name)});`)
+	].join('\n') + '\n');
 	receipt.dumpMs = Math.round(performance.now() - dumpStarted);
 	receipt.files = Object.fromEntries(Object.entries(files).map(([name, path]) => [name, { bytes: statSync(path).size, sha256: sha256(path) }]));
 	const dumped = copyRowCounts(readFileSync(files.data, 'utf8'));
@@ -113,7 +123,7 @@ try {
 	if (!receipt.tables) throw new Error('The data dump holds no table.');
 	const managedSource = stagingJson(managedObjectsSql);
 	const source = stagingJson(`select json_build_object(
-		'migrations', (select coalesce(json_agg(version order by version), '[]'::json) from supabase_migrations.schema_migrations),
+		'migrations', (select coalesce(json_agg(json_build_array(version, name) order by version), '[]'::json) from supabase_migrations.schema_migrations),
 		'objects', (select coalesce(json_agg(json_build_object('bucket', bucket_id, 'name', name, 'size', (metadata->>'size')::bigint) order by bucket_id, name), '[]'::json) from storage.objects)
 	)::text;`);
 
@@ -176,7 +186,7 @@ try {
 	const restoreStarted = performance.now();
 	const restore = spawnSync('docker', ['exec', '-e', 'PGPASSWORD=postgres', database, 'psql', '-X', '-U', 'postgres', '-d', 'postgres', '--single-transaction', '-v', 'ON_ERROR_STOP=1', '-q',
 		'-f', '/tmp/roles.sql', '-f', '/tmp/schema.sql', '-c', 'SET session_replication_role = replica', '-f', '/tmp/data.sql',
-		'-c', 'SET session_replication_role = origin', '-f', '/tmp/managed.sql'],
+		'-c', 'SET session_replication_role = origin', '-f', '/tmp/managed.sql', '-f', '/tmp/history.sql'],
 		{ encoding: 'utf8', maxBuffer: 256 * 1024 ** 2, timeout: 900_000 });
 	// The error first, then each distinct warning once: grants on extension functions the
 	// platform owns print one warning each.
@@ -193,12 +203,10 @@ try {
 	receipt.rowMismatches = countMismatches(dumped, restored);
 	// The CLI history may stay out of the dump with the platform schemas. The backup keeps the
 	// list read from the source, so a restore can record it again; when present it must match.
-	const historyRestored = restoredSql("select to_regclass('supabase_migrations.schema_migrations') is not null;") === 't';
-	const restoredMigrations = historyRestored ? JSON.parse(restoredSql(
-		"select coalesce(json_agg(version order by version), '[]'::json)::text from supabase_migrations.schema_migrations;")) : null;
-	receipt.migrations = { source: source.migrations.length, inDump: restoredMigrations !== null,
-		same: restoredMigrations === null || JSON.stringify(restoredMigrations) === JSON.stringify(source.migrations) };
-	receipt.migrationHistory = source.migrations;
+	const restoredMigrations = JSON.parse(restoredSql(
+		"select coalesce(json_agg(json_build_array(version, name) order by version), '[]'::json)::text from supabase_migrations.schema_migrations;"));
+	receipt.migrations = { source: source.migrations.length, restored: restoredMigrations.length,
+		same: JSON.stringify(restoredMigrations) === JSON.stringify(source.migrations) };
 	const managedRestored = JSON.parse(restoredSql(managedObjectsSql));
 	receipt.managedSchemaObjects = {
 		source: { policies: managedSource.policies.length, triggers: managedSource.triggers.length },
