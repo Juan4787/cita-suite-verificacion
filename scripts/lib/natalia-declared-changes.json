@@ -1,0 +1,15 @@
+[
+	{
+		"reason": "Auditoría transversal, r14: el catálogo de prestaciones valida el identificador con la forma canónica de isUuid (@cita-suite/shared/uuid), de cualquier versión, como la aplicación. Antes sólo aceptaba las versiones 1 a 5 y omitía en silencio una prestación con otro identificador.",
+		"baseline": {
+			"name": "PublicLayout.astro_astro_type_script_index_0_lang.C5aznpb4.js",
+			"bytes": 6239,
+			"sha256": "35622b51ebad014dde1e8690282df744e35e2c5df65120ed2eb0f3ba099e2ac1"
+		},
+		"candidate": {
+			"name": "PublicLayout.astro_astro_type_script_index_0_lang.DTPxCkXc.js",
+			"bytes": 6228,
+			"sha256": "1b51d7b3031dd3f190b5968fb295475d67c3ea97ae452a25fd968f007fdedff6"
+		}
+	}
+]

@@ -28,7 +28,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const baseline = 'c0129e492051a38d5b8025158fb996a81da0e871';
 // Deliberate changes to Natalia's JS since the baseline, each with its reason and exact
 // artifacts; anything else still fails the comparison.
-const declaredChanges = JSON.parse(readFileSync(join(root, 'scripts/natalia-declared-changes.json'), 'utf8'));
+const declaredChanges = JSON.parse(readFileSync(join(root, 'scripts/lib/natalia-declared-changes.json'), 'utf8'));
 const runId = process.env.CITA_VERIFICATION_RUN_ID;
 assert.match(runId ?? '', /^[a-f0-9-]{36}$/);
 const output = join(root, '.verification/runs', runId, 'natalia-performance');
