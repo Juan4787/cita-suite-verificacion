@@ -1,4 +1,3 @@
-import { logServerFailure } from '$lib/server/platform/logging';
 import { readRecord } from '$lib/contracts/json';
 import { MASTER_EMAIL } from '$lib/server/platform/supabase';
 import type { BusinessRole } from '$lib/server/access/public/business';
@@ -69,20 +68,6 @@ const errorMessage = (error: unknown) =>
 	typeof error === 'object' && error !== null && 'message' in error
 		? String((error as { message?: unknown }).message ?? '')
 		: String(error ?? '');
-
-const isMissingSchemaError = (error: unknown) => {
-	const message = errorMessage(error).toLowerCase();
-	const code =
-		typeof error === 'object' && error !== null && 'code' in error
-			? String((error as { code?: unknown }).code ?? '')
-			: '';
-	return (
-		code === '42P01' ||
-		code === 'PGRST205' ||
-		message.includes('account_assistance') ||
-		message.includes('could not find the table')
-	);
-};
 
 export const formatAccountAssistanceLocalTime = (value: string, timeZone: string) =>
 	new Intl.DateTimeFormat('es-AR', {
@@ -174,23 +159,16 @@ export const loadLatestAccountAssistanceGrant = async (
 	supabase: CitaSupabaseClient,
 	businessId: string
 ): Promise<AccountAssistanceRow | null> => {
-	try {
-		const { data, error } = await supabase
-			.from('account_assistance_grants')
-			.select(ASSISTANCE_SELECT)
-			.eq('business_id', businessId)
-			.order('created_at', { ascending: false })
-			.limit(1)
-			.maybeSingle();
-		if (error) {
-			if (!isMissingSchemaError(error)) logServerFailure('Error cargando ayuda para configurar', error);
-			return null;
-		}
-		return normalizeRow(data);
-	} catch (error) {
-		if (!isMissingSchemaError(error)) logServerFailure('Error cargando ayuda para configurar', error);
-		return null;
-	}
+	// An unread grant is not an absent one: the caller says it could not check.
+	const { data, error } = await supabase
+		.from('account_assistance_grants')
+		.select(ASSISTANCE_SELECT)
+		.eq('business_id', businessId)
+		.order('created_at', { ascending: false })
+		.limit(1)
+		.maybeSingle();
+	if (error) throw error;
+	return normalizeRow(data);
 };
 
 export const loadAccountAssistanceView = async ({
@@ -235,10 +213,7 @@ export const loadActiveMasterAccountAssistanceRequests = async ({
 		.is('revoked_at', null)
 		.gt('expires_at', now.toISOString())
 		.order('expires_at', { ascending: true });
-	if (error) {
-		if (!isMissingSchemaError(error)) logServerFailure('Error cargando solicitudes de ayuda activas', error);
-		return [];
-	}
+	if (error) throw error;
 
 	return (data ?? [])
 		.map((row) => {

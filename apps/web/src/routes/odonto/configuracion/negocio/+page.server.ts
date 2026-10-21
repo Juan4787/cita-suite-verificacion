@@ -5,7 +5,7 @@ import {
 	normalizeSlug,
 	resolveActiveBusiness
 } from '$lib/server/access/public/business';
-import { createSupabaseAdminClient, createSupabaseServerClient } from '$lib/server/platform/supabase';
+import { createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { isValidMapsUrl } from '$lib/sites/location';
 import { isAllowedPublicImageUrl } from '$lib/server/sites/public/public-image';
 import { env } from '$env/dynamic/private';
@@ -127,7 +127,8 @@ export const actions: Actions = {
 			});
 		}
 
-		let updateClient = supabase;
+		// The assistance saves under its own rules, as an administrator of the practice;
+		// checking the grant first only gives it a clear message when it expired.
 		if (context.assistance) {
 			const { data: assistanceIsActive, error: assistanceError } = await supabase.rpc(
 				'user_has_active_account_assistance',
@@ -142,10 +143,9 @@ export const actions: Actions = {
 					values: Object.fromEntries(form)
 				});
 			}
-			updateClient = await createSupabaseAdminClient('odonto', fetch);
 		}
 
-		const { data: updatedBusiness, error } = await updateClient
+		const { data: updatedBusiness, error } = await supabase
 			.from('businesses')
 			.update({
 				name,

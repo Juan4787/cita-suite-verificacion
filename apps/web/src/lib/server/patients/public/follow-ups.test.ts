@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
 	addDaysISO,
 	buildNotice,
@@ -6,6 +6,7 @@ import {
 	getFollowUpErrorMessage,
 	isExecuting,
 	isValidISODate,
+	listAssignablePatientsSearch,
 	mergeAssignableProfessionals,
 	roleParticipatesInFollowUps,
 	roleSeesAllFollowUps,
@@ -125,5 +126,17 @@ describe('mensajes de error', () => {
 		expect(message).toContain('seguimiento');
 		expect(message).toContain('Recargá');
 		expect(message).not.toMatch(/FOLLOWUP_|SQL|HTTP|RPC/);
+	});
+});
+
+describe('listAssignablePatientsSearch', () => {
+	it('keeps a comma in the text instead of splitting the filter', async () => {
+		const builder: Record<string, unknown> = {};
+		for (const method of ['select', 'eq', 'is', 'or', 'order']) builder[method] = vi.fn(() => builder);
+		builder.limit = vi.fn(async () => ({ data: [], error: null }));
+
+		await listAssignablePatientsSearch({ from: vi.fn(() => builder) } as never, 'business-1', 'Pérez, Juan');
+
+		expect(builder.or).toHaveBeenCalledWith(expect.stringContaining('full_name.ilike."%Pérez, Juan%"'));
 	});
 });

@@ -845,12 +845,9 @@ export const actions: Actions = {
 		}
 
 		// Se asienta cualquier cobro aprobado sin registrar antes de cancelar:
-		// una vez cancelada la fila sale del filtro de conciliación.
-		try {
-			await settleApprovedChargesForPreapproval(admin, fetch, businessId, preapprovalId);
-		} catch (error) {
-			logServerFailure('No se pudo asentar el cobro final antes de cancelar (maestro)', error);
-		}
+		// una vez cancelada la fila sale del filtro de conciliación. Si el barrido
+		// falla, la cancelación sigue y queda un evento que requiere atención.
+		await settleApprovedChargesForPreapproval(admin, fetch, businessId, preapprovalId);
 
 		let cancelled;
 		try {

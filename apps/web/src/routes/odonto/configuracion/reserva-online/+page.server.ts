@@ -1,7 +1,6 @@
 import { fail, error, redirect } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
 import { getOdontoContext } from "$lib/server/access/public/odonto-context";
-import { createSupabaseAdminClient } from "$lib/server/platform/supabase";
 import { bookingInformationEnabled } from "$lib/server/patients/public/booking-information";
 import { readBoundedBookingForm } from "$lib/server/platform/form-data";
 import { parseBookingSettings } from "$lib/server/sites/public/booking-settings";
@@ -76,9 +75,10 @@ async function saveSettings(
     const expected = String(form.get("revision") ?? "");
     if (!expected)
       return fail(409, { message: "Recargá la página antes de guardar." });
-    let client = context.supabase;
+    // The assistance saves under its own rules, as an administrator of the practice;
+    // checking the grant first only gives it a clear message when it expired.
     if (context.business.assistance) {
-      const grant = await client.rpc("user_has_active_account_assistance", {
+      const grant = await context.supabase.rpc("user_has_active_account_assistance", {
         target_business_id: context.business.business.id,
       });
       if (grant.error || grant.data !== true)
@@ -86,9 +86,8 @@ async function saveSettings(
           message:
             "La autorización de ayuda venció. Volvé a abrir el consultorio.",
         });
-      client = await createSupabaseAdminClient("odonto", event.fetch);
     }
-    const result = await client
+    const result = await context.supabase
       .from("businesses")
       .update({ ...patch, updated_at: new Date().toISOString() })
       .eq("id", context.business.business.id)

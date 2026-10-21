@@ -497,7 +497,10 @@ export const upsertMpSubscription = async (
 			.eq('status', 'authorized')
 			.limit(2)
 			.retry(false);
-		if (!dupError && (dupRows ?? []).length > 1) {
+		if (dupError) {
+			// The check repeats on every sync; a failure must not switch it off silently.
+			logServerFailure('No se pudo comprobar si hay otra suscripción autorizada', dupError);
+		} else if ((dupRows ?? []).length > 1) {
 			await logMpWebhookEventOnce(admin, {
 				topic: 'duplicate_subscription',
 				action: 'duplicate_authorized',
@@ -907,27 +910,47 @@ export const confirmMpSubscriptionForBusiness = async (
 // Antes de cancelar un preapproval hay que asentar cualquier cobro ya aprobado
 // que webhook/retorno no hayan registrado: una vez cancelada, la fila sale del
 // filtro de conciliación y ese último mes pagado se perdería. Idempotente.
+// La cancelación no espera a este barrido, porque frenarla podría cobrar otro mes:
+// si no se pudieron revisar los cobros, queda un evento que requiere atención.
 export const settleApprovedChargesForPreapproval = async (
 	admin: CitaSupabaseClient,
 	fetchFn: FetchLike,
 	businessId: string,
 	preapprovalId: string
-): Promise<{ credited: number }> => {
+): Promise<{ credited: number; checked: boolean }> => {
 	let credited = 0;
-	const { ok, data: page } = await searchAuthorizedPayments(preapprovalId, fetchFn);
-	if (!ok) return { credited };
-	for (const charge of page?.results ?? []) {
-		const paymentId = charge.payment?.id != null ? String(charge.payment.id) : null;
-		if (!paymentId || charge.payment?.status !== 'approved') continue;
-		const outcome = await creditApprovedPayment(admin, {
-			businessId,
-			paymentId,
-			amount: charge.transaction_amount ?? null,
-			origin: 'cancelación'
+	try {
+		const { ok, status, data: page } = await searchAuthorizedPayments(preapprovalId, fetchFn);
+		if (!ok) throw new Error(`Mercado Pago respondió HTTP ${status} al buscar los cobros.`);
+		for (const charge of page?.results ?? []) {
+			const paymentId = charge.payment?.id != null ? String(charge.payment.id) : null;
+			if (!paymentId || charge.payment?.status !== 'approved') continue;
+			const outcome = await creditApprovedPayment(admin, {
+				businessId,
+				paymentId,
+				amount: charge.transaction_amount ?? null,
+				origin: 'cancelación'
+			});
+			if (outcome.kind === 'credited') credited += 1;
+		}
+		return { credited, checked: true };
+	} catch (error) {
+		logServerFailure('No se pudo asentar el cobro final antes de cancelar', error);
+		await logMpWebhookEvent(admin, {
+			topic: 'cancellation',
+			action: 'final_charges_unchecked',
+			resource_id: preapprovalId,
+			request_id: null,
+			live_mode: null,
+			signature_valid: true,
+			processing_status: 'error',
+			processing_detail:
+				'Se canceló la suscripción sin poder revisar sus cobros en Mercado Pago. Revisar si hay un cobro aprobado sin acreditar: después de cancelar, la conciliación ya no la revisa.',
+			business_id: businessId,
+			requires_attention: true
 		});
-		if (outcome.kind === 'credited') credited += 1;
+		return { credited, checked: false };
 	}
-	return { credited };
 };
 
 // ---------------------------------------------------------------------------

@@ -19,8 +19,11 @@ import {
 import { error as kitError, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
+// As in hooks: the identity Auth verified, or the demo token's claim in demo mode.
 const isMasterSession = (locals: App.Locals) =>
-	isMasterEmail(getEmailFromAccessToken(locals.auth?.access_token));
+	isMasterEmail(
+		env.DEMO_MODE === 'true' ? getEmailFromAccessToken(locals.auth?.access_token) : locals.verifiedUser?.email
+	);
 
 const loadContext = async ({
 	locals,
@@ -64,14 +67,20 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 	if (context.role === 'professional') throw redirect(303, '/odonto/mis-turnos');
 	if (context.role !== 'owner' && context.role !== 'admin') throw redirect(303, '/odonto/agenda');
 
-	const assistance = await loadAccountAssistanceView({
-		supabase,
-		businessId: context.business.id,
-		role: context.role,
-		timeZone: context.business.timezone,
-		canUseBusiness: context.access.canUseBusiness,
-		isAssisting: Boolean(context.assistance)
-	});
+	let assistance;
+	try {
+		assistance = await loadAccountAssistanceView({
+			supabase,
+			businessId: context.business.id,
+			role: context.role,
+			timeZone: context.business.timezone,
+			canUseBusiness: context.access.canUseBusiness,
+			isAssisting: Boolean(context.assistance)
+		});
+	} catch (assistanceError) {
+		logServerFailure('Error cargando ayuda para configurar', assistanceError);
+		throw kitError(503, 'No pudimos cargar la ayuda para configurar. Volvé a intentar.');
+	}
 
 	return {
 		context,

@@ -55,7 +55,7 @@ describe('patient search endpoint used by the agenda wizard', () => {
 
 		expect(response.status).toBe(200);
 		expect(mocks.or).toHaveBeenCalledWith(
-			expect.stringContaining('search_name_normalized.ilike.%maria%')
+			expect.stringContaining('search_name_normalized.ilike."%maria%"')
 		);
 	});
 
@@ -63,10 +63,19 @@ describe('patient search endpoint used by the agenda wizard', () => {
 		await GET(makeEvent('342 896'));
 
 		expect(mocks.or).toHaveBeenCalledWith(
-			expect.stringContaining('search_phone_digits.ilike.%342896%')
+			expect.stringContaining('search_phone_digits.ilike."%342896%"')
 		);
 		expect(mocks.or).toHaveBeenCalledWith(
-			expect.stringContaining('search_dni_digits.ilike.%342896%')
+			expect.stringContaining('search_dni_digits.ilike."%342896%"')
+		);
+	});
+
+	it('keeps a comma or a parenthesis in the text instead of splitting the filter', async () => {
+		const response = await GET(makeEvent('Pérez, Juan (hijo)'));
+
+		expect(response.status).toBe(200);
+		expect(mocks.or).toHaveBeenCalledWith(
+			expect.stringContaining('full_name.ilike."%Pérez, Juan (hijo)%"')
 		);
 	});
 });
