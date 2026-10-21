@@ -530,7 +530,7 @@
 	>
 		<div class={`shrink-0 text-center ${showDate ? 'w-16 sm:w-24' : 'w-14 sm:w-20'}`}>
 			{#if showDate}
-				<p class="text-[11px] font-bold uppercase tracking-wide text-[#c4b5fd]">{shortDayLabel(appointment.starts_at)}</p>
+				<p class="text-micro font-bold uppercase tracking-wide text-[#c4b5fd]">{shortDayLabel(appointment.starts_at)}</p>
 			{/if}
 			<p class="text-xl font-bold text-white sm:text-2xl">{timeOnly(appointment.starts_at)}</p>
 			<p class="mt-0.5 text-xs text-white/40">{timeOnly(appointment.ends_at)}</p>

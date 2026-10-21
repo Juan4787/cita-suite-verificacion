@@ -204,7 +204,7 @@
 			<input type="hidden" name="accepted_terms" value={acceptedTerms ? 'true' : 'false'} />
 			<button
 				type="submit"
-				class="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/15 bg-white px-4 py-3 text-sm font-black text-neutral-950 shadow-lg transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+				class="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/15 bg-white px-4 py-3 text-sm font-bold text-neutral-950 shadow-lg transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
 				disabled={googleSubmitting || (mode === 'register' && !acceptedTerms)}
 				aria-busy={googleSubmitting}
 			>

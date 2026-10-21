@@ -340,8 +340,7 @@
 	<header class="master-hero">
 		<div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
 			<div class="max-w-2xl">
-				<p class="ux-badge">Panel maestro</p>
-				<h1 class="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">Consultorios y accesos</h1>
+				<h1 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">Consultorios y accesos</h1>
 				<p class="mt-3 max-w-xl text-base leading-relaxed text-white/60">
 					Buscá una cuenta, revisá su vencimiento y cambiá el acceso. Las herramientas técnicas quedan apartadas.
 				</p>
@@ -405,7 +404,7 @@
 				</svg>
 			</div>
 			<div class="min-w-0 flex-1">
-				<h2 id="assistance-title" class="font-black text-white">
+				<h2 id="assistance-title" class="font-bold text-white">
 					{assistance.length === 1 ? '1 cuenta pidió ayuda' : `${assistance.length} cuentas pidieron ayuda`}
 				</h2>
 				<p class="mt-1 text-sm text-white/55">Sólo aparecen mientras el permiso de una hora sigue vigente.</p>
@@ -413,8 +412,8 @@
 					{#each assistance as item}
 						<div class="ux-soft-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
 							<div class="min-w-0">
-								<p class="truncate font-black text-white">{item.businessName}</p>
-								<p class="mt-1 truncate text-sm text-white/55">{item.requestedByEmail ?? 'Dueño del consultorio'}</p>
+								<p class="break-words font-bold text-white">{item.businessName}</p>
+								<p class="mt-1 break-words text-sm text-white/55">{item.requestedByEmail ?? 'Dueño del consultorio'}</p>
 								<p class="mt-2 text-sm font-bold text-emerald-200">
 									{formatAccessRemaining(item.expiresAt) ?? `Hasta ${dateTime(item.expiresAt)}`}
 								</p>
@@ -455,8 +454,7 @@
 		<section class="ux-card master-reveal" aria-labelledby="create-business-title">
 			<div class="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
 				<div>
-					<p class="ux-badge">Alta guiada</p>
-					<h2 id="create-business-title" class="mt-4 text-2xl font-black text-white">Nuevo consultorio</h2>
+					<h2 id="create-business-title" class="text-2xl font-bold text-white">Nuevo consultorio</h2>
 					<p class="mt-3 text-sm leading-relaxed text-white/55">
 						Creá el consultorio y definí su primer período de acceso en un solo paso. Si el dueño todavía no tiene cuenta, quedará invitado.
 					</p>
@@ -495,15 +493,14 @@
 	{#if showTools}
 		<section class="ux-card master-reveal" aria-labelledby="tools-title">
 			<div>
-				<p class="ux-badge">Uso ocasional</p>
-				<h2 id="tools-title" class="mt-4 text-2xl font-black text-white">Herramientas administrativas</h2>
+				<h2 id="tools-title" class="text-2xl font-bold text-white">Herramientas administrativas</h2>
 				<p class="mt-2 text-sm text-white/55">Se mantienen fuera del flujo diario para que no compitan con la gestión de accesos.</p>
 				<a class="ux-btn-secondary mt-4" href="/odonto/maestro/almacenamiento">Administrar espacio para documentos</a>
 			</div>
 
 			<div class="mt-6 grid gap-4 lg:grid-cols-2">
 				<div class="ux-soft-card p-5">
-					<h3 class="font-black text-white">Mercado Pago</h3>
+					<h3 class="font-bold text-white">Mercado Pago</h3>
 					<p class="mt-2 text-sm leading-relaxed text-white/55">
 						La conciliación automática corre aproximadamente cada 6 horas. Forzala sólo si un pago no aparece.
 					</p>
@@ -515,7 +512,7 @@
 				</div>
 
 				<div class="ux-soft-card p-5">
-					<h3 class="font-black text-white">Referencias de email (legacy)</h3>
+					<h3 class="font-bold text-white">Referencias de email (legacy)</h3>
 					<p class="mt-2 text-sm leading-relaxed text-white/55">
 						Esta lista sirve para rastrear altas manuales antiguas. <strong class="text-white/80">No define la duración del acceso</strong> de un consultorio.
 					</p>
@@ -535,7 +532,7 @@
 					{#each emails as item}
 						<div class="master-email-row">
 							<div class="min-w-0">
-								<p class="truncate text-sm font-bold text-white">{item.email}</p>
+								<p class="break-words text-sm font-bold text-white">{item.email}</p>
 								<div class="mt-2 flex flex-wrap gap-2">
 									<span class={item.enabled ? 'ux-badge ux-badge-success' : 'ux-badge'}>{item.enabled ? 'Referencia activa' : 'Referencia inactiva'}</span>
 									<span class="ux-badge">{linkedEmails.has(item.email.toLowerCase()) ? 'Con consultorio' : 'Sin consultorio'}</span>
@@ -570,7 +567,7 @@
 	<section class="ux-card master-directory" aria-labelledby="businesses-title">
 		<div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
 			<div>
-				<h2 id="businesses-title" class="text-xl font-black text-white">Consultorios</h2>
+				<h2 id="businesses-title" class="text-xl font-bold text-white">Consultorios</h2>
 				<p class="mt-1 text-sm text-white/50">El acceso se administra por consultorio, no por dirección de email.</p>
 			</div>
 			<span class="text-sm font-bold text-white/45">{filteredBusinesses.length} resultados</span>
@@ -608,19 +605,19 @@
 						<div class="master-business-avatar" aria-hidden="true">{business.name.trim().charAt(0).toUpperCase() || 'C'}</div>
 						<div class="min-w-0">
 							<div class="flex flex-wrap items-center gap-2">
-								<h3 class="truncate text-lg font-black text-white">{business.name}</h3>
+								<h3 class="break-words text-lg font-bold text-white">{business.name}</h3>
 								<span class={statusClass(business)}>{statusLabel(business)}</span>
 								{#if business.mpSubscription}
 									<span class={mpStatusClass(business.mpSubscription.status)}>{mpStatusLabel(business.mpSubscription.status)}</span>
 								{/if}
 							</div>
-							<p class="mt-2 truncate text-sm text-white/55">{business.primaryOwnerEmail ?? 'Sin dueño vinculado'}</p>
+							<p class="mt-2 break-words text-sm text-white/55">{business.primaryOwnerEmail ?? 'Sin dueño vinculado'}</p>
 							<p class="mt-1 text-xs font-bold text-white/30">/{business.slug}</p>
 						</div>
 					</div>
 
 					<div class="master-access-summary">
-						<p class="font-black text-white">{accessSummary(business)}</p>
+						<p class="font-bold text-white">{accessSummary(business)}</p>
 						<p class="mt-1 text-sm text-white/50">{accessDetail(business)}</p>
 					</div>
 
@@ -643,8 +640,8 @@
 					<div class="master-management">
 						<section class="master-primary-action" aria-labelledby={`grant-title-${business.id}`}>
 							<div>
-								<p class="text-xs font-black uppercase tracking-[0.14em] text-violet-200/70">Acción principal</p>
-								<h4 id={`grant-title-${business.id}`} class="mt-2 text-xl font-black text-white">Dar más acceso</h4>
+								<p class="text-xs font-bold uppercase tracking-[0.14em] text-violet-200/70">Acción principal</p>
+								<h4 id={`grant-title-${business.id}`} class="mt-2 text-xl font-bold text-white">Dar más acceso</h4>
 								<p class="mt-2 max-w-xl text-sm leading-relaxed text-white/55">
 									Si el acceso sigue vigente, el tiempo se suma al vencimiento actual. Si ya venció, empieza ahora.
 								</p>
@@ -1002,7 +999,7 @@
 		padding: 0.55rem 0.75rem;
 		color: var(--text-muted);
 		font-size: 0.82rem;
-		font-weight: 800;
+		font-weight: 700;
 		transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
 	}
 
@@ -1070,7 +1067,7 @@
 		background: var(--accent-soft);
 		color: var(--accent-text);
 		font-size: 1.05rem;
-		font-weight: 900;
+		font-weight: 700;
 	}
 
 	.master-access-summary {
@@ -1128,7 +1125,7 @@
 		list-style: none;
 		color: var(--accent-text);
 		font-size: 0.82rem;
-		font-weight: 800;
+		font-weight: 700;
 	}
 
 	.master-optional > summary span {
@@ -1194,7 +1191,7 @@
 
 	.master-advanced-group h5 {
 		color: white;
-		font-weight: 900;
+		font-weight: 700;
 	}
 
 	.master-advanced-group > p {

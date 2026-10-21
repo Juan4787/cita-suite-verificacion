@@ -341,10 +341,10 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 		>
 			<div class="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-violet-400/10 blur-2xl" aria-hidden="true"></div>
 			<div class="relative">
-				<span class="inline-flex rounded-full border border-violet-300/25 bg-violet-300/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.12em] text-violet-100">
+				<span class="inline-flex rounded-full border border-violet-300/25 bg-violet-300/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-violet-100">
 					Turno creado
 				</span>
-				<h2 id="activation-title" class="mt-4 text-xl font-extrabold tracking-tight text-white sm:text-2xl">
+				<h2 id="activation-title" class="mt-4 text-xl font-bold tracking-tight text-white sm:text-2xl">
 					Último paso
 				</h2>
 				{#if activationWhatsAppHref}
@@ -352,7 +352,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 						href={activationWhatsAppHref}
 						target="_blank"
 						rel="noreferrer"
-						class="group mt-5 flex min-h-[4.5rem] w-full items-center justify-center gap-3 rounded-2xl bg-emerald-500 px-5 py-4 text-center text-lg font-extrabold leading-tight text-white shadow-xl shadow-emerald-950/30 ring-1 ring-emerald-300/35 transition hover:bg-emerald-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-emerald-300"
+						class="group mt-5 flex min-h-[4.5rem] w-full items-center justify-center gap-3 rounded-2xl bg-emerald-500 px-5 py-4 text-center text-lg font-bold leading-tight text-white shadow-xl shadow-emerald-950/30 ring-1 ring-emerald-300/35 transition hover:bg-emerald-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-emerald-300"
 					>
 						<svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-6 w-6 shrink-0 transition-transform group-hover:scale-105">
 							<path d="M20.4 11.7a8.4 8.4 0 0 1-12.5 7.3L4 20l1.1-3.7a8.4 8.4 0 1 1 15.3-4.6Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
@@ -365,7 +365,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 					</p>
 				{:else}
 					<div class="mt-5 rounded-2xl border border-amber-300/25 bg-amber-300/[0.08] p-5">
-						<p class="text-base font-extrabold text-amber-50">Falta completar el teléfono del paciente</p>
+						<p class="text-base font-bold text-amber-50">Falta completar el teléfono del paciente</p>
 						<p class="mt-2 text-sm leading-relaxed text-amber-50/75">
 							Cargá un número argentino completo con código de área para preparar el enlace de WhatsApp.
 						</p>

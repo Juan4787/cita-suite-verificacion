@@ -67,10 +67,22 @@ typography:
     fontFamily: "Inter, system-ui, -apple-system, sans-serif"
     fontSize: "0.78rem"
     fontWeight: 700
+  micro:
+    fontFamily: "Inter, system-ui, -apple-system, sans-serif"
+    fontSize: "0.6875rem"
+    fontWeight: 700
+  caption:
+    fontFamily: "Inter, system-ui, -apple-system, sans-serif"
+    fontSize: "0.8125rem"
+    fontWeight: 700
+  cta:
+    fontFamily: "Inter, system-ui, -apple-system, sans-serif"
+    fontSize: "1.075rem"
+    fontWeight: 700
   patient-service:
     fontFamily: "Inter, system-ui, -apple-system, sans-serif"
     fontSize: "1.4rem"
-    fontWeight: 650
+    fontWeight: 700
     lineHeight: 1.35
   patient-label:
     fontFamily: "Inter, system-ui, -apple-system, sans-serif"
@@ -211,6 +223,8 @@ Verde comunica éxito; ámbar, advertencia o cambios pendientes; rojo, error o a
 ## Typography
 
 **Body Font:** Inter, con los fallbacks declarados en el frontmatter. La misma familia sostiene toda la jerarquía; no hay una fuente ornamental independiente.
+
+**Escala y pesos.** Los tamaños salen de la escala de Tailwind y de los roles con nombre del frontmatter (`micro`, `caption`, `supporting`, `body`, `cta`, definidos en `tailwind.config.js`), nunca de valores literales; lo controla `scripts/lib/type-scale.test.mjs`. Los pesos son los que se cargan: 400, 500, 600 y 700. Un peso mayor se dibujaría como 700, así que no se pide (`scripts/lib/font-weights.test.mjs`).
 
 `headline` corresponde al título de página; `title`, a grupos de trabajo. `body` registra el tamaño base del documento. `supporting` acompaña títulos con contexto breve; `label` nombra campos; `button` y `badge` mantienen acciones y estados compactos. Los campos usan un tamaño de una unidad rem para conservar legibilidad y evitar el zoom automático en iOS.
 

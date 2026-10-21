@@ -226,7 +226,7 @@
 									onchange={() => !isDefault && onToggleService(service.id)}
 								/>
 								<span class="min-w-0 flex-1">
-									<span class="block font-black text-white">{service.name}</span>
+									<span class="block font-bold text-white">{service.name}</span>
 									<span class="mt-1 block text-sm text-white/55">
 										{formatDuration(service.duration_minutes)}{currentPriceLabels?.[service.id] ? ` ·\u00a0${currentPriceLabels[service.id]} este mes` : service.price_label ? ` ·\u00a0${service.price_label}` : ''}
 									</span>

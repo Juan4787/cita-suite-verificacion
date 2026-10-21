@@ -25,8 +25,7 @@
 
 <section class="ux-page">
 	<div class="ux-hero text-center">
-		<p class="ux-badge mx-auto">{isNotFound ? 'No disponible' : 'Error'}</p>
-		<h1 class="ux-title mt-4">{title}</h1>
+		<h1 class="ux-title">{title}</h1>
 		<p class="ux-subtitle mx-auto">{detail}</p>
 		<div class="mt-6 flex flex-wrap justify-center gap-3">
 			<button type="button" class="ux-btn-primary" onclick={() => window.location.reload()}>

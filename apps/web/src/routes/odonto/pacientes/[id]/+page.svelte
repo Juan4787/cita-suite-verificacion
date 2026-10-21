@@ -184,7 +184,7 @@
 		<div class="flex min-w-0 flex-wrap items-start justify-between gap-4">
 			<div class="flex min-w-0 flex-[1_1_24rem] items-start justify-between gap-3">
 				<div class="min-w-0 space-y-1">
-					<h1 class="break-words text-[28px] font-semibold text-neutral-900 dark:text-white sm:text-[30px]">
+					<h1 class="break-words text-3xl font-semibold text-neutral-900 dark:text-white">
 						{data.patient.full_name}
 					</h1>
 				</div>
@@ -317,7 +317,7 @@
 						}[chip.intent]
 					}`}
 				>
-					<span class="shrink-0 text-[11px] uppercase tracking-wide">{chip.label}:</span>
+					<span class="shrink-0 text-micro uppercase tracking-wide">{chip.label}:</span>
 					<span class="min-w-0 break-words">{chip.value}</span>
 				</div>
 			{/each}
@@ -377,14 +377,14 @@
 	{#if permissions.canExportPatientData && !data.demo}
 		<section class="mt-6 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-[#1f3554] dark:bg-[#0f1f36] sm:flex sm:items-center sm:justify-between sm:gap-5" aria-labelledby="patient-export-title">
 			<div class="min-w-0">
-				<h2 id="patient-export-title" class="text-lg font-black text-neutral-950 dark:text-white">Exportar datos de este paciente</h2>
+				<h2 id="patient-export-title" class="text-lg font-bold text-neutral-950 dark:text-white">Exportar datos de este paciente</h2>
 				<p class="mt-1 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
 					Prepará un Excel con su ficha, historial, turnos y seguimientos. No incluye radiografías ni adjuntos.
 				</p>
 			</div>
 			<a
 				href={`/odonto/exportar-datos?patient_id=${encodeURIComponent(String(data.patient.id))}`}
-				class="mt-4 inline-flex min-h-11 w-full shrink-0 items-center justify-center rounded-xl border border-violet-300 bg-violet-50 px-4 py-2.5 text-sm font-black text-violet-800 transition hover:bg-violet-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] dark:border-violet-400/35 dark:bg-violet-400/10 dark:text-violet-100 dark:hover:bg-violet-400/15 sm:mt-0 sm:w-auto"
+				class="mt-4 inline-flex min-h-11 w-full shrink-0 items-center justify-center rounded-xl border border-violet-300 bg-violet-50 px-4 py-2.5 text-sm font-bold text-violet-800 transition hover:bg-violet-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] dark:border-violet-400/35 dark:bg-violet-400/10 dark:text-violet-100 dark:hover:bg-violet-400/15 sm:mt-0 sm:w-auto"
 			>
 				Abrir exportación
 			</a>

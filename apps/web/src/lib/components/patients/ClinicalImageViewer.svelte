@@ -382,10 +382,9 @@
 		>
 			<header class="clinical-viewer-header">
 				<div class="min-w-0">
-					<p class="text-[0.68rem] font-bold uppercase tracking-[0.16em] text-cyan-200/70">Visor clínico</p>
-					<h2 id="clinical-viewer-title" class="mt-0.5 truncate text-base font-semibold text-white sm:text-lg">{title}</h2>
+					<h2 id="clinical-viewer-title" class="break-words text-base font-semibold text-white sm:text-lg">{title}</h2>
 					{#if metadata}
-						<p class="mt-0.5 truncate text-xs text-slate-400">{metadata}</p>
+						<p class="mt-0.5 break-words text-xs text-slate-400">{metadata}</p>
 					{/if}
 				</div>
 				<button type="button" class="clinical-viewer-close" aria-label="Cerrar visor" title="Cerrar (Esc)" onclick={onclose}>
@@ -487,7 +486,7 @@
 						<svg class="h-5 w-5 shrink-0 text-cyan-200/80" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M8 13V6a2 2 0 114 0v5-3a2 2 0 114 0v4-2a2 2 0 114 0v4c0 4-2.8 7-7 7h-1.2c-2.2 0-4.3-1-5.6-2.8L4.5 15a2 2 0 012.8-.3L8 15.3" />
 						</svg>
-						<p class="truncate text-xs text-slate-300">
+						<p class="break-words text-xs text-slate-300">
 							{zoomed ? 'Pellizcá y arrastrá' : 'Pellizcá para ampliar'}
 						</p>
 					</div>

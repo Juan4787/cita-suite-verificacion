@@ -149,7 +149,7 @@
 			<div class="mt-4 space-y-4">
 				<div class="rounded-xl border border-neutral-100 bg-white/60 p-4 dark:border-[#1f3554] dark:bg-[#0f1f36]">
 					<div class="mb-3 flex items-center justify-between">
-						<p class="text-[13px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Identidad</p>
+						<p class="text-caption font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Identidad</p>
 						{#if permissions.canEditPatient}
 							<button disabled={!client.ready}
 								type="button"
@@ -162,7 +162,7 @@
 					</div>
 					<div class="space-y-1">
 						<p class="text-xs font-semibold text-neutral-500 dark:text-neutral-300">Nombre</p>
-						<p class="break-words text-[17px] font-semibold text-neutral-900 dark:text-white">
+						<p class="break-words text-body font-semibold text-neutral-900 dark:text-white">
 							{patient.full_name}
 						</p>
 					</div>
@@ -170,7 +170,7 @@
 				{#if permissions.canReadClinicalProfile}
 				<div class="rounded-xl border border-neutral-100 bg-white/60 p-4 dark:border-[#1f3554] dark:bg-[#0f1f36]">
 					<div class="mb-3 flex items-center justify-between">
-						<p class="text-[13px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Alertas médicas</p>
+						<p class="text-caption font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Alertas médicas</p>
 							{#if permissions.canEditClinicalProfile}
 								<button disabled={!client.ready}
 									type="button"
@@ -193,7 +193,7 @@
 								Alergias
 							</div>
 							<p
-								class={`min-w-0 flex-[1_1_10rem] break-words text-left text-[15px] font-semibold sm:text-right ${
+								class={`min-w-0 flex-[1_1_10rem] break-words text-left text-supporting font-semibold sm:text-right ${
 									patient.allergies ? 'text-amber-900 dark:text-amber-100' : 'text-amber-700/70 dark:text-amber-200/70'
 								}`}
 							>
@@ -209,7 +209,7 @@
 								Medicación
 							</div>
 							<p
-								class={`min-w-0 flex-[1_1_10rem] break-words text-left text-[15px] font-semibold ${
+								class={`min-w-0 flex-[1_1_10rem] break-words text-left text-supporting font-semibold ${
 									patient.medication ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'
 								}`}
 							>
@@ -224,7 +224,7 @@
 								Antecedentes
 							</div>
 							<p
-								class={`min-w-0 flex-[1_1_10rem] break-words text-left text-[15px] font-semibold whitespace-pre-wrap ${
+								class={`min-w-0 flex-[1_1_10rem] break-words text-left text-supporting font-semibold whitespace-pre-wrap ${
 									patient.background ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'
 								}`}
 							>
@@ -238,7 +238,7 @@
 
 				<div class="rounded-xl border border-neutral-100 bg-white/60 p-4 dark:border-[#1f3554] dark:bg-[#0f1f36]">
 					<div class="mb-3 flex items-center justify-between">
-						<p class="text-[13px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Contacto</p>
+						<p class="text-caption font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Contacto</p>
 							{#if permissions.canEditPatient}
 								<button disabled={!client.ready}
 									type="button"
@@ -253,7 +253,7 @@
 						<div class="space-y-1">
 							<p class="text-xs font-semibold text-neutral-500 dark:text-neutral-300">Teléfono</p>
 							<div class="flex items-center gap-2">
-								<p class={`min-w-0 flex-1 break-words text-[15px] font-semibold ${patient.phone ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
+								<p class={`min-w-0 flex-1 break-words text-supporting font-semibold ${patient.phone ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
 									{patient.phone ?? 'Sin registrar'}
 								</p>
 								{#if patient.phone}
@@ -271,7 +271,7 @@
 						<div class="space-y-1">
 							<p class="text-xs font-semibold text-neutral-500 dark:text-neutral-300">Correo electrónico</p>
 							<div class="flex items-center gap-2">
-								<p class={`min-w-0 flex-1 break-all text-[15px] font-semibold ${patient.email ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
+								<p class={`min-w-0 flex-1 break-all text-supporting font-semibold ${patient.email ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
 									{patient.email ?? 'Sin registrar'}
 								</p>
 								{#if patient.email}
@@ -289,7 +289,7 @@
 						<div class="space-y-1 md:col-span-2">
 							<p class="text-xs font-semibold text-neutral-500 dark:text-neutral-300">Dirección</p>
 							<div class="flex items-center gap-2">
-								<p class={`min-w-0 flex-1 break-words text-[15px] font-semibold ${patient.address ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
+								<p class={`min-w-0 flex-1 break-words text-supporting font-semibold ${patient.address ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
 									{patient.address ?? 'Sin registrar'}
 								</p>
 								{#if patient.address}
@@ -309,7 +309,7 @@
 
 				<div class="rounded-xl border border-neutral-100 bg-white/60 p-4 dark:border-[#1f3554] dark:bg-[#0f1f36]">
 					<div class="mb-3 flex items-center justify-between">
-						<p class="text-[13px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Administrativo</p>
+						<p class="text-caption font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Administrativo</p>
 							{#if permissions.canEditPatient}
 								<button disabled={!client.ready}
 									type="button"
@@ -323,19 +323,19 @@
 					<div class="grid gap-3 md:grid-cols-2">
 						<div class="space-y-1">
 							<p class="text-xs font-semibold text-neutral-500 dark:text-neutral-300">Obra social</p>
-							<p class={`text-[15px] font-semibold ${patient.insurance ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
+							<p class={`text-supporting font-semibold ${patient.insurance ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
 								{patient.insurance ?? 'Sin registrar'}
 							</p>
 						</div>
 						<div class="space-y-1">
 							<p class="text-xs font-semibold text-neutral-500 dark:text-neutral-300">Plan de la obra social</p>
-							<p class={`text-[15px] font-semibold ${patient.insurance_plan ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
+							<p class={`text-supporting font-semibold ${patient.insurance_plan ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
 								{patient.insurance_plan ?? 'Sin registrar'}
 							</p>
 						</div>
 						<div class="space-y-1">
 							<p class="text-xs font-semibold text-neutral-500 dark:text-neutral-300">Nacimiento</p>
-							<p class={`text-[15px] font-semibold ${patient.birth_date ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
+							<p class={`text-supporting font-semibold ${patient.birth_date ? 'text-neutral-800 dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
 								{patient.birth_date ? formatDate(patient.birth_date, businessTimeZone) : 'Sin registrar'}
 							</p>
 						</div>
@@ -354,7 +354,7 @@
 				</div>
 			{:else if changeEvents.length > 0}
 				<div class="mt-5 rounded-xl border border-neutral-100 bg-white/60 p-4 dark:border-[#1f3554] dark:bg-[#0f1f36]">
-					<p class="text-[13px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Últimos cambios</p>
+					<p class="text-caption font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Últimos cambios</p>
 					<div class="mt-3 space-y-3">
 						{#each changeEvents.slice(0, 5) as event}
 							<div class="rounded-lg border border-neutral-100 bg-white/70 px-3 py-2 dark:border-[#1f3554] dark:bg-[#122641]">
@@ -367,7 +367,7 @@
 					</div>
 				</div>
 			{/if}
-			<details class="mt-4 text-[11px] text-[#65738d] dark:text-[#7b8aa5]">
+			<details class="mt-4 text-micro text-[#65738d] dark:text-[#7b8aa5]">
 				<summary class="cursor-pointer text-neutral-600 dark:text-neutral-200">Ver detalles</summary>
 				<p class="mt-1">
 					Creado: {formatDate(patient.created_at, businessTimeZone)} • Última actualización: {formatDateTime(patient.updated_at, businessTimeZone)}

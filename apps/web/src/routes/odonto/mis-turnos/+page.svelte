@@ -53,8 +53,7 @@
 	<div class="ux-hero">
 		<div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
 			<div>
-				<p class="ux-badge">Profesional</p>
-				<h1 class="ux-title mt-4">Mis turnos</h1>
+				<h1 class="ux-title">Mis turnos</h1>
 				<p class="ux-subtitle">
 					{selectedProfile ? selectedProfile.name : 'Tu agenda de hoy y próximos turnos.'}
 				</p>
@@ -102,8 +101,8 @@
 							<p class="mt-0.5 text-xs text-white/40">{timeOnly(appointment.ends_at)}</p>
 						</div>
 						<div class="min-w-0 flex-1">
-							<p class="truncate text-base font-bold text-white sm:text-lg">{appointment.service_name_snapshot}</p>
-							<p class="mt-0.5 truncate text-sm text-white/55">
+							<p class="break-words text-base font-bold text-white sm:text-lg">{appointment.service_name_snapshot}</p>
+							<p class="mt-0.5 break-words text-sm text-white/55">
 								{appointment.patients?.full_name ?? 'Paciente'}{appointment.patients?.phone_e164 ? ` · ${appointment.patients.phone_e164}` : ''}
 							</p>
 							<div class="mt-2">
@@ -125,8 +124,8 @@
 				{#each data.upcomingAppointments as appointment}
 					<a href={`/odonto/turnos/${appointment.id}`} class="ux-choice flex items-center gap-3 p-3 sm:gap-4 sm:p-4">
 						<div class="min-w-0 flex-1">
-							<p class="truncate text-base font-bold text-white">{formatDateTime(appointment.starts_at)}</p>
-							<p class="mt-0.5 truncate text-sm text-white/55">{appointment.service_name_snapshot}</p>
+							<p class="break-words text-base font-bold text-white">{formatDateTime(appointment.starts_at)}</p>
+							<p class="mt-0.5 break-words text-sm text-white/55">{appointment.service_name_snapshot}</p>
 							<div class="mt-2">
 								<span class={statusTone[appointment.status] ?? 'ux-badge'}>{statusLabels[appointment.status] ?? appointment.status}</span>
 							</div>

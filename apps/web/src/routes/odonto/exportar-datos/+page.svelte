@@ -37,7 +37,7 @@
 						</svg>
 					</span>
 					<div class="min-w-0">
-						<h2 id="included-data-title" class="text-xl font-black text-neutral-950 dark:text-white">Qué incluye</h2>
+						<h2 id="included-data-title" class="text-xl font-bold text-neutral-950 dark:text-white">Qué incluye</h2>
 						<p class="mt-1 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
 							El archivo contiene ocho hojas.
 						</p>

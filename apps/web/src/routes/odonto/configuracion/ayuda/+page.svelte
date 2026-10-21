@@ -24,7 +24,7 @@
 		{#if isAssisting}
 			<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 				<div class="min-w-0">
-					<p class="inline-flex items-center gap-2 text-sm font-black text-emerald-100">
+					<p class="inline-flex items-center gap-2 text-sm font-bold text-emerald-100">
 						<span class="h-[0.85em] w-[0.85em] rounded-full bg-emerald-400 shadow-[0_0_0.8rem_rgba(52,211,153,0.85)]"></span>
 						Activa
 					</p>
@@ -36,8 +36,7 @@
 			</div>
 		{:else if !canUseBusiness}
 			<div class="max-w-2xl">
-				<p class="ux-badge ux-badge-warning">Cuenta inactiva</p>
-				<h1 class="ux-title mt-3">Ayuda para configurar</h1>
+				<h1 class="ux-title">Ayuda para configurar</h1>
 				<p class="mt-3 text-sm leading-6 text-white/60">
 					Primero activá la cuenta. Después podemos ayudarte a completar la configuración inicial.
 				</p>
@@ -45,7 +44,7 @@
 		{:else if assistance.status === 'active'}
 			<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 				<div class="min-w-0">
-					<p class="inline-flex items-center gap-2 text-sm font-black text-emerald-100">
+					<p class="inline-flex items-center gap-2 text-sm font-bold text-emerald-100">
 						<span class="h-[0.85em] w-[0.85em] rounded-full bg-emerald-400 shadow-[0_0_0.8rem_rgba(52,211,153,0.85)]"></span>
 						Ayuda activa
 					</p>
@@ -64,8 +63,7 @@
 		{:else if assistance.status === 'expired'}
 			<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 				<div class="min-w-0">
-					<p class="ux-badge ux-badge-warning">Finalizada</p>
-					<h1 class="ux-title mt-3">La ayuda de Cita Suite finalizó</h1>
+					<h1 class="ux-title">La ayuda de Cita Suite finalizó</h1>
 					<p class="mt-3 max-w-2xl text-sm leading-6 text-white/60">
 						Si todavía necesitás ayuda, podés activarla otra vez.
 					</p>
@@ -89,8 +87,7 @@
 		{:else if assistance.status === 'revoked'}
 			<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 				<div class="min-w-0">
-					<p class="ux-badge">Detenida</p>
-					<h1 class="ux-title mt-3">Ayuda detenida</h1>
+					<h1 class="ux-title">Ayuda detenida</h1>
 					<p class="mt-3 max-w-2xl text-sm leading-6 text-white/60">
 						Cita Suite ya no puede hacer cambios en esta cuenta.
 					</p>
@@ -114,8 +111,7 @@
 		{:else}
 			<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 				<div class="min-w-0">
-					<p class="ux-badge">Configuración</p>
-					<h1 class="ux-title mt-3">¿Querés que te ayudemos a configurar tu cuenta?</h1>
+					<h1 class="ux-title">¿Querés que te ayudemos a configurar tu cuenta?</h1>
 					<p class="mt-3 max-w-2xl text-sm leading-6 text-white/60">
 						Podemos cargar profesionales, servicios y horarios iniciales durante 1 hora.
 					</p>

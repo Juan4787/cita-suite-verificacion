@@ -484,7 +484,7 @@
 				<h2 class="ux-section-title">Agregar integrante</h2>
 				<div class="flex shrink-0 gap-2">
 					{#each steps as _, item}
-						<span class={`grid h-8 w-8 place-items-center rounded-full text-sm font-black ${stepIndex === item ? 'bg-[#7c3aed] text-white' : 'bg-white/10 text-white/45'}`}>
+						<span class={`grid h-8 w-8 place-items-center rounded-full text-sm font-bold ${stepIndex === item ? 'bg-[#7c3aed] text-white' : 'bg-white/10 text-white/45'}`}>
 							{item + 1}
 						</span>
 					{/each}
@@ -545,7 +545,7 @@
 							}`}
 							onclick={() => (role = option)}
 						>
-							<span class="block text-lg font-black">{roleLabels[option]}</span>
+							<span class="block text-lg font-bold">{roleLabels[option]}</span>
 							<span class="mt-1 block text-sm text-white/55">{roleDescriptions[option]}</span>
 						</button>
 					{/each}
@@ -559,7 +559,7 @@
 							class="mt-1 accent-[#7c3aed]"
 						/>
 						<span>
-							<span class="block font-black">También atiende pacientes</span>
+							<span class="block font-bold">También atiende pacientes</span>
 							<span class="mt-1 block text-sm text-white/55">
 								Creá ahora su perfil profesional y dejá configurados sus servicios y horarios, aunque todavía no tenga cuenta.
 							</span>
@@ -603,7 +603,7 @@
 								<div class="ux-choice ux-choice-active flex min-w-0 items-center gap-3 p-3 sm:gap-4 sm:p-4">
 									<input type="checkbox" checked disabled class="accent-[#7c3aed]" />
 									<span class="min-w-0 flex-1">
-										<span class="block break-words font-black text-white">{service.name}</span>
+										<span class="block break-words font-bold text-white">{service.name}</span>
 										<span class="mt-1 block text-sm text-white/55">
 											{formatDuration(service.duration_minutes)}{service.price_label ? ` ·\u00a0${service.price_label}` : ''}
 										</span>
@@ -620,7 +620,7 @@
 										onchange={() => toggleService(service.id)}
 									/>
 									<span class="min-w-0 flex-1">
-										<span class="block break-words font-black text-white">{service.name}</span>
+										<span class="block break-words font-bold text-white">{service.name}</span>
 										<span class="mt-1 block text-sm text-white/55">
 											{formatDuration(service.duration_minutes)}{service.price_label ? ` ·\u00a0${service.price_label}` : ''}
 										</span>
@@ -631,13 +631,13 @@
 								<div class="ux-choice ux-choice-active flex min-w-0 items-center gap-3 p-3 sm:gap-4 sm:p-4">
 									<input type="checkbox" checked disabled class="accent-[#7c3aed]" />
 									<span class="min-w-0 flex-1">
-										<span class="block break-words font-black text-white">{service.name}</span>
+										<span class="block break-words font-bold text-white">{service.name}</span>
 										<span class="mt-1 block text-sm text-white/55">
 											{formatDuration(service.duration_minutes)}{service.price_label ? ` ·\u00a0${service.price_label}` : ''}
 										</span>
 									</span>
 									<span class="ux-badge shrink-0">Nuevo</span>
-									<button type="button" class="text-xs font-black text-red-200" onclick={() => removeNewService(index)}>
+									<button type="button" class="text-xs font-bold text-red-200" onclick={() => removeNewService(index)}>
 										Quitar
 									</button>
 								</div>
@@ -689,7 +689,7 @@
 								{@const preview = schedulePreview(block)}
 								<div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
 									<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-										<h4 class="font-black text-white">Bloque {blockIndex + 1}</h4>
+										<h4 class="font-bold text-white">Bloque {blockIndex + 1}</h4>
 										<button type="button" class="ux-btn-secondary shrink-0 text-sm" disabled={!canManage} onclick={() => removeScheduleBlock(block.id)}>
 											Quitar bloque
 										</button>
@@ -701,7 +701,7 @@
 												<button
 													type="button"
 													disabled={!canManage}
-													class={`min-h-14 min-w-0 rounded-2xl border px-3 py-3 text-center text-sm font-black leading-tight whitespace-normal transition disabled:cursor-not-allowed disabled:opacity-50 ${
+													class={`min-h-14 min-w-0 rounded-2xl border px-3 py-3 text-center text-sm font-bold leading-tight whitespace-normal transition disabled:cursor-not-allowed disabled:opacity-50 ${
 														block.weekdays.includes(index)
 															? 'border-[#8b5cf6] bg-[#7c3aed] text-white shadow-lg shadow-[#7c3aed]/20'
 															: assignedByOtherBlock.has(index)
@@ -813,7 +813,7 @@
 											class={`ux-choice p-4 text-left ${exceptionPeriodMode === 'single' ? 'ux-choice-active' : ''}`}
 											onclick={() => (exceptionPeriodMode = 'single')}
 										>
-											<span class="block font-black text-white">Un día</span>
+											<span class="block font-bold text-white">Un día</span>
 											<span class="mt-1 block text-xs text-white/50">Elegís fecha y horario.</span>
 										</button>
 										<button
@@ -823,7 +823,7 @@
 											class={`ux-choice p-4 text-left ${exceptionPeriodMode === 'range' ? 'ux-choice-active' : ''}`}
 											onclick={() => (exceptionPeriodMode = 'range')}
 										>
-											<span class="block font-black text-white">Rango de días</span>
+											<span class="block font-bold text-white">Rango de días</span>
 											<span class="mt-1 block text-xs text-white/50">Desde y hasta, días completos.</span>
 										</button>
 									</div>
@@ -872,32 +872,32 @@
 			{:else}
 				<div class="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
 					<p class="text-sm font-bold text-white/45">Email</p>
-					<p class="mt-1 text-xl font-black text-white">{email.trim().toLowerCase()}</p>
+					<p class="mt-1 text-xl font-bold text-white">{email.trim().toLowerCase()}</p>
 					<p class="mt-4 text-sm font-bold text-white/45">Rol asignado</p>
-					<p class="mt-1 text-xl font-black text-white">{roleLabels[role]}</p>
+					<p class="mt-1 text-xl font-bold text-white">{roleLabels[role]}</p>
 					{#if hasProfessionalProfile}
 						<p class="mt-4 text-sm font-bold text-white/45">Perfil profesional</p>
-						<p class="mt-1 text-xl font-black text-white">
+						<p class="mt-1 text-xl font-bold text-white">
 							{role === 'professional' ? 'Incluido por el rol Profesional' : 'También atiende pacientes'}
 						</p>
 						<p class="mt-4 text-sm font-bold text-white/45">Nombre</p>
-						<p class="mt-1 text-xl font-black text-white">{professionalName}</p>
+						<p class="mt-1 text-xl font-bold text-white">{professionalName}</p>
 						{#if professionalSpecialty.trim()}
 							<p class="mt-4 text-sm font-bold text-white/45">Especialidad</p>
-							<p class="mt-1 text-xl font-black text-white">{professionalSpecialty}</p>
+							<p class="mt-1 text-xl font-bold text-white">{professionalSpecialty}</p>
 						{/if}
 						<p class="mt-4 text-sm font-bold text-white/45">Servicios incluidos</p>
-						<p class="mt-1 text-xl font-black text-white">{(defaultServiceNames as readonly string[]).join(', ')}</p>
+						<p class="mt-1 text-xl font-bold text-white">{(defaultServiceNames as readonly string[]).join(', ')}</p>
 						{#if summaryAdditionalServices.length > 0}
 							<p class="mt-4 text-sm font-bold text-white/45">Servicios adicionales</p>
-							<p class="mt-1 text-xl font-black text-white">{summaryAdditionalServices.join(', ')}</p>
+							<p class="mt-1 text-xl font-bold text-white">{summaryAdditionalServices.join(', ')}</p>
 						{/if}
 						<p class="mt-4 text-sm font-bold text-white/45">Horarios habituales</p>
 						<div class="mt-2 grid gap-2">
 							{#each summaryScheduleBlocks as block, index}
 								<div class="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
 									<p class="text-sm font-bold text-white/45">Bloque {index + 1}</p>
-									<p class="mt-1 text-lg font-black text-white">{block.days || 'Sin días'}</p>
+									<p class="mt-1 text-lg font-bold text-white">{block.days || 'Sin días'}</p>
 									<p class="mt-1 text-sm font-bold text-white/65">
 										{block.ranges || 'Sin horario'} · descanso {block.slotInterval} minutos
 									</p>
@@ -906,7 +906,7 @@
 						</div>
 						{#if hasExceptionLoaded}
 							<p class="mt-4 text-sm font-bold text-white/45">Ausencia o cambio de horario</p>
-							<p class="mt-1 text-xl font-black text-white">
+							<p class="mt-1 text-xl font-bold text-white">
 								{#if exceptionPeriodMode === 'range'}
 									Bloquear del {formatDateKey(exceptionDateFrom)} al {formatDateKey(exceptionDateTo)} · Días completos
 								{:else}

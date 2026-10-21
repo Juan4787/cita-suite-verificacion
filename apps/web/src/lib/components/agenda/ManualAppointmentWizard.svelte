@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { formatDuration, formatStepCounter } from '$lib/utils/format';
 	import ManualPatientPicker from './ManualPatientPicker.svelte';
 	import type { ManualBookingPatient as Patient } from '$lib/patients/manual-booking';
@@ -860,10 +861,10 @@
 							<span
 								aria-hidden="true"
 								class={selected
-									? 'grid h-7 w-7 shrink-0 place-items-center rounded-full border border-[#a78bfa] bg-[#7c3aed] text-sm font-black text-white'
-									: 'grid h-7 w-7 shrink-0 place-items-center rounded-full border border-white/20 text-sm font-black text-transparent'}
+									? 'grid h-7 w-7 shrink-0 place-items-center rounded-full border border-[#a78bfa] bg-[#7c3aed] text-sm font-bold text-white'
+									: 'grid h-7 w-7 shrink-0 place-items-center rounded-full border border-white/20 text-sm font-bold text-transparent'}
 							>
-								✓
+								<Icon name="check" class="h-4 w-4" />
 							</span>
 						</button>
 					{/each}
@@ -902,7 +903,7 @@
 						class="ux-btn-primary group min-h-16 min-w-0 w-full justify-between rounded-2xl px-6 py-4 text-left shadow-xl shadow-violet-950/40 sm:w-auto sm:min-w-80"
 					>
 						<span class="min-w-0">
-							<span class="block text-lg font-black leading-tight tracking-tight">
+							<span class="block text-lg font-bold leading-tight tracking-tight">
 								{selectedTeam.length < 2
 									? 'Seleccioná al menos dos integrantes'
 									: loadingSlots
@@ -1186,7 +1187,7 @@
 
 				{#if phoneWarning}
 					<div id="phone-warning" class="mt-5 rounded-2xl border border-amber-300/35 bg-amber-300/[0.09] p-4 text-amber-50" role="alert">
-						<p class="text-base font-extrabold">
+						<p class="text-base font-bold">
 							{phoneWarning === 'missing'
 								? 'Falta el número de teléfono'
 								: 'El número de teléfono no es válido'}

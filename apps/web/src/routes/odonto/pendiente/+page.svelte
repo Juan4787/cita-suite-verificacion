@@ -6,7 +6,6 @@
 	const copy = $derived.by(() => {
 		if (data.reason === 'temporarily_unavailable') {
 			return {
-				badge: 'Alta pausada',
 				title: 'No pudimos preparar tu consultorio',
 				detail:
 					'Tu cuenta está creada, pero todavía no pudimos terminar el consultorio. Detuvimos el alta de forma segura: volvé a intentar en unos minutos.',
@@ -16,7 +15,6 @@
 		}
 		if (data.reason === 'rate_limited') {
 			return {
-				badge: 'Alta pausada',
 				title: 'Esperá antes de volver a intentar',
 				detail:
 					'Hicimos varios intentos de preparar tu consultorio y detuvimos el alta para evitar duplicados.',
@@ -25,7 +23,6 @@
 			};
 		}
 		return {
-			badge: 'Cuenta creada',
 			title: 'Estamos configurando tu consultorio',
 			detail:
 				'Tu email ya está habilitado, pero todavía falta que soporte cree o vincule tu consultorio. Tus accesos quedarán disponibles cuando esa configuración esté completa.',
@@ -38,8 +35,7 @@
 <section class="ux-page">
 	<div class="mx-auto max-w-2xl">
 		<div class="ux-card text-center">
-			<p class="ux-badge mx-auto">{copy.badge}</p>
-			<h1 class="ux-title mt-5">{copy.title}</h1>
+			<h1 class="ux-title">{copy.title}</h1>
 			<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-white/65">
 				{copy.detail}
 			</p>

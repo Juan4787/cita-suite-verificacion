@@ -37,6 +37,18 @@ afterEach(() => {
 });
 
 describe('patient history interaction and request ownership', () => {
+	it('shows a cost with its cents and keeps the precision of a historical fraction', () => {
+		const entries = [
+			{ ...first, amount: 125.5 },
+			{ ...row('a6400000-0000-4000-8000-000000000006', '01', 'Whole amount'), amount: 1250 },
+			{ ...row('a6400000-0000-4000-8000-000000000007', '04', 'Historical fraction'), amount: 0.001 }
+		];
+		render(PatientHistoryPanel, { props: { ...props(entries), hasMoreEntries: false } });
+
+		expect(screen.getByText('$ 125,50')).toBeInTheDocument();
+		expect(screen.getByText('$ 1.250')).toBeInTheDocument();
+		expect(screen.getByText('$ 0,001')).toBeInTheDocument();
+	});
 	it('opens the complete description with Space and keeps editing separate from expansion', async () => {
 		const user = userEvent.setup();
 		const input = props([

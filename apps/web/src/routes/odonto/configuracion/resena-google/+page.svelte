@@ -45,8 +45,7 @@
 <section class="ux-page">
 	<div class="ux-hero">
 		<BackLink href="/odonto/configuracion" label="Volver" class="mb-5" />
-		<p class="ux-badge">Configuración</p>
-		<h1 class="ux-title mt-4">Reseña de Google</h1>
+		<h1 class="ux-title">Reseña de Google</h1>
 		<p class="ux-subtitle">Invitá a tus pacientes a compartir su experiencia.</p>
 	</div>
 

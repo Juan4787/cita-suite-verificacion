@@ -213,7 +213,7 @@
 {#snippet doneStep(label: string, value: string, changeHref: string)}
 	<div class="ux-soft-card flex items-center justify-between gap-3 px-4 py-3">
 		<div class="min-w-0">
-			<p class="text-[11px] font-bold uppercase tracking-wider text-white/40">{label}</p>
+			<p class="text-micro font-bold uppercase tracking-wider text-white/40">{label}</p>
 			<p class="break-words text-base font-bold text-white">{value}</p>
 		</div>
 		<a data-sveltekit-noscroll href={changeHref} class="shrink-0 text-sm font-bold text-[#a78bfa] hover:underline">
@@ -255,8 +255,7 @@
 					</div>
 				{/if}
 				<div class="min-w-0">
-					<p class="ux-badge">Reserva online</p>
-					<h1 class="mt-3 text-2xl font-bold text-white sm:text-3xl">{business?.name ?? 'Reserva online'}</h1>
+					<h1 class="text-2xl font-bold text-white sm:text-3xl">{business?.name ?? 'Reserva online'}</h1>
 					{#if (modality !== 'video' && business?.address) || business?.phone}
 						<p class="mt-2 text-sm text-white/55">
 							{modality !== 'video' ? business.address ?? '' : ''}{modality !== 'video' && business.address && business.phone ? ' · ' : ''}{business.phone ?? ''}
@@ -403,7 +402,7 @@
 					<section class="ux-card scroll-mt-5" bind:this={activeStepCard}>
 						<h2 class="ux-section-title">Elegí un horario</h2>
 						{#if morningSlots.length > 0}
-							<p class="mt-5 text-[11px] font-bold uppercase tracking-wider text-white/40">Mañana</p>
+							<p class="mt-5 text-micro font-bold uppercase tracking-wider text-white/40">Mañana</p>
 							<div class="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
 								{#each morningSlots as slot (slot.starts_at)}
 									<a
@@ -417,7 +416,7 @@
 							</div>
 						{/if}
 						{#if afternoonSlots.length > 0}
-							<p class="mt-5 text-[11px] font-bold uppercase tracking-wider text-white/40">Tarde</p>
+							<p class="mt-5 text-micro font-bold uppercase tracking-wider text-white/40">Tarde</p>
 							<div class="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
 								{#each afternoonSlots as slot (slot.starts_at)}
 									<a

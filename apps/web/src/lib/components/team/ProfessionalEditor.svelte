@@ -403,8 +403,7 @@
 			<BackLink href="/odonto/configuracion/usuarios" label="Volver" class="mb-5" />
 			<div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
 				<div class="min-w-0 flex-1">
-					<p class="text-xs font-bold uppercase text-white/42">Profesional</p>
-					<h1 class="ux-title mt-3">{visibleName}</h1>
+					<h1 class="ux-title">{visibleName}</h1>
 					<p class="ux-subtitle">{visibleSubtitle}</p>
 					{#if hasMissingMinimum}
 						<p class="mt-3 text-sm font-bold text-red-100">Falta completar: {missingSummary}</p>
@@ -426,7 +425,7 @@
 
 		{#if accountLinkPending}
 			<div class="rounded-2xl border border-amber-300/25 bg-amber-300/10 px-5 py-4" role="status">
-				<p class="font-black text-amber-100">Cuenta profesional pendiente</p>
+				<p class="font-bold text-amber-100">Cuenta profesional pendiente</p>
 				<p class="mt-1 text-sm text-amber-50/80">
 					Este profesional no aparecerá en las reservas online hasta que cree su cuenta con
 					<strong>{data.pendingAccountEmail}</strong>. Cuando se registre, accederá automáticamente a este

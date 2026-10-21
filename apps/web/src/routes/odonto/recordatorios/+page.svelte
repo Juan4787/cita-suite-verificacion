@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import type { ReminderCandidate, ReminderDay } from '$lib/scheduling/contracts';
 	import { classifyUserAgent, refineDeviceClass, type DeviceClass } from '$lib/device';
 	import { onMount } from 'svelte';
@@ -52,13 +53,15 @@
 			<div class="min-w-0">
 				<p class="text-lg font-bold text-white">{candidate.time_label} · {candidate.patient_name}</p>
 				<p class="mt-1 text-sm text-white/55">{candidate.service_name} · {candidate.professional_name}</p>
-				<p class="mt-2 text-sm font-bold {candidate.coverage === 'pendiente_actualizar' ? 'text-amber-300' : 'text-white/70'}">
-					{candidate.coverage === 'pendiente_actualizar'
-						? '⚠ Calendario pendiente de actualizar'
-						: '○ Sin recordatorio confirmado'}
+				<p class="mt-2 flex items-center gap-2 text-sm font-bold {candidate.coverage === 'pendiente_actualizar' ? 'text-amber-300' : 'text-white/70'}">
+					{#if candidate.coverage === 'pendiente_actualizar'}
+						<Icon name="alert" class="h-4 w-4 shrink-0" />Calendario pendiente de actualizar
+					{:else}
+						<Icon name="circle" class="h-4 w-4 shrink-0" />Sin recordatorio confirmado
+					{/if}
 				</p>
 				{#if candidate.whatsapp_marked_sent_at}
-					<p class="mt-2 text-sm font-bold text-emerald-300">✓ Enviado {relativeTime(candidate.whatsapp_marked_sent_at)}</p>
+					<p class="mt-2 flex items-center gap-2 text-sm font-bold text-emerald-300"><Icon name="check" class="h-4 w-4 shrink-0" />Enviado {relativeTime(candidate.whatsapp_marked_sent_at)}</p>
 				{:else if candidate.whatsapp_opened_at}
 					<p class="mt-2 text-sm text-white/55">WhatsApp abierto {relativeTime(candidate.whatsapp_opened_at)}</p>
 				{/if}

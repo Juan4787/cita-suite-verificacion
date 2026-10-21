@@ -235,7 +235,7 @@
 					aria-expanded={Boolean(openCategories[category.id])}
 				>
 					<span class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-						<span class="text-lg font-black text-white sm:text-xl">{category.title}</span>
+						<span class="text-lg font-bold text-white sm:text-xl">{category.title}</span>
 						<span class="ux-badge">{categoryMembers.length}</span>
 					</span>
 					<svg
@@ -269,7 +269,7 @@
 										</p>
 										{#if member.status === 'pending' && member.professional_id}
 											<div class="mt-3 rounded-2xl border border-amber-300/25 bg-amber-300/10 px-4 py-3" role="status">
-												<p class="font-black text-amber-100">Cuenta profesional pendiente</p>
+												<p class="font-bold text-amber-100">Cuenta profesional pendiente</p>
 												<p class="mt-1 text-sm text-amber-50/80">
 													No aparecerá en las reservas online hasta que cree su cuenta con <strong>{member.email}</strong>.
 													Cuando se registre, accederá al perfil ya configurado.

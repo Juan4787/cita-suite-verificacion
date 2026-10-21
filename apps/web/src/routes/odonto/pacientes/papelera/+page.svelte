@@ -116,8 +116,7 @@
 <section class="ux-page">
 	<div class="ux-hero">
 		<BackLink href="/odonto/pacientes" label="Volver a pacientes" class="mb-5" />
-		<p class="ux-badge">Archivos clínicos</p>
-		<h1 class="ux-title mt-4">Papelera de documentos</h1>
+		<h1 class="ux-title">Papelera de documentos</h1>
 		<p class="ux-subtitle">
 			{data.canRestore
 				? 'Restaurá documentos que dejaron de mostrarse en la ficha. Desde acá no se borran archivos físicamente.'
@@ -174,7 +173,7 @@
 						</div>
 						<div class="min-w-0 flex-1">
 							<a href={`/odonto/pacientes/${item.patient_id}?tab=radiografias`} class="font-semibold text-white hover:underline">{item.patient_name}</a>
-							<p class="mt-1 truncate text-sm text-white/70">{item.original_filename || 'Imagen clínica'}</p>
+							<p class="mt-1 break-words text-sm text-white/70">{item.original_filename || 'Imagen clínica'}</p>
 							<p class="mt-1 text-xs text-white/45">Movida {formatDateTime(item.deleted_at)} por {item.deleted_by_label || 'usuario autorizado'} · {formatClinicalFileBytes(item.bytes)}</p>
 							{#if item.taken_at}<p class="mt-1 text-xs text-white/45">Tomada el {formatDate(item.taken_at)}</p>{/if}
 							{#if item.integrity_status !== 'ok'}

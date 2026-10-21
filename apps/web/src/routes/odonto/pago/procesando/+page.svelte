@@ -30,8 +30,7 @@
 	<div class="mx-auto max-w-2xl">
 		<div class="ux-card text-center">
 			{#if data.activated}
-				<p class="ux-badge ux-badge-success mx-auto">Suscripción activada</p>
-				<h1 class="ux-title mt-5">Suscripción activada</h1>
+				<h1 class="ux-title">Suscripción activada</h1>
 				<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-white/65">
 					Ahora configurá tu agenda para empezar a recibir turnos.
 				</p>
@@ -44,8 +43,7 @@
 					</p>
 				{/if}
 			{:else if data.manualBlock}
-				<p class="ux-badge ux-badge-warning mx-auto">Revisión necesaria</p>
-				<h1 class="ux-title mt-5">Tu cuenta requiere soporte</h1>
+				<h1 class="ux-title">Tu cuenta requiere soporte</h1>
 				<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-white/65">
 					El acceso fue suspendido por el administrador del sistema. Un pago no lo
 					reactiva automáticamente.
@@ -54,15 +52,14 @@
 					Ver estado de suscripción
 				</a>
 			{:else}
-				<p class="ux-badge mx-auto">Pago en proceso</p>
-				<h1 class="ux-title mt-5">Estamos confirmando tu pago</h1>
+				<h1 class="ux-title">Estamos confirmando tu pago</h1>
 				<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-white/65">
 					Esto suele demorar solo unos segundos. Tu cuenta y tus datos ya están guardados.
 				</p>
 
 				<div class="mx-auto mt-7 max-w-sm rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-left">
 					<p class="text-sm font-bold text-white/45">Plan Cita Suite</p>
-					<p class="mt-2 text-2xl font-black text-white">{money(data.mpAmount)} por mes</p>
+					<p class="mt-2 text-2xl font-bold text-white">{money(data.mpAmount)} por mes</p>
 					<p class="mt-2 text-sm font-semibold text-white/55">
 						Acceso completo a agenda, pacientes, turnos y recordatorios.
 					</p>

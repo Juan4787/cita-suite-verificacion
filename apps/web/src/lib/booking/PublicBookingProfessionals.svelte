@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
  import type { BookingProfessional as Professional, BookingSelection, BookingQuery } from '$lib/scheduling/booking-view';
  let { professionals, selection, queryFor, teamDraftIds = $bindable([]), activeStepCard = $bindable(null) }: {
   professionals: Professional[]; selection: BookingSelection; queryFor: (params: BookingQuery) => string;
@@ -104,13 +105,13 @@
 										</div>
 										<span
 											aria-hidden="true"
-											class={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-sm font-black ${
+											class={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-sm font-bold ${
 												teamDraftIds.includes(professional.id)
 													? 'border-[#a78bfa] bg-[#7c3aed] text-white'
 													: 'border-white/20 text-transparent'
 											}`}
 										>
-											✓
+											<Icon name="check" class="h-4 w-4" />
 										</span>
 									</button>
 								{/each}

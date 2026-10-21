@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
  import {formatQuotedPrice} from '$lib/booking/pricing';
 	import { enhance } from '$app/forms';
 	import BookingAppearance from '$lib/booking/BookingAppearance.svelte';
@@ -1112,11 +1113,11 @@
 </script>
 
 {#snippet instructionList(guide: NotificationGuide)}
-	<h3 class="text-lg font-extrabold leading-snug text-white">{guide.title}</h3>
+	<h3 class="text-lg font-bold leading-snug text-white">{guide.title}</h3>
 	<ol class="mt-4 space-y-3 text-sm leading-relaxed text-white/80">
 		{#each guide.steps as step, index}
 			<li class="flex gap-3">
-				<span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-400/15 text-xs font-extrabold text-violet-200">
+				<span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-400/15 text-xs font-bold text-violet-200">
 					{index + 1}
 				</span>
 				<span class="pt-0.5">{step}</span>
@@ -1130,7 +1131,7 @@
 		<div class="mt-5">
 			{#if renderedPushState === 'subscribed'}
 				<div
-					class="inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-300/[0.08] px-4 py-2 text-sm font-extrabold text-emerald-100"
+					class="inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-300/[0.08] px-4 py-2 text-sm font-bold text-emerald-100"
 					aria-live="polite"
 				>
 					<svg viewBox="0 0 20 20" aria-hidden="true" class="h-4 w-4 shrink-0">
@@ -1164,7 +1165,7 @@
 				</div>
 			{:else if renderedPushState === 'test_question'}
 				<div class="ux-alert ux-alert-success" aria-live="polite">
-					<p class="font-extrabold text-white">¿Recibiste la notificación de prueba?</p>
+					<p class="font-bold text-white">¿Recibiste la notificación de prueba?</p>
 					<p class="mt-1">Revisá las notificaciones del teléfono y confirmalo acá.</p>
 				</div>
 				<div class="mt-3 grid grid-cols-2 gap-3">
@@ -1201,10 +1202,10 @@
 			{:else if renderedPushState === 'awaiting_permission'}
 				<button
 					type="button"
-					class={primary ? 'ux-btn-primary ux-btn-cta w-full px-3 text-[1.075rem] font-extrabold' : 'ux-btn-secondary w-full px-3 text-[1.075rem] font-extrabold'}
+					class={primary ? 'ux-btn-primary ux-btn-cta w-full px-3 text-cta font-bold' : 'ux-btn-secondary w-full px-3 text-cta font-bold'}
 					onclick={enablePush}
 				>
-					🔔 Activar recordatorio
+					<Icon name="bell" />Activar recordatorio
 				</button>
 				<p class="mt-3 text-center text-xs leading-relaxed text-white/55">
 					Cuando aparezca la pregunta, elegí “{permissionChoiceLabel}”.
@@ -1223,10 +1224,10 @@
 			{:else}
 				<button
 					type="button"
-					class={primary ? 'ux-btn-primary ux-btn-cta w-full px-3 text-[1.075rem] font-extrabold' : 'ux-btn-secondary w-full px-3 text-[1.075rem] font-extrabold'}
+					class={primary ? 'ux-btn-primary ux-btn-cta w-full px-3 text-cta font-bold' : 'ux-btn-secondary w-full px-3 text-cta font-bold'}
 					onclick={enablePush}
 				>
-					🔔 Activar recordatorio
+					<Icon name="bell" />Activar recordatorio
 				</button>
 				<p class="mt-3 text-center text-xs leading-relaxed text-white/45">
 					Primero te pedimos permiso y después enviamos una prueba real.
@@ -1294,7 +1295,7 @@
 				>
 					<summary class="flex min-h-[5.75rem] cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
 						<span>
-							<span class="block text-base font-extrabold leading-snug text-white">¿Tu teléfono es Samsung?</span>
+							<span class="block text-base font-bold leading-snug text-white">¿Tu teléfono es Samsung?</span>
 							<span class="mt-1.5 block text-sm font-bold text-violet-200">Configurar el recordatorio</span>
 						</span>
 						<svg viewBox="0 0 20 20" aria-hidden="true" class="h-5 w-5 shrink-0 text-violet-200/75 transition-transform group-open:rotate-180">
@@ -1306,11 +1307,11 @@
 							<button
 								type="button"
 								aria-label="Enviar otra notificación de prueba"
-								class="ux-btn-primary ux-btn-cta mb-5 min-h-[4.25rem] w-full px-5 py-4 text-center text-[1.075rem] font-extrabold leading-snug ring-2 ring-violet-300/30"
+								class="ux-btn-primary ux-btn-cta mb-5 min-h-[4.25rem] w-full px-5 py-4 text-center text-cta font-bold leading-snug ring-2 ring-violet-300/30"
 								disabled={syncing}
 								onclick={enablePush}
 							>
-								<span aria-hidden="true">🔔</span>
+								<Icon name="bell" />
 								<span>Enviar otra prueba</span>
 							</button>
 						{/if}
@@ -1321,11 +1322,11 @@
 							</p>
 							<button
 								type="button"
-								class="ux-btn-primary ux-btn-cta mt-4 w-full px-3 text-[1.075rem] font-extrabold"
+								class="ux-btn-primary ux-btn-cta mt-4 w-full px-3 text-cta font-bold"
 								disabled={syncing}
 								onclick={enablePush}
 							>
-								🔔 Activar recordatorio
+								<Icon name="bell" />Activar recordatorio
 							</button>
 						{/if}
 					</div>
@@ -1339,7 +1340,7 @@
 					class="flex min-h-[5.75rem] items-center justify-between gap-4 rounded-2xl border border-violet-300/30 bg-violet-400/[0.07] px-5 py-4 shadow-[0_12px_30px_rgba(76,29,149,0.12)] transition hover:border-violet-300/45 hover:bg-violet-400/[0.1]"
 				>
 					<span>
-						<span class="block text-base font-extrabold leading-snug text-white">¿Tu teléfono es de otra marca?</span>
+						<span class="block text-base font-bold leading-snug text-white">¿Tu teléfono es de otra marca?</span>
 						<span class="mt-1.5 block text-sm font-bold text-violet-200">Agregar a Google Calendar</span>
 					</span>
 					<svg viewBox="0 0 20 20" aria-hidden="true" class="h-5 w-5 shrink-0 text-violet-200/75">
@@ -1358,7 +1359,7 @@
 			aria-live="polite"
 			aria-labelledby="calendar-handoff-question"
 		>
-			<h3 id="calendar-handoff-question" class="text-lg font-extrabold leading-snug text-white">
+			<h3 id="calendar-handoff-question" class="text-lg font-bold leading-snug text-white">
 				¿Pudiste guardar el turno en tu calendario?
 			</h3>
 			<div class="mt-4 grid gap-3 sm:grid-cols-2">
@@ -1376,7 +1377,7 @@
 		</div>
 	{:else if calendarHandoffAllowed && calendarHandoffStage === 'saved'}
 		<div
-			class="mt-5 inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-300/[0.08] px-4 py-2 text-sm font-extrabold text-emerald-100"
+			class="mt-5 inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-300/[0.08] px-4 py-2 text-sm font-bold text-emerald-100"
 			role="status"
 			aria-live="polite"
 		>
@@ -1391,12 +1392,11 @@
 {#snippet locationCard(current: NonNullable<PageData['appointment']>)}
 	<section class="ux-card">
 		{#if data.isSoon}
-			<p class="ux-badge ux-badge-warning">Tu turno es pronto</p>
-			<h2 class="ux-section-title mt-3">{isVirtual ? 'Revisá el acceso a tu consulta' : 'Revisá la dirección ahora'}</h2>
+			<h2 class="ux-section-title">{isVirtual ? 'Tu turno es pronto: revisá el acceso a tu consulta' : 'Tu turno es pronto: revisá la dirección'}</h2>
 		{:else}
 			<h2 class="ux-section-title">{isVirtual ? 'Tu consulta virtual' : 'Dónde es'}</h2>
 		{/if}
-		<p class="mt-4 text-lg font-bold text-white">{isVirtual ? 'Modalidad: Virtual' : '📍 ' + current.business.address}</p>
+		<p class="mt-4 text-lg font-bold text-white">{isVirtual ? 'Modalidad: Virtual' : current.business.address}</p>
 		{#if current.business.address_instructions}
 			<p class="mt-2 text-sm text-white/70">{current.business.address_instructions}</p>
 		{/if}
@@ -1410,7 +1410,7 @@
 
 {#snippet reminderCard()}
 	<section class="ux-card">
-		<h2 class="text-2xl font-extrabold leading-tight tracking-tight text-white sm:text-[1.7rem]">
+		<h2 class="text-2xl font-bold leading-tight tracking-tight text-white">
 			{reminderTitle}
 		</h2>
 		<p class="mt-3 text-sm leading-relaxed text-white/70">{reminderIntro}</p>
@@ -1427,9 +1427,9 @@
 				<a
 					href={`${base}/calendario.ics?p=phone`}
 					onclick={() => beginCalendarHandoff('iphone')}
-					class="ux-btn-primary ux-btn-cta mt-5 flex w-full px-3 text-center text-[1.075rem] font-extrabold"
+					class="ux-btn-primary ux-btn-cta mt-5 flex w-full px-3 text-center text-cta font-bold"
 				>
-					📅 Agregar al calendario
+					<Icon name="calendar" />Agregar al calendario
 				</a>
 				<p class="mt-3 text-center text-xs leading-relaxed text-white/45">
 					El evento queda preparado con la fecha, la hora y sus avisos.
@@ -1438,7 +1438,7 @@
 		{:else}
 			<details class="mt-4 rounded-2xl border border-white/10 bg-white/[0.035]">
 				<summary class={`${calendarSummaryClass} block w-full cursor-pointer list-none text-center`}>
-					{needsCalendarUpdate ? '🔄 Actualizar calendario' : '📅 Agregar al calendario'}
+					<span class="inline-flex items-center justify-center gap-2"><Icon name={needsCalendarUpdate ? 'refresh' : 'calendar'} />{needsCalendarUpdate ? 'Actualizar calendario' : 'Agregar al calendario'}</span>
 				</summary>
 				<div class="border-t border-white/10 p-4">
 					{#if hasCalendarAction && !needsCalendarUpdate}
@@ -1475,7 +1475,7 @@
 			<div class="border-t border-white/10 p-4">
 				<pre class="overflow-x-auto whitespace-pre-wrap text-sm text-white/80">{copyDetailsText}</pre>
 				<button type="button" class="ux-btn-secondary mt-3 w-full" onclick={copyDetails}>
-					{copied ? 'Copiado ✓' : 'Copiar al portapapeles'}
+					{#if copied}<Icon name="check" class="h-4 w-4 shrink-0" />Copiado{:else}Copiar al portapapeles{/if}
 				</button>
 			</div>
 		</details>
@@ -1489,8 +1489,7 @@
 			{#if appointment?.business?.logo_url}
 				<img src={appointment.business.logo_url} alt={appointment.business.name} class="mb-5 h-16 w-16 rounded-2xl object-cover" />
 			{/if}
-			<p class="ux-badge">{data.created ? 'Reserva confirmada' : 'Turno'}</p>
-			<h1 class="ux-title mt-4">{data.created ? 'Tu turno quedó reservado' : 'Tu turno'}</h1>
+			<h1 class="ux-title">{data.created ? 'Tu turno quedó reservado' : 'Tu turno'}</h1>
 			{#if isActive && whenLabels}
 				<p class="ux-subtitle">Te esperamos el {whenLabels.full}.</p>
 			{:else}
@@ -1567,7 +1566,7 @@
 					download="comprobante-turno.pdf"
 					class="ux-btn-secondary mt-6 w-full"
 				>
-					🧾 Guardar comprobante
+					<Icon name="receipt" />Guardar comprobante
 				</a>
 			</section>
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { formatDateTime } from '$lib/utils/format';
 	import type { PageData } from './$types';
 
@@ -25,8 +26,7 @@
 						class="mb-5 h-16 w-16 rounded-2xl object-cover"
 					/>
 				{/if}
-				<p class="ux-badge">Reprogramación</p>
-				<h1 class="ux-title mt-4">Tu turno fue reprogramado</h1>
+				<h1 class="ux-title">Tu turno fue reprogramado</h1>
 				<p class="ux-subtitle">Este es el detalle actualizado de tu turno.</p>
 			</section>
 
@@ -64,14 +64,14 @@
 			<section class="ux-card">
 				<ul class="flex flex-col gap-3 text-sm text-white/80">
 					<li class="flex gap-2">
-						<span aria-hidden="true">🔔</span>
+						<Icon name="bell" class="mt-0.5 h-4 w-4 shrink-0" />
 						<span>
 							Si activaste las notificaciones de la aplicación al reservar, vas a recibir
 							recordatorios en la nueva fecha y horario.
 						</span>
 					</li>
 					<li class="flex gap-2">
-						<span aria-hidden="true">📅</span>
+						<Icon name="calendar" class="mt-0.5 h-4 w-4 shrink-0" />
 						<span>
 							Si habías agregado el turno anterior a tu calendario, no olvides actualizarlo.
 						</span>

@@ -150,7 +150,8 @@ describe('public booking UX helpers', () => {
 		];
 
 		const days = summarizeSlotsByDate(slots, 'America/Argentina/Buenos_Aires');
-		expect(days).toEqual([{ date: '2026-06-03', label: 'Miércoles 3 de junio', count: 2 }]);
+		// The day and month stay together: a narrow screen breaks after the weekday.
+		expect(days).toEqual([{ date: '2026-06-03', label: 'Miércoles 3\u00a0de\u00a0junio', count: 2 }]);
 	});
 
 	it('ordena los días cronológicamente aunque los slots lleguen desordenados', () => {

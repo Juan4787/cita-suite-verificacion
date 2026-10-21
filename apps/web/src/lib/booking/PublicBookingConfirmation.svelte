@@ -113,7 +113,6 @@
 				>
 				  <section class="patient-booking-summary" aria-label="Resumen del turno">
 				    <div class="patient-summary-heading">
-				      <p class="patient-summary-context">Estás reservando</p>
 				      <h2 id="patient-booking-title">
 				        {selectedService.name}
 				        {selection.bookingMode === "joint" ? "con el equipo" : "con"}

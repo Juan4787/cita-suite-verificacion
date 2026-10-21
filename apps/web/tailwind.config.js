@@ -10,6 +10,15 @@ export default {
 			fontFamily: {
 				sans: ['"Inter Variable"', 'Inter', 'system-ui', 'sans-serif']
 			},
+			// Named roles of the type scale (DESIGN.md). Size only: each keeps the line
+			// height of its context, as the literal values they replace did.
+			fontSize: {
+				micro: '0.6875rem', // group labels and compact navigation
+				caption: '0.8125rem', // field labels of the patient file
+				supporting: '0.95rem',
+				body: '17px',
+				cta: '1.075rem' // the patient's main actions on their appointment page
+			},
 			colors: {
 				primary: {
 					50: '#eef7ff',

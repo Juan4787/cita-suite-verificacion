@@ -97,8 +97,7 @@
 		{#if access.canUseBusiness}
 			<BackLink href="/odonto/configuracion" label="Volver" class="mb-5" />
 		{/if}
-		<p class="ux-badge">Cita Suite</p>
-		<h1 class="ux-title mt-4">{mainTitle}</h1>
+		<h1 class="ux-title">{mainTitle}</h1>
 		<p class="ux-subtitle">{mainDescription}</p>
 	</div>
 
@@ -106,7 +105,7 @@
 		<div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
 			<div>
 				<span class={statusClass}>{statusLabel}</span>
-				<h2 class="mt-4 text-3xl font-black text-white">{data.context.business.name}</h2>
+				<h2 class="mt-4 text-3xl font-bold text-white">{data.context.business.name}</h2>
 				<p class="mt-2 text-sm text-white/55">
 					{access.isPermanent ? 'Tu cuenta no tiene vencimiento.' : 'Estado de acceso del consultorio.'}
 				</p>
@@ -161,7 +160,7 @@
 			</p>
 			{#if data.mpEnvironment === 'test'}
 				<div class="ux-alert ux-alert-warning mt-4">
-					<p class="font-black">Mercado Pago está en modo de prueba.</p>
+					<p class="font-bold">Mercado Pago está en modo de prueba.</p>
 					<p class="mt-1">
 						Abrí el checkout en una ventana privada e ingresá con un comprador de prueba de
 						Argentina. No uses tu cuenta personal de Mercado Pago: las tarjetas de prueba se
@@ -310,7 +309,7 @@
 					<div class="ux-soft-card p-4">
 						<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 							<div>
-								<p class="font-black text-white">
+								<p class="font-bold text-white">
 									{grant.operation === 'set_permanent' ? 'Acceso permanente' : grant.operation === 'grant_access' || grant.operation === 'extend_access' ? 'Acceso actualizado' : 'Cambio registrado'}
 								</p>
 								<p class="mt-1 text-sm text-white/55">

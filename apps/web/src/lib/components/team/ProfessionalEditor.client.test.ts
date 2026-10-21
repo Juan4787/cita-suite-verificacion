@@ -60,6 +60,8 @@ describe('professional editor cross-task coordination', () => {
 		expect(field).toHaveValue('Segunda edición durante la espera');
 		expect(screen.getByRole('button', { name: 'Guardar sólo perfil' })).toBeEnabled();
 		expect(screen.getAllByText('Cambios sin guardar').length).toBeGreaterThan(0);
+		// The tab marks its unsaved changes with a drawn icon, not a typed glyph.
+		expect(screen.getByRole('img', { name: 'Cambios sin guardar' }).querySelector('svg')).not.toBeNull();
 	});
 	it('deselecting a service preserves a closed restricted schedule in the shared atomic payload', async () => {
 		render(ProfessionalEditor, { data: professionalEditorData() });

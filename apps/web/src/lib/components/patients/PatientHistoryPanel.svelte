@@ -214,18 +214,18 @@
 												class="w-full min-w-0 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0f1f36]">
 												<span class="flex min-w-0 flex-wrap items-center gap-3">
 													<span class="rounded-full bg-[#7c3aed]/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#5b21b6] dark:bg-[#7c3aed]/20 dark:text-[#d9c5ff]">{entry.entry_type}</span>
-													<span class="min-w-0 break-words text-[16px] font-semibold text-neutral-900 line-clamp-1 dark:text-white">{mainTitle(entry)}</span>
+													<span class="min-w-0 break-words text-base font-semibold text-neutral-900 line-clamp-1 dark:text-white" data-truncation="allowed">{mainTitle(entry)}</span>
 												</span>
-												{#if entry.description && !isDuplicateDescription(entry)}<span class="mt-1 block text-[13px] font-medium text-neutral-700 line-clamp-1 dark:text-neutral-200">{entry.description}</span>{/if}
+												{#if entry.description && !isDuplicateDescription(entry)}<span class="mt-1 block text-caption font-medium text-neutral-700 line-clamp-1 dark:text-neutral-200" data-truncation="allowed">{entry.description}</span>{/if}
 												<span class="mt-3 flex flex-wrap items-center gap-2 text-xs text-neutral-500 dark:text-neutral-300">
 													<span>{formatDate(entry.created_at, businessTimeZone)}</span><span class="inline-flex items-center gap-2 whitespace-nowrap"><span aria-hidden="true">·</span><span>{fmtTime(entry.created_at)}</span></span>
-													{#if entry.teeth}<span class="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-600 dark:bg-white/10 dark:text-neutral-200">Zona {entry.teeth}</span>{/if}
+													{#if entry.teeth}<span class="rounded-full bg-neutral-100 px-2 py-0.5 text-micro font-semibold text-neutral-600 dark:bg-white/10 dark:text-neutral-200">Zona {entry.teeth}</span>{/if}
 												</span>
-												{#if hasDistinctNote(entry)}<span class="mt-2 block text-xs text-neutral-500 line-clamp-1 dark:text-neutral-300">Nota: {entry.internal_note}</span>{/if}
+												{#if hasDistinctNote(entry)}<span class="mt-2 block text-xs text-neutral-500 line-clamp-1 dark:text-neutral-300" data-truncation="allowed">Nota: {entry.internal_note}</span>{/if}
 												<span class="mt-2 block text-xs font-semibold text-primary-700 dark:text-primary-300">{expanded ? 'Ocultar detalle' : 'Ver detalle'}</span>
 											</button>
 											<div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
-												{#if entry.amount != null}<span class="whitespace-nowrap text-[15px] font-semibold text-neutral-800 dark:text-neutral-100">{formatCurrency(entry.amount)}</span>{/if}
+												{#if entry.amount != null}<span class="whitespace-nowrap text-supporting font-semibold text-neutral-800 dark:text-neutral-100">{formatCurrency(entry.amount)}</span>{/if}
 												{#if canEditEntry(entry)}
 													<button type="button" disabled={!client.ready} class="inline-flex items-center gap-1 rounded-full border border-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-100 dark:hover:bg-[#122641]" onclick={() => onEdit(entry)}>
 														<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>Editar

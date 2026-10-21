@@ -85,8 +85,8 @@
 <div class="space-y-3">
 	{#if value}
 		<div class="rounded-2xl border border-[#7c3aed]/40 bg-[#7c3aed]/10 px-4 py-3 text-center">
-			<p class="text-[11px] font-black uppercase tracking-wide text-[#b89bff]">Fecha del recordatorio</p>
-			<p class="mt-1 text-lg font-black leading-tight text-white">{fullLabel(value)}</p>
+			<p class="text-micro font-bold uppercase tracking-wide text-[#b89bff]">Fecha del recordatorio</p>
+			<p class="mt-1 text-lg font-bold leading-tight text-white">{fullLabel(value)}</p>
 		</div>
 	{:else}
 		<p class="text-sm text-white/55">Elegí cuándo querés que la app te recuerde contactar al paciente.</p>
@@ -140,7 +140,7 @@
 			</div>
 			<div class="mt-2 grid grid-cols-7 gap-1 text-center">
 				{#each WEEKDAYS as wd}
-					<span class="py-1 text-[11px] font-bold text-white/40">{wd}</span>
+					<span class="py-1 text-micro font-bold text-white/40">{wd}</span>
 				{/each}
 				{#each grid as cell}
 					{#if cell}

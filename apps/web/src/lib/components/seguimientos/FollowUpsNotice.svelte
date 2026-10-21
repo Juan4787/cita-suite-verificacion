@@ -29,7 +29,6 @@
 	{#if notice.count === 1 && notice.single}
 		<DismissibleNotice
 			storageKey={`${storageKeyPrefix}:follow-ups:${notice.dismissalKey}`}
-			eyebrow="Seguimiento"
 			title="Tenés un recordatorio importante"
 			message={singleLine}
 			tone="warning"
@@ -41,7 +40,6 @@
 	{:else}
 		<DismissibleNotice
 			storageKey={`${storageKeyPrefix}:follow-ups:${notice.dismissalKey}`}
-			eyebrow="Seguimientos"
 			title={`Tenés ${notice.count} recordatorios importantes`}
 			tone="warning"
 		>

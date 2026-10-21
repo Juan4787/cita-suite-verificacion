@@ -355,7 +355,7 @@
 	{:else if step === 'data'}
 		<div class="space-y-5">
 			<div class="rounded-xl bg-white/5 px-4 py-3">
-				<p class="text-[11px] font-black uppercase tracking-wide text-white/40">Paciente</p>
+				<p class="text-micro font-bold uppercase tracking-wide text-white/40">Paciente</p>
 				<p class="mt-0.5 font-bold text-white">{selectedPatient?.full_name}</p>
 			</div>
 
@@ -422,24 +422,24 @@
 			</p>
 
 			<div class="rounded-2xl border border-[#7c3aed]/50 bg-[#7c3aed]/15 px-4 py-6 text-center shadow-lg shadow-[#7c3aed]/10">
-				<p class="text-xs font-black uppercase tracking-[0.15em] text-[#b89bff]">Fecha del recordatorio</p>
-				<p class="mt-2 text-2xl font-black leading-tight text-white sm:text-3xl">{fullLabel(remindOn)}</p>
+				<p class="text-xs font-bold uppercase tracking-[0.15em] text-[#b89bff]">Fecha del recordatorio</p>
+				<p class="mt-2 text-2xl font-bold leading-tight text-white sm:text-3xl">{fullLabel(remindOn)}</p>
 			</div>
 
 			<div class="grid gap-3">
 				<div class="rounded-xl bg-white/5 px-4 py-3">
-					<p class="text-[11px] font-black uppercase tracking-wide text-white/40">Paciente</p>
+					<p class="text-micro font-bold uppercase tracking-wide text-white/40">Paciente</p>
 					<p class="mt-0.5 font-bold text-white">{selectedPatient?.full_name}</p>
 				</div>
 				{#if message.trim()}
 					<div class="rounded-xl bg-white/5 px-4 py-3">
-						<p class="text-[11px] font-black uppercase tracking-wide text-white/40">Mensaje</p>
+						<p class="text-micro font-bold uppercase tracking-wide text-white/40">Mensaje</p>
 						<p class="mt-0.5 text-white/90">{message.trim()}</p>
 					</div>
 				{/if}
 				{#if canAssign && assignedName}
 					<div class="rounded-xl bg-white/5 px-4 py-3">
-						<p class="text-[11px] font-black uppercase tracking-wide text-white/40">Asignado a</p>
+						<p class="text-micro font-bold uppercase tracking-wide text-white/40">Asignado a</p>
 						<p class="mt-0.5 font-bold text-white">{assignedName}</p>
 					</div>
 				{/if}

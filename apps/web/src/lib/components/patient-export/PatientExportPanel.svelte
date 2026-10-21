@@ -221,7 +221,7 @@
 <div class="rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-[#1f3554] dark:bg-[#0f1f36] sm:p-7">
 	{#if scope === 'patient'}
 		<div class="rounded-2xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-400/25 dark:bg-violet-400/10">
-			<p class="text-xs font-black uppercase tracking-[0.18em] text-violet-700 dark:text-violet-200">Paciente seleccionado</p>
+			<p class="text-xs font-bold uppercase tracking-[0.18em] text-violet-700 dark:text-violet-200">Paciente seleccionado</p>
 			<p class="mt-2 break-words text-lg font-bold text-neutral-950 dark:text-white">
 				{patientName || 'Paciente'}
 			</p>
@@ -235,7 +235,7 @@
 			</p>
 			<button
 				type="button"
-				class="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#6d28d9] px-5 py-3 text-base font-black text-white shadow-lg shadow-violet-900/15 transition hover:-translate-y-0.5 hover:bg-[#5b21b6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] sm:w-auto"
+				class="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#6d28d9] px-5 py-3 text-base font-bold text-white shadow-lg shadow-violet-900/15 transition hover:-translate-y-0.5 hover:bg-[#5b21b6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] sm:w-auto"
 				onclick={startExport}
 			>
 				<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-5 w-5">
@@ -285,7 +285,7 @@
 						</svg>
 					</span>
 					<div class="min-w-0">
-						<p class="font-black text-emerald-950 dark:text-emerald-100">Archivo listo</p>
+						<p class="font-bold text-emerald-950 dark:text-emerald-100">Archivo listo</p>
 						<p class="mt-1 break-words text-sm leading-6 text-emerald-900/80 dark:text-emerald-50/75">
 							{prepared.filename} · {formatBytes(prepared.byteLength)}
 						</p>
@@ -296,10 +296,10 @@
 			<div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
 				{#each datasets as dataset}
 					<div class="min-w-0 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3 dark:border-[#294568] dark:bg-[#13243d]">
-						<p class="break-words text-[11px] font-bold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+						<p class="break-words text-micro font-bold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
 							{datasetLabels[dataset]}
 						</p>
-						<p class="mt-1 text-lg font-black text-neutral-950 dark:text-white">{prepared.counts[dataset].toLocaleString('es-AR')}</p>
+						<p class="mt-1 text-lg font-bold text-neutral-950 dark:text-white">{prepared.counts[dataset].toLocaleString('es-AR')}</p>
 					</div>
 				{/each}
 			</div>
@@ -309,7 +309,7 @@
 			</p>
 			<button
 				type="button"
-				class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#6d28d9] px-4 py-2.5 text-sm font-black text-white transition hover:bg-[#5b21b6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] sm:w-auto"
+				class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#6d28d9] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#5b21b6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] sm:w-auto"
 				onclick={downloadPreparedFile}
 			>
 				Descargar otra vez
@@ -324,14 +324,14 @@
 			bind:this={terminalSummary}
 		>
 			<div class="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:border-[#294568] dark:bg-[#13243d]">
-				<p class="font-black text-neutral-950 dark:text-white">Exportación cancelada</p>
+				<p class="font-bold text-neutral-950 dark:text-white">Exportación cancelada</p>
 				<p class="mt-1 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
 					No se guardó ningún archivo y los datos del consultorio no se modificaron.
 				</p>
 			</div>
 			<button
 				type="button"
-				class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#6d28d9] px-4 py-2.5 text-sm font-black text-white transition hover:bg-[#5b21b6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] sm:w-auto"
+				class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#6d28d9] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#5b21b6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] sm:w-auto"
 				onclick={startExport}
 			>
 				Preparar de nuevo
@@ -345,13 +345,13 @@
 			bind:this={terminalSummary}
 		>
 			<div class="rounded-2xl border border-red-200 bg-red-50 p-4 outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-red-400/30 dark:bg-red-400/10">
-				<p class="font-black text-red-950 dark:text-red-100">No pudimos preparar el archivo</p>
+				<p class="font-bold text-red-950 dark:text-red-100">No pudimos preparar el archivo</p>
 				<p class="mt-1 break-words text-sm leading-6 text-red-900/80 dark:text-red-50/80">{errorMessage}</p>
 			</div>
 			{#if retryable}
 				<button
 					type="button"
-					class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#6d28d9] px-4 py-2.5 text-sm font-black text-white transition hover:bg-[#5b21b6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] sm:w-auto"
+					class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#6d28d9] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#5b21b6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] sm:w-auto"
 					onclick={startExport}
 				>
 					Intentar nuevamente
@@ -359,7 +359,7 @@
 			{:else if errorCode === 'EXPORT_NOT_AUTHENTICATED'}
 				<a
 					href="/login"
-					class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#6d28d9] px-4 py-2.5 text-sm font-black text-white transition hover:bg-[#5b21b6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] sm:w-auto"
+					class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#6d28d9] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#5b21b6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] sm:w-auto"
 				>
 					Volver a ingresar
 				</a>

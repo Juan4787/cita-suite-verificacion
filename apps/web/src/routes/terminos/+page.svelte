@@ -393,9 +393,9 @@ n. que acepta que la eliminación estará sujeta a verificación, disponibilidad
 			<div class="mt-6 space-y-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-200">
 				{#each lines as line}
 					{#if isMainTitle(line)}
-						<p class="text-base font-black uppercase tracking-wide text-neutral-950 dark:text-white">{line}</p>
+						<p class="text-base font-bold uppercase tracking-wide text-neutral-950 dark:text-white">{line}</p>
 					{:else if isHeading(line)}
-						<h2 class="pt-5 text-lg font-black text-neutral-950 dark:text-white">{line}</h2>
+						<h2 class="pt-5 text-lg font-bold text-neutral-950 dark:text-white">{line}</h2>
 					{:else if isListItem(line)}
 						<p class="pl-4">
 							<span class="font-bold text-neutral-950 dark:text-white">{line.slice(0, 2)}</span>{line.slice(2)}

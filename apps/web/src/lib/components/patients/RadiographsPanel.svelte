@@ -552,8 +552,7 @@
 <section class="ux-card" aria-labelledby="clinical-images-title">
 	<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 		<div>
-			<p class="ux-badge">Ficha clínica</p>
-			<h2 id="clinical-images-title" class="ux-section-title mt-3">Estudios y documentos</h2>
+			<h2 id="clinical-images-title" class="ux-section-title">Estudios y documentos</h2>
 			<p class="mt-2 max-w-2xl text-sm text-white/60">
 				El equipo autorizado puede consultarlos desde esta ficha. Los originales permanecen privados.
 			</p>
@@ -658,7 +657,7 @@
 							{/if}
 						</div>
 						<div class="min-w-0 flex-1">
-							<h3 class="truncate text-sm font-semibold text-white" title={item.original_filename ?? ''}>{titleFor(item)}</h3>
+							<h3 class="break-words text-sm font-semibold text-white" title={item.original_filename ?? ''}>{titleFor(item)}</h3>
  {#if item.source==='patient'}<p class="text-xs text-white/75">Adjuntado desde el enlace del turno</p>{/if}
 							<p class="mt-1 text-xs text-white/50">{metadataFor(item)}</p>
 							{#if item.status === 'ready' && item.integrity_status !== 'ok'}
@@ -703,7 +702,7 @@
 <Modal open={showUpload} title="Añadir documento clínico" closable={!uploadBusy} on:close={closeUpload}>
 	<div class="space-y-4 text-sm text-neutral-800 dark:text-neutral-100">
 		<div class="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 dark:border-[#1f3554] dark:bg-[#122641]">
-			<p class="truncate font-semibold text-neutral-900 dark:text-white">{selectedFile?.name ?? 'Imagen seleccionada'}</p>
+			<p class="break-words font-semibold text-neutral-900 dark:text-white">{selectedFile?.name ?? 'Imagen seleccionada'}</p>
 			<p class="mt-1 text-xs text-neutral-500 dark:text-neutral-300">{formatClinicalFileBytes(selectedFile?.size)}</p>
 		</div>
 		<div class="grid gap-4 sm:grid-cols-2">

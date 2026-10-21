@@ -6,14 +6,12 @@
 
 	let {
 		storageKey,
-		eyebrow = '',
 		title,
 		message = '',
 		tone = 'neutral',
 		children
 	}: {
 		storageKey: string;
-		eyebrow?: string;
 		title: string;
 		message?: string;
 		tone?: NoticeTone;
@@ -87,10 +85,7 @@
 			</svg>
 		</button>
 
-		{#if eyebrow}
-			<p class="text-[11px] font-black uppercase tracking-wide text-white/55">{eyebrow}</p>
-		{/if}
-		<h2 class:mt-1={Boolean(eyebrow)} class="text-base font-black text-white sm:text-lg">{title}</h2>
+		<h2 class="text-base font-bold text-white sm:text-lg">{title}</h2>
 		{#if message}
 			<p class="mt-1 text-sm font-semibold leading-6 text-white/65">{message}</p>
 		{/if}

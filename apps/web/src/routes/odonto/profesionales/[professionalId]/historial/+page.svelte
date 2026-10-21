@@ -55,7 +55,7 @@
 			{#each data.appointments as appt}
 				<a href={`/odonto/turnos/${appt.id}`} class="ux-choice flex items-center gap-3 p-4">
 					<div class="min-w-0 flex-1">
-						<p class="truncate font-bold text-white">{appt.patients?.full_name ?? 'Paciente'}</p>
+						<p class="break-words font-bold text-white">{appt.patients?.full_name ?? 'Paciente'}</p>
 						<p class="mt-0.5 text-sm text-white/55">
 							{formatDateTime(appt.starts_at)}{appt.service_name_snapshot ? ` · ${appt.service_name_snapshot}` : ''} · {statusLabels[appt.status] ?? appt.status}
 						</p>
@@ -80,7 +80,7 @@
 			{#each data.entries as entry}
 				<a href={`/odonto/pacientes/${entry.patient_id}`} class="ux-choice flex items-center gap-3 p-4">
 					<div class="min-w-0 flex-1">
-						<p class="truncate font-bold text-white">{entry.patients?.full_name ?? 'Paciente'}</p>
+						<p class="break-words font-bold text-white">{entry.patients?.full_name ?? 'Paciente'}</p>
 						<p class="mt-0.5 text-sm text-white/55">
 							{formatDateTime(entry.created_at)}{entry.entry_type ? ` · ${entry.entry_type}` : ''}
 						</p>

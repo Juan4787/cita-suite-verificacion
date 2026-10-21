@@ -333,7 +333,7 @@
 						<div class={`ux-soft-card p-4 ${scheduleBlockCardClass(block)}`}>
 							<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 								<div class="min-w-0 flex-1">
-									<h3 class="text-base font-black text-white">Bloque {blockIndex + 1}</h3>
+									<h3 class="text-base font-bold text-white">Bloque {blockIndex + 1}</h3>
 									<p class="mt-1 text-sm text-white/55">Días que comparten la misma franja habitual.</p><div class="mt-4"><label class="ux-label">Prestaciones de esta franja<select use:styledSelect={block.serviceScope??'all'} class="ux-input mt-2" value={block.serviceScope??'all'} onchange={event=>updateScheduleBlock(block.id,{serviceScope:event.currentTarget.value as 'all'|'restricted',allowedServiceIds:block.allowedServiceIds??[]})}><option value="all">Todas las habilitadas</option><option value="restricted">Sólo las seleccionadas</option></select></label>{#if block.serviceScope==='restricted'}<fieldset class="mt-3"><legend class="ux-label">Prestaciones permitidas</legend>{#if dirtyFields.services}<p class="mt-2 text-sm text-white/75">Usá Guardar todo para aplicar juntos los cambios de prestaciones y horarios.</p>{/if}{#each data.services.filter((service:Service)=>draft.serviceIds.includes(service.id)||defaultServiceIdSet.has(service.id)) as service}<label class="mt-2 flex min-h-11 items-center gap-3 text-sm text-white/80"><input type="checkbox" checked={block.allowedServiceIds?.includes(service.id)??false} onchange={event=>updateScheduleBlock(block.id,{allowedServiceIds:event.currentTarget.checked?[...(block.allowedServiceIds??[]),service.id]:(block.allowedServiceIds??[]).filter(id=>id!==service.id)})}/>{service.name}</label>{/each}{#if !block.allowedServiceIds?.length}<p class="mt-2 text-sm text-white/80">La franja está cerrada hasta que elijas una prestación.</p>{/if}</fieldset>{/if}</div>
 								</div>
 								<button type="button" class="ux-btn-secondary shrink-0 text-sm" disabled={!canOperate} onclick={() => removeScheduleBlock(block.id)}>
@@ -355,7 +355,7 @@
 										<button
 											type="button"
 											disabled={!canOperate}
-											class={`min-h-14 min-w-0 rounded-2xl border px-3 py-3 text-center text-sm font-black leading-tight whitespace-normal transition disabled:cursor-not-allowed disabled:opacity-50 ${
+											class={`min-h-14 min-w-0 rounded-2xl border px-3 py-3 text-center text-sm font-bold leading-tight whitespace-normal transition disabled:cursor-not-allowed disabled:opacity-50 ${
 												block.weekdays.includes(index)
 													? 'border-[#8b5cf6] bg-[#7c3aed] text-white shadow-lg shadow-[#7c3aed]/20'
 													: false /* Another block on this weekday is valid when the time ranges do not overlap. */
@@ -504,7 +504,7 @@
 									class={`ux-choice p-4 text-left ${draft.exception.periodMode === 'single' ? 'ux-choice-active' : ''}`}
 									onclick={() => (draft.exception.periodMode = 'single')}
 								>
-									<span class="block font-black text-white">Un día</span>
+									<span class="block font-bold text-white">Un día</span>
 									<span class="mt-1 block text-xs text-white/50">Elegís fecha y horario.</span>
 								</button>
 								<button
@@ -514,7 +514,7 @@
 									class={`ux-choice p-4 text-left ${draft.exception.periodMode === 'range' ? 'ux-choice-active' : ''}`}
 									onclick={() => (draft.exception.periodMode = 'range')}
 								>
-									<span class="block font-black text-white">Rango de días</span>
+									<span class="block font-bold text-white">Rango de días</span>
 									<span class="mt-1 block text-xs text-white/50">Desde y hasta, días completos.</span>
 								</button><button type="button" class="ux-choice p-4 text-left" aria-pressed={draft.exception.periodMode==='multiple'} onclick={()=>draft.exception.periodMode='multiple'}><span class="block font-bold">Fechas separadas</span><span class="mt-1 block text-xs text-white/70">Elegí varios días completos.</span></button>
 							</div>
@@ -572,7 +572,7 @@
 					{#each rulesByWeekday as day}
 						<div class="ux-soft-card p-4">
 							<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-								<p class="min-w-28 text-sm font-black text-white">{day.day}</p>
+								<p class="min-w-28 text-sm font-bold text-white">{day.day}</p>
 								<div class="flex flex-1 flex-wrap gap-2">
 									{#if day.rules.length > 0}
 										{#each day.rules as rule}
@@ -580,7 +580,7 @@
 												<input type="hidden" name="rule_id" value={rule.id}/><input type="hidden" name="availability_revision" value={data.availabilityRevision??0} />
 												<span class="whitespace-nowrap text-sm font-bold text-white">{rule.start_time.slice(0, 5)} - {rule.end_time.slice(0, 5)}</span>
 												<span class="text-xs font-bold text-white/50">Descanso entre consultas: {rule.break_minutes} min</span>{#if rule.service_scope==='restricted'}<span class="text-xs text-white/75">{restrictionLabel((rule.rule_services??[]).map(item=>item.service_id))}</span>{/if}
-												<button type="submit" disabled={!canOperate} class="min-h-11 whitespace-nowrap font-black text-red-200 disabled:opacity-50">Quitar</button>
+												<button type="submit" disabled={!canOperate} class="min-h-11 whitespace-nowrap font-bold text-red-200 disabled:opacity-50">Quitar</button>
 											</form>
 										{/each}
 									{:else}

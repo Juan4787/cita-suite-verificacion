@@ -161,7 +161,7 @@
 
 			<div class="mt-3 grid grid-cols-7 gap-1 text-center">
 				{#each weekdays as weekday}
-					<span class="text-[11px] font-bold uppercase text-white/35">{weekday}</span>
+					<span class="text-micro font-bold uppercase text-white/35">{weekday}</span>
 				{/each}
 				{#each cells as cell, index (index)}
 					{#if cell === null}
