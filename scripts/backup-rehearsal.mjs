@@ -86,8 +86,13 @@ try {
 	const existingRoles = new Set(JSON.parse(restoredSql("select json_agg(rolname)::text from pg_roles;")));
 	const skippedRoles = new Set();
 	const rolesLines = readFileSync(files.roles, 'utf8').split('\n').map((line) => {
-		if (!/^(ALTER ROLE|GRANT) /.test(line)) return line;
-		const named = [...line.matchAll(/"((?:[^"]|"")+)"/g)].map(([, role]) => role.replaceAll('""', '"'));
+		// The roles a statement names: ALTER ROLE "x" …, or GRANT "a" TO "b" [GRANTED BY "c"].
+		const identifier = '"((?:[^"]|"")+)"';
+		const altered = new RegExp(`^ALTER ROLE ${identifier}`).exec(line);
+		const granted = new RegExp(`^GRANT ${identifier} TO ${identifier}(?: WITH [A-Z ]+? OPTION)?(?: GRANTED BY ${identifier})?`).exec(line);
+		const match = altered ?? granted;
+		if (!match) return line;
+		const named = match.slice(1).filter(Boolean).map((role) => role.replaceAll('""', '"'));
 		if (!named.length || !named.every((role) => existingRoles.has(role))) return line;
 		named.forEach((role) => skippedRoles.add(role));
 		return '-- ' + line;
