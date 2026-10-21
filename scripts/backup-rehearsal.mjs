@@ -107,6 +107,8 @@ try {
 		platformRoleStatements: rolesLines.filter((line) => /^-- (CREATE ROLE|ALTER ROLE|GRANT) /.test(line)).length,
 		platformRoles: [...skippedRoles].sort(),
 		ownRoleStatements: rolesLines.filter((line) => /^(CREATE ROLE|ALTER ROLE|GRANT) /.test(line)).length,
+		// The dump has no passwords (--no-role-passwords); text values are hidden anyway.
+		roleStatements: rolesLines.filter((line) => /^(-- )?(CREATE ROLE|ALTER ROLE|GRANT) /.test(line)).map((line) => line.replace(/'(?:[^']|'')*'/g, "'…'")),
 		supabaseAdminOwnership: ownershipFixes
 	};
 	for (const [name, path] of Object.entries(files)) docker(['cp', path, `${database}:/tmp/${name}.sql`]);
