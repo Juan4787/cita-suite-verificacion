@@ -44,3 +44,28 @@ test('a stored object that was not downloaded whole is reported', () => {
 		{ object: 'patient-clinical-files/a/3.pdf', expected: 30, actual: null }
 	]);
 });
+
+test('a restore skips what configures the platform roles and keeps the project settings and roles', async () => {
+	const { skipPlatformRoleStatements } = await import('./supabase-backup.mjs');
+	const { lines, platformRoles } = skipPlatformRoleStatements([
+		'ALTER ROLE "anon" SET "statement_timeout" TO \'3s\';',
+		'ALTER ROLE "authenticator" SET "pgrst.db_schemas" TO \'public\';',
+		'CREATE ROLE "supabase_realtime_admin";',
+		'GRANT SET ON PARAMETER "log_min_messages" TO "supabase_realtime_admin";',
+		'ALTER ROLE "authenticated" SET "log_min_messages" TO \'fatal\';',
+		'GRANT "pg_read_all_data" TO "postgres" WITH INHERIT TRUE GRANTED BY "supabase_admin";',
+		'CREATE ROLE "reporting";',
+		'GRANT "authenticated" TO "reporting";'
+	], new Set(['anon', 'authenticated', 'authenticator', 'postgres']));
+	assert.deepEqual(lines, [
+		'ALTER ROLE "anon" SET "statement_timeout" TO \'3s\';',
+		'ALTER ROLE "authenticator" SET "pgrst.db_schemas" TO \'public\';',
+		'-- CREATE ROLE "supabase_realtime_admin";',
+		'-- GRANT SET ON PARAMETER "log_min_messages" TO "supabase_realtime_admin";',
+		'-- ALTER ROLE "authenticated" SET "log_min_messages" TO \'fatal\';',
+		'-- GRANT "pg_read_all_data" TO "postgres" WITH INHERIT TRUE GRANTED BY "supabase_admin";',
+		'CREATE ROLE "reporting";',
+		'GRANT "authenticated" TO "reporting";'
+	]);
+	assert.deepEqual([...platformRoles].sort(), ['authenticated', 'postgres', 'supabase_realtime_admin']);
+});
