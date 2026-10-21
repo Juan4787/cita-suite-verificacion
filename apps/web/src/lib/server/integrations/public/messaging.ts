@@ -1169,6 +1169,10 @@ export const processWhatsAppWebhookPayload = async (
 	return { events, inbound, statuses, botReplies };
 };
 
+/** Whether a signature can be checked at all, so a request without one is refused unread. */
+export const webhookSignatureCheckable = (signatureHeader?: string | null) =>
+	Boolean(env.WHATSAPP_APP_SECRET?.trim()) && Boolean(signatureHeader?.startsWith('sha256='));
+
 export const verifyWebhookSignature = (body: string, signatureHeader?: string | null) => {
 	const secret = env.WHATSAPP_APP_SECRET?.trim();
 	// Falla-cerrado: sin el app secret no podemos verificar la firma, así que se

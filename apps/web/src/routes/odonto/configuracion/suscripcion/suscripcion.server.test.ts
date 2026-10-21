@@ -156,7 +156,11 @@ const makeEvent = (opts: {
 	url?: string;
 	formEntries?: Record<string, string>;
 }) => ({
-	locals: { auth: { access_token: 'token', refresh_token: 'r' } },
+	// As hooks leaves it: the identity Auth verified for this request.
+	locals: {
+		auth: { access_token: 'token', refresh_token: 'r' },
+		verifiedUser: { id: 'owner-1', email: 'duena@mail.com' }
+	},
 	fetch: opts.fetchMock,
 	cookies: {},
 	url: new URL(opts.url ?? PAGE_URL),
@@ -175,6 +179,27 @@ beforeEach(() => {
 });
 
 describe('action subscribe', () => {
+	it('usa como pagador la identidad que hooks ya verificó, sin volver a pedirla a Auth', async () => {
+		const server = createDbMock();
+		const admin = createDbMock({
+			mp_subscriptions: [{ data: [], error: null }, { error: null }]
+		});
+		mocks.createSupabaseServerClient.mockResolvedValue(server.client);
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		mocks.resolveActiveBusiness.mockResolvedValue(ownerContext());
+		const { fetchMock, requests } = createMpFetch([
+			[
+				'/preapproval',
+				{ status: 201, body: { id: 'pre-9', status: 'pending', init_point: 'https://mp.test/init/pre-9' } }
+			]
+		]);
+
+		await expect(actions.subscribe(makeEvent({ fetchMock }) as never)).rejects.toMatchObject({ status: 303 });
+
+		expect(requests[0].body).toMatchObject({ payer_email: 'duena@mail.com' });
+		expect(server.client.auth.getUser).not.toHaveBeenCalled();
+	});
+
 	it('crea el preapproval con el contrato acordado y redirige a init_point', async () => {
 		const server = createDbMock();
 		// 1) chequeo de suscripción existente (vacío) 2) upsert del mapeo
@@ -869,6 +894,46 @@ describe('action cancel', () => {
 });
 
 describe('load', () => {
+	type SubscriptionPage = { mpSubscription: unknown; mpSubscriptionUnavailable?: boolean; grants: unknown };
+
+	it('dice que no pudo comprobar la suscripción en vez de ofrecer suscribirse cuando no pudo leerla', async () => {
+		const server = createDbMock({ access_grants: [{ data: [], error: null }] });
+		const admin = createDbMock({ mp_subscriptions: [{ data: null, error: { message: 'synthetic read failure' } }] });
+		mocks.createSupabaseServerClient.mockResolvedValue(server.client);
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		mocks.resolveActiveBusiness.mockResolvedValue(ownerContext());
+		const { fetchMock } = createMpFetch([]);
+
+		const data = (await load(makeEvent({ fetchMock }) as never)) as SubscriptionPage;
+
+		expect(data).toMatchObject({ mpSubscription: null, mpSubscriptionUnavailable: true });
+	});
+
+	it('sin cliente de servicio tampoco presenta la suscripción como inexistente', async () => {
+		const server = createDbMock({ access_grants: [{ data: [], error: null }] });
+		mocks.createSupabaseServerClient.mockResolvedValue(server.client);
+		mocks.createSupabaseAdminClient.mockRejectedValue(new Error('synthetic unavailable admin client'));
+		mocks.resolveActiveBusiness.mockResolvedValue(ownerContext());
+		const { fetchMock } = createMpFetch([]);
+
+		const data = (await load(makeEvent({ fetchMock }) as never)) as SubscriptionPage;
+
+		expect(data).toMatchObject({ mpSubscription: null, mpSubscriptionUnavailable: true });
+	});
+
+	it('distingue un historial de pagos que no pudo leer de uno vacío', async () => {
+		const server = createDbMock({ access_grants: [{ data: null, error: { message: 'synthetic read failure' } }] });
+		const admin = createDbMock({ mp_subscriptions: [{ data: [], error: null }] });
+		mocks.createSupabaseServerClient.mockResolvedValue(server.client);
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		mocks.resolveActiveBusiness.mockResolvedValue(ownerContext());
+		const { fetchMock } = createMpFetch([]);
+
+		const data = (await load(makeEvent({ fetchMock }) as never)) as SubscriptionPage;
+
+		expect(data).toMatchObject({ grants: null, mpSubscriptionUnavailable: false });
+	});
+
 	it('con ?mp=retorno confirma contra MP y acredita el primer cobro idempotentemente', async () => {
 		const server = createDbMock({ access_grants: [{ data: [], error: null }] });
 		const admin = createDbMock({
