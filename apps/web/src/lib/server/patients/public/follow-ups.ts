@@ -1,6 +1,7 @@
 import type { CitaSupabaseClient, CitaRow } from '$lib/types/database';
 import { readArray, readChoice, readRecord, readText } from '$lib/contracts/json';
 import type { BusinessRole } from '$lib/server/access/public/business';
+import { ilikeContains } from '$lib/server/platform/postgrest-filters';
 
 // Seguimientos: recordar volver a contactar a un paciente. Sin recurrencia.
 // Visibilidad por rol de sistema; asignación a un perfil profesional atendible.
@@ -298,10 +299,9 @@ export const listAssignablePatientsSearch = async (
 ): Promise<PatientSearchResult[]> => {
 	const query = cleanQuery(rawQuery);
 	if (query.length < 2) return [];
-	const safe = query.replace(/[%_]/g, '\\$&');
 	const digits = query.replace(/\D/g, '');
-	const filters = [`full_name.ilike.%${safe}%`, `phone_e164.ilike.%${safe}%`, `dni.ilike.%${safe}%`];
-	if (digits.length >= 3) filters.push(`phone_e164.ilike.%${digits}%`);
+	const filters = [ilikeContains('full_name', query), ilikeContains('phone_e164', query), ilikeContains('dni', query)];
+	if (digits.length >= 3) filters.push(ilikeContains('phone_e164', digits));
 	const { data, error } = await supabase
 		.from('patients')
 		.select('id, full_name, phone_e164')

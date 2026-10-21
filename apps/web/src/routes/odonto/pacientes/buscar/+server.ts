@@ -2,12 +2,11 @@ import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import { normalizeSearchText } from '$lib/utils/agenda-search';
+import { ilikeContains } from '$lib/server/platform/postgrest-filters';
 import { json, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
 const cleanQuery = (value: string) => value.trim().replace(/\s+/g, ' ');
-const escapeIlikePattern = (value: string) =>
-	value.replace(/\\/g, '\\\\').replace(/[%_]/g, '\\$&');
 
 export const GET: RequestHandler = async ({ url, locals, fetch, cookies }) => {
 	if (!locals.auth) throw redirect(303, '/login');
@@ -22,22 +21,16 @@ export const GET: RequestHandler = async ({ url, locals, fetch, cookies }) => {
 		cookies,
 		membershipCache: 'fresh'
 	});
-	const safeQuery = escapeIlikePattern(query);
 	const normalizedQuery = normalizeSearchText(query);
 	const digits = query.replace(/\D/g, '');
 	const filters = [
-		`full_name.ilike.%${safeQuery}%`,
-		`phone_e164.ilike.%${safeQuery}%`,
-		`dni.ilike.%${safeQuery}%`
+		ilikeContains('full_name', query),
+		ilikeContains('phone_e164', query),
+		ilikeContains('dni', query)
 	];
-	if (normalizedQuery) {
-		filters.push(`search_name_normalized.ilike.%${escapeIlikePattern(normalizedQuery)}%`);
-	}
+	if (normalizedQuery) filters.push(ilikeContains('search_name_normalized', normalizedQuery));
 	if (digits.length >= 2) {
-		filters.push(
-			`search_phone_digits.ilike.%${digits}%`,
-			`search_dni_digits.ilike.%${digits}%`
-		);
+		filters.push(ilikeContains('search_phone_digits', digits), ilikeContains('search_dni_digits', digits));
 	}
 
 	const { data, error } = await supabase

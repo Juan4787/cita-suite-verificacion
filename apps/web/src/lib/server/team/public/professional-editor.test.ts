@@ -108,4 +108,16 @@ describe('team editor operations with real typed SDK and simulated HTTP', () => 
 			});
 		}
 	);
+
+	it('answers not found for an identifier that is not one, without querying', async () => {
+		const { client, calls } = sdk(() => Response.json({ booking_availability_revision: 42 }));
+		const context = demoBusinessContext();
+		context.business.id = businessId;
+		expect(await loadProfessionalEditor(client, context, 'actor-one', 'no-es-un-id', 'perfil')).toEqual({
+			ok: false,
+			status: 404,
+			message: 'Profesional no encontrado'
+		});
+		expect(calls).toEqual([]);
+	});
 });

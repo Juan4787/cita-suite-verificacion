@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
 	getOdontoContext: vi.fn(),
 	from: vi.fn(),
 	countTomorrowUncovered: vi.fn(),
-	loadInternalAvailabilitySnapshot: vi.fn()
+	loadInternalAvailabilitySnapshot: vi.fn(),
+	updateAppointmentStatus: vi.fn()
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
@@ -13,12 +14,16 @@ vi.mock('$lib/server/access/public/odonto-context', () => ({ getOdontoContext: m
 vi.mock('$lib/server/platform/supabase', () => ({ createSupabaseAdminClient: vi.fn(async () => ({})) }));
 vi.mock('$lib/server/scheduling/public/reminders', () => ({ countTomorrowUncovered: mocks.countTomorrowUncovered }));
 vi.mock('$lib/server/integrations/public/google-calendar', () => ({ processAppointmentGoogleCalendarSync: vi.fn() }));
+vi.mock('$lib/server/scheduling/public/appointments', async (importOriginal) => ({
+	...(await importOriginal<typeof import('$lib/server/scheduling/public/appointments')>()),
+	updateAppointmentStatus: mocks.updateAppointmentStatus
+}));
 vi.mock('$lib/server/scheduling/public/availability-snapshot', () => ({
 	defaultInternalAvailabilitySnapshotRange: () => ({ fromDate: '2026-10-21', toDate: '2026-11-04' }),
 	loadInternalAvailabilitySnapshot: mocks.loadInternalAvailabilitySnapshot
 }));
 
-const { load } = await import('./+page.server');
+const { load, actions } = await import('./+page.server');
 
 // A query builder: every chained call returns it, and awaiting it gives `result`.
 const query = (result: unknown) => {
@@ -80,5 +85,45 @@ describe('daily agenda load', () => {
 		mocks.countTomorrowUncovered.mockRejectedValue(new Error('reminders unavailable'));
 		const result = (await load(event())) as { reminderCount: number | null };
 		expect(result.reminderCount).toBeNull();
+	});
+
+	describe('on Sunday 22:30 in Buenos Aires, already Monday in UTC', () => {
+		beforeEach(() => {
+			vi.useFakeTimers({ toFake: ['Date'] });
+			vi.setSystemTime(new Date('2026-11-02T01:30:00.000Z'));
+			mocks.from.mockReturnValue(query({ data: [], error: null }));
+		});
+		afterEach(() => vi.useRealTimers());
+
+		it.each(['hoy', '2026-02-31', '2026-13-01'])(
+			'shows the practice day instead of a date that does not exist (%s)',
+			async (requested) => {
+				const result = (await load(event(`?date=${requested}`))) as { date: string };
+				expect(result.date).toBe('2026-11-01');
+			}
+		);
+
+		it('returns to the practice day after a status change that carried no date', async () => {
+			mocks.getOdontoContext.mockResolvedValue({
+				supabase: { from: mocks.from },
+				business: {
+					business: { id: 'business-1', timezone: 'America/Argentina/Buenos_Aires' },
+					role: 'owner',
+					canOperate: true
+				},
+				userId: 'user-1'
+			});
+			const form = new FormData();
+			form.set('appointment_id', 'a1');
+			form.set('status', 'cancelled');
+			await expect(
+				actions.update_status({
+					request: new Request('http://localhost/odonto/agenda?/update_status', { method: 'POST', body: form }),
+					locals: { auth: { access_token: 'test-token' } },
+					fetch: vi.fn(),
+					cookies: { get: vi.fn() }
+				} as never)
+			).rejects.toMatchObject({ status: 303, location: '/odonto/agenda?date=2026-11-01' });
+		});
 	});
 });

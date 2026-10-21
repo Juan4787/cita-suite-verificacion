@@ -72,4 +72,16 @@ describe('practice settings save', () => {
 		expect(mocks.from).toHaveBeenCalledWith('businesses');
 		expect(mocks.createSupabaseAdminClient).not.toHaveBeenCalled();
 	});
+
+	it('does not accept a public link name shaped like an identifier, which the booking link would read as one', async () => {
+		const form = new FormData();
+		form.set('name', 'Consultorio'); form.set('slug', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'); form.set('industry', 'odontology');
+		form.set('timezone', 'America/Argentina/Buenos_Aires');
+		const result = await actions.update_business({
+			request: new Request('http://localhost/odonto/configuracion/negocio', { method: 'POST', body: form }),
+			locals: { auth: { access_token: 'test-token' } }, fetch: vi.fn(), cookies: { get: vi.fn() }
+		} as never);
+		expect(result).toMatchObject({ status: 400 });
+		expect(mocks.from).not.toHaveBeenCalled();
+	});
 });
