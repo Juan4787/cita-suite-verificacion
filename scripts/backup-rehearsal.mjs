@@ -79,6 +79,28 @@ try {
 	const localApi = local.API_URL;
 	const localKey = local.SERVICE_ROLE_KEY ?? local.SECRET_KEY;
 	if (!localApi || !localKey) throw new Error('The new project did not report its API and service key.');
+	// A new project already defines the platform's roles (Realtime's supabase_realtime_admin,
+	// for one), and their settings are the platform's: a role statement that names only roles
+	// the new project already has is skipped. Statements that create the project's own roles
+	// stay. The schema gets the fix the guide lists for supabase_admin ownership.
+	const existingRoles = new Set(JSON.parse(restoredSql("select json_agg(rolname)::text from pg_roles;")));
+	const skippedRoles = new Set();
+	const rolesLines = readFileSync(files.roles, 'utf8').split('\n').map((line) => {
+		if (!/^(ALTER ROLE|GRANT) /.test(line)) return line;
+		const named = [...line.matchAll(/"((?:[^"]|"")+)"/g)].map(([, role]) => role.replaceAll('""', '"'));
+		if (!named.length || !named.every((role) => existingRoles.has(role))) return line;
+		named.forEach((role) => skippedRoles.add(role));
+		return '-- ' + line;
+	});
+	writeFileSync(files.roles, rolesLines.join('\n'));
+	const schemaLines = readFileSync(files.schema, 'utf8').split('\n');
+	const ownershipFixes = schemaLines.filter((line) => /^ALTER .* OWNER TO "supabase_admin";$/.test(line)).length;
+	writeFileSync(files.schema, schemaLines.map((line) => (/^ALTER .* OWNER TO "supabase_admin";$/.test(line) ? '-- ' + line : line)).join('\n'));
+	receipt.restoreFixes = {
+		platformRoleStatements: rolesLines.filter((line) => line.startsWith('-- ALTER ROLE ') || line.startsWith('-- GRANT ')).length,
+		platformRoles: [...skippedRoles].sort(),
+		supabaseAdminOwnership: ownershipFixes
+	};
 	for (const [name, path] of Object.entries(files)) docker(['cp', path, `${database}:/tmp/${name}.sql`]);
 	const restoreStarted = performance.now();
 	docker(['exec', '-e', 'PGPASSWORD=postgres', database, 'psql', '-X', '-U', 'postgres', '-d', 'postgres', '--single-transaction', '-v', 'ON_ERROR_STOP=1', '-q',
