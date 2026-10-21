@@ -32,7 +32,6 @@
 		"@testing-library/svelte": "^5.2.10",
 		"@testing-library/user-event": "^14.6.1",
 		"@types/web-push": "^3.6.4",
-		"@types/ws": "^8.18.1",
 		"autoprefixer": "^10.4.20",
 		"fflate": "0.8.3",
 		"jsdom": "^27.3.0",
@@ -50,7 +49,6 @@
 		"@cita-suite/shared": "workspace:*",
 		"pdf-lib": "^1.17.1",
 		"web-push": "^3.6.7",
-		"write-excel-file": "4.1.1",
-		"ws": "^8.21.0"
+		"write-excel-file": "4.1.1"
 	}
 }

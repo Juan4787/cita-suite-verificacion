@@ -127,7 +127,7 @@
 		`cita-suite:notice:v1:${noticeViewerKey}:${activeBusiness?.business?.id ?? 'sin-consultorio'}`
 	);
 	const masterAssistanceNoticeKey = $derived.by(() => {
-		const grantIds = masterAssistanceRequests.map((request: any) => String(request.id)).sort();
+		const grantIds = masterAssistanceRequests.map((request) => String(request.id)).sort();
 		return `cita-suite:notice:v1:${noticeViewerKey}:master-assistance:${grantIds.join('.')}`;
 	});
 	const missingAddressNoticeKey = $derived(`${businessNoticeStoragePrefix}:missing-address`);
@@ -454,7 +454,7 @@
 
 	$effect(() => {
 		const expirations = masterAssistanceRequests
-			.map((request: any) => Date.parse(String(request.expiresAt ?? '')))
+			.map((request) => Date.parse(String(request.expiresAt ?? '')))
 			.filter((value: number) => Number.isFinite(value) && value > Date.now());
 		if (expirations.length === 0) return;
 		const timer = window.setTimeout(

@@ -13,7 +13,9 @@ import type {
 } from './worker-protocol';
 import { toPatientExportWritableSheets } from './xlsx-adapter';
 
-const workerScope: DedicatedWorkerGlobalScope = self as unknown as DedicatedWorkerGlobalScope;
+// In this module `self` is the dedicated worker's scope, not the window the DOM library declares.
+declare const self: DedicatedWorkerGlobalScope;
+const workerScope = self;
 let busy = false;
 
 const respond = (message: PatientExportWorkerResponse, transfer?: Transferable[]) => {

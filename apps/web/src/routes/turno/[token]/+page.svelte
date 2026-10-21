@@ -13,10 +13,11 @@
 		type NotificationBrowserProfile,
 		type NotificationGuide
 	} from '$lib/device';
+	import type { PageData } from './$types';
 
 	let { data, form }: {
 		data: {
-			appointment: any;
+			appointment: PageData['appointment'];
 			message: string;
 			created: boolean;
 			suggestedAction: string;
@@ -939,14 +940,14 @@
 	);
 
 	const isActive = $derived(
-		Boolean(appointment) && !appointment.is_past && isActiveAppointmentStatus(appointment.status)
+		appointment !== null && !appointment.is_past && isActiveAppointmentStatus(appointment.status)
 	);
 	const isCancelled = $derived(appointment?.status === 'cancelled');
 	const canShowCancelAction = $derived(
 		isActive && appointment?.can_cancel === true
 	);
 	const hasCalendarAction = $derived(
-		Boolean(appointment) &&
+		appointment !== null &&
 			['clicked_google', 'clicked_ics', 'downloaded_ics', 'clicked_outlook', 'clicked_phone_calendar', 'synced_google'].includes(
 				appointment.calendar_action_status
 			)
@@ -1387,7 +1388,7 @@
 	{/if}
 {/snippet}
 
-{#snippet locationCard()}
+{#snippet locationCard(current: NonNullable<PageData['appointment']>)}
 	<section class="ux-card">
 		{#if data.isSoon}
 			<p class="ux-badge ux-badge-warning">Tu turno es pronto</p>
@@ -1395,11 +1396,11 @@
 		{:else}
 			<h2 class="ux-section-title">{isVirtual ? 'Tu consulta virtual' : 'Dónde es'}</h2>
 		{/if}
-		<p class="mt-4 text-lg font-bold text-white">{isVirtual ? 'Modalidad: Virtual' : '📍 ' + appointment.business.address}</p>
-		{#if appointment.business.address_instructions}
-			<p class="mt-2 text-sm text-white/70">{appointment.business.address_instructions}</p>
+		<p class="mt-4 text-lg font-bold text-white">{isVirtual ? 'Modalidad: Virtual' : '📍 ' + current.business.address}</p>
+		{#if current.business.address_instructions}
+			<p class="mt-2 text-sm text-white/70">{current.business.address_instructions}</p>
 		{/if}
-		{#if appointment.business.maps_link}
+		{#if current.business.maps_link}
 			<a href={`${base}/ir/maps`} target="_blank" rel="noreferrer" class="ux-btn-primary mt-5 block w-full text-center">
 				Cómo llegar
 			</a>
@@ -1482,7 +1483,7 @@
 {/snippet}
 
 <BookingAppearance theme={appointment?.booking_context?.theme ?? 'cita-suite'}>
-<main class="min-h-screen bg-[#06111f] px-4 py-6 text-white sm:py-10">{#if data.appointment.price_quote_snapshot}<section class="ux-card mb-5"><h2 class="ux-section-title">Arancel registrado al reservar</h2><p class="mt-2 font-bold">{formatQuotedPrice(data.appointment.price_quote_snapshot)}</p></section>{/if}{#if data.appointment.patient_instructions_snapshot}<section class="ux-card mb-5"><h2 class="ux-section-title">Indicaciones para tu turno</h2><p class="mt-2 whitespace-pre-wrap break-words">{data.appointment.patient_instructions_snapshot}</p></section>{/if}
+<main class="min-h-screen bg-[#06111f] px-4 py-6 text-white sm:py-10">{#if data.appointment?.price_quote_snapshot}<section class="ux-card mb-5"><h2 class="ux-section-title">Arancel registrado al reservar</h2><p class="mt-2 font-bold">{formatQuotedPrice(data.appointment.price_quote_snapshot)}</p></section>{/if}{#if data.appointment?.patient_instructions_snapshot}<section class="ux-card mb-5"><h2 class="ux-section-title">Indicaciones para tu turno</h2><p class="mt-2 whitespace-pre-wrap break-words">{data.appointment.patient_instructions_snapshot}</p></section>{/if}
 	<div class="mx-auto flex w-full max-w-3xl flex-col gap-5">
 		<section class="ux-hero">
 			{#if appointment?.business?.logo_url}
@@ -1518,7 +1519,7 @@
 			{/if}
 
 			{#if data.isSoon && (appointment.business.address || isVirtual)}
-				{@render locationCard()}
+				{@render locationCard(appointment)}
 			{/if}
 
 			{#if isActive}
@@ -1571,7 +1572,7 @@
 			</section>
 
 			{#if !data.isSoon && (appointment.business.address || isVirtual)}
-				{@render locationCard()}
+				{@render locationCard(appointment)}
 			{/if}
 
 			{#if isCancelled}

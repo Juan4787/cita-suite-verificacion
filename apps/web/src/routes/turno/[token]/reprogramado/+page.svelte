@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { formatDateTime } from '$lib/utils/format';
+	import type { PageData } from './$types';
 
 	let { data }: {
 		data: {
-			appointment: any;
+			appointment: PageData['appointment'];
 			active: boolean;
 			demo: boolean;
 		};

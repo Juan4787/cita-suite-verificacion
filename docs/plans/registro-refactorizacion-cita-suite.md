@@ -880,3 +880,14 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
   - retención de los eventos de webhook (`webhook_events_retention.sql`);
   - guarda de escapes de tipos `scripts/lib/type-escapes.test.mjs`, reproducida localmente con 14 escapes (11 `any` y 3 `as unknown as`; `.verification/type-escapes-reproduction-20261021.txt`).
   - Fast 39545185216 sobre `93e8976`, en cola detrás de la medición.
+- **Segunda medición alojada de dos consultorios, 39545125202, con la base asentada desde hace horas:**
+  - **0 % de errores**, 0 cortes de CPU, 0 cruces, superposiciones e interbloqueos; abuso aprobado; fase pública aprobada.
+  - **Latencia: ninguna repetición cumple.** Repetición 1: escrituras p99 7.712 ms. Repetición 2: lecturas p95 1.134 ms y p99 2.367 ms. Repetición 3: lecturas p99 3.115 ms y escrituras p95 2.104 ms.
+  - Las pausas son crónicas y no vienen de la siembra: dos pedidos de 7,6 y 4,5 s a la vez, a las 04:43:22, con CPU de 14 a 17 ms.
+  - Limpieza 39549917172: 2 consultorios, 12.004 pacientes, 24.105 turnos y 2 dueños eliminados; la base vuelve de 113 a 19,7 MB.
+- **Impedimento de publicación informado al usuario (21 de octubre, ~05:35 UTC).** Con dos consultorios, Workers Free cumple: 0 errores y ningún corte. Supabase Free no cumple los p95 y p99 del plan en 5 de 6 repeticiones, por pausas de 2 a 7 s del cómputo Nano: CPU compartida, 0,5 GB y disco con base de 250 IOPS ([cómputo y disco](https://supabase.com/docs/guides/platform/compute-and-disk)). Es una limitación del proveedor, no de las consultas de la app. Alternativas presentadas:
+  1. Supabase Pro en Micro con tope de gasto: 25 USD por mes. El crédito de 10 USD cubre el Micro de un proyecto ([cómputo](https://supabase.com/docs/guides/platform/manage-your-usage/compute)). El tope bloquea el excedente de consumo sin cobrarlo, pero no cubre el cómputo, que es de precio fijo por tamaño ([control de costos](https://supabase.com/docs/guides/platform/cost-control)). Si staging comparte organización, también paga cómputo. Medir antes de publicar.
+  2. Publicar en Free aceptando las pausas: es un criterio incumplido y decide el usuario.
+  3. Mitigaciones de la app, que no eliminan las pausas.
+  - Recomendación: la 1. Nada contratado. La publicación queda frenada hasta la decisión; la auditoría y la preparación del release siguen.
+- **Corrida de reproducción de la auditoría: fast 39545905650 sobre `e6deb18`.** Reemplazó a la 39545185216 sobre `93e8976`, que se canceló antes de arrancar para sumar la prueba del verificador de revisiones. **Fallaron exactamente las 22 pruebas nuevas**, todas por su aserción, y aprobaron las otras 1.329 de servidor y `svelte-check`. Las correcciones del servidor se aplicaron (`apply-r2.sh`) y se verifican en la fast 39549995653 sobre `227976a`.

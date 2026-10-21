@@ -5,7 +5,6 @@ import { dev } from '$app/environment';
 import type { Cookies } from '@sveltejs/kit';
 import { createClient } from '@supabase/supabase-js';
 import type { CitaDatabase, CitaSupabaseClient } from '$lib/types/database';
-import WebSocket from 'ws';
 
 export type Module = 'odonto' | 'administrativo';
 
@@ -21,8 +20,6 @@ const normalizeEnv = (value?: string | null) => {
 	const trimmed = value?.trim();
 	return trimmed ? trimmed : undefined;
 };
-
-const WebSocketTransport = WebSocket as unknown as typeof globalThis.WebSocket;
 
 const moduleEmails: Record<Module, string | undefined> = {
 	odonto: normalizeEnv(env.CITA_SUITE_OWNER_EMAIL) ?? normalizeEnv(env.SABRINA_EMAIL),
@@ -101,9 +98,6 @@ export async function createSupabaseServerClient(
 			autoRefreshToken: false,
 			detectSessionInUrl: false
 		},
-		realtime: {
-			transport: WebSocketTransport
-		},
 		global: {
 			headers,
 			fetch: fetchImpl ?? fetch
@@ -167,9 +161,6 @@ export const createSupabaseOAuthClient = async (
 				}
 			}
 		},
-		realtime: {
-			transport: WebSocketTransport
-		},
 		global: {
 			headers: { 'X-App-Module': module, 'X-Auth-Flow': 'oauth' },
 			fetch: fetchImpl ?? fetch
@@ -202,9 +193,6 @@ export const createSupabaseAdminClient = async (
 			persistSession: false,
 			autoRefreshToken: false,
 			detectSessionInUrl: false
-		},
-		realtime: {
-			transport: WebSocketTransport
 		},
 		global: {
 			headers: { 'X-App-Module': module, 'X-Server-Context': 'admin' },

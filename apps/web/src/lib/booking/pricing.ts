@@ -15,6 +15,19 @@ export type PriceAdjustment = {
   kind: "default" | "override";
   percentage: number;
 };
+/** A saved price policy as the editor receives it, its adjustments already validated. */
+export type PricePolicy = {
+  service_id: string;
+  professional_id: string | null;
+  base_amount: number;
+  base_month: string;
+  first_adjustment_month: string;
+  monthly_percentage: number;
+  rounding_unit: number;
+  currency: string;
+  revision: number;
+  service_price_monthly_adjustments: PriceAdjustment[];
+};
 export function monthForTimezone(date: Date, timezone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,

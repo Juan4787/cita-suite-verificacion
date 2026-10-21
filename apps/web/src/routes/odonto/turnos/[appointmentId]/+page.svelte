@@ -7,6 +7,7 @@
 	import { onMount } from 'svelte';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import { isUpcomingActiveAppointment } from '$lib/utils/appointment-visibility';
+	import type { PageData } from './$types';
 import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/shared/booking-integration';
 
 	type Slot = { date: string; time: string; starts_at: string; professional_name: string };
@@ -21,7 +22,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 	let { data, form }: {
 		data: {
 			context: { canOperate: boolean; role: string };canEditInstructions?:boolean;
-			appointment: any;
+			appointment: PageData['appointment'];
 			auditLogs: AuditLog[] | null;
 			userLabels: Record<string, string>;
 			reprogramDate: string;
@@ -96,7 +97,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 			new Date(value)
 		);
 
-	const durationText = (appointment: any) => {
+	const durationText = (appointment: NonNullable<PageData['appointment']>) => {
 		const minutes =
 			Number(appointment?.duration_minutes_snapshot) ||
 			Math.round((new Date(appointment?.ends_at).getTime() - new Date(appointment?.starts_at).getTime()) / 60_000);
@@ -367,7 +368,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 						<p class="mt-2 text-sm leading-relaxed text-amber-50/75">
 							Cargá un número argentino completo con código de área para preparar el enlace de WhatsApp.
 						</p>
-						{#if data.appointment.patients?.id}
+						{#if data.appointment?.patients?.id}
 							<a
 								href={`/odonto/pacientes/${data.appointment.patients.id}`}
 								target="_blank"

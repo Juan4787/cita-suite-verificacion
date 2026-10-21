@@ -33,7 +33,7 @@
 			last_payment_amount?: number | string | null;
 			updated_at?: string | null;
 		} | null;
-		recentGrants: any[];
+		recentGrants: { operation: string; admin_email: string | null; amount: number | null; note: string | null; created_at: string }[];
 		mpSubscription: {
 			preapproval_id: string;
 			status: string;

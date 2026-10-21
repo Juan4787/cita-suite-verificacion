@@ -8,6 +8,7 @@
     PriceConfigurationError,
     formatQuotedPrice,
     type PriceAdjustment,
+    type PricePolicy,
   } from "./pricing";
   let {
     services,
@@ -18,7 +19,7 @@
     canConfigureShared = false,
   }: {
     services: Array<{ id: string; name: string }>;
-    policies: any[];
+    policies: PricePolicy[];
     professionalId: string;
     currentMonth: string;
     canEdit?: boolean;
@@ -34,8 +35,10 @@
         item.service_id === initialService() &&
         item.professional_id === professionalId,
     );
-  const initialBase = () =>
-    initialPolicy() ? String(initialPolicy().base_amount) : "";
+  const initialBase = () => {
+    const policy = initialPolicy();
+    return policy ? String(policy.base_amount) : "";
+  };
   const initialRate = () => String(initialPolicy()?.monthly_percentage ?? 0);
   const initialRounding = () => String(initialPolicy()?.rounding_unit ?? 1);
   const initialReference = () =>
@@ -50,7 +53,7 @@
   const initialRevision = () => initialPolicy()?.revision ?? 0;
   const initialAdjustments = () =>
     (initialPolicy()?.service_price_monthly_adjustments ?? []).map(
-      (row: any) => ({
+      (row) => ({
         month: row.month,
         kind: row.kind,
         percentage: row.percentage,
@@ -107,7 +110,7 @@
       policy?.first_adjustment_month?.slice(0, 7) ??
       `${year + (month === 12 ? 1 : 0)}-${String(month === 12 ? 1 : month + 1).padStart(2, "0")}`;
     adjustments = (policy?.service_price_monthly_adjustments ?? []).map(
-      (row: any) => ({
+      (row) => ({
         month: row.month,
         kind: row.kind,
         percentage: row.percentage,
