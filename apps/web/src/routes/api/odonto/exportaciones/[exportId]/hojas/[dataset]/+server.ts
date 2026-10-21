@@ -19,7 +19,7 @@ export const GET: RequestHandler = async ({ params, url, locals, fetch }) => {
 			throw new PatientExportError('EXPORT_INVALID_REQUEST');
 		}
 
-		const actorUserId = getPatientExportActorId(locals.auth);
+		const actorUserId = getPatientExportActorId(locals);
 		const supabase = await createPatientExportAdminClient(fetch);
 		const page = await readPatientExportPage({
 			supabase,

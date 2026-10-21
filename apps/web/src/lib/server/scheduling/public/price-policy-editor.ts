@@ -38,7 +38,7 @@ export async function loadPricePolicyEditor(event: RequestEvent) {
       .select("id,name")
       .eq("business_id", businessId)
       .eq("id", professionalId)
-      .single(),
+      .maybeSingle(),
     context.supabase
       .from("professional_services")
       .select("services(id,name)")
@@ -55,6 +55,7 @@ export async function loadPricePolicyEditor(event: RequestEvent) {
       503,
       "No pudimos cargar las prestaciones y aranceles. Volvé a intentar.",
     );
+  if (!professional) error(404, "No encontramos ese profesional.");
   return {
     professional,
     services: (assignments ?? []).flatMap((row) =>

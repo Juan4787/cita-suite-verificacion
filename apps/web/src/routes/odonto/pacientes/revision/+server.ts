@@ -7,7 +7,7 @@ import {
 	patientDataCacheScope,
 	type PatientDataRevision
 } from '$lib/server/patients/public/patient-data-revision';
-import { createSupabaseServerClient, getUserIdFromAccessToken } from '$lib/server/platform/supabase';
+import { createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
@@ -45,7 +45,8 @@ export const GET: RequestHandler = async ({ locals, fetch, setHeaders, url }) =>
 		return json({ message: 'No se pudo verificar el consultorio activo.' }, { status: 400 });
 	}
 
-	const userId = getUserIdFromAccessToken(locals.auth.access_token);
+	// Hooks verified this request's identity with Auth.
+	const userId = locals.verifiedUser?.id;
 	if (!userId) {
 		return json({ message: 'Tu sesión terminó. Volvé a iniciar sesión.' }, { status: 401 });
 	}

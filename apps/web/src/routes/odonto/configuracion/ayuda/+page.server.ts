@@ -13,17 +13,13 @@ import { demoBusinessContext, resolveActiveBusiness } from '$lib/server/access/p
 import {
 	createSupabaseAdminClient,
 	createSupabaseServerClient,
-	getEmailFromAccessToken,
 	isMasterEmail
 } from '$lib/server/platform/supabase';
+import { verifiedRequestEmail } from '$lib/server/access/public/odonto-context';
 import { error as kitError, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
-// As in hooks: the identity Auth verified, or the demo token's claim in demo mode.
-const isMasterSession = (locals: App.Locals) =>
-	isMasterEmail(
-		env.DEMO_MODE === 'true' ? getEmailFromAccessToken(locals.auth?.access_token) : locals.verifiedUser?.email
-	);
+const isMasterSession = (locals: App.Locals) => isMasterEmail(verifiedRequestEmail(locals));
 
 const loadContext = async ({
 	locals,

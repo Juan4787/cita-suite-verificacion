@@ -38,7 +38,12 @@ describe('price policy editor', () => {
 			supabase: {
 				from: vi.fn((table: string) => query(table === 'professionals' ? { data: null, error: null } : { data: [], error: null }))
 			},
-			business: { canManage: true, role: 'owner', business: { id: 'business-1', timezone: 'America/Argentina/Buenos_Aires' } },
+			business: {
+				canManage: true,
+				role: 'owner',
+				business: { id: 'business-1', timezone: 'America/Argentina/Buenos_Aires' },
+				access: { canUseBusiness: true }
+			},
 			userId: 'user-1'
 		});
 

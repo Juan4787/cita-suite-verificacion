@@ -5,7 +5,7 @@ import { logServerFailure } from '$lib/server/platform/logging';
 
 import { env } from '$env/dynamic/private';
 import { redirect } from '@sveltejs/kit';
-import { createSupabaseServerClient, getAuthUserId } from '$lib/server/platform/supabase';
+import { createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { resolveActiveBusiness } from '$lib/server/access/public/business';
 import { writeAuditLog } from '$lib/server/platform/audit';
 import { resolveMapsUrl } from '$lib/sites/location';
@@ -66,7 +66,7 @@ export const GET: RequestHandler = async ({ params, locals, fetch, cookies, url,
 		throw redirect(303, backTo(day));
 	}
 
-	const userId = await getAuthUserId(supabase, locals.auth.access_token);
+	const userId = locals.verifiedUser?.id ?? null;
 	const now = new Date().toISOString();
 	const { error: updateError } = await supabase
 		.from('appointments')

@@ -9,8 +9,12 @@ import {
 	type BusinessContext
 } from '$lib/server/access/public/business';
 import { RateLimitExceededError } from '$lib/server/platform/rate-limits';
-import { createSupabaseServerClient, getAuthUserId } from '$lib/server/platform/supabase';
+import { createSupabaseServerClient, getAuthUserId, getEmailFromAccessToken } from '$lib/server/platform/supabase';
 import { env } from '$env/dynamic/private';
+
+/** As in hooks: the email Auth verified for this request, or the demo token's claim in demo mode. */
+export const verifiedRequestEmail = (locals: App.Locals): string | null =>
+	(env.DEMO_MODE === 'true' ? getEmailFromAccessToken(locals.auth?.access_token) : locals.verifiedUser?.email) ?? null;
 
 export type OdontoContext = {
 	supabase: CitaSupabaseClient;

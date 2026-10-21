@@ -23,7 +23,7 @@ export const POST: RequestHandler = async ({ request, params, locals, fetch }) =
 			throw new PatientExportError('EXPORT_INVALID_REQUEST');
 		}
 
-		const actorUserId = getPatientExportActorId(locals.auth);
+		const actorUserId = getPatientExportActorId(locals);
 		const supabase = await createPatientExportAdminClient(fetch);
 		const validation = await validatePatientExport({
 			supabase,

@@ -1,10 +1,7 @@
 import { env } from '$env/dynamic/private';
 import { resolveActiveBusiness } from '$lib/server/access/public/business';
-import {
-	createSupabaseServerClient,
-	getEmailFromAccessToken,
-	isMasterEmail
-} from '$lib/server/platform/supabase';
+import { createSupabaseServerClient, isMasterEmail } from '$lib/server/platform/supabase';
+import { verifiedRequestEmail } from '$lib/server/access/public/odonto-context';
 import { redirect } from '@sveltejs/kit';
 import { canExportPatientData } from '$lib/server/patients/public/patient-permissions';
 import type { PageServerLoad } from './$types';
@@ -12,10 +9,7 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 	if (!locals.auth) throw redirect(303, '/login');
 
-	// As in hooks: the identity Auth verified, or the demo token's claim in demo mode.
-	const isMaster = isMasterEmail(
-		env.DEMO_MODE === 'true' ? getEmailFromAccessToken(locals.auth.access_token) : locals.verifiedUser?.email
-	);
+	const isMaster = isMasterEmail(verifiedRequestEmail(locals));
 	if (env.DEMO_MODE === 'true') return { demo: true, isMaster, canExportPatientData: false };
 
 	const supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);

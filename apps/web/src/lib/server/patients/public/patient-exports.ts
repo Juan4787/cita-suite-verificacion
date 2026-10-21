@@ -20,7 +20,7 @@ import {
 	RateLimitExceededError,
 	RateLimitUnavailableError
 } from '$lib/server/platform/rate-limits';
-import { createSupabaseAdminClient, getUserIdFromAccessToken, type AuthTokens } from '$lib/server/platform/supabase';
+import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import { readJson } from '$lib/contracts/json';
 
 export const PATIENT_EXPORT_ERROR_CODES = [
@@ -479,8 +479,9 @@ export const readPatientExportJson = async (
 	}
 };
 
-export const getPatientExportActorId = (auth: AuthTokens | null): string => {
-	const userId = getUserIdFromAccessToken(auth?.access_token);
+/** The identity hooks verified for this request: exports are never offered in demo mode. */
+export const getPatientExportActorId = (locals: App.Locals): string => {
+	const userId = locals.verifiedUser?.id;
 	if (!isUuid(userId)) throw new PatientExportError('EXPORT_NOT_AUTHENTICATED');
 	return userId;
 };

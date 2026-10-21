@@ -1,4 +1,4 @@
-import { logServerFailure, logServerWarning } from '$lib/server/platform/logging';
+import { logServerFailure } from '$lib/server/platform/logging';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { env } from '$env/dynamic/private';
 import { demoBusinessContext, resolveActiveBusiness } from '$lib/server/access/public/business';
@@ -50,10 +50,7 @@ const loadMpSubscription = async (
 		.eq('business_id', businessId)
 		.order('created_at', { ascending: false })
 		.limit(5);
-	if (error) {
-		logServerFailure('Error cargando suscripción de Mercado Pago', error);
-		return null;
-	}
+	if (error) throw error;
 	return pickRelevantMpSubscription(data ?? []);
 };
 
@@ -66,6 +63,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			grants: [],
 			demo: true,
 			mpSubscription: null,
+			mpSubscriptionUnavailable: false,
 			mpAmount: getSubscriptionAmountArs(),
 			mpEnvironment: getMercadoPagoEnvironment(),
 			mpReturn: null as MpReturnSummary | null,
@@ -85,8 +83,8 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 	if (context.role !== 'owner' && context.role !== 'admin') throw redirect(303, '/odonto/agenda');
 	if (context.assistance) throw redirect(303, '/odonto/configuracion/ayuda');
 
-	// Sin cliente admin la página degrada (no muestra el estado MP) pero no se
-	// cae: el estado comercial sale del cliente del usuario igual que antes.
+	// Sin cliente admin la página no se cae: el estado comercial sale del cliente
+	// del usuario, y la suscripción se muestra como no comprobada, nunca como ausente.
 	let admin: Awaited<ReturnType<typeof createSupabaseAdminClient>> | null = null;
 	try {
 		admin = await createSupabaseAdminClient('odonto', fetch);
@@ -120,7 +118,18 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 		}
 	}
 
-	const [{ data: grants, error }, mpSubscription] = await Promise.all([
+	// An unread subscription is not an absent one: offering to subscribe, and hiding the
+	// cancellation, would act on a state nobody checked.
+	const readMpSubscription = async () => {
+		if (!admin) return { subscription: null, unavailable: true };
+		try {
+			return { subscription: await loadMpSubscription(admin, context.business.id), unavailable: false };
+		} catch (cause) {
+			logServerFailure('Error cargando suscripción de Mercado Pago', cause);
+			return { subscription: null, unavailable: true };
+		}
+	};
+	const [{ data: grants, error }, mp] = await Promise.all([
 		supabase
 			.from('access_grants')
 			.select(
@@ -129,7 +138,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			.eq('business_id', context.business.id)
 			.order('created_at', { ascending: false })
 			.limit(30),
-		admin ? loadMpSubscription(admin, context.business.id) : Promise.resolve(null)
+		readMpSubscription()
 	]);
 
 	if (error) {
@@ -138,9 +147,10 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 
 	return {
 		context,
-		grants: grants ?? [],
+		grants: error ? null : (grants ?? []),
 		demo: false,
-		mpSubscription,
+		mpSubscription: mp.subscription,
+		mpSubscriptionUnavailable: mp.unavailable,
 		mpAmount: getSubscriptionAmountArs(),
 		mpEnvironment: getMercadoPagoEnvironment(),
 		mpReturn,
@@ -191,19 +201,8 @@ export const actions: Actions = {
 			});
 		}
 
-		let authEmail = '';
-		try {
-			const { data: userData, error: userError } = await supabase.auth.getUser();
-			if (userError) {
-				logServerWarning('No se pudo leer el email autenticado para la suscripción', {
-					status: userError.status
-				});
-			} else {
-				authEmail = userData?.user?.email?.trim() ?? '';
-			}
-		} catch (error) {
-			logServerFailure('No se pudo consultar el email autenticado para la suscripción', error);
-		}
+		// Hooks already verified this request's identity with Auth: no second round trip.
+		const authEmail = locals.verifiedUser?.email?.trim() ?? '';
 		const payerEmail =
 			authEmail || context.business.email?.trim() || '';
 		if (!payerEmail) {

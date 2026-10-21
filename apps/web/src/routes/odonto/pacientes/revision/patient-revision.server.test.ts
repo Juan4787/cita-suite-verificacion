@@ -25,7 +25,7 @@ const { GET } = await import('./+server');
 const businessId = '00000000-0000-4000-8000-000000000001';
 const event = () =>
 	({
-		locals: { auth: { access_token: 'test-token' } },
+		locals: { auth: { access_token: 'test-token' }, verifiedUser: { id: 'user-1', email: null } },
 		fetch: vi.fn(),
 		cookies: { get: vi.fn() },
 		setHeaders: vi.fn(),

@@ -169,7 +169,7 @@
 					</p>
 				</div>
 			{/if}
-			{#if access.commercialStatus === 'active' && access.paidUntil && mpSub?.status !== 'authorized' && mpSub?.status !== 'paused'}
+			{#if access.commercialStatus === 'active' && access.paidUntil && !data.mpSubscriptionUnavailable && mpSub?.status !== 'authorized' && mpSub?.status !== 'paused'}
 				<p class="ux-alert ux-alert-success mt-4">
 					Tu tiempo vigente se conserva: cuando se acredite el primer pago, se suman 30 días
 					al vencimiento actual.
@@ -222,6 +222,11 @@
 					acá: contactá soporte para regularizar la cuenta.
 				</p>
 				<p class="mt-4 text-sm font-semibold text-white/55">¿Necesitás ayuda? Contactar soporte</p>
+			{:else if data.mpSubscriptionUnavailable}
+				<p class="ux-alert ux-alert-warning mt-5">
+					No pudimos comprobar el estado de tu suscripción en Mercado Pago. Volvé a intentar en
+					unos minutos antes de suscribirte o cancelar.
+				</p>
 			{:else if mpSub?.status === 'authorized' || mpSub?.status === 'paused'}
 				<div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 					<div class="ux-soft-card p-4">
@@ -296,7 +301,9 @@
 		</div>
 
 		<div class="mt-5 space-y-3">
-			{#if data.grants.length === 0}
+			{#if data.grants === null}
+				<p class="ux-alert ux-alert-warning">No pudimos cargar el historial. Volvé a intentar en unos minutos.</p>
+			{:else if data.grants.length === 0}
 				<p class="ux-empty">Sin movimientos registrados.</p>
 			{:else}
 				{#each data.grants as grant}

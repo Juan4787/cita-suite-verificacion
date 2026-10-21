@@ -12,11 +12,7 @@ import {
 	decodePatientListCursor,
 	encodePatientListCursor
 } from '$lib/server/patients/public/patient-list-cursor';
-import {
-	createSupabaseAdminClient,
-	createSupabaseServerClient,
-	getAuthUserId
-} from '$lib/server/platform/supabase';
+import { createSupabaseAdminClient, createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { normalizePatientListQuery } from '$lib/utils/patient-list-query';
 import { error as kitError, redirect, type Cookies } from '@sveltejs/kit';
 
@@ -165,15 +161,15 @@ export const loadPatientList = async ({
 		throw kitError(500, 'No se pudo conectar para cargar los pacientes. Intentá de nuevo.');
 	}
 
-	const [userId, context] = await Promise.all([
-		getAuthUserId(supabase, locals.auth.access_token),
-		resolveActiveBusiness({
-			supabase,
-			accessToken: locals.auth.access_token,
-			cookies,
-			membershipCache: 'fresh'
-		})
-	]);
+	// Hooks verified this request's identity with Auth.
+	const userId = locals.verifiedUser?.id ?? null;
+	const context = await resolveActiveBusiness({
+		supabase,
+		verifiedUserId: userId ?? undefined,
+		accessToken: locals.auth.access_token,
+		cookies,
+		membershipCache: 'fresh'
+	});
 	if (!userId) throw redirect(303, '/login');
 	if (!context) throw kitError(500, 'No se pudo resolver el consultorio activo.');
 

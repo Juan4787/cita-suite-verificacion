@@ -13,7 +13,7 @@ export const DELETE: RequestHandler = async ({ params, locals, fetch }) => {
 		if (!locals.auth) throw new PatientExportError('EXPORT_NOT_AUTHENTICATED');
 		if (!isUuid(params.exportId)) throw new PatientExportError('EXPORT_INVALID_REQUEST');
 
-		const actorUserId = getPatientExportActorId(locals.auth);
+		const actorUserId = getPatientExportActorId(locals);
 		const supabase = await createPatientExportAdminClient(fetch);
 		const result = await cancelPatientExport({
 			supabase,

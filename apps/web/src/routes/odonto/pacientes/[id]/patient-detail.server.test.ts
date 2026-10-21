@@ -62,7 +62,8 @@ const makeEvent = (formData = new FormData(), options: { enhanced?: boolean } = 
 			body: formData
 		}),
 		params: { id: patientId },
-		locals: { auth: { access_token: 'test-token' } },
+		// As hooks leaves it: the identity Auth verified for this request.
+		locals: { auth: { access_token: 'test-token' }, verifiedUser: { id: ownerId, email: null } },
 		fetch,
 		cookies: {}
 	}) as any;

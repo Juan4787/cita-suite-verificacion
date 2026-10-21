@@ -8,10 +8,9 @@ import {
 import {
 	createSupabaseAdminClient,
 	createSupabaseServerClient,
-	getAuthUserId,
-	getEmailFromAccessToken,
 	isMasterEmail
 } from '$lib/server/platform/supabase';
+import { verifiedRequestEmail } from '$lib/server/access/public/odonto-context';
 import { RateLimitExceededError } from '$lib/server/platform/rate-limits';
 import {
 	businessTodayISO,
@@ -52,8 +51,7 @@ export const load: LayoutServerLoad = async ({
 		// Administrativo deshabilitado por ahora.
 		throw redirect(303, '/odonto/pacientes');
 	}
-	// As in hooks: the identity Auth verified, or the demo token's claim in demo mode.
-	const email = (env.DEMO_MODE === 'true' ? getEmailFromAccessToken(auth.access_token) : locals.verifiedUser?.email) ?? null;
+	const email = verifiedRequestEmail(locals);
 	const isMaster = isMasterEmail(email);
 	// El estado comercial es sensible: debe revalidarse tanto al recargar como al
 	// navegar entre rutas. Evitar el seguimiento de la ruta dejaría el shell con
@@ -122,7 +120,7 @@ export const load: LayoutServerLoad = async ({
 				(async (): Promise<MasterAccountAssistanceRequest[]> => {
 					if (!isMaster) return [];
 					try {
-						const supportUserId = await getAuthUserId(supabase, auth.access_token);
+						const supportUserId = locals.verifiedUser?.id;
 						if (supportUserId) {
 							return await loadActiveMasterAccountAssistanceRequests({
 								admin: await getAdminClient(),

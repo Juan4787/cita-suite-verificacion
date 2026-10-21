@@ -1,11 +1,7 @@
 import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { error as kitError, fail, redirect } from '@sveltejs/kit';
-import {
-	createSupabaseAdminClient,
-	createSupabaseServerClient,
-	getAuthUserId
-} from '$lib/server/platform/supabase';
+import { createSupabaseAdminClient, createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { resolveActiveBusiness } from '$lib/server/access/public/business';
 import { writeAuditLog } from '$lib/server/platform/audit';
 import {
@@ -126,7 +122,7 @@ export const actions: Actions = {
 		const appointmentId = String(form.get('appointment_id') ?? '').trim();
 		if (!appointmentId) return fail(400, { message: 'Falta el turno.' });
 
-		const userId = await getAuthUserId(supabase, locals.auth.access_token);
+		const userId = locals.verifiedUser?.id ?? null;
 		const now = new Date().toISOString();
 		const { error } = await supabase
 			.from('appointments')

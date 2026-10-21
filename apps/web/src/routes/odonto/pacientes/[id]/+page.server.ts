@@ -23,11 +23,7 @@ import { bookingInformationEnabled } from '$lib/server/patients/public/booking-i
 import { env } from '$env/dynamic/private';
 import { resolveActiveBusiness } from '$lib/server/access/public/business';
 import { newId, readDemoDb, updateDemoDb } from '$lib/server/platform/demo-store';
-import {
-	createSupabaseAdminClient,
-	createSupabaseServerClient,
-	getAuthUserId
-} from '$lib/server/platform/supabase';
+import { createSupabaseAdminClient, createSupabaseServerClient } from '$lib/server/platform/supabase';
 import {
 	PATIENT_UNIQUE_CONFLICT_MESSAGES,
 	type PatientUniqueField
@@ -69,7 +65,8 @@ const resolveBusinessActionContext = async ({
 	membershipCache?: 'fresh' | 'request';
 }) => {
 	const supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);
-	const ownerId = await getAuthUserId(supabase, locals.auth?.access_token);
+	// Hooks verified this request's identity with Auth.
+	const ownerId = locals.verifiedUser?.id ?? null;
 	const context = await resolveActiveBusiness({
 		supabase,
 		accessToken: locals.auth?.access_token,
@@ -203,7 +200,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, dep
 	}
 
 	const supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);
-	const ownerId = await getAuthUserId(supabase, locals.auth.access_token);
+	const ownerId = locals.verifiedUser?.id ?? null;
 	const context = await resolveActiveBusiness({
 		supabase,
 		accessToken: locals.auth.access_token,
