@@ -22,8 +22,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 		data: {
 			context: { canOperate: boolean; role: string };canEditInstructions?:boolean;
 			appointment: any;
-			auditLogs: AuditLog[];
-			messageDispatches: any[];
+			auditLogs: AuditLog[] | null;
 			userLabels: Record<string, string>;
 			reprogramDate: string;
 			minReprogramDate: string;
@@ -707,7 +706,10 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 			</summary>
 			<div class="border-t border-white/10 px-5 py-6 sm:px-7">
 				<div class="grid gap-3">
-					{#each data.auditLogs as log}
+					{#if data.auditLogs === null}
+						<p class="ux-alert">No pudimos cargar el historial del turno. Volvé a intentar en unos momentos.</p>
+					{/if}
+					{#each data.auditLogs ?? [] as log}
 						<div class="rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-4 text-sm">
 							<p class="font-semibold text-white">{auditLabel(log)}</p>
 							<p class="mt-1 text-xs font-semibold text-white/45">{formatDateTime(log.created_at)}</p>
@@ -716,7 +718,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 							{/if}
 						</div>
 					{/each}
-					{#if data.auditLogs.length === 0}
+					{#if data.auditLogs?.length === 0}
 						<p class="rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-4 text-sm text-white/60">
 							Todavía no hay movimientos registrados.
 						</p>

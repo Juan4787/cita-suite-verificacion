@@ -7,13 +7,6 @@
 		data: {
 			context: BusinessContext;
 			industries: readonly BusinessIndustry[];
-			readiness: {
-				services: number;
-				professionals: number;
-				availabilityRules: number;
-				reservableServices: number;
-				reservableProfessionals: number;
-			};
 			demo: boolean;
 		};
 		form?: { success?: boolean; message?: string; values?: Record<string, unknown> };
@@ -21,10 +14,9 @@
 
 	const business = $derived(data.context.business);
 	const canManage = $derived(Boolean(data.context.canManage) && !data.demo);
-	const businessValues = $derived(business as unknown as Record<string, unknown>);
+	type FormField = 'name' | 'industry' | 'timezone' | 'phone' | 'email' | 'address' | 'address_instructions' | 'maps_url' | 'logo_url' | 'slug';
 	const values = $derived((form?.values ?? {}) as Record<string, unknown>);
-	const valueOf = (key: string, fallback: unknown = '') =>
-		String(values[key] ?? businessValues[key] ?? fallback ?? '');
+	const valueOf = (key: FormField, fallback = '') => String(values[key] ?? business[key] ?? fallback);
 	const checkedOf = (key: string, fallback: boolean) =>
 		values[key] != null ? values[key] === 'true' : Boolean(fallback);
 	const industryLabels: Record<BusinessIndustry, string> = {

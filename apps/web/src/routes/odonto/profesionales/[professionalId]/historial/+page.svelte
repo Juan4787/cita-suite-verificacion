@@ -22,7 +22,8 @@
 				patient_id: string;
 				patients?: { full_name: string } | null;
 			}>;
-			loadError: string | null;
+			appointmentsTotal: number;
+			entriesTotal: number;
 			demo: boolean;
 		};
 	} = $props();
@@ -45,14 +46,10 @@
 		</p>
 	</div>
 
-	{#if data.loadError}
-		<p class="ux-alert">{data.loadError}</p>
-	{/if}
-
 	<div class="ux-card">
 		<div class="flex items-center justify-between gap-3">
 			<h2 class="ux-section-title">Turnos</h2>
-			<span class="ux-badge">{data.appointments.length}</span>
+			<span class="ux-badge">{data.appointmentsTotal}</span>
 		</div>
 		<div class="mt-5 grid gap-3">
 			{#each data.appointments as appt}
@@ -68,6 +65,8 @@
 			{/each}
 			{#if data.appointments.length === 0}
 				<EmptyState title="Sin turnos" description="Este profesional no tiene turnos cargados." />
+			{:else if data.appointmentsTotal > data.appointments.length}
+				<p class="text-sm text-white/55">Se muestran los {data.appointments.length} más recientes de {data.appointmentsTotal}.</p>
 			{/if}
 		</div>
 	</div>
@@ -75,7 +74,7 @@
 	<div class="ux-card">
 		<div class="flex items-center justify-between gap-3">
 			<h2 class="ux-section-title">Consultas</h2>
-			<span class="ux-badge">{data.entries.length}</span>
+			<span class="ux-badge">{data.entriesTotal}</span>
 		</div>
 		<div class="mt-5 grid gap-3">
 			{#each data.entries as entry}
@@ -94,6 +93,8 @@
 			{/each}
 			{#if data.entries.length === 0}
 				<EmptyState title="Sin consultas" description="Este profesional no tiene consultas cargadas." />
+			{:else if data.entriesTotal > data.entries.length}
+				<p class="text-sm text-white/55">Se muestran las {data.entries.length} más recientes de {data.entriesTotal}.</p>
 			{/if}
 		</div>
 	</div>

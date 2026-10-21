@@ -1,3 +1,4 @@
+import { logServerFailure } from '$lib/server/platform/logging';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { error, isHttpError, type RequestEvent } from '@sveltejs/kit';
@@ -28,7 +29,10 @@ async function readBookingIntegrationRequest(event: RequestEvent, publicKey: str
 		const { data: allowed, error: rateError } = await supabase.rpc('consume_booking_integration_read_limit', {
 			p_subject_hash: hashRateLimitSubject(event.getClientAddress())
 		});
-		if (rateError) error(503, 'No pudimos cargar las reservas. Esperá unos segundos y volvé a intentar.');
+		if (rateError) {
+			logServerFailure('booking.integration_limiter_unavailable', rateError);
+			error(503, 'No pudimos cargar las reservas. Esperá unos segundos y volvé a intentar.');
+		}
 		if (allowed !== true) {
 			event.setHeaders({ 'retry-after': '60' });
 			error(429, 'Se consultaron muchas opciones en poco tiempo. Esperá un minuto antes de volver a intentar.');
@@ -49,6 +53,7 @@ async function readBookingIntegrationRequest(event: RequestEvent, publicKey: str
   return { integration, embed };
 	} catch (cause) {
 		if (isHttpError(cause)) throw cause;
+		logServerFailure('booking.integration_unavailable', cause);
 		error(503, 'No pudimos cargar las reservas. Esperá unos segundos y volvé a intentar o contactá al consultorio.');
 	}
 }

@@ -1,4 +1,5 @@
 import { dev } from '$app/environment';
+import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { loadPublicBookingPage, submitPublicBookingPage } from '$lib/server/scheduling/public/public-booking-page';
 import { getPublicBusinessBySlug } from '$lib/server/scheduling/public/public-booking';
@@ -16,7 +17,8 @@ async function defaultIntegration(event: RequestEvent) {
         const businessId = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(reference) ? reference : (await getPublicBusinessBySlug(supabase, reference))?.id;
         const integration = businessId ? (await loadDefaultBookingIntegration(supabase, businessId, dev)) ?? undefined : undefined;
         return integration && env.BOOKING_INTEGRATIONS_ENABLED !== 'true' ? { ...integration, isActive: false } : integration;
-    } catch {
+    } catch (cause) {
+        logServerFailure('booking.default_integration_unavailable', cause);
         error(503, 'No pudimos cargar las reservas. Esperá unos segundos y volvé a intentar o contactá al consultorio.');
     }
 }

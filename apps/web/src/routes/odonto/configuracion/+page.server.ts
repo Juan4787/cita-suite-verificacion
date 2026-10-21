@@ -12,7 +12,10 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 	if (!locals.auth) throw redirect(303, '/login');
 
-	const isMaster = isMasterEmail(getEmailFromAccessToken(locals.auth.access_token));
+	// As in hooks: the identity Auth verified, or the demo token's claim in demo mode.
+	const isMaster = isMasterEmail(
+		env.DEMO_MODE === 'true' ? getEmailFromAccessToken(locals.auth.access_token) : locals.verifiedUser?.email
+	);
 	if (env.DEMO_MODE === 'true') return { demo: true, isMaster, canExportPatientData: false };
 
 	const supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);

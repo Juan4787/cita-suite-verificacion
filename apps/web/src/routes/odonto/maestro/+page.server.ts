@@ -11,12 +11,7 @@ import {
 	type MpSubscriptionRow
 } from '$lib/server/integrations/public/mercadopago';
 import { ACTIVE_BUSINESS_COOKIE, normalizeSlug } from '$lib/server/access/public/business';
-import {
-	createSupabaseAdminClient,
-	getEmailFromAccessToken,
-	getUserIdFromAccessToken,
-	isMasterEmail
-} from '$lib/server/platform/supabase';
+import { createSupabaseAdminClient, isMasterEmail } from '$lib/server/platform/supabase';
 import {
 	businessEmailAssociationErrorMessage,
 	businessEmailAssociationErrorStatus,
@@ -28,15 +23,13 @@ import { fail, redirect } from '@sveltejs/kit';
 import { randomUUID } from 'node:crypto';
 import type { Actions, PageServerLoad } from './$types';
 
-const ensureMaster = (accessToken?: string | null) => {
-	const email = getEmailFromAccessToken(accessToken);
-	if (!email || !isMasterEmail(email)) {
+// The master is the identity Auth verified in hooks, never a claim decoded from the token.
+const ensureMaster = (locals: App.Locals) => {
+	const user = locals.verifiedUser;
+	if (!user?.email || !isMasterEmail(user.email)) {
 		throw redirect(303, '/odonto/pacientes');
 	}
-	return {
-		email,
-		userId: getUserIdFromAccessToken(accessToken)
-	};
+	return { email: user.email, userId: user.id };
 };
 
 const EMAIL_FORMAT_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -107,10 +100,8 @@ const listAuthEmailsById = async (admin: Awaited<ReturnType<typeof createSupabas
 
 	while (true) {
 		const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
-		if (error) {
-			logServerFailure('Error listando usuarios Auth para panel maestro', error);
-			break;
-		}
+		// A partial list would show accounts without their emails.
+		if (error) throw error;
 		const users = data?.users ?? [];
 		for (const user of users) {
 			if (user.id && user.email) result.set(user.id, user.email);
@@ -223,24 +214,10 @@ const buildMasterData = async (
 
 	if (emailsRes.error) throw emailsRes.error;
 	if (businessesRes.error) throw businessesRes.error;
-	if (subscriptionsRes.error) {
-		// Compatibility: before migration, keep page readable.
-		logServerFailure('Error cargando business_subscriptions', subscriptionsRes.error);
-	}
-	if (membershipsRes.error) throw membershipsRes.error;
-	if (grantsRes.error) {
-		logServerFailure('Error cargando access_grants', grantsRes.error);
-	}
-	// Compatibilidad: si las tablas MP no existen todavía, el panel sigue legible.
-	if (mpSubsRes.error) {
-		logServerFailure('Error cargando mp_subscriptions', mpSubsRes.error);
-	}
-	if (mpAttentionRes.error) {
-		logServerFailure('Error cargando eventos MP con atención', mpAttentionRes.error);
-	}
-	if (assistanceRes.error) {
-		logServerFailure('Error cargando ayuda para configurar', assistanceRes.error);
-	}
+	// Every table exists since its migration: a failed read is an error the panel shows,
+	// not practices listed without their commercial state, grants or payments.
+	for (const result of [subscriptionsRes, membershipsRes, grantsRes, mpSubsRes, mpAttentionRes, assistanceRes])
+		if (result.error) throw result.error;
 
 	const subscriptionsByBusinessId = new Map(
 		(subscriptionsRes.data ?? []).map((subscription) => [
@@ -309,7 +286,7 @@ const buildMasterData = async (
 	const businessNameById = new Map(
 		businesses.map((business) => [String(business.id), String(business.name ?? '')])
 	);
-	const assistance = (assistanceRes.error ? [] : assistanceRes.data ?? [])
+	const assistance = (assistanceRes.data ?? [])
 		.filter((grant) => businessNameById.has(String(grant.business_id)))
 		.map((grant) => {
 			const business = Array.isArray(grant.business) ? grant.business[0] : grant.business;
@@ -346,7 +323,7 @@ const buildMasterData = async (
 
 export const load: PageServerLoad = async ({ locals, fetch }) => {
 	if (!locals.auth) throw redirect(303, '/login');
-	const master = ensureMaster(locals.auth.access_token);
+	const master = ensureMaster(locals);
 	const admin = await createSupabaseAdminClient('odonto', fetch);
 
 	try {
@@ -372,7 +349,7 @@ export const load: PageServerLoad = async ({ locals, fetch }) => {
 export const actions: Actions = {
 	enter_assisted_business: async ({ request, locals, fetch, cookies }) => {
 		if (!locals.auth) throw redirect(303, '/login');
-		const master = ensureMaster(locals.auth.access_token);
+		const master = ensureMaster(locals);
 		const form = await request.formData();
 		const grantId = String(form.get('grant_id') ?? '').trim();
 		const businessId = String(form.get('business_id') ?? '').trim();
@@ -428,7 +405,7 @@ export const actions: Actions = {
 	},
 	create_business: async ({ request, locals, fetch }) => {
 		if (!locals.auth) throw redirect(303, '/login');
-		const master = ensureMaster(locals.auth.access_token);
+		const master = ensureMaster(locals);
 		const form = await request.formData();
 		const name = String(form.get('name') ?? '').trim();
 		const ownerEmail = normalizeEmail(form.get('owner_email'));
@@ -613,7 +590,7 @@ export const actions: Actions = {
 	},
 	add_email: async ({ request, locals, fetch }) => {
 		if (!locals.auth) throw redirect(303, '/login');
-		const master = ensureMaster(locals.auth.access_token);
+		const master = ensureMaster(locals);
 		const form = await request.formData();
 		const email = normalizeEmail(form.get('email'));
 		const onboardingModeRaw = String(form.get('onboarding_mode') ?? 'manual').trim();
@@ -680,7 +657,7 @@ export const actions: Actions = {
 	},
 	toggle_email: async ({ request, locals, fetch }) => {
 		if (!locals.auth) throw redirect(303, '/login');
-		const master = ensureMaster(locals.auth.access_token);
+		const master = ensureMaster(locals);
 		const form = await request.formData();
 		const id = String(form.get('id') ?? '').trim();
 		const enabled = String(form.get('enabled') ?? '') === 'true';
@@ -725,7 +702,7 @@ export const actions: Actions = {
 	},
 	adjust_business_access: async ({ request, locals, fetch }) => {
 		if (!locals.auth) throw redirect(303, '/login');
-		const master = ensureMaster(locals.auth.access_token);
+		const master = ensureMaster(locals);
 		const form = await request.formData();
 		const businessId = String(form.get('business_id') ?? '').trim();
 		const operation = String(form.get('operation') ?? '').trim();
@@ -799,7 +776,7 @@ export const actions: Actions = {
 	},
 	revoke_business_sessions: async ({ request, locals, fetch }) => {
 		if (!locals.auth) throw redirect(303, '/login');
-		const master = ensureMaster(locals.auth.access_token);
+		const master = ensureMaster(locals);
 		const form = await request.formData();
 		const businessId = String(form.get('business_id') ?? '').trim();
 		if (!businessId) return fail(400, { message: 'Consultorio inválido.' });
@@ -843,7 +820,7 @@ export const actions: Actions = {
 	},
 	mp_cancel_subscription: async ({ request, locals, fetch }) => {
 		if (!locals.auth) throw redirect(303, '/login');
-		ensureMaster(locals.auth.access_token);
+		ensureMaster(locals);
 		const form = await request.formData();
 		const businessId = String(form.get('business_id') ?? '').trim();
 		const preapprovalId = String(form.get('preapproval_id') ?? '').trim();
@@ -906,7 +883,7 @@ export const actions: Actions = {
 	},
 	mp_reconcile_now: async ({ locals, fetch }) => {
 		if (!locals.auth) throw redirect(303, '/login');
-		ensureMaster(locals.auth.access_token);
+		ensureMaster(locals);
 
 		const admin = await createSupabaseAdminClient('odonto', fetch);
 		let summary;

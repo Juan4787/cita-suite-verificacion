@@ -50,7 +50,8 @@ export const load: LayoutServerLoad = async ({
 		// Administrativo deshabilitado por ahora.
 		throw redirect(303, '/odonto/pacientes');
 	}
-	const email = getEmailFromAccessToken(auth.access_token);
+	// As in hooks: the identity Auth verified, or the demo token's claim in demo mode.
+	const email = (env.DEMO_MODE === 'true' ? getEmailFromAccessToken(auth.access_token) : locals.verifiedUser?.email) ?? null;
 	const isMaster = isMasterEmail(email);
 	// El estado comercial es sensible: debe revalidarse tanto al recargar como al
 	// navegar entre rutas. Evitar el seguimiento de la ruta dejaría el shell con

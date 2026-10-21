@@ -70,7 +70,7 @@
 			patients: Patient[];
 			patientsLoaded?: boolean;
 			referencesLoaded?: boolean;
-			reminderCount?: number;
+			reminderCount?: number | null;
 			appointmentRequestId: string;
 			demo: boolean;
 		};
@@ -617,7 +617,12 @@
 		</div>
 	{/if}
 
-	{#if (data.reminderCount ?? 0) > 0}
+	{#if data.reminderCount === null}
+		<div class="ux-alert ux-alert-warning">
+			No pudimos comprobar los recordatorios de mañana.
+			<a href="/odonto/recordatorios" class="font-bold underline">Ver turnos para recordar</a>
+		</div>
+	{:else if (data.reminderCount ?? 0) > 0}
 		<div class="ux-alert ux-alert-warning">
 			{data.reminderCount}{' '}
 			{data.reminderCount === 1

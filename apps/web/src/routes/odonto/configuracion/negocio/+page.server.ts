@@ -20,7 +20,6 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 		return {
 			context: demoBusinessContext(),
 			industries: BUSINESS_INDUSTRIES,
-			readiness: { services: 1, professionals: 1, availabilityRules: 1, reservableServices: 1, reservableProfessionals: 1 },
 			demo: true
 		};
 	}
@@ -38,62 +37,9 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 	if (context.role === 'professional') throw redirect(303, '/odonto/mis-turnos');
 	if (context.role !== 'owner' && context.role !== 'admin') throw redirect(303, '/odonto/agenda');
 
-	const [
-		{ count: services },
-		{ count: professionals },
-		{ count: availabilityRules },
-		{ data: assignments },
-		{ data: rules }
-	] = await Promise.all([
-		supabase
-			.from('services')
-			.select('id', { count: 'exact', head: true })
-			.eq('business_id', context.business.id)
-			.eq('is_active', true)
-			.eq('is_public', true),
-		supabase
-			.from('professionals')
-			.select('id', { count: 'exact', head: true })
-			.eq('business_id', context.business.id)
-			.eq('is_active', true)
-			.eq('is_public', true),
-		supabase
-			.from('availability_rules')
-			.select('id', { count: 'exact', head: true })
-			.eq('business_id', context.business.id)
-			.eq('is_active', true),
-		supabase
-			.from('professional_services')
-			.select('service_id, professional_id, services!inner(is_active, is_public), professionals!inner(is_active, is_public)')
-			.eq('business_id', context.business.id),
-		supabase
-			.from('availability_rules')
-			.select('professional_id')
-			.eq('business_id', context.business.id)
-			.eq('is_active', true)
-	]);
-	const professionalsWithRules = new Set((rules ?? []).map((rule) => String(rule.professional_id)));
-	const readyServices = new Set<string>();
-	const readyProfessionals = new Set<string>();
-	for (const assignment of assignments ?? []) {
-		const service = assignment.services;
-		const professional = assignment.professionals;
-		if (!service?.is_active || !service?.is_public) continue;
-		if (!professional?.is_active || !professional?.is_public) continue;
-		if (!professionalsWithRules.has(String(assignment.professional_id))) continue;
-		readyServices.add(String(assignment.service_id));
-		readyProfessionals.add(String(assignment.professional_id));
-	}
 	return {
 		context,
 		industries: BUSINESS_INDUSTRIES,
-		readiness: {
-			services: services ?? 0,
-			professionals: professionals ?? 0,
-			availabilityRules: availabilityRules ?? 0,
-			reservableServices: readyServices.size,
-			reservableProfessionals: readyProfessionals.size
-		},
 		demo: false
 	};
 };

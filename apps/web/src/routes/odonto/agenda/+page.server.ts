@@ -30,7 +30,7 @@ import { resolveCommunicationPhoneDecision } from '$lib/utils/communication-phon
 import { isRecord } from '$lib/contracts/json';
 import type { CitaRow } from '$lib/types/database';
 import type { AvailabilitySnapshot } from '$lib/availability/snapshot';
-import { fail, redirect, isRedirect } from '@sveltejs/kit';
+import { error, fail, redirect, isRedirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -111,8 +111,9 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 				pushSubscriptionsSupabase
 			});
 		} catch (reminderError) {
+			// Unknown, not zero: the page says it could not check them.
 			logServerFailure('Error contando recordatorios pendientes', reminderError);
-			return 0;
+			return null;
 		}
 	})();
 
@@ -155,9 +156,13 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			.lte('starts_at', dayEnd.toISOString())
 			.order('starts_at'));
 	}
-	if (appointmentsError) {
-		logServerFailure('Error cargando agenda diaria', appointmentsError);
-	}
+	// An unreadable day, or references that cannot be read, is an error: never an empty
+	// day or a practice that looks as if it had no professionals or services yet.
+	const unavailable = (cause: unknown): never => {
+		logServerFailure('agenda.day_unavailable', cause);
+		error(503, 'No pudimos cargar la agenda. Volvé a intentar.');
+	};
+	if (appointmentsError) unavailable(appointmentsError);
 
 	const filteredAppointments = (dayAppointments ?? []).filter((appointment) => {
 		if (serviceId && appointment.service_id !== serviceId) return false;
@@ -187,8 +192,8 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			professionals = availabilitySnapshot.professionals;
 			services = availabilitySnapshot.services;
 			assignments = availabilitySnapshot.assignments;
-		} catch (error) {
-			logServerFailure('Error cargando referencias y disponibilidad de agenda', error);
+		} catch (cause) {
+			unavailable(cause);
 		}
 	}
 	const appointments = filteredAppointments;
@@ -205,12 +210,13 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 	const reminderCount = await reminderCountPromise;
 
 	if (patientId) {
-		const { data: selectedPatient } = await supabase
+		const { data: selectedPatient, error: patientError } = await supabase
 			.from('patients')
 			.select('id, full_name, phone, phone_raw, phone_e164, dni, birth_date, activity_at, blocked')
 			.eq('business_id', business.business.id)
 			.eq('id', patientId)
 			.maybeSingle();
+		if (patientError) unavailable(patientError);
 		if (selectedPatient) patients = [selectedPatient];
 	}
 

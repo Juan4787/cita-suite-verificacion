@@ -26,6 +26,7 @@ import { shouldOfferCreatedAppointmentActivation } from '$lib/scheduling/agenda-
 import { normalizeArgentineWhatsAppPhone } from '$lib/utils/phone';
 import { classifyUserAgent } from '$lib/device';
 import { isActiveAppointmentStatus } from '$lib/utils/appointment-visibility';
+import { isAvailabilityDate } from '$lib/availability/windows';
 import { error as kitError, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -59,7 +60,6 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
 			context: demoBusinessContext(),
 			appointment: null,
 			auditLogs: [],
-			messageDispatches: [],
 			userLabels: {},
 			reprogramDate: new Date().toISOString().slice(0, 10),
 			minReprogramDate: new Date().toISOString().slice(0, 10),
@@ -117,12 +117,15 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
 
 	const appointmentLocalDate = localDateFor(data.starts_at, business.business.timezone);
 	const minReprogramDate = todayForTimezone(business.business.timezone);
-	const requestedReprogramDate = url.searchParams.get('reprogram_date');
-	const reprogramDate =
-		requestedReprogramDate ?? (appointmentLocalDate >= minReprogramDate ? appointmentLocalDate : minReprogramDate);
-	const fromDate = url.searchParams.get('from_date') ?? localDateFor(data.starts_at, business.business.timezone);
+	// Dates from the address are used only when they are real dates.
+	const requestedReprogramDate = url.searchParams.get('reprogram_date') ?? '';
+	const reprogramDate = isAvailabilityDate(requestedReprogramDate)
+		? requestedReprogramDate
+		: appointmentLocalDate >= minReprogramDate ? appointmentLocalDate : minReprogramDate;
+	const requestedFromDate = url.searchParams.get('from_date') ?? '';
+	const fromDate = isAvailabilityDate(requestedFromDate) ? requestedFromDate : appointmentLocalDate;
 
-	const [auditResult, usersResult, messageResult, teamResult] = await Promise.all([
+	const [auditResult, usersResult, teamResult] = await Promise.all([
 		supabase
 			.from('audit_logs')
 			.select('id, user_id, action, entity_type, entity_id, metadata, created_at')
@@ -131,12 +134,6 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
 			.eq('entity_id', params.appointmentId)
 			.order('created_at', { ascending: false }),
 		supabase.rpc('list_business_users', { target_business_id: business.business.id }),
-		supabase
-			.from('message_dispatches')
-			.select('id, type, status, scheduled_for, sent_at, delivered_at, read_at, failed_at, human_error_message, created_at')
-			.eq('business_id', business.business.id)
-			.eq('appointment_id', params.appointmentId)
-			.order('created_at', { ascending: false }),
 		supabase
 			.from('appointment_professionals')
 			.select(
@@ -147,10 +144,15 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
 			.order('position')
 	]);
 
+	// Without its team a joint appointment would look like one professional's: an error.
+	// The history is secondary, so the page says it could not be loaded instead of
+	// showing it as empty; without the users, it names them by their identifier.
+	if (teamResult.error) {
+		logServerFailure('appointment.team_unavailable', teamResult.error);
+		throw kitError(503, 'No pudimos cargar el equipo del turno. Volvé a intentar.');
+	}
 	if (auditResult.error) logServerFailure('Error cargando auditoria del turno', auditResult.error);
 	if (usersResult.error) logServerFailure('Error cargando usuarios para auditoria', usersResult.error);
-	if (messageResult.error) logServerFailure('Error cargando mensajes del turno', messageResult.error);
-	if (teamResult.error) logServerFailure('Error cargando equipo del turno', teamResult.error);
 
 	const userLabels = Object.fromEntries(
 		(usersResult.data ?? []).map((user) => [String(user.user_id), user.email ?? String(user.user_id).slice(0, 8)])
@@ -216,8 +218,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
 							}
 						]
 		},
-		auditLogs: auditResult.data ?? [],
-		messageDispatches: messageResult.data ?? [],
+		auditLogs: auditResult.error ? null : auditResult.data,
 		userLabels,
 		reprogramDate,
 		minReprogramDate,
