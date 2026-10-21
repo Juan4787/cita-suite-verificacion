@@ -112,8 +112,13 @@ try {
 	};
 	for (const [name, path] of Object.entries(files)) docker(['cp', path, `${database}:/tmp/${name}.sql`]);
 	const restoreStarted = performance.now();
-	docker(['exec', '-e', 'PGPASSWORD=postgres', database, 'psql', '-X', '-U', 'postgres', '-d', 'postgres', '--single-transaction', '-v', 'ON_ERROR_STOP=1', '-q',
-		'-f', '/tmp/roles.sql', '-f', '/tmp/schema.sql', '-c', 'SET session_replication_role = replica', '-f', '/tmp/data.sql']);
+	const restore = spawnSync('docker', ['exec', '-e', 'PGPASSWORD=postgres', database, 'psql', '-X', '-U', 'postgres', '-d', 'postgres', '--single-transaction', '-v', 'ON_ERROR_STOP=1', '-q',
+		'-f', '/tmp/roles.sql', '-f', '/tmp/schema.sql', '-c', 'SET session_replication_role = replica', '-f', '/tmp/data.sql'],
+		{ encoding: 'utf8', maxBuffer: 256 * 1024 ** 2, timeout: 900_000 });
+	// The error first, then each distinct warning once: grants on extension functions the
+	// platform owns print one warning each.
+	receipt.restoreDiagnostics = psqlDiagnostics(restore.stderr).slice(0, 3000);
+	if (restore.error || restore.status !== 0) throw new Error('The restore failed.\n' + redact(receipt.restoreDiagnostics));
 	receipt.restoreMs = Math.round(performance.now() - restoreStarted);
 
 	// 3. The restore holds every row of the dump and the same migration history.
