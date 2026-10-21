@@ -58,6 +58,11 @@ Conclusión: con los planes gratuitos, el escenario de 5 consultorios no cumple 
 
 1. **Lectura de pacientes evaluada fila por fila** (corregido en `20261020020000_patient_read_set_based.sql`). La política de `patients` y las funciones de lista y conteo evaluaban `user_can_read_basic_patient`, cinco consultas, por cada paciente del consultorio. Con 6.000 pacientes, listar o buscar tardaba 2,9 s, con p95 de lecturas de 3,3 s. Las mismas reglas se evalúan ahora una vez por sentencia: p95 151 ms. `supabase/tests/patient_read_set_based.sql` demuestra la equivalencia exacta para cada rol y que una lectura completa no evalúa la regla por fila; sin la corrección, falló con 35 evaluaciones para 12 pacientes.
 2. **Guardia `safeupdate` del PostgREST alojado** (corregido en `20261020010000`; encontrado en staging durante la etapa 6). El entorno descartable ahora entra como `authenticator` y reproduce ese guardia.
+3. **Lectura de turnos evaluada fila por fila** (corregido en `20261020030000_appointment_read_set_based.sql`). Las políticas de turnos, asignaciones y contextos de reserva, y la ventana interna de disponibilidad, evaluaban `user_can_read_appointment` por fila. Con la corrección, la lectura de una semana bajó de 132 a 5,2 ms de media y las lecturas internas del diagnóstico de 5 consultorios, de p95 274 a 159 ms.
+4. **Un formateador de zona horaria por cada fecha, regla y franja** en el calculador compartido de disponibilidad: 442 construcciones por cálculo. Ahora se construye uno por forma y zona y se reutiliza (`calculate.test.ts`).
+5. **Agenda semanal contada en el Worker.** Leía todos los turnos de la semana, con un formateador por turno y por día: 116 ms de CPU de mediana en staging. Además mostraba una semana vacía ante un error y podía truncarse. Ahora la base cuenta por día local y estado (`20261020050000_agenda_week_counts.sql`) y la carga falla de forma explícita.
+6. **Dos lecturas de membresías por pedido** (`list_user_business_contexts`, unas 2 por pedido en staging). Un pedido de lectura ahora comparte una sola entre layout y página.
+7. **Consumo de la sincronización de revisiones**: cada pestaña abierta consultaba cada 5 s aunque estuviera oculta. Ahora no consulta oculta y, sin Realtime, se espacia hasta 30 s ([control de consumo](control-de-consumo.md)).
 
 ## Límites conocidos
 

@@ -87,7 +87,8 @@ const createMpFetch = (routes: Array<[string, { status?: number; body?: unknown 
 };
 
 const makeEvent = (opts: { fetchMock: typeof fetch; formEntries?: Record<string, string> }) => ({
-	locals: { auth: { access_token: 'token', refresh_token: 'r' } },
+	// The identity Auth verified in hooks, which the panel trusts.
+	locals: { auth: { access_token: 'token', refresh_token: 'r' }, verifiedUser: { id: 'master-user-id', email: 'master@mail.com' } },
 	fetch: opts.fetchMock,
 	request: new Request('https://app.test/odonto/maestro', {
 		method: 'POST',

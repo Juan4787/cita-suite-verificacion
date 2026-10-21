@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ env: { BOOKING_INTEGRATIONS_ENABLED: 'true', DEMO_MODE: 'false' }, rpc: vi.fn(), load: vi.fn(), admin: vi.fn() }));
+const mocks = vi.hoisted(() => ({ env: { BOOKING_INTEGRATIONS_ENABLED: 'true', DEMO_MODE: 'false' }, rpc: vi.fn(), load: vi.fn(), admin: vi.fn(), logFailure: vi.fn() }));
 vi.mock('$env/dynamic/private', () => ({ env: mocks.env }));
 vi.mock('$app/environment', () => ({ dev: false }));
 vi.mock('$lib/server/platform/supabase', () => ({ createSupabaseAdminClient: mocks.admin }));
 vi.mock('$lib/server/sites/public/booking-integrations', () => ({ loadBookingIntegration: mocks.load }));
 vi.mock('$lib/server/platform/rate-limits', () => ({ hashRateLimitSubject: () => 'a'.repeat(64) }));
+vi.mock('$lib/server/platform/logging', () => ({ logServerFailure: mocks.logFailure }));
 import { resolveBookingIntegrationRequest } from '$lib/server/sites/public/booking-integration-request';
 
 const key = 'a'.repeat(32);
@@ -63,5 +64,12 @@ describe('public integration request isolation', () => {
     mocks.admin.mockRejectedValue(new Error('Missing private server credential'));
     await expect(resolveBookingIntegrationRequest(event())).rejects.toMatchObject({ status: 503 });
     expect(mocks.rpc).toHaveBeenCalledTimes(1);
+  });
+  it('records why it answered 503, so an outage leaves a cause in the logs', async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: '57014', message: 'database unavailable' } });
+    await expect(resolveBookingIntegrationRequest(event())).rejects.toMatchObject({ status: 503 });
+    mocks.rpc.mockResolvedValue({ data: true, error: null }); mocks.load.mockRejectedValue(new Error('BOOKING_INTAKE_SCHEMA_INVALID'));
+    await expect(resolveBookingIntegrationRequest(event())).rejects.toMatchObject({ status: 503 });
+    expect(mocks.logFailure).toHaveBeenCalledTimes(2);
   });
 });

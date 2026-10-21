@@ -957,3 +957,13 @@ describe('visibilidad de cancelación por estado y fecha', () => {
 		expect(screen.queryByText('Cancelar turno', { selector: 'summary' })).not.toBeInTheDocument();
 	});
 });
+
+describe('enlace sin turno', () => {
+	afterEach(() => cleanup());
+
+	it('explica que no encuentra el turno en vez de fallar al mostrar la página', () => {
+		render(Page, { data: { ...pageData, appointment: null, message: 'El enlace no es válido o no está disponible.' } });
+		expect(screen.getByText('No encontramos un turno asociado a este enlace.')).toBeInTheDocument();
+		expect(screen.getByText('El enlace no es válido o no está disponible.')).toBeInTheDocument();
+	});
+});

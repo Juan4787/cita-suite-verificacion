@@ -9,13 +9,13 @@ Capas: **SQL** es PostgreSQL real descartable con las migraciones completas y cl
 Lecturas, escrituras, identificadores manipulados y funciones llamadas directamente, sin pasar por la interfaz.
 
 - **SQL:** `tenant_relation_identity.sql` (45 controles: cada relación entre tablas de un consultorio es compuesta y validada, y rechaza un consultorio ajeno aun sin triggers de usuario); `tenant_context_revocation.sql` (paciente ajeno oculto por RLS, RPC directo que no puede modificar otro consultorio, identificador manipulado); `availability_windows.sql` (un miembro no lee el catálogo de otro consultorio, profesional manipulado, profesional o prestación privados fuera de la ventana pública); `patient_archive_actor_scope.sql`, `patient_registration_transaction.sql`, `clinical_direct_write_guards.sql` y `team_editor_atomic_commands.sql` (paciente, consultorio o destino ajenos en cada operación); `clinical_business_storage_budget.sql` (una reserva de carga no puede apuntar a un archivo de otro consultorio, un dueño no lee la cuota ajena); `security_definer_resolution.sql` (una tabla temporal no puede falsificar vínculos ni exponer pacientes); `patient_read_set_based.sql` (un usuario ajeno no ve ningún paciente); `table_privilege_hardening.sql` y `service_role_backend_privileges.sql` (privilegios de tablas y del rol de servidor).
-- **Capacidad:** ningún turno creado por la carga queda en otro consultorio (`crossPractice` 0) con 5 y 25 consultorios.
+- **Capacidad:** ningún turno creado por la carga queda en otro consultorio (`crossPractice` 0), con 5 y 25 consultorios en CI y con los dos del lanzamiento en el ensayo alojado.
 
 ## 2. Revocación de membresía, cambio de rol y estados comerciales
 
 - **SQL:** `tenant_context_revocation.sql` (el contexto refleja el rol nuevo y la revocación de inmediato, también para RPC clínicos directos); `appointment_actor_revalidation.sql` (17 controles: una creación en curso revalida el rol en SQL, la recuperación idempotente no expone el turno a quien perdió el permiso); `patient_archive_actor_scope.sql`, `patient_registration_transaction.sql` y `team_editor_atomic_commands.sql` (membresía revocada, asistencia revocada y pausa comercial); `availability_windows.sql` (la revocación actúa en la siguiente llamada SQL); `role_access_audit.sql`, `team_access_transactions.sql` y `manual_access_then_mp_payment.sql`.
 - **Carreras:** `run_appointment_actor_concurrency.sh`, `run_patient_archive_actor_concurrency.sh`, `run_patient_registration_concurrency.sh` y `run_team_editor_concurrency.sh`: el cambio de rol o la revocación entre la comprobación y la escritura.
-- **Unidad:** `commercial-access.test.ts`, `odonto-context.test.ts`, `account-assistance.test.ts`.
+- **Unidad:** `commercial-access.test.ts`, `odonto-context.test.ts`, `account-assistance.test.ts`. `hooks.server.test.ts` y `odonto-context.test.ts` fijan que sólo un pedido que no escribe comparte su lectura de membresías y que nunca se comparte entre pedidos. Las pruebas de retorno de `suscripcion.server.test.ts` y `procesando.server.test.ts` exigen una lectura nueva después de confirmar un pago.
 - **Navegador:** `commercial-lock.spec.ts` (pantalla de bloqueo y salida en móvil), `account-assistance.spec.ts` (la ayuda se activa, el equipo configura y pierde acceso al revocar).
 
 ## 3. Capacidades diferentes entre consultorios y acceso histórico autorizado
@@ -30,7 +30,7 @@ Lecturas, escrituras, identificadores manipulados y funciones llamadas directame
 - **Carreras:** `run_patient_identity_idempotency_concurrency.sh`, `run_public_booking_limit_concurrency.sh`, `run_public_patient_resolution_concurrency.sh`, `run_availability_snapshot_concurrency.sh`, `run_availability_configuration_concurrency.sh`.
 - **Unidad:** `public-booking.test.ts`, `appointments.test.ts`, `reschedule.server.test.ts`, `reschedule-push-migration.test.ts`, `public-booking-navigation.test.ts`.
 - **Navegador:** `booking-embed.spec.ts` (recupera una reserva confirmada después de una respuesta perdida), `odonto.full.spec.ts` (protección contra solapamiento).
-- **Capacidad:** ninguna superposición activa de un profesional (`overlaps` 0) después de la carga, y la reserva pública bajo sus límites.
+- **Capacidad:** ninguna superposición activa de un profesional (`overlaps` 0) después de la carga, y la reserva pública bajo sus límites, en CI y en el ensayo alojado.
 
 ## 5. Restricciones de seguimiento y eliminación de una prestación permitida
 
@@ -66,6 +66,7 @@ Lecturas, escrituras, identificadores manipulados y funciones llamadas directame
 
 - **Unidad:** `push.test.ts` (cada respuesta del proveedor y una respuesta perdida clasificadas como transitorias, 410 que marca muerto sólo el dispositivo, revalidación antes de enviar, corte por tiempo que libera la reclamación); `web-push-sender.test.ts`; `google-calendar-sync.test.ts` (creación cuya respuesta se perdió recuperada sin duplicar, 503 transitorio); `google-reviews.test.ts` (resultado incierto que espera la recuperación sin reenviar, fallo del cierre después de la aceptación); `mercadopago.test.ts` (500 y 429 reintentables, 404 que pide atención); `job-budget.test.ts` y `scheduled-jobs.test.ts` (presupuesto de la cadena, fecha límite, recibo negativo sin exponer el error).
 - **SQL:** `scheduled_job_batches.sql` y `scheduled_job_queue_scenarios.sql` (reclamaciones, espera persistente, reparto entre consultorios).
+- **Realtime ausente o fallando:** `patient-revision-sync.client.test.ts`. La sincronización de pacientes no consulta con la pestaña oculta y se espacia sin Realtime. Al perderlo verifica una sola vez, no en cada reintento del cliente.
 - **Staging:** recuperación de reclamaciones abandonadas y entrega real por FCM (etapa 6).
 
 ## 11. Navegación, tema y notificaciones desde Natalia
