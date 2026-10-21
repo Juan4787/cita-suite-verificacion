@@ -21,7 +21,6 @@ function fixture(
 		duplicate?: boolean;
 		profileError?: boolean;
 		rpcDenied?: boolean;
-		auditError?: boolean;
 	} = {}
 ) {
 	const requests: { url: URL; body: Record<string, unknown> | null }[] = [];
@@ -59,10 +58,6 @@ function fixture(
 								{ status: 400 }
 							)
 						: Response.json([{ patient_id: patientId }]);
-				if (table === 'patient_profile_change_events')
-					return options.auditError
-						? Response.json({ code: 'XX000', message: 'private details' }, { status: 400 })
-						: new Response(null, { status: 201 });
 				throw new Error('Unexpected patient profile request');
 			}
 		}
@@ -77,7 +72,7 @@ function fixture(
 }
 
 describe('patient profile operation with typed SDK and simulated HTTP', () => {
-	it('uses the atomic RPC with current revisions, actor and tenant, then records changed field names', async () => {
+	it('saves the change and its history line in one atomic call, with current revisions, actor and tenant', async () => {
 		const state = fixture();
 		await updatePatientProfile(state);
 		const calls = state.requests.filter((r) => r.url.pathname.includes('/rpc/'));
@@ -89,17 +84,14 @@ describe('patient profile operation with typed SDK and simulated HTTP', () => {
 			p_expected_patient_updated_at: revision,
 			p_expected_clinical_profile_updated_at: revision,
 			p_update_clinical_profile: true,
-			p_allergies: 'Synthetic updated allergy'
+			p_allergies: 'Synthetic updated allergy',
+			p_changed_fields: ['nombre', 'alergias'],
+			p_change_summary: 'Se modificó: nombre y alergias.',
+			p_changed_by_professional_id: null,
+			p_changed_by_name: 'Dueño'
 		});
-		const audit = state.requests.find((r) =>
-			r.url.pathname.endsWith('/patient_profile_change_events')
-		);
-		expect(audit?.body).toMatchObject({
-			patient_id: patientId,
-			business_id: businessId,
-			changed_fields: ['nombre', 'alergias']
-		});
-		expect(audit?.body).not.toHaveProperty('allergies');
+		// The history line is never written apart, where a failure could lose it.
+		expect(state.requests.some((r) => r.url.pathname.endsWith('/patient_profile_change_events'))).toBe(false);
 	});
 	it('returns a resolvable duplicate conflict before mutation instead of swallowing the domain failure as an outage', async () => {
 		const state = fixture({ duplicate: true });
@@ -156,17 +148,6 @@ describe('patient profile operation with typed SDK and simulated HTTP', () => {
 				state.requests.some((r) => r.url.pathname.endsWith('/patient_profile_change_events'))
 			).toBe(false);
 			expect(JSON.stringify(output.mock.calls)).not.toContain('private');
-		} finally {
-			output.mockRestore();
-		}
-	});
-	it('retains a committed patient update when the best-effort visible change log is unavailable', async () => {
-		const output = vi.spyOn(console, 'error').mockImplementation(() => {});
-		try {
-			const state = fixture({ auditError: true });
-			await expect(updatePatientProfile(state)).resolves.toBeUndefined();
-			expect(state.requests.filter((r) => r.url.pathname.includes('/rpc/'))).toHaveLength(1);
-			expect(output).toHaveBeenCalledOnce();
 		} finally {
 			output.mockRestore();
 		}
