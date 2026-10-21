@@ -2,7 +2,7 @@
 -- practice, its owner membership or invitation and its initial access are all written,
 -- or none is. Synthetic data only; everything is rolled back.
 begin;
-select extensions.plan(6);
+select extensions.plan(7);
 
 create temporary table creation_fixture(label text primary key, id uuid, email text);
 
@@ -58,7 +58,31 @@ select extensions.is(
  'true owner:active:true true:manual true 1',
  'an existing account becomes the active owner of a practice with its email and initial access');
 
--- 2. An email without an account receives a pending owner invitation.
+-- The role a practice's context gives a user when they sign in.
+create function pg_temp.context_role(p_user uuid, p_business uuid) returns text language plpgsql as $$
+declare v_role text;
+begin
+ perform set_config('request.jwt.claim.sub', p_user::text, true);
+ perform set_config('request.jwt.claim.role', 'authenticated', true);
+ execute 'set local role authenticated';
+ select context.role into v_role from public.list_user_business_contexts() context
+ where context.business->>'id' = p_business::text;
+ execute 'reset role';
+ return v_role;
+end $$;
+
+-- 2. The owner's first sign-in finds the practice ready, with nothing configured by
+-- hand: their context as owner, the storage quota account and the availability
+-- configuration the practice's triggers create.
+select extensions.is(
+ (select concat_ws(' ',
+   pg_temp.context_role((select id from creation_fixture where label='owner'), (select business_id from first_creation)),
+   (select count(*)::text from public.clinical_business_storage_budget where business_id=(select business_id from first_creation)),
+   (select count(*)::text from private.availability_configuration_versions where business_id=(select business_id from first_creation)))),
+ 'owner 1 1',
+ 'a new practice is ready for its owner without manual configuration');
+
+-- 3. An email without an account receives a pending owner invitation.
 create temporary table invited_creation as select * from pg_temp.create_practice('Consultorio Invitado', 'consultorio-invitado-'||(select email from creation_fixture where label='suffix'), 'new', 'creation-invited');
 select extensions.is(
  (select concat_ws(' ',
@@ -69,7 +93,7 @@ select extensions.is(
  'false owner:pending 0',
  'an email without an account receives a pending owner invitation');
 
--- 3. An email that already belongs to another practice is refused, and nothing of the
+-- 4. An email that already belongs to another practice is refused, and nothing of the
 -- attempt remains: no practice, the email stays disabled and no access was granted.
 select extensions.throws_ok(
  $$select * from pg_temp.create_practice('Consultorio Rechazado', 'consultorio-rechazado-'||(select email from creation_fixture where label='suffix'), 'taken', 'creation-refused')$$,
@@ -84,7 +108,7 @@ select extensions.is(
  '0 false 0',
  'a refused creation leaves no practice, no enabled email and no access');
 
--- 4. Two practices with the same name get distinct slugs, and a base shaped like an id
+-- 5. Two practices with the same name get distinct slugs, and a base shaped like an id
 -- never becomes a slug that the booking link would read as an id.
 create temporary table repeated_creation as select * from pg_temp.create_practice('Consultorio Primero', 'consultorio-primero-'||(select email from creation_fixture where label='suffix'), 'new-repeated', 'creation-repeated');
 create temporary table id_shaped_creation as select * from pg_temp.create_practice('Consultorio Id', gen_random_uuid()::text, 'new-id-shaped', 'creation-id-shaped');
@@ -95,7 +119,7 @@ select extensions.ok(
   !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
  'repeated names get distinct slugs and no slug is shaped like an id');
 
--- 5. Only the backend, after the panel verified the master, can create a practice.
+-- 6. Only the backend, after the panel verified the master, can create a practice.
 select extensions.ok(
  has_function_privilege('service_role','public.create_business_with_owner(text,text,text,integer,text,boolean,text,text,uuid,text,text)','execute')
  and not has_function_privilege('authenticated','public.create_business_with_owner(text,text,text,integer,text,boolean,text,text,uuid,text,text)','execute')

@@ -193,97 +193,119 @@ describe('action mp_reconcile_now (maestro)', () => {
 });
 
 describe('action create_business (maestro)', () => {
-	it('crea owner ya registrado como membresía aceptada y activa', async () => {
-		const ownerUserId = 'owner-user-id';
-		const admin = createDbMock(
-			{
-				business_users: [{ data: [], error: null }],
-				allowed_emails: [{ data: null, error: null }, { error: null }],
-				businesses: [{ data: null, error: null }, { data: { id: BUSINESS_ID }, error: null }]
-			},
-			{ authUsers: [{ id: ownerUserId, email: 'cliente@example.com' }] }
-		);
-		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
-		const { fetchMock } = createMpFetch([]);
-
-		const result = (await actions.create_business(
-			makeEvent({
-				fetchMock,
-				formEntries: {
-					name: 'Consultorio Existente',
-					owner_email: 'cliente@example.com',
-					duration: 'month_1'
-				}
-			}) as never
-		)) as { success?: boolean };
-
-		expect(result.success).toBe(true);
-		const membershipInsert = admin.calls.find(
-			(c) => c.table === 'business_users' && c.method === 'insert'
-		);
-		expect(membershipInsert?.args[0]).toMatchObject({
-			business_id: BUSINESS_ID,
-			user_id: ownerUserId,
-			role: 'owner',
-			status: 'active',
-			created_by: 'master-user-id',
-			updated_by: 'master-user-id'
-		});
-		expect((membershipInsert?.args[0] as { accepted_at?: unknown })?.accepted_at).toEqual(expect.any(String));
+	const createForm = (overrides: Record<string, string> = {}) => ({
+		name: 'Consultorio Nuevo',
+		owner_email: ' Cliente@Example.com ',
+		duration: 'month_1',
+		...overrides
 	});
+	const writes = (calls: Array<{ method: string }>) =>
+		calls.filter((call) => ['insert', 'update', 'upsert', 'delete'].includes(call.method));
 
-	it('crea consultorio manual con owner pendiente si el usuario Auth todavía no existe', async () => {
+	it('crea consultorio, owner y acceso inicial en una sola transacción de la base', async () => {
 		const admin = createDbMock(
-			{
-				allowed_emails: [{ data: null, error: null }, { error: null }],
-				businesses: [{ data: null, error: null }, { data: { id: BUSINESS_ID }, error: null }],
-				business_user_invites: [{ data: [], error: null }, { error: null }]
-			},
-			{ authUsers: [] }
+			{},
+			{ rpcResult: { data: [{ business_id: BUSINESS_ID, owner_linked: true }], error: null } }
 		);
 		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
 		const { fetchMock } = createMpFetch([]);
 
 		const result = (await actions.create_business(
-			makeEvent({
-				fetchMock,
-				formEntries: {
-					name: 'Consultorio Nuevo',
-					owner_email: 'cliente@example.com',
-					duration: 'month_1',
-					note: 'Alta guiada'
-				}
-			}) as never
+			makeEvent({ fetchMock, formEntries: createForm({ note: 'Alta guiada' }) }) as never
 		)) as { success?: boolean; message?: string };
 
-		expect(result.success).toBe(true);
-		expect(result.message).toContain('owner pendiente');
-		expect(admin.client.auth.admin.listUsers).toHaveBeenCalled();
-		const allowedInsert = admin.calls.find(
-			(c) => c.table === 'allowed_emails' && c.method === 'insert'
-		);
-		expect(allowedInsert?.args[0]).toMatchObject({
-			email: 'cliente@example.com',
-			enabled: true,
-			onboarding_mode: 'manual'
+		expect(result).toEqual({
+			success: true,
+			message: 'Consultorio creado y owner vinculado. Acceso inicial: 1 mes.'
 		});
-		const inviteInsert = admin.calls.find(
-			(c) => c.table === 'business_user_invites' && c.method === 'insert'
-		);
-		expect(inviteInsert?.args[0]).toMatchObject({
-			business_id: BUSINESS_ID,
-			email: 'cliente@example.com',
-			role: 'owner',
-			status: 'pending'
-		});
-		expect(admin.rpcCalls[0]).toMatchObject({
-			fn: 'grant_business_access',
-			args: {
-				p_business_id: BUSINESS_ID,
-				p_operation: 'grant_access',
-				p_source: 'internal'
+		expect(admin.rpcCalls).toEqual([
+			{
+				fn: 'create_business_with_owner',
+				args: {
+					p_name: 'Consultorio Nuevo',
+					p_slug_base: 'consultorio-nuevo',
+					p_owner_email: 'cliente@example.com',
+					p_duration_seconds: 30 * 24 * 60 * 60,
+					p_duration_unit: 'month',
+					p_is_permanent: false,
+					p_note: 'Alta guiada',
+					p_access_note: 'Alta guiada',
+					p_admin_id: 'master-user-id',
+					p_admin_email: 'master@mail.com',
+					p_idempotency_key: expect.any(String)
+				}
 			}
+		]);
+		// Nothing is written outside that transaction, and Auth is not scanned for the owner.
+		expect(writes(admin.calls)).toEqual([]);
+		expect(admin.client.auth.admin.listUsers).not.toHaveBeenCalled();
+	});
+
+	it('informa el owner pendiente cuando todavía no tiene cuenta, con el acceso permanente', async () => {
+		const admin = createDbMock(
+			{},
+			{ rpcResult: { data: [{ business_id: BUSINESS_ID, owner_linked: false }], error: null } }
+		);
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		const { fetchMock } = createMpFetch([]);
+
+		const result = (await actions.create_business(
+			makeEvent({ fetchMock, formEntries: createForm({ duration: 'permanent' }) }) as never
+		)) as { success?: boolean; message?: string };
+
+		expect(result).toEqual({
+			success: true,
+			message:
+				'Consultorio creado con owner pendiente. Acceso inicial: permanente. Cuando el owner ingrese, se vinculará automáticamente.'
 		});
+		expect(admin.rpcCalls[0]?.args).toMatchObject({
+			p_duration_seconds: null,
+			p_duration_unit: 'permanent',
+			p_is_permanent: true,
+			p_note: null,
+			p_access_note: 'Consultorio creado con acceso inicial: permanente.'
+		});
+	});
+
+	it('rechaza un email de otro consultorio sin escrituras sueltas', async () => {
+		const admin = createDbMock(
+			{},
+			{ rpcResult: { data: null, error: { message: 'EMAIL_ALREADY_ASSOCIATED_WITH_OTHER_BUSINESS' } } }
+		);
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		const { fetchMock } = createMpFetch([]);
+
+		const result = (await actions.create_business(makeEvent({ fetchMock, formEntries: createForm() }) as never)) as {
+			status: number;
+			data: { message: string };
+		};
+
+		expect(result.status).toBe(409);
+		expect(result.data.message).toBe('Ese email ya pertenece a otro consultorio.');
+		expect(writes(admin.calls)).toEqual([]);
+	});
+
+	it('no informa éxito ni un fallo seguro si la transacción falla o su respuesta no identifica el consultorio', async () => {
+		for (const rpcResult of [
+			{ data: null, error: { message: 'connection reset' } },
+			{ data: [], error: null },
+			{ data: [{ business_id: 'no-es-un-id', owner_linked: true }], error: null },
+			{ data: [{ business_id: BUSINESS_ID }], error: null }
+		]) {
+			const admin = createDbMock({}, { rpcResult });
+			mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+			const { fetchMock } = createMpFetch([]);
+
+			const result = (await actions.create_business(
+				makeEvent({ fetchMock, formEntries: createForm() }) as never
+			)) as { status: number; data: { message: string } };
+
+			expect(result.status).toBe(503);
+			expect(result.data.message).toBe(
+				'No pudimos confirmar el alta del consultorio. Revisá la lista de consultorios antes de volver a intentarlo.'
+			);
+			expect(writes(admin.calls)).toEqual([]);
+		}
 	});
 });
 
