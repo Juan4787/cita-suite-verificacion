@@ -12,7 +12,7 @@ function fixture(baseMonth: string, monthly = 0) {
  const firstMonth = `${year + (month === 12 ? 1 : 0)}-${String(month === 12 ? 1 : month + 1).padStart(2, '0')}-01`;
  return { services: [{ id: 'service', name: 'Synthetic service' }], professionalId: 'professional', currentMonth: '2026-10',
   policies: [{ service_id: 'service', professional_id: 'professional', base_amount: 15, base_month: baseMonth + '-01',
-   first_adjustment_month: firstMonth, monthly_percentage: monthly, rounding_unit: 1, revision: 1,
+   first_adjustment_month: firstMonth, monthly_percentage: monthly, rounding_unit: 1, currency: 'ARS', revision: 1,
    service_price_monthly_adjustments: [] }] };
 }
 describe('price preview boundary in the editor', () => {

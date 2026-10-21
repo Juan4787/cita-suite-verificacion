@@ -14,28 +14,40 @@ const USER_AGENT = {
 	firefox: 'Mozilla/5.0 (Android 14; Mobile; rv:153.0) Gecko/153.0 Firefox/153.0'
 };
 
+// The whole public view the load returns, so the page is checked against its real type.
 const appointment = {
+	id: 'appointment-1',
 	token: 'public-token',
 	starts_at: '2026-08-10T15:00:00.000Z',
 	ends_at: '2026-08-10T15:30:00.000Z',
-	status: 'reserved',
+	status: 'reserved' as const,
 	is_past: false,
 	is_joint: false,
+	professional_count: 1,
 	calendar_action_status: 'not_offered',
+	calendar_action_at: null,
+	calendar_action_count: 0,
+	calendar_sequence: 0,
 	calendar_update_required_at: null,
 	professional_name_snapshot: 'Profesional',
 	service_name_snapshot: 'Consulta',
+	patient_name: 'Paciente',
 	public_status_label: 'Reservado',
+	public_actions_available: true,
 	can_confirm: true,
 	can_cancel: true,
 	can_request_reschedule: true,
 	business: {
+		id: 'business-1',
 		name: 'Consultorio',
+		slug: 'consultorio',
+		phone: null,
 		timezone: 'America/Argentina/Buenos_Aires',
 		address: null,
 		address_instructions: null,
 		maps_link: null,
 		logo_url: null,
+		is_active: true,
 		cancellation_policy: null
 	}
 };
