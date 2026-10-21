@@ -361,7 +361,7 @@
 		<div class="relative w-full sm:flex-1">
 			<label class="sr-only" for="q">Buscar pacientes</label>
 			<svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-			<input bind:this={searchInputElement} id="q" type="search" placeholder="Buscar por nombre, DNI o teléfono" bind:value={search} class="patient-search w-full rounded-2xl border border-neutral-200 bg-white py-3 pl-10 pr-20 text-sm shadow-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-[#eaf1ff]" />
+			<input bind:this={searchInputElement} id="q" type="search" placeholder="Nombre, DNI o teléfono" bind:value={search} class="patient-search w-full rounded-2xl border border-neutral-200 bg-white py-3 pl-10 pr-16 text-sm shadow-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-[#eaf1ff]" />
 			<div class="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1.5">
 				{#if searchLoading}
 					<span class="h-4 w-4 animate-spin rounded-full border-2 border-neutral-300 border-t-[#7c3aed]" aria-hidden="true"></span>

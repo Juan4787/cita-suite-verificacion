@@ -366,7 +366,7 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 			// Playwright informa ese aborto como una ruta ya resuelta.
 			await route.continue().catch(() => undefined);
 		});
-		const search = page.getByPlaceholder('Buscar por nombre, DNI o teléfono');
+		const search = page.getByRole('searchbox', { name: 'Buscar pacientes' });
 		await search.fill('Z');
 		const desktopPatientName = page.getByRole('button', {
 			name: fixture.patientName,

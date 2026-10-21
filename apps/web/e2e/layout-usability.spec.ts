@@ -49,7 +49,7 @@ test('layout usability detector reports squeezed ordinary words and accepts legi
 			<div class="ux-choice" id="truncated-choice" style="width: 120px">
 				<span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">E2E Consulta sintética larga</span>
 			</div>
-			<div id="clipped-placeholder"><input type="search" style="font: inherit; box-sizing: border-box; width: 240px; padding: 0 80px 0 40px" placeholder="Buscar por nombre, DNI o teléfono"></div>
+			<div id="clipped-placeholder"><input type="search" style="font: inherit; box-sizing: border-box; border: 0; width: 240px; padding: 0 80px 0 40px" placeholder="Buscar por nombre, DNI o teléfono"></div>
 		</section>
 		<section id="legitimate">
 			<p style="width: 120px">Paciente ${longName}</p>

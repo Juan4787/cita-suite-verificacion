@@ -857,7 +857,7 @@
 							{/if}
 							<label>
 								<span class="ux-label">Motivo (opcional)</span>
-								<input placeholder="Vacaciones, feriado, trámite..." bind:value={exceptionReason} disabled={!canManage} class="ux-input" />
+								<input placeholder="Vacaciones, feriado…" bind:value={exceptionReason} disabled={!canManage} class="ux-input" />
 							</label>
 							{#if exceptionError}
 								<p class="ux-alert">{exceptionError}</p>

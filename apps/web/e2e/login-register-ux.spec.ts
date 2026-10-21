@@ -1,15 +1,29 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+import { textIssues } from './helpers/layout-usability';
+
+// The hints of the account form are read whole on a phone, beside the Ver button too.
+async function expectWholeHintsOnPhones(page: Page) {
+	const viewport = page.viewportSize();
+	for (const width of [320, 390]) {
+		await page.setViewportSize({ width, height: 844 });
+		const hints = (await textIssues(page, 'body')).filter(({ check }) => check === 'clipped-placeholder');
+		expect(hints, `${width} px`).toEqual([]);
+	}
+	if (viewport) await page.setViewportSize(viewport);
+}
 
 test.describe('Login/registro - UX', () => {
 	test('mantiene crear cuenta y los campos al errar confirmación de contraseña', async ({ page }) => {
 		await page.goto('/login');
 		await page.waitForLoadState('networkidle');
+		await expectWholeHintsOnPhones(page);
 
 		const modeNav = page.locator('.ux-pill-nav');
 		await modeNav.getByRole('button', { name: 'Crear cuenta' }).click();
 		await expect(modeNav.getByRole('button', { name: 'Crear cuenta', exact: true })).toHaveClass(
 			/bg-\[#7c3aed\]/
 		);
+		await expectWholeHintsOnPhones(page);
 
 		const email = page.locator('#email');
 		const password = page.locator('#password');

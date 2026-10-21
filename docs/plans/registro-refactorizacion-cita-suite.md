@@ -1060,7 +1060,10 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
     - los nombres repetidos dan slugs distintos y ninguno tiene forma de identificador;
     - sólo el backend puede ejecutarla.
   - **sql 39661668404 sobre `a5ef6af`: aprobada.** 124 migraciones, todas las suites y carreras, y `business_creation_atomic.sql` 7 de 7. Tipos oficiales reproducibles (`3757d31f…`) con sólo la RPC nueva, 19 líneas, incorporados a `packages/shared/src/database.types.ts`.
-  - **Full 39662127414 sobre `ac35613`, en curso.** Verifica la ruta con los tipos oficiales y toda la campaña junta, y trae las capturas para inspeccionar la tanda de interfaz.
+  - **Full 39662127414 sobre `ac35613`.**
+    - **Aprobado** hasta la demo: tipos, guardas, servidor, cliente y exportación nativa, más SQL, carreras, Auth, Storage y navegador con 40 de 40, y la demo con 2 de 2.
+    - Es el primer full contra una base reconstruida sólo con los permisos que declaran las migraciones. La app no depende de permisos automáticos.
+    - **Falló la medición de Natalia**, porque el JavaScript cambió respecto de la referencia: `PublicLayout…C5aznpb4.js`, de 6.239 bytes, pasó a `…DTPxCkXc.js`, de 6.228 bytes. Es el cambio deliberado de `r14`: el catálogo de Natalia validaba los identificadores de prestación sólo con UUID de versiones 1 a 5, y habría omitido en silencio una prestación con otra versión.
   - **Otras compensaciones desde HTTP:** no hay. El borrado de excepciones de horario es la operación misma, bajo RLS, y el de calendario limpia intentos vencidos sin afectar el resultado.
 - **Matriz de regresiones actualizada** con las pruebas y guardas de la auditoría transversal ya verificadas.
 - **Otras clases de permisos, producción en una transacción de sólo lectura verificada** (`.verification/sequence-trigger-privileges-production-20261021.json`):
@@ -1077,3 +1080,30 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
       - `set_patient_archive_state_safely(uuid, uuid, boolean)` conserva `EXECUTE` para `authenticated`.
     - **Cambios de esquema:** `clinical_upload_slots.business_id` se completa antes de pasar a `not null`, y las cargas las crea una función SQL que la misma cadena actualiza, como prueban las suites de documentos. Las políticas reemplazadas son las de lectura por conjuntos de la etapa anterior.
   - **Respaldos:** Supabase Free no tiene respaldos diarios administrados; la documentación oficial los reserva a Pro, Team y Enterprise y recomienda que los proyectos gratuitos exporten sus datos (`supabase db dump`) con copias fuera de la plataforma ([respaldos](https://supabase.com/docs/guides/platform/backups)). El release necesita una exportación propia y una restauración ensayada. El destino de las copias de datos reales es una decisión del usuario.
+- **Cambios declarados en la comparación de Natalia.** La comparación exigía un JavaScript idéntico, lo que es más estricto que el plan («no aumentar injustificadamente la carga»).
+  - **Contrato nuevo:** se mantiene la identidad, salvo los cambios declarados en `scripts/lib/natalia-declared-changes.json`. Cada uno lleva su motivo y los artefactos exactos de la referencia y de la candidata (nombre, bytes y SHA-256).
+  - **Qué sigue fallando:** cualquier otro cambio, una huella distinta, una declaración sin motivo o una que ya no coincide con la referencia. Un artefacto sin cambios tiene que conservar la misma transferencia medida.
+  - **Reproducción local**, con la prueba liviana de Node (`.verification/natalia-declared-change-reproduction-20261021.txt`): la prueba nueva falló con el contrato anterior; con el nuevo aprueban las tres.
+  - Se declara el cambio de `r14` con las huellas que midió el full. El archivo vive en `scripts/lib`, porque el snapshot sólo toma archivos nuevos de las carpetas de código.
+  - Está documentado en `verificacion.md`.
+- **Full 39663919257 sobre `2412af0`: aprobado entero.**
+  - `svelte-check` sin errores, 97 guardas, 11 pruebas del programador, 1.384 de servidor, 171 de cliente y la exportación nativa.
+  - 124 migraciones, con todas las suites SQL y las carreras sin interbloqueos.
+  - 40 de 40 pruebas de navegador y 2 de 2 de la demo.
+  - Natalia aprobada con 12 cargas frías y el cambio declarado.
+  - Evidencia en `.verification/remote-39663919257/`, paquete SHA-256 `b68b385c…`.
+  - **Verifica toda la auditoría transversal hasta `r18`**, más la tanda de interfaz.
+- **Inspección visual de la tanda de interfaz**, con las capturas del full 39662127414, en una sola tanda de móvil y escritorio:
+  - **Ficha, editor de profesional, panel maestro y ayuda:** sin rótulos sobre los títulos, con los estados debajo; los nombres largos ajustan completos.
+  - **Costo:** «$ 125,50».
+  - **Vista previa de la historia:** se recorta como excepción revisada y se expande con «Ver detalle».
+  - **Resumen de la reserva:** el título va en su fila y el precio debajo, alineado a la izquierda.
+  - **Fechas:** a 320 px, «Domingo / 8 de noviembre» corta después del día de la semana.
+  - **Íconos dibujados** en el turno y el comprobante.
+  - **Alta de Equipo:** el título no se parte con el progreso.
+  - **Artefacto, no defecto:** la barra inferior fija aparece a mitad de página en las capturas de página completa.
+  - **Hallazgo anterior a la tanda:** el texto de ayuda del buscador de pacientes, «Buscar por nombre, DNI o teléfono», se corta a mitad de palabra a 390 px, porque el campo reserva 80 px para la carga y el botón de limpiar.
+- **Detector general `clipped-placeholder`** en `textIssues` y, por lo tanto, en `layoutIssues`. Así las matrices de anchos ya no dejan pasar un texto de ayuda más ancho que el espacio de su campo.
+  - **Prueba del detector:** caso sintético en `layout-usability.spec.ts`. Un campo lleno o con lugar suficiente no se reporta.
+  - **Prueba de la lista de pacientes:** busca el campo por su nombre accesible y comprueba el texto de ayuda a 320 y 390 px.
+  - **Reproducción:** diagnóstico de navegador 39665245843 sobre `4bed46a`, sin límite de fallas, sobre todas las matrices que usan la comprobación general.

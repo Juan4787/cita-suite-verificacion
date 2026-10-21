@@ -548,7 +548,7 @@
 					{/if}
 					<label>
 						<span class="ux-label">Motivo (opcional)</span>
-						<input name="reason" placeholder="Vacaciones, feriado, trámite..." bind:value={draft.exception.reason} disabled={!canOperate} class={`ux-input ${fieldStateClass(dirtyFields.exception)}`} />
+						<input name="reason" placeholder="Vacaciones, feriado…" bind:value={draft.exception.reason} disabled={!canOperate} class={`ux-input ${fieldStateClass(dirtyFields.exception)}`} />
 					</label>
 					{#if exceptionValidationMessage}
 						<p class="ux-alert">{exceptionValidationMessage}</p>
