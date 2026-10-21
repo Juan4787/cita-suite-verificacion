@@ -21,4 +21,8 @@ alter default privileges for role postgres in schema public
 revoke all on all tables in schema public from anon;
 revoke all on all sequences in schema public from anon;
 
+-- TRUNCATE reached the service role only through those automatic grants. Nothing
+-- uses it, the Data API cannot issue it, and a rebuilt project never had it.
+revoke truncate on all tables in schema public from service_role;
+
 commit;

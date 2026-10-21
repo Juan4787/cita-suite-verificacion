@@ -29,8 +29,9 @@ select is(
 );
 
 select ok(
-	has_table_privilege('service_role', 'public.patients', 'TRUNCATE'),
-	'service_role conserva TRUNCATE para tareas backend controladas'
+	not has_table_privilege('service_role', 'public.patients', 'TRUNCATE')
+		and has_table_privilege('service_role', 'public.patients', 'SELECT, INSERT, UPDATE, DELETE'),
+	'service_role conserva el DML que usa y no TRUNCATE, que sólo llegaba por permisos automáticos'
 );
 
 select ok(
