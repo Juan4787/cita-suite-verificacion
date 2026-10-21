@@ -37,6 +37,7 @@ begin
   on conflict (business_id) do update set enabled = excluded.enabled
   returning business_id into v_review;
  exception when insufficient_privilege then
+  raise notice 'review settings save refused for %: %', p_actor, sqlerrm;
   v_review:=null;
  end;
  execute 'reset role';
