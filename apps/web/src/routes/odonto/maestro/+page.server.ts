@@ -14,10 +14,11 @@ import { ACTIVE_BUSINESS_COOKIE, normalizeSlug } from '$lib/server/access/public
 import { createSupabaseAdminClient, isMasterEmail } from '$lib/server/platform/supabase';
 import {
 	businessEmailAssociationErrorMessage,
-	businessEmailAssociationErrorStatus,
-	EMAIL_ALREADY_ASSOCIATED_WITH_OTHER_BUSINESS_MESSAGE
+	businessEmailAssociationErrorStatus
 } from '$lib/server/access/public/business-email-association';
+import { InvalidDataContractError, readArray, readBoolean, readRecord, readText } from '$lib/contracts/json';
 import { parseMoneyInteger } from '$lib/utils/money-input';
+import { isUuid } from '@cita-suite/shared/uuid';
 import { defaultManualAccessNote } from '$lib/utils/commercial-access-copy';
 import { fail, redirect } from '@sveltejs/kit';
 import { randomUUID } from 'node:crypto';
@@ -78,19 +79,17 @@ const normalizeEmail = (value: FormDataEntryValue | string | null | undefined) =
 		.trim()
 		.toLowerCase();
 
-const uniqueBusinessSlug = async (
-	admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
-	baseValue: string
-) => {
-	const base = normalizeSlug(baseValue) || 'consultorio';
-	for (let attempt = 0; attempt < 20; attempt += 1) {
-		const suffix = attempt === 0 ? '' : `-${randomUUID().slice(0, 6)}`;
-		const slug = `${base}${suffix}`.slice(0, 80);
-		const { data, error } = await admin.from('businesses').select('id').eq('slug', slug).maybeSingle();
-		if (error) throw error;
-		if (!data) return slug;
-	}
-	return `${base}-${randomUUID().slice(0, 8)}`.slice(0, 80);
+const UNCONFIRMED_BUSINESS_CREATION =
+	'No pudimos confirmar el alta del consultorio. Revisá la lista de consultorios antes de volver a intentarlo.';
+
+// The creation confirms exactly one practice; any other answer is not a confirmation.
+const readCreatedBusiness = (data: unknown) => {
+	const rows = readArray(data, 'createdBusiness');
+	if (rows.length !== 1) throw new InvalidDataContractError('createdBusiness');
+	const row = readRecord(rows[0], 'createdBusiness');
+	const businessId = readText(row.business_id, 'createdBusiness');
+	if (!isUuid(businessId)) throw new InvalidDataContractError('createdBusiness');
+	return { businessId, ownerLinked: readBoolean(row.owner_linked, 'createdBusiness') };
 };
 
 const listAuthEmailsById = async (admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>) => {
@@ -111,24 +110,6 @@ const listAuthEmailsById = async (admin: Awaited<ReturnType<typeof createSupabas
 	}
 
 	return result;
-};
-
-const findAuthUserIdByEmail = async (
-	admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
-	email: string
-) => {
-	const normalizedEmail = email.trim().toLowerCase();
-	const perPage = 200;
-	let page = 1;
-	while (true) {
-		const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
-		if (error) throw error;
-		const users = data?.users ?? [];
-		const match = users.find((user) => (user.email ?? '').toLowerCase() === normalizedEmail);
-		if (match?.id) return match.id;
-		if (users.length < perPage) return null;
-		page += 1;
-	}
 };
 
 const businessHasMasterOwner = async (
@@ -358,10 +339,7 @@ export const actions: Actions = {
 		}
 
 		const admin = await createSupabaseAdminClient('odonto', fetch);
-		const masterUserId = master.userId ?? (await findAuthUserIdByEmail(admin, master.email));
-		if (!masterUserId) {
-			return fail(403, { message: 'No pudimos validar el usuario maestro.' });
-		}
+		const masterUserId = master.userId;
 
 		const { data: grant, error } = await admin
 			.from('account_assistance_grants')
@@ -424,169 +402,42 @@ export const actions: Actions = {
 			return fail(400, { message: 'Elegí la duración inicial del consultorio.' });
 		}
 
+		// The access email, the practice, its owner and its initial access are written in
+		// one transaction, and the database keeps one practice per email.
 		const admin = await createSupabaseAdminClient('odonto', fetch);
-		let ownerUserId: string | null = null;
-		try {
-			ownerUserId = await findAuthUserIdByEmail(admin, ownerEmail);
-		} catch (error) {
-			logServerFailure('Error buscando usuario owner', error);
-			return fail(500, { message: 'No pudimos validar el usuario owner.' });
-		}
-
-		if (ownerUserId) {
-			const { data: existingMemberships, error: existingMembershipsError } = await admin
-				.from('business_users')
-				.select('business_id, role')
-				.eq('user_id', ownerUserId)
-				.eq('status', 'active')
-				.limit(1);
-			if (existingMembershipsError) {
-				logServerFailure('Error validando membresías existentes del owner', existingMembershipsError);
-				return fail(500, { message: 'No pudimos validar si el owner ya tiene consultorio.' });
-			}
-			if ((existingMemberships ?? []).length > 0) {
-				return fail(409, {
-					message: EMAIL_ALREADY_ASSOCIATED_WITH_OTHER_BUSINESS_MESSAGE
-				});
-			}
-		}
-
-		const { data: existingInvites, error: existingInvitesError } = await admin
-			.from('business_user_invites')
-			.select('id, business_id, role')
-			.eq('email', ownerEmail)
-			.eq('status', 'pending')
-			.limit(1);
-		if (existingInvitesError) {
-			logServerFailure('Error validando invitaciones existentes del owner', existingInvitesError);
-			return fail(500, { message: 'No pudimos validar si el owner ya tiene invitación pendiente.' });
-		}
-		if ((existingInvites ?? []).length > 0) {
-			return fail(409, {
-				message: EMAIL_ALREADY_ASSOCIATED_WITH_OTHER_BUSINESS_MESSAGE
-			});
-		}
-
-		const { data: existingEmail, error: existingEmailError } = await admin
-			.from('allowed_emails')
-			.select('id')
-			.eq('email', ownerEmail)
-			.maybeSingle();
-		if (existingEmailError) {
-			logServerFailure('Error validando email owner', existingEmailError);
-			return fail(500, { message: 'No pudimos validar el email owner.' });
-		}
-
-		const emailWrite = existingEmail
-			? await admin
-					.from('allowed_emails')
-					.update({
-						enabled: true,
-						onboarding_mode: 'manual',
-						disabled_at: null,
-						disabled_reason: null,
-						updated_by: master.userId,
-						note: note ?? 'Owner de consultorio creado desde panel maestro.'
-					})
-					.eq('id', existingEmail.id)
-			: await admin.from('allowed_emails').insert({
-					email: ownerEmail,
-					enabled: true,
-					onboarding_mode: 'manual',
-					note: note ?? 'Owner de consultorio creado desde panel maestro.',
-					updated_by: master.userId,
-					created_by: master.userId
-				});
-		if (emailWrite.error) {
-			logServerFailure('Error habilitando email owner', emailWrite.error);
-			return fail(500, { message: 'No pudimos habilitar el email owner.' });
-		}
-
-		const slug = await uniqueBusinessSlug(admin, name);
-		const { data: business, error: businessError } = await admin
-			.from('businesses')
-			.insert({
-				name,
-				slug,
-				industry: 'odontology',
-				email: ownerEmail
-			})
-			.select('id')
-			.single();
-
-		if (businessError || !business?.id) {
-			logServerFailure('Error creando consultorio', businessError);
-			return fail(500, { message: 'No pudimos crear el consultorio.' });
-		}
-
-		if (ownerUserId) {
-			const { error: membershipError } = await admin.from('business_users').insert({
-				business_id: business.id,
-				user_id: ownerUserId,
-				role: 'owner',
-				status: 'active',
-				accepted_at: new Date().toISOString(),
-				created_by: master.userId,
-				updated_by: master.userId
-			});
-
-			if (membershipError) {
-				logServerFailure('Error vinculando owner al consultorio', membershipError);
-				await admin.from('businesses').delete().eq('id', business.id);
-				return fail(businessEmailAssociationErrorStatus(membershipError), {
-					message: businessEmailAssociationErrorMessage(
-						membershipError,
-						'No pudimos vincular el owner al consultorio.'
-					)
-				});
-			}
-		} else {
-			const { error: inviteError } = await admin.from('business_user_invites').insert({
-				business_id: business.id,
-				email: ownerEmail,
-				role: 'owner',
-				status: 'pending',
-				invited_by: master.userId
-			});
-
-			if (inviteError) {
-				logServerFailure('Error creando invitación owner del consultorio', inviteError);
-				await admin.from('businesses').delete().eq('id', business.id);
-				return fail(businessEmailAssociationErrorStatus(inviteError), {
-					message: businessEmailAssociationErrorMessage(
-						inviteError,
-						'No pudimos dejar invitado al owner del consultorio.'
-					)
-				});
-			}
-		}
-
-		const operation = durationKey === 'permanent' ? 'set_permanent' : 'grant_access';
-		const { error: grantError } = await admin.rpc('grant_business_access', {
-			p_business_id: business.id,
-			p_operation: operation,
+		const { data, error } = await admin.rpc('create_business_with_owner', {
+			p_name: name,
+			p_slug_base: normalizeSlug(name) || 'consultorio',
+			p_owner_email: ownerEmail,
 			p_duration_seconds: duration.seconds,
 			p_duration_unit: duration.unit,
 			p_is_permanent: durationKey === 'permanent',
-			p_amount: null,
-			p_source: 'internal',
-			p_note: note ?? `Consultorio creado con acceso inicial: ${duration.label}.`,
+			p_note: note,
+			p_access_note: note ?? `Consultorio creado con acceso inicial: ${duration.label}.`,
 			p_admin_id: master.userId,
 			p_admin_email: master.email,
 			p_idempotency_key: randomUUID()
 		});
-		if (grantError) {
-			logServerFailure('Error asignando acceso inicial al consultorio', grantError);
-			await admin.from('businesses').delete().eq('id', business.id);
-			return fail(500, { message: 'No pudimos asignar el acceso inicial del consultorio.' });
+		if (error) {
+			logServerFailure('Error creando consultorio', error);
+			return fail(businessEmailAssociationErrorStatus(error, 503), {
+				message: businessEmailAssociationErrorMessage(error, UNCONFIRMED_BUSINESS_CREATION)
+			});
+		}
+		let created: ReturnType<typeof readCreatedBusiness>;
+		try {
+			created = readCreatedBusiness(data);
+		} catch (contractError) {
+			logServerFailure('Respuesta inválida al crear el consultorio', contractError);
+			return fail(503, { message: UNCONFIRMED_BUSINESS_CREATION });
 		}
 
-			return {
-				success: true,
-				message: ownerUserId
-					? `Consultorio creado y owner vinculado. Acceso inicial: ${duration.label}.`
-					: `Consultorio creado con owner pendiente. Acceso inicial: ${duration.label}. Cuando el owner ingrese, se vinculará automáticamente.`
-			};
+		return {
+			success: true,
+			message: created.ownerLinked
+				? `Consultorio creado y owner vinculado. Acceso inicial: ${duration.label}.`
+				: `Consultorio creado con owner pendiente. Acceso inicial: ${duration.label}. Cuando el owner ingrese, se vinculará automáticamente.`
+		};
 	},
 	add_email: async ({ request, locals, fetch }) => {
 		if (!locals.auth) throw redirect(303, '/login');

@@ -2,7 +2,7 @@
 
 ## Estado de este documento
 
-**Actualizado por Opus 5.5 — 21 de octubre de 2026, ~00:30 UTC.** La **etapa 5 está cerrada** sobre `674649108bc2caa87e82c8bca25d93f82d584d51` (full 39276578152, dictamen independiente `ship`, DESIGN.md documentado) y se avisó al usuario. La **etapa 6 está cerrada** (ver abajo). La campaña completa **no** está terminada.
+**Actualizado por Opus 5.5 — 21 de octubre de 2026, ~16:00 UTC.** La **etapa 5 está cerrada** sobre `674649108bc2caa87e82c8bca25d93f82d584d51` (full 39276578152, dictamen independiente `ship`, DESIGN.md documentado) y se avisó al usuario. La **etapa 6 está cerrada** (ver abajo). La campaña completa **no** está terminada.
 
 **Alcance vigente (instrucción del usuario del 19 de octubre al retomar con Opus 5.5):** completar y verificar íntegramente la fase 5, avisar al usuario cuando esté realmente cerrada y **continuar automáticamente con la fase 6 y todas las etapas restantes** hasta terminar la campaña, incluida la auditoría transversal, release, publicación y comprobaciones posteriores según las autorizaciones vigentes. Esta instrucción sustituye la restricción anterior de «detenerse antes de fase 6», que se conserva abajo sólo como antecedente de la intervención de GPT-6.1 Sol. Cambia únicamente el punto de detención: no reduce requisitos, garantías, controles ni procedimientos de seguridad.
 
@@ -28,30 +28,44 @@ Leer la decisión literal al final del plan. En resumen: no hay usuarios reales 
    - **Siguiente:** cerrar la matriz de regresiones (`docs/architecture/matriz-regresiones.md`). Después, la auditoría transversal, con estos pendientes: historiales sin depurar, el 503 público sin registro de causa, los tres `as unknown as`, la agenda diaria que muestra un día vacío ante un error de lectura, copias del cálculo de fecha local y del patrón UUID, `getAuthUserId` repetido en `patient-list.ts` y la deuda de interfaz del punto 5. Luego el release.
    - **Release: correo de Auth.** Producción tiene `mailer_autoconfirm` activo, pero el restablecimiento de contraseña necesita correo, y el SMTP integrado de Supabase sólo entrega a miembros del equipo (2 por hora). Comprobar si producción tiene SMTP propio. Si no, es un impedimento para clientes reales y una decisión del usuario, porque requiere una cuenta de correo transaccional.
    - **Realtime alojado, para el release:** la primera siembra de staging mostró que allí las difusiones de `realtime.send` desde triggers se pierden por falta de la partición diaria de `realtime.messages` (una advertencia por fila). Comprobar en producción, en modo lectura, las particiones y el transporte antes de dar por verificada la sincronización de revisiones de pacientes. Con la corrección del 21 de octubre, sin Realtime la lista se actualiza en unos 30 s.
-3b. **Punto exacto (21 de octubre, ~04:45 UTC).** Primera medición alojada de dos consultorios: 0 % de errores, sin cortes de CPU, integridad sin fallas. No cumple el p99 en dos de tres repeticiones, por pausas de 2 a 4 s de la base gratuita (ver registro). **Segunda medición 39545125202 en curso**, con su tail en `.verification/staging-tail-3c0f*.jsonl`. **Después:** `capacity-report` y `capacity-cleanup` con `practices` 2. **Fast 39545185216 sobre `93e8976` en cola:** reproducciones de la auditoría, que deben fallar. **Correcciones preparadas** en `.verification/pending-audit-fixes-20261021/`, fuera de los snapshots. `apply-r2.sh` aplica las del servidor; la tercera tanda lleva el tipado de los Svelte (`*.svelte`, `pricing.ts`), `supabase.ts` sin `ws` (quitar `ws` de los `package.json` y actualizar el lockfile con `pnpm install --lockfile-only`), `patient-export.worker.ts`, la página pública del turno y la guarda `type-escapes.test.mjs`. Migraciones `20261021010000_webhook_events_retention.sql` y `20261021020000_explicit_api_grants.sql` con sus pruebas SQL `webhook_events_retention.sql` y `api_exposure_explicit.sql`: reproducir primero en `level=sql`. El inventario de la auditoría está en `auditoria-inventario.md` de esa carpeta; su hallazgo central es Seguimientos, autorizado en TypeScript con la clave de servicio desde `20260831065000`.
-3c. **Punto exacto (21 de octubre, 14:50 UTC).** Reemplaza a 3b.
-   - **Ensayo de dos consultorios: cerrado.** Workers Free cumple. Supabase Free no cumple p95 ni p99 por pausas del cómputo Nano. La publicación está frenada hasta la decisión del usuario, con alternativas informadas; no se contrata nada.
-   - **Auditoría transversal en cadena.** Cada fast verifica la tanda anterior, ya aplicada, y reproduce la siguiente, cuya corrección espera en `.verification/pending-audit-fixes-20261021/rN/`. El detalle está en el registro.
-     - **Verificado:** hasta `r12` (fast 39584355964, verde entera), `r14` (UUID en `@cita-suite/shared/uuid` y su guarda) y la migración del historial atómico `20261021050000` (sql 39585611597, con tipos oficiales incorporados).
-   - **En curso:**
-     - **sql 39618149541.** Diagnostica por qué la ayuda no puede guardar `google_review_settings` bajo RLS en la base reconstruida. Las políticas usan la misma función que `businesses`, donde sí guarda. El motivo sale por `extensions.diag`.
-       - Hasta entenderlo, **`r15` (reseñas con el cliente del usuario) NO se aplica**: hoy esa ayuda guarda con la clave de servicio y funciona.
-     - **fast 39618281546.** Reproduce el historial atómico en TypeScript (`r13`, `patient-profile.ts`) y la ayuda de reseñas. Se esperan exactamente 3 fallas.
-     - Las versiones anteriores de `patient-profile.ts` y `resena-google/+page.server.ts` están restauradas desde `c5aebfe` sólo para esa reproducción. Las corregidas están en `r13/` y `r15/`.
-   - **Preparado, sin aplicar a ningún entorno:**
-     - `20261021060000_align_api_privileges.sql` deja producción con exactamente los permisos de las migraciones. La evidencia de sólo lectura está en `.verification/api-privileges-production-20261021.json`.
-     - `api_exposure_explicit.sql` controla que los roles de la API no tengan más que leer y escribir filas.
-   - **Documentado:**
-     - el inventario de la clave de servicio, en `docs/architecture/clave-de-servicio.md`;
-     - la decisión de retención y el tope de los webhooks, en `control-de-consumo.md`.
-   - **Siguiente:** cerrar `r13` y `r15`, y después la tanda de interfaz del punto 5:
-     - la píldora «Reserva online» y los rótulos superiores;
-     - las fechas «Miércoles 4 de / noviembre» a 320 px;
-     - «$ 125,50»;
-     - los pesos 800 y 900 con Inter cargada en 400 a 700;
-     - los tamaños literales, los glifos de `.ux-tab-marker` y los `truncate`;
-     - `ThemeToggle.svelte`, que no se usa.
-     Luego el full contra la base reconstruida, que valida además que la app no dependa de permisos automáticos, la matriz de regresiones y el release.
+3d. **Punto exacto (21 de octubre, ~16:00 UTC).** Reemplaza a 3b y 3c; el detalle de cada tanda está en el registro.
+   - **Ensayo de dos consultorios, en staging: cerrado.**
+     - Workers Free cumple.
+     - Supabase Free no cumple p95 ni p99. Las demoras se acumulan dentro de PostgreSQL, pero su causa (CPU o disco de la instancia, o bloqueos) no está atribuida.
+     - La publicación está frenada hasta la decisión del usuario.
+   - **Análisis externo aportado por el usuario.** Se adopta su secuencia: antes de decidir, medir la producción de São Paulo en Free con datos ficticios. La medición registra:
+     - eventos de espera de PostgreSQL;
+     - fotografías de `pg_stat_statements`;
+     - métricas del servidor, si Free las expone;
+     - tiempos separados de punta a punta, del Worker y de PostgreSQL.
+
+     El Worker de producción ya se ubica en `aws:sa-east-1`. No se contrata nada.
+   - **Auditoría transversal en cadena.** Cada fast verifica la tanda anterior, ya aplicada, y reproduce la siguiente; las correcciones esperan en `.verification/pending-audit-fixes-20261021/rN/`. El inventario de hallazgos está en `auditoria-inventario.md`, en esa carpeta.
+     - **Verificado hasta `r17`:**
+       - `r13`: historial atómico en TypeScript;
+       - `r14`: UUID;
+       - `r15`: la ayuda guarda las reseñas con el cliente del usuario;
+       - `r16`: costo con centavos, fechas sin partir y marcadores dibujados;
+       - `r17`: `20261021070000` concede `EXECUTE` sobre `private.is_google_review_url`. Sin ese permiso, ni el dueño, ni la ayuda, ni el backend podían guardar la configuración de reseñas; producción tiene 0 filas;
+       - la tanda de interfaz del punto 5.
+
+       Las evidencias son la sql 39625073683, con 123 migraciones y tipos oficiales idénticos (`5053328b…`), y la fast 39626429287 sobre `9e3a433`, con 96 guardas, 1.382 de servidor y 171 de cliente.
+     - **En curso: `r18`, alta atómica del consultorio desde el panel maestro.** La ruta escribía correo, consultorio, dueño o invitación y acceso en pedidos separados, y compensaba borrando sin comprobar el borrado.
+       - **Reproducciones:** fast 39627102129 sobre `ff154a4`, donde deben fallar exactamente las 4 pruebas nuevas de `create_business`; y sql 39626436682, donde `business_creation_atomic.sql` falla porque la función todavía no existe.
+       - **Corrección preparada** en `r18/`: la migración `20261021080000_create_business_with_owner.sql` y la ruta.
+       - **Orden de aplicación:** primero la migración y una sql que genere los tipos oficiales con la RPC nueva; después incorporar esos tipos y aplicar la ruta; por último, una fast verde.
+   - **Producción:** toda consulta va dentro de `begin transaction read only`, porque el pooler no reenvía `PGOPTIONS`.
+   - **Siguiente:**
+     1. Cerrar `r18`.
+     2. Correr un full con capturas e inspeccionar la tanda de interfaz a 320, 390, 768, 1280 y 1600.
+     3. Hacer el release:
+        - ensayo de respaldo y restauración;
+        - migraciones de staging `20261021010000` a `080000`;
+        - repetir la consulta de privilegios de producción después de migrar;
+        - correo de Auth;
+        - Realtime;
+        - transición de identidad;
+        - la medición de producción.
    - **Postergado con riesgo documentado:** los comparadores de parámetros de ruta (`[id=uuid]`).
 4. **Copias antiguas retiradas por el usuario (resuelto el 19 de octubre):** `https://cita-suite.netlify.app` servía una copia completa de la aplicación con endpoint de tareas. El usuario desactivó ese proyecto y también pausó `https://cita-suite-app.vercel.app`, otra copia que no figuraba en el inventario. Comprobado por HTTP a las 21:12 UTC: Netlify responde 404 y Vercel 503. Ambas están en el inventario de `identidad-cita-suite.md`. El interruptor de base de la migración sigue siendo parte de la transición: neutraliza cualquier llamador antiguo (por ejemplo cron-job.org contra el Worker) sin depender de esas cuentas. Antes de activar el programador nuevo, volver a comprobar que las dos copias siguen fuera de servicio.
 5. **Pendiente para la auditoría transversal** (debe corregirse ahí): con el criterio de retención de la sección 4, revisar las tablas de historia que no se depuran (`audit_logs`, `mp_webhook_events`, `patient_profile_change_events`, `whatsapp_webhook_events`) y decidir cuáles son historia del producto y cuáles registros; `public_booking_attempts` ya se conserva 7 días (`20261020040000`). La carga pública (`defaultIntegration` en `/reservar` y `readBookingIntegrationRequest`) convierte cualquier excepción en 503 sin registrar la causa. Tres `as unknown as` en producción (transporte `ws` del cliente Supabase de servidor, `configuracion/negocio/+page.svelte` y `patient-export.worker.ts`); deuda de interfaz preexistente no canonizada por el documentador (kickers/eyebrows, glifos como íconos en `.ux-tab-marker`, 14 tamaños literales, `truncate` en superficies no cubiertas, pesos 650–900 con Inter cargada en 400–700, `ThemeToggle.svelte` sin uso, fechas «4 de / noviembre» partidas a 320 y costo «$ 125,5»). Detalle en el registro. Resueltos en etapa 6: los casts de errores de `push.ts` (ahora `PushServiceError` y el error tipado del SDK) y la auditoría de las tareas fuera del `fetch` presupuestado (`insertAuditLog` recibe el cliente de la tarea).
