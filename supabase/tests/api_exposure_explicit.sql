@@ -7,27 +7,29 @@
 begin;
 select extensions.plan(3);
 
--- 1. The schema owner's default privileges give the API roles nothing.
+-- 1. The default privileges of the roles that apply migrations give the API roles
+-- nothing: postgres in hosted projects, supabase_admin in this reconstruction.
 do $$
 declare v_acl text;
 begin
- select string_agg(d.defaclobjtype::text||':'||d.defaclacl::text, ' ') into v_acl
+ select string_agg(pg_get_userbyid(d.defaclrole)||' '||d.defaclobjtype::text||':'||d.defaclacl::text, ' ') into v_acl
  from pg_default_acl d join pg_namespace n on n.oid=d.defaclnamespace
- where n.nspname='public' and d.defaclrole='postgres'::regrole
+ where n.nspname='public' and d.defaclrole in ('postgres'::regrole,'supabase_admin'::regrole)
   and d.defaclacl::text ~ '(^|[{,])(anon|authenticated|service_role)=';
  if v_acl is not null then raise exception 'TEST_API_DEFAULT_PRIVILEGES %',v_acl; end if;
 end $$;
 select extensions.pass('new public objects get no automatic Data API grant');
 
--- 2. A table the schema owner creates now is reachable by no API role until a
--- migration grants it.
-set local role postgres;
+-- 2. A table created now, as a migration here or in a hosted project would create
+-- it, is reachable by no API role until a migration grants it.
 create table public.api_exposure_probe(id integer);
+set local role postgres;
+create table public.api_exposure_probe_hosted(id integer);
 reset role;
 select extensions.ok(
- not has_table_privilege('anon','public.api_exposure_probe','SELECT')
- and not has_table_privilege('authenticated','public.api_exposure_probe','SELECT')
- and not has_table_privilege('service_role','public.api_exposure_probe','SELECT'),
+ not exists(select 1 from unnest(array['public.api_exposure_probe','public.api_exposure_probe_hosted']) probe,
+  unnest(array['anon','authenticated','service_role']) api_role
+  where has_table_privilege(api_role, probe, 'SELECT,INSERT,UPDATE,DELETE')),
  'a new public table needs an explicit grant before the Data API can reach it');
 
 -- 3. The public anon key has no privilege on any public table, view or sequence.
@@ -36,7 +38,7 @@ declare v_relations text;
 begin
  select string_agg(c.relname, ', ' order by c.relname) into v_relations
  from pg_class c join pg_namespace n on n.oid=c.relnamespace
- where n.nspname='public' and c.relkind in ('r','p','v','m','f','S') and c.relname<>'api_exposure_probe'
+ where n.nspname='public' and c.relkind in ('r','p','v','m','f','S') and c.relname not like 'api\_exposure\_probe%'
   and (case when c.relkind='S' then has_sequence_privilege('anon',c.oid,'USAGE,SELECT,UPDATE')
        else has_table_privilege('anon',c.oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') end);
  if v_relations is not null then raise exception 'TEST_ANON_RELATION_PRIVILEGES %',v_relations; end if;

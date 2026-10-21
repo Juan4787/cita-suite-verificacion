@@ -63,7 +63,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 	const canOperate = $derived(data.context.canOperate && !data.demo);
 	const isClosed = $derived(data.appointment?.status === 'cancelled');
 	const canShowCancelAction = $derived(
-		!isClosed && isUpcomingActiveAppointment(data.appointment)
+		!isClosed && data.appointment !== null && isUpcomingActiveAppointment(data.appointment)
 	);
 	const appointmentProfessionals = $derived(data.appointment?.professionals ?? []);
 	const isJoint = $derived(appointmentProfessionals.length > 1);
@@ -141,7 +141,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 	};
 
 	const canUseStatusAction = (status: string) => {
-		if (isClosed || data.appointment.status === status) return false;
+		if (isClosed || !data.appointment || data.appointment.status === status) return false;
 		return canOperate;
 	};
 
@@ -234,7 +234,8 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 	const isSelected = (iso: string) => iso === selectedDate;
 
 	const loadSlots = async (date: string) => {
-		if (slotsCache[date]) return;
+		const appointmentId = data.appointment?.id;
+		if (!appointmentId || slotsCache[date]) return;
 		const request = ++slotRequest;
 		loadingSlots = true;
 		slotsError = null;
@@ -244,7 +245,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 				ignore_break: ignoreBreak ? 'true' : 'false'
 			});
 			const res = await fetch(
-				`/odonto/turnos/${data.appointment.id}/slots?${params.toString()}`
+				`/odonto/turnos/${appointmentId}/slots?${params.toString()}`
 			);
 			const body = await res.json().catch(() => ({}));
 			if (request !== slotRequest) return;

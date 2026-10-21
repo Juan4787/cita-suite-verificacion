@@ -27,6 +27,7 @@ import { normalizeArgentineWhatsAppPhone } from '$lib/utils/phone';
 import { classifyUserAgent } from '$lib/device';
 import { isActiveAppointmentStatus } from '$lib/utils/appointment-visibility';
 import { isAvailabilityDate } from '$lib/availability/windows';
+import { parsePriceQuote } from '$lib/scheduling/price-contracts';
 import { error as kitError, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -203,6 +204,8 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
 		context: business,canEditInstructions,
 		appointment: {
 			...data,
+			// The quote saved with the booking is JSON: validated here, never trusted as is.
+			price_quote_snapshot: parsePriceQuote(data.price_quote_snapshot),
 			booking_context: bookingContext,
 			booking_intake: bookingIntake,
 			professionals:

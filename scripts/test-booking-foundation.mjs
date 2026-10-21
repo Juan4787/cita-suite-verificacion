@@ -170,6 +170,13 @@ try {
   // The hosted platform's PostgREST login role: its sessions reject an UPDATE or
   // DELETE without WHERE, also inside the functions a request calls.
   sql("alter role authenticator password 'cita-disposable-test-only'; alter role authenticator set session_preload_libraries = 'safeupdate';");
+  // Supabase gives the API roles no automatic grant on new public objects (projects
+  // created since 30 May 2026, existing ones from 30 October). The migrations run here
+  // as supabase_admin and in hosted projects as postgres: with neither role granting
+  // by default, every privilege a table needs comes from its migration, as in a
+  // project rebuilt from them.
+  sql(["supabase_admin", "postgres"].flatMap((owner) => ["tables", "sequences", "functions"].map((kind) =>
+    `alter default privileges for role ${owner} in schema public revoke all on ${kind} from anon, authenticated, service_role;`)).join("\n"));
   if (realStorage) {
     const storageImage = "public.ecr.aws/supabase/storage-api:v1.70.3";
     command(["image", "inspect", storageImage]);
