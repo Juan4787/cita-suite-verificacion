@@ -1134,3 +1134,26 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
     - **Consultorio nuevo sin configuración manual:** `business_creation_atomic.sql`, control 2.
   - **Quedan para el release** los recorridos sobre los artefactos construidos (`verify:release`) y el ensayo de cambio de recursos.
   - **Postergado, con riesgo documentado** en `guia-nuevas-funciones.md`: los comparadores de parámetros de ruta.
+- **Release, paso 1: respaldo y recuperación ensayados (21 de octubre).** Procedimiento y evidencia en `docs/architecture/respaldo-y-recuperacion.md`.
+  - **Base:** Supabase Free no tiene respaldos diarios administrados. La guía oficial recomienda `supabase db dump` en tres partes (roles, esquema y datos) y restaurar con `psql` en un proyecto nuevo.
+  - **Herramienta:** `scripts/lib/supabase-backup.mjs`, con `createSupabaseBackup` y `restoreSupabaseBackup`. Las pruebas livianas están en `scripts/lib/backup-verification.test.mjs` (4).
+  - **Ensayo `backup-rehearsal`** en `staging-operations`. El respaldo se escribe en disco y se restaura desde esos archivos en un proyecto nuevo: la pila local de la CLI fijada en el ejecutor, con las versiones de Auth y Storage de staging.
+  - **La restauración sobre la imagen sola no sirve.** Le faltan los roles y los esquemas que crean los servicios de un proyecto nuevo.
+  - **Hallazgos, cada uno visto fallar en CI antes de corregirse:**
+    1. **Rol de plataforma no reservado.** El volcado crea `supabase_realtime_admin` y le otorga `log_min_messages`; `postgres` no puede hacerlo. Se aplica la regla de la propia CLI: se omite lo que crea, otorga o modifica roles de plataforma, pero se conservan `statement_timeout` y `pgrst.*`. Corridas 39670962594, 39672073965, 39672887870, 39673532969, 39674208779 y 39674896972; esta última mostró las sentencias, con los valores ocultos.
+    2. **Desfase de versiones.** El Auth alojado es más nuevo que el de la CLI: faltaba `auth.mfa_recovery_code_sets` (39676188680). Se corrige con los archivos de versión que escribe `supabase link`.
+    3. **Objetos en esquemas de la plataforma.** Faltaban `cita_storage_budget` y la política de Realtime (39679198880). Se resuelve con `managed.sql`.
+    4. **Historial de migraciones.** No viene en el volcado (39678122638). Se resuelve con `history.sql`.
+    5. **Una descarga transitoria de Storage** quedó oculta (39680631098). Se agregan reintentos acotados y el registro de la causa.
+  - **Ensayo final aprobado: 39682517594 sobre `0618b35`.**
+    - 83.335 filas en 96 tablas, sin diferencias; los datos ocupan 35 MB y se restauraron en 3,6 s.
+    - Historial de migraciones: 117 de 117.
+    - Objetos en esquemas de la plataforma: 1 política y 1 disparador.
+    - Archivo sintético restaurado con la misma huella y borrado de staging.
+    - Recibo en `.verification/backup-rehearsal-staging-20261021.json`.
+  - **Staging, sembrado y limpiado** por `capacity-seed` y `capacity-cleanup` (39682127537 y 39683097818): no queda ningún consultorio sintético y la base vuelve a 19,8 MB.
+  - **Respaldo de producción:** `scripts/backup-production.mjs` corre desde esta máquina con la misma biblioteca, fuera del repositorio y con lecturas de sólo lectura. El destino y la frecuencia de los respaldos de datos reales los decide el usuario.
+  - **Respaldo de producción previo al release (21 de octubre, 22:03 UTC)**, con `backup-production.mjs`, en `~/.local/share/cita-suite/backups/production-2026-10-21T22-03-10-856Z` (privado, fuera del repositorio).
+    - **Contenido:** 101 tablas con 4.409 filas; historial de 97 migraciones; 1 política y 1 disparador de los esquemas de la plataforma; 32 archivos almacenados, sin fallas. Los datos ocupan 1,27 MB y el esquema 858 KB.
+    - **Primer intento fallido:** la CLI corrió en la raíz del repositorio, cuyo `supabase/.temp` vinculado a producción fija la imagen `17.6.1.054`. Ahora corre en una carpeta de trabajo vacía, como en el ensayo, y el error incluye la salida estándar.
+    - **Carpeta parcial borrada:** la que había creado ese intento, que estaba incompleta.
