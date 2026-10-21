@@ -181,29 +181,6 @@
 			access.commercialStatus === 'archived'
 		);
 	});
-	// Notices the server could not check: each says so where it would have appeared.
-	const UNAVAILABLE_NOTICE_COPY = {
-		'follow-ups': {
-			message: 'No pudimos comprobar los recordatorios de seguimiento.',
-			href: '/odonto/seguimientos/importantes',
-			link: 'Ver recordatorios'
-		},
-		'help-requests': {
-			message: 'No pudimos comprobar las solicitudes de ayuda.',
-			href: '/odonto/maestro#solicitudes-ayuda',
-			link: 'Ver en el panel maestro'
-		},
-		assistance: {
-			message: 'No pudimos comprobar la ayuda de Cita Suite.',
-			href: '/odonto/configuracion/ayuda',
-			link: 'Ver detalle'
-		}
-	} as const;
-	const unavailableNotices = $derived(
-		(data?.unavailableNotices ?? []).filter(
-			(notice) => notice !== 'follow-ups' || !commercialAccessRestricted
-		)
-	);
 	const restrictedClinicalReadContext = $derived({
 		role: activeBusiness?.role,
 		commercialStatus: activeBusiness?.access?.commercialStatus,
@@ -1029,7 +1006,7 @@
 				{data.businessError}
 			</div>
 		{/if}
-		{#if (commercialNotice && !commercialAccessRestricted) || masterAssistanceRequests.length > 0 || shouldShowMissingAddress || shouldShowAccountAssistanceNotice || (!commercialAccessRestricted && data?.followUps?.count > 0) || unavailableNotices.length > 0}
+		{#if (commercialNotice && !commercialAccessRestricted) || masterAssistanceRequests.length > 0 || shouldShowMissingAddress || shouldShowAccountAssistanceNotice || (!commercialAccessRestricted && data?.followUps?.count > 0)}
 			<div class="mb-6 grid gap-3" aria-label="Avisos importantes">
 				{#if commercialNotice && !commercialAccessRestricted}
 					<div
@@ -1126,15 +1103,6 @@
 						storageKeyPrefix={businessNoticeStoragePrefix}
 					/>
 				{/if}
-
-				{#each unavailableNotices as notice (notice)}
-					<div class="ux-alert ux-alert-warning">
-						{UNAVAILABLE_NOTICE_COPY[notice].message}
-						<a href={UNAVAILABLE_NOTICE_COPY[notice].href} class="font-bold underline">
-							{UNAVAILABLE_NOTICE_COPY[notice].link}
-						</a>
-					</div>
-				{/each}
 			</div>
 		{/if}
 		{#if commercialLockActive}

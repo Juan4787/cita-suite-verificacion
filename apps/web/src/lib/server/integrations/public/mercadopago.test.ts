@@ -26,6 +26,7 @@ import {
 	RECONCILE_CHARGE_CALLS,
 	RECONCILE_SUBSCRIPTION_CALLS,
 	recordCancelledPayment,
+	settleApprovedChargesForPreapproval,
 	SUBSCRIPTION_DURATION_SECONDS,
 	verifyMpWebhookSignature
 } from '$lib/server/integrations/public/mercadopago';
@@ -1500,6 +1501,41 @@ describe('upsertMpSubscription: detección de doble suscripción autorizada', ()
 		);
 		expect(dup).toBeUndefined();
 	});
+
+	it('registra la falla cuando no pudo comprobar si hay otra autorizada', async () => {
+		const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { admin, insertCalls } = createAdminMock({
+			tables: {
+				mp_subscriptions: [
+					{ data: null, error: null },
+					{ data: null, error: { message: 'synthetic read failure' } }
+				]
+			}
+		});
+		const { fetchMock } = createFetchMock([
+			[
+				'/preapproval/pre-err',
+				{ body: { id: 'pre-err', status: 'authorized', external_reference: BUSINESS_ID } }
+			]
+		]);
+
+		try {
+			await processMpWebhookEvent(admin, fetchMock, {
+				topic: 'subscription_preapproval',
+				resourceId: 'pre-err'
+			});
+
+			expect(errors).toHaveBeenCalledWith(
+				'No se pudo comprobar si hay otra suscripción autorizada',
+				expect.anything()
+			);
+			expect(
+				insertCalls.find((c) => (c.payload as { action?: string }).action === 'duplicate_authorized')
+			).toBeUndefined();
+		} finally {
+			errors.mockRestore();
+		}
+	});
 });
 
 
@@ -1510,5 +1546,44 @@ describe('provider response contracts', () => {
 		expect(payment).toEqual({ ok: false, status: 200, data: null });
 		const preapproval = await getPreapproval('123', vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: 123, status: 'authorized' }), { status: 200 })));
 		expect(preapproval).toEqual({ ok: false, status: 200, data: null });
+	});
+});
+
+describe('settleApprovedChargesForPreapproval', () => {
+	it('deja un aviso que requiere atención si no pudo revisar los cobros antes de cancelar', async () => {
+		const { admin, insertCalls, rpcCalls } = createAdminMock();
+		const { fetchMock } = createFetchMock([['/authorized_payments/search', { status: 500 }]]);
+
+		const result = await settleApprovedChargesForPreapproval(admin, fetchMock, BUSINESS_ID, 'pre-c');
+
+		expect(result).toEqual({ credited: 0, checked: false });
+		expect(rpcCalls).toHaveLength(0);
+		expect(insertCalls).toEqual([
+			expect.objectContaining({
+				table: 'mp_webhook_events',
+				payload: expect.objectContaining({
+					action: 'final_charges_unchecked',
+					resource_id: 'pre-c',
+					business_id: BUSINESS_ID,
+					requires_attention: true
+				})
+			})
+		]);
+	});
+
+	it('asienta el cobro aprobado sin pedir atención cuando pudo revisarlo', async () => {
+		const { admin, insertCalls, rpcCalls } = createAdminMock();
+		const { fetchMock } = createFetchMock([
+			[
+				'/authorized_payments/search',
+				{ body: { results: [{ id: 80, transaction_amount: 50000, payment: { id: 801, status: 'approved' } }] } }
+			]
+		]);
+
+		const result = await settleApprovedChargesForPreapproval(admin, fetchMock, BUSINESS_ID, 'pre-c');
+
+		expect(result).toEqual({ credited: 1, checked: true });
+		expect(rpcCalls[0].args.p_idempotency_key).toBe('mp:payment:801');
+		expect(insertCalls).toEqual([]);
 	});
 });

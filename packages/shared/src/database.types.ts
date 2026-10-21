@@ -3987,6 +3987,14 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: boolean
       }
+      complete_follow_up: {
+        Args: {
+          p_business_id: string
+          p_expected_updated_at: string
+          p_follow_up_id: string
+        }
+        Returns: undefined
+      }
       complete_google_calendar_event_delete: {
         Args: { p_event_row_id: string; p_now?: string }
         Returns: string
@@ -4197,6 +4205,16 @@ export type Database = {
           p_teeth?: string
         }
         Returns: Json
+      }
+      create_follow_up: {
+        Args: {
+          p_assigned_professional_id?: string
+          p_business_id: string
+          p_message: string
+          p_patient_id: string
+          p_remind_on: string
+        }
+        Returns: string
       }
       create_integrated_public_appointment: {
         Args: {
@@ -4640,6 +4658,14 @@ export type Database = {
           user_id: string
         }[]
       }
+      list_follow_up_assignable_professionals: {
+        Args: { p_business_id: string; p_patient_id: string }
+        Returns: {
+          id: string
+          name: string
+          source: string
+        }[]
+      }
       list_trashed_patient_radiographs_page: {
         Args: {
           p_business_id: string
@@ -5034,6 +5060,15 @@ export type Database = {
         Returns: undefined
       }
       slugify_business_slug: { Args: { value: string }; Returns: string }
+      snooze_follow_up: {
+        Args: {
+          p_business_id: string
+          p_expected_updated_at: string
+          p_follow_up_id: string
+          p_remind_on: string
+        }
+        Returns: undefined
+      }
       submit_public_booking_information: {
         Args: {
           p_answers: Json
@@ -5082,6 +5117,17 @@ export type Database = {
           p_internal_note?: string
           p_patient_id: string
           p_teeth?: string
+        }
+        Returns: undefined
+      }
+      update_follow_up: {
+        Args: {
+          p_assigned_professional_id?: string
+          p_business_id: string
+          p_expected_updated_at: string
+          p_follow_up_id: string
+          p_message: string
+          p_remind_on: string
         }
         Returns: undefined
       }
@@ -5201,6 +5247,15 @@ export type Database = {
         Args: { target_business_id: string }
         Returns: boolean
       }
+      user_follow_up_assignments: {
+        Args: never
+        Returns: {
+          business_id: string
+          patient_id: string
+          professional_id: string
+        }[]
+      }
+      user_follow_up_reader_business_ids: { Args: never; Returns: string[] }
       user_has_active_account_assistance: {
         Args: { target_business_id: string }
         Returns: boolean

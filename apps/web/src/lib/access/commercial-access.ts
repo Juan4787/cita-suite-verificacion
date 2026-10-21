@@ -206,6 +206,7 @@ const computeCommercialStatus = (
 type BusinessAccessOptions = {
 	now?: Date;
 	businessCreatedAt?: string | null;
+	legacyFallback?: boolean;
 };
 
 const isLegacyBusinessWithoutSubscription = (createdAt?: string | null) => {
@@ -219,9 +220,8 @@ export const getBusinessAccessState = (
 ): BusinessAccessState => {
 	const safeSubscription = subscription ?? null;
 	const nowMs = (options.now ?? new Date()).getTime();
-	// As in SQL (business_commercial_status): only a practice older than subscriptions
-	// is active without a row; nothing else can stand in for a missing subscription.
-	const legacyFallbackActive = isLegacyBusinessWithoutSubscription(options.businessCreatedAt);
+	const legacyFallbackActive =
+		options.legacyFallback === true || isLegacyBusinessWithoutSubscription(options.businessCreatedAt);
 	const status = computeCommercialStatus(safeSubscription, nowMs, legacyFallbackActive);
 	const isPermanent = safeSubscription?.is_permanent === true || (!safeSubscription && legacyFallbackActive);
 	const commercialAccessEnabled = safeSubscription
