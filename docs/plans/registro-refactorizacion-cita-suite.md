@@ -1017,3 +1017,48 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
   - **Evidencias:** `.verification/{font-weights,heading-kickers,glyph-icons,type-scale,text-truncation}-reproduction-20261021.txt`.
   - **Verificación en CI:** la primera es la fast 39624049558 sobre `8baa77a`.
   - **`r16`, preparada de nuevo sobre el árbol actual:** la copia anterior de `PatientHistoryPanel.svelte` revertía la escala y los recortes; ahora sólo cambia el formateador del costo.
+- **F1, fast 39624049558 sobre `8baa77a`.** Es la primera verificación en CI de la tanda de interfaz: `svelte-check` sin errores, 96 guardas con las 5 nuevas y 11 del programador. Hubo 2 fallas de servidor:
+  - la reproducción esperada de `r16` (`public-booking.test.ts`, día y mes sin partir);
+  - `patient-detail.server.test.ts`, que todavía exigía el `insert` aparte del historial. Faltó actualizarla al aplicar `r13`. Ahora exige que la RPC reciba los campos, el resumen y el autor, y que no haya ningún `insert` en `patient_profile_change_events`. No se debilita: la inserción en la misma transacción la cubre `patient_change_history_atomic.sql`.
+- **S15, sql 39625073683 sobre `82cfcfd`: aprobada.**
+  - 123 migraciones, todas las suites y carreras.
+  - `write_expression_privileges.sql` aprobada y `assistance_business_settings.sql` 5 de 5.
+  - Tipos oficiales idénticos a los del árbol (`5053328b…`).
+  - **`r17` verificada.**
+- **F2, fast 39625080575 sobre `82cfcfd`.**
+  - **Servidor verde**, con 1.382 pruebas: verifica `r16` del servidor y la prueba de la ficha.
+  - **Cliente con 24 fallas:**
+    - las dos reproducciones de `r16`: el costo con centavos y el marcador dibujado del editor de profesionales;
+    - 22 pruebas de la página del turno, que buscaban el botón y el enlace por el nombre accesible con emoji («🔔 Activar recordatorio», «📅 Agregar al calendario»).
+  - **Cambio buscado:** el ícono dibujado está oculto para los lectores de pantalla, que antes leían el emoji. Se actualizaron las pruebas, incluida una aserción negativa (`queryByRole(…'📅 Agregar al calendario').not.toBeInTheDocument()`) que con el nombre viejo habría pasado sin probar nada.
+  - **Revisión de dependencias:** se revisaron todas las pruebas de unidad y de navegador buscando glifos y los textos que quitó la tanda. No hay otra dependencia: los demás emojis son datos, como el título de la notificación de reseñas o los nombres de la exportación.
+- **F3, fast 39626429287 sobre `9e3a433`: aprobada entera.** `svelte-check` sin errores, 96 guardas, 11 del programador, 1.382 de servidor y 171 de cliente. Verifica `r15`, `r16` y la tanda de interfaz del punto 5.
+- **`r18`, alta del consultorio desde el panel maestro.**
+  - **Defecto.** `create_business` escribía en pedidos separados, con la clave de servicio, el correo habilitado, el consultorio, la membresía o invitación del dueño y el acceso inicial.
+    - Ante un fallo borraba el consultorio sin comprobar el borrado, y nunca deshacía el correo habilitado.
+    - Un error o una respuesta perdida podían dejar un consultorio sin dueño o sin acceso, o un correo habilitado sin consultorio. Un reintento creaba un segundo consultorio con otro slug.
+    - Además buscaba al dueño recorriendo el directorio de Auth página por página.
+  - **Corrección:** `create_business_with_owner` (`20261021080000`) escribe todo en una transacción.
+    - Toma el mismo candado por correo que la regla de un consultorio por correo.
+    - Busca al dueño en `auth.users`.
+    - Actualiza o inserta el correo con la misma coincidencia exacta del panel.
+    - Elige el slug en SQL con `on conflict (slug)`, nunca con forma de identificador.
+    - Crea la membresía o la invitación, y los triggers de asociación siguen imponiendo un consultorio por correo.
+    - Aplica `grant_business_access` en la misma transacción.
+    - Sólo `service_role` la ejecuta.
+  - **Ruta del panel:**
+    - hace una sola llamada y valida la respuesta en ejecución (`readCreatedBusiness`);
+    - responde 409 ante un correo de otro consultorio, y 503 con «No pudimos confirmar el alta del consultorio…» ante un resultado desconocido, como las altas de pacientes y de servicios;
+    - se retiran `uniqueBusinessSlug`, `findAuthUserIdByEmail` y una alternativa inalcanzable en `enter_assisted_business`.
+  - **Reproducción:** fast 39627102129 sobre `ff154a4`. Fallaron exactamente las 4 pruebas nuevas de `create_business`, todas por aserción: la ruta escribía por separado y respondía «No pudimos crear el consultorio.». Aprobaron las otras 1.380.
+  - **sql 39626436682 sobre `9e3a433`:** `business_creation_atomic.sql` falla porque la función no existe. Eso prueba su ausencia, no el defecto, que reproduce la prueba de la ruta.
+  - **`business_creation_atomic.sql` tiene 7 controles:**
+    - una cuenta existente queda como dueña activa, con su correo y su acceso;
+    - el consultorio queda listo para su dueño sin configuración manual: su contexto como dueño, la cuenta de cuota y la configuración de disponibilidad. Cubre ese punto de la auditoría final del plan;
+    - un correo sin cuenta recibe una invitación;
+    - un correo de otro consultorio se rechaza sin dejar consultorio, correo habilitado ni acceso;
+    - los nombres repetidos dan slugs distintos y ninguno tiene forma de identificador;
+    - sólo el backend puede ejecutarla.
+  - **Verificación en curso:** sql 39661668404 sobre `a5ef6af`. Los tipos oficiales que genere, con la RPC nueva, se incorporan antes de la fast.
+  - **Otras compensaciones desde HTTP:** no hay. El borrado de excepciones de horario es la operación misma, bajo RLS, y el de calendario limpia intentos vencidos sin afectar el resultado.
+- **Matriz de regresiones actualizada** con las pruebas y guardas de la auditoría transversal ya verificadas.

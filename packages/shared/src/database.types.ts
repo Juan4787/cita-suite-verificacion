@@ -4180,6 +4180,25 @@ export type Database = {
         }
         Returns: Json
       }
+      create_business_with_owner: {
+        Args: {
+          p_access_note: string
+          p_admin_email: string
+          p_admin_id: string
+          p_duration_seconds: number
+          p_duration_unit: string
+          p_idempotency_key: string
+          p_is_permanent: boolean
+          p_name: string
+          p_note: string
+          p_owner_email: string
+          p_slug_base: string
+        }
+        Returns: {
+          business_id: string
+          owner_linked: boolean
+        }[]
+      }
       create_clinical_entry_safely: {
         Args: {
           p_amount?: number
