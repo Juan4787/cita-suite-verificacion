@@ -36,7 +36,7 @@ import type { IntegratedAvailabilityRows } from '$lib/availability/rows';
 import { AVAILABILITY_WINDOW_DAYS, isAvailabilityDate } from '$lib/availability/windows';
 import { InvalidDataContractError } from '$lib/contracts/json';
 import { isRecord } from '$lib/contracts/json';
-import { isUuid } from '$lib/contracts/uuid';
+import { isUuid } from '@cita-suite/shared/uuid';
 
 export type PublicService = {
 	id: string;

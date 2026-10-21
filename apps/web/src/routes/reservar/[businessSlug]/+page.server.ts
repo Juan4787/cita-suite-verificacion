@@ -1,3 +1,4 @@
+import { isUuid } from '@cita-suite/shared/uuid';
 import { dev } from '$app/environment';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
@@ -14,7 +15,7 @@ async function defaultIntegration(event: RequestEvent) {
     try {
         const reference = event.params.businessSlug ?? '';
         const supabase = await createSupabaseAdminClient('odonto', event.fetch);
-        const businessId = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(reference) ? reference : (await getPublicBusinessBySlug(supabase, reference))?.id;
+        const businessId = isUuid(reference) ? reference : (await getPublicBusinessBySlug(supabase, reference))?.id;
         const integration = businessId ? (await loadDefaultBookingIntegration(supabase, businessId, dev)) ?? undefined : undefined;
         return integration && env.BOOKING_INTEGRATIONS_ENABLED !== 'true' ? { ...integration, isActive: false } : integration;
     } catch (cause) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isUuid } from './uuid';
+import { isUuid } from '@cita-suite/shared/uuid';
 
 describe('isUuid', () => {
 	it('accepts the canonical form of any version', () => {

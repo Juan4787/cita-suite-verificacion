@@ -1,3 +1,4 @@
+import { isUuid } from '@cita-suite/shared/uuid';
 import { json } from "@sveltejs/kit";
 import { informationContext } from "$lib/server/patients/public/booking-information";
 import {
@@ -47,7 +48,7 @@ export const POST: RequestHandler = async (event) => {
       bytes < 1 ||
       bytes > CLINICAL_FILE_MAX_BYTES ||
       typeof body.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(body.sha256) ||
-      typeof body.requestId !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(body.requestId)
+      typeof body.requestId !== 'string' || !isUuid(body.requestId)
     )
       throw new Error("RADIOGRAPH_UPLOAD_INVALID");
     const { data, error } = await admin.rpc(

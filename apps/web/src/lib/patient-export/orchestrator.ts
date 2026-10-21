@@ -1,4 +1,4 @@
-import { isUuid } from '$lib/contracts/uuid';
+import { isUuid } from '@cita-suite/shared/uuid';
 import {
 	PATIENT_EXPORT_DATASETS,
 	PATIENT_EXPORT_SCHEMA_VERSION,

@@ -1,4 +1,4 @@
-import { isUuid } from '$lib/contracts/uuid';
+import { isUuid } from '@cita-suite/shared/uuid';
 import { parsePriceAdjustments } from '$lib/scheduling/price-contracts';
 import { env } from "$env/dynamic/private";
 import { getOdontoContext } from "$lib/server/access/public/odonto-context";

@@ -1,3 +1,4 @@
+import { isUuid } from '@cita-suite/shared/uuid';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { createSupabaseAdminClient, isMasterEmail } from '$lib/server/platform/supabase';
 import { readBoundedBookingForm } from '$lib/server/platform/form-data';
@@ -11,12 +12,11 @@ async function masterContext(event: RequestEvent) {
 	if (!isMasterEmail(user.email)) error(403, 'Tu usuario no puede administrar el espacio de Cita Suite.');
 	return { user, admin: await createSupabaseAdminClient('odonto', event.fetch) };
 }
-const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 
 export const load: PageServerLoad = async event => {
 	const { admin } = await masterContext(event);
 	const after = event.url.searchParams.get('after');
-	if (after && !uuid.test(after)) error(400, 'La página solicitada no es válida. Volvé al inicio de la lista.');
+	if (after && !isUuid(after)) error(400, 'La página solicitada no es válida. Volvé al inicio de la lista.');
 	let query = admin.from('clinical_business_storage_budget')
 		.select('business_id,max_bytes,used_bytes,reserved_bytes,uploads_enabled,policy_revision,business:businesses!inner(id,name)')
 		.order('business_id').limit(51);
@@ -41,7 +41,7 @@ async function savePolicy(event: RequestEvent, defaults: boolean) {
 	const versionText = String(form.get('policy_revision') ?? '');
 	const revision = Number(versionText);
 	if (!bytes) return invalid(400, 'Revisá el límite en MB. Usá coma para decimales y no agregues puntos.', 'megabytes');
-	if (!/^[1-9]\d{0,9}$/.test(versionText) || !Number.isSafeInteger(revision) || revision > 2147483647 || (!defaults && !uuid.test(target)))
+	if (!/^[1-9]\d{0,9}$/.test(versionText) || !Number.isSafeInteger(revision) || revision > 2147483647 || (!defaults && !isUuid(target)))
 		return invalid(400, 'La configuración ya no es válida. Recargá para revisar los valores actuales antes de guardar.');
 	const response = defaults
 		? await admin.rpc('set_clinical_storage_defaults', { p_actor_id: user.id, p_default_business_max_bytes: bytes,

@@ -96,7 +96,7 @@ function loadCatalogue(): Promise<void> {
     const heading = document.createElement('h3'); heading.textContent = 'Prestaciones disponibles en la agenda';
     const list = document.createElement('div'); list.className = 'services-commercial-grid';
     for (const service of (Array.isArray(data.services) ? data.services : []).slice(0, 30)) {
-      if (!service || typeof service.id !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(service.id) || typeof service.name !== 'string' || !service.name.trim() || !Number.isFinite(service.duration_minutes) || service.duration_minutes <= 0) continue;
+      if (!service || typeof service.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(service.id) /* as isUuid in @cita-suite/shared/uuid */ || typeof service.name !== 'string' || !service.name.trim() || !Number.isFinite(service.duration_minutes) || service.duration_minutes <= 0) continue;
       const article = document.createElement('article'); article.className = 'service-commercial-card';
       const title = document.createElement('h3'); title.textContent = service.name;
       const detail = document.createElement('p'); detail.textContent = `${service.duration_minutes} minutos${service.price_label ? ' · ' + service.price_label : ''}`;

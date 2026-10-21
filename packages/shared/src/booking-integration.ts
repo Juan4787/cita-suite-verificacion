@@ -1,3 +1,5 @@
+import { isUuid } from './uuid';
+
 /** Public host contract. New booking steps and database shapes are deliberately private. */
 export const BOOKING_EMBED_PROTOCOL = 'cita-suite.booking' as const;
 export const BOOKING_EMBED_VERSION = 1 as const;
@@ -53,7 +55,7 @@ export function parseBookingModalityWindows(value: unknown): BookingModalityWind
 			!BOOKING_MODALITIES.includes(window.modality as BookingModality) || !Number.isInteger(window.weekday) || Number(window.weekday) < 0 || Number(window.weekday) > 6 ||
 			typeof window.startTime !== 'string' || !/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(window.startTime) ||
 			typeof window.endTime !== 'string' || !/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(window.endTime) || window.startTime >= window.endTime ||
-			(window.professionalId !== undefined && (typeof window.professionalId !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(window.professionalId)))) throw new BookingIntegrationValidationError('BOOKING_INTEGRATION_CONFIGURATION_INVALID');
+			(window.professionalId !== undefined && !isUuid(window.professionalId))) throw new BookingIntegrationValidationError('BOOKING_INTEGRATION_CONFIGURATION_INVALID');
 		return { ...window } as BookingModalityWindow;
 	});
 }

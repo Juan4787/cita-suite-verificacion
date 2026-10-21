@@ -1,4 +1,4 @@
-import { isUuid } from '$lib/contracts/uuid';
+import { isUuid } from '@cita-suite/shared/uuid';
 import {listBusinessRoleAccess} from '$lib/server/access/public/team-access';
 import { boolFromForm, scheduleBlocksFromForm, professionalSchedulePayload } from '$lib/team/professional-form';
 import type { BusinessContext } from '$lib/access/contracts';

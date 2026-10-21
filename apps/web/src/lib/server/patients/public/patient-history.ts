@@ -1,4 +1,4 @@
-import { isUuid } from '$lib/contracts/uuid';
+import { isUuid } from '@cita-suite/shared/uuid';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import type { BusinessContext } from '$lib/access/contracts';
 import { readPatientHistoryEntry } from '$lib/patients/history-contract';

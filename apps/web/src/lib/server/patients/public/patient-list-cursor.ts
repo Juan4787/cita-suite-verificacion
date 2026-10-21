@@ -1,4 +1,4 @@
-import { isUuid } from '$lib/contracts/uuid';
+import { isUuid } from '@cita-suite/shared/uuid';
 import { isRecord } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
 import crypto from 'node:crypto';

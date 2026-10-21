@@ -40,7 +40,7 @@ returns table(
 )
 language plpgsql
 security definer
-set search_path = public, extensions, pg_catalog
+set search_path = public, extensions, pg_catalog, pg_temp
 as $$
 declare
 	v_actor uuid := coalesce(p_actor_id, auth.uid());

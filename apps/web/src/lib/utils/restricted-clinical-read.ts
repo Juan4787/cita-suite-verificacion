@@ -1,4 +1,4 @@
-import { isUuid } from '$lib/contracts/uuid';
+import { isUuid } from '@cita-suite/shared/uuid';
 
 type RestrictedClinicalReadContext = {
 	role?: string | null;

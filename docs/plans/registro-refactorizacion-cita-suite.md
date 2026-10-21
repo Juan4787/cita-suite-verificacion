@@ -957,3 +957,10 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
   - **Firma nueva** de `update_patient_with_clinical_profile_safely`, con campos, resumen, profesional autor y nombre visible. Llama a la anterior, que conserva autorización, bloqueos y escritura, e inserta la línea en la misma transacción. Exige además que el profesional autor sea el del propio actor.
   - **Transición:** la firma anterior queda mientras convivan versiones desplegadas.
   - **Reproducción:** `patient_change_history_atomic.sql`, sql 39584782456 sobre `4c7b8ea`. Migración preparada: `20261021050000`.
+- **Corrección de una afirmación del registro: la consolidación del patrón UUID de `r9` estaba incompleta.** Sólo había buscado la forma `[0-9a-f]`. Quedaban 9 copias escritas `[a-f0-9]`:
+  - en la app: documentos del turno, almacenamiento del maestro (sin bandera `i`, así que rechazaba mayúsculas), `/reservar`, dos en `public-booking-page.ts`, `booking-integrations.ts` y `booking-profile-config.ts`;
+  - en `packages/shared`, una;
+  - en Natalia, una.
+  - **`r14`:** la definición única pasa a `packages/shared/src/uuid.ts` (`@cita-suite/shared/uuid`) y las 23 importaciones de la app la usan. `$lib/contracts/uuid.ts` se elimina.
+  - **Excepciones:** `BOOKING_REQUEST_ID_PATTERN` es un contrato distinto, porque los identificadores de solicitud de reserva son versión 4 aleatoria. La copia que lo repetía usa ahora la constante. Natalia, despliegue aparte sin el paquete compartido, conserva una copia alineada a la forma canónica y comentada.
+  - **Guarda nueva `scripts/lib/uuid-pattern.test.mjs`:** recorre la app, Natalia, el programador y el paquete compartido. Reprodujo localmente las 9 copias (`.verification/uuid-pattern-reproduction-20261021.txt`) y con `r14` aprueba.

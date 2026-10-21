@@ -13,7 +13,8 @@
 		"./messaging": "./src/messaging.ts",
 		"./phone": "./src/phone.ts",
 		"./booking-integration": "./src/booking-integration.ts",
-		"./scheduled-jobs": "./src/scheduled-jobs.ts"
+		"./scheduled-jobs": "./src/scheduled-jobs.ts",
+		"./uuid": "./src/uuid.ts"
 	},
 	"devDependencies": {
 		"typescript": "^5.9.3"

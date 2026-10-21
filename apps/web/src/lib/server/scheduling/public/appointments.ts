@@ -1,4 +1,4 @@
-import { isUuid } from '$lib/contracts/uuid';
+import { isUuid } from '@cita-suite/shared/uuid';
 import type { CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
 import { isRecord } from '$lib/contracts/json';
 import type { IntegratedBookingInput } from '$lib/server/sites/public/booking-integrations';

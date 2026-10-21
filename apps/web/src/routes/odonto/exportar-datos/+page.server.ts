@@ -1,4 +1,4 @@
-import { isUuid } from '$lib/contracts/uuid';
+import { isUuid } from '@cita-suite/shared/uuid';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { error as kitError, redirect } from '@sveltejs/kit';
 import { canExportPatientData } from '$lib/server/patients/public/patient-permissions';

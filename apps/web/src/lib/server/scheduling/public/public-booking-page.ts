@@ -1,4 +1,4 @@
-import { isUuid } from '$lib/contracts/uuid';
+import { isUuid } from '@cita-suite/shared/uuid';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { readBoundedBookingForm } from '$lib/server/platform/form-data';
 import { isRecord } from '$lib/contracts/json';
@@ -62,7 +62,7 @@ async function recoverIntegratedBooking(supabase: CitaSupabaseClient, url: URL, 
 export const loadPublicBookingPage = async ({ params, fetch, url, setHeaders }: RequestEvent, integration?: BookingIntegration, entryPoint: 'embedded' | 'public_page' = 'embedded') => {
 	const framed = entryPoint === 'embedded' && url.searchParams.has('parent_origin') && url.searchParams.has('instance_id');
 	const suppliedRequestId = url.searchParams.get('request_id') ?? '';
-	const bookingRequestId = integration && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(suppliedRequestId) ? suppliedRequestId : randomUUID();
+	const bookingRequestId = integration && BOOKING_REQUEST_ID_PATTERN.test(suppliedRequestId) ? suppliedRequestId : randomUUID();
 	const requestedProfessionalIds = [
 		...new Set(
 			url.searchParams
@@ -296,7 +296,7 @@ export const submitPublicBookingPage = async ({ request, params, fetch, url, get
 		}
 
 		try {
-			if ((integration || bookingInformationEnabled()) && (!/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(serviceId) || professionalIds.some((id) => !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(id)) || slotStartsAt.length > 35 || !Number.isFinite(new Date(slotStartsAt).getTime()))) throw new Error('BOOKING_FORM_INVALID');
+			if ((integration || bookingInformationEnabled()) && (!isUuid(serviceId) || professionalIds.some((id) => !isUuid(id)) || slotStartsAt.length > 35 || !Number.isFinite(new Date(slotStartsAt).getTime()))) throw new Error('BOOKING_FORM_INVALID');
 			if ((integration || bookingInformationEnabled()) && (rawPatientName.length > 200 || patientPhone.length > 50 || patientEmail.length > 254 || note.length > 2000 || professionalIds.length > 16)) throw new Error('BOOKING_FORM_INVALID');
 			const modality = String(form.get('modality') ?? '');
 			const selectedModality = integration ? assertIntegrationSelection(integration, { serviceId, professionalIds, modality }) : null;

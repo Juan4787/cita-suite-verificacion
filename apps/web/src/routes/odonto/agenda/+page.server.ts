@@ -24,7 +24,7 @@ import { processAppointmentGoogleCalendarSync } from '$lib/server/integrations/p
 import { createdAppointmentDetailUrl } from '$lib/scheduling/agenda-navigation';
 import { todayInTimeZone } from '$lib/availability/calculate';
 import { isAvailabilityDate } from '$lib/availability/windows';
-import { isUuid } from '$lib/contracts/uuid';
+import { isUuid } from '@cita-suite/shared/uuid';
 import {
 	ACTIVE_APPOINTMENT_STATUSES,
 	isActiveAppointmentStatus
