@@ -136,8 +136,9 @@ try {
 	// 3. The restore holds every row of the dump and the same migration history.
 	const literal = (text) => `'${text.replaceAll("'", "''")}'`;
 	const relation = (table) => table.split('.').map((part) => `"${part.replaceAll('"', '""')}"`).join('.');
-	const restored = JSON.parse(restoredSql(`select json_build_object(${Object.keys(dumped)
-		.map((table) => `${literal(table)}, (select count(*) from ${relation(table)})`).join(', ')})::text;`));
+	// One row per table: a function takes at most 100 arguments, so no json_build_object.
+	const restored = JSON.parse(restoredSql(`select json_object_agg(name, rows)::text from (${Object.keys(dumped)
+		.map((table) => `select ${literal(table)} as name, (select count(*) from ${relation(table)}) as rows`).join(' union all ')}) counts;`));
 	receipt.rowMismatches = countMismatches(dumped, restored);
 	// The CLI history may stay out of the dump with the platform schemas. The backup keeps the
 	// list read from the source, so a restore can record it again; when present it must match.
