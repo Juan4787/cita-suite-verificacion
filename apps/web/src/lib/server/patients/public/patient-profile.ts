@@ -431,13 +431,6 @@ export async function updatePatientProfile({
 			currentClinicalProfileUpdatedAt: String(currentProfile?.updated_at ?? '')
 		});
 	}
-	// The history line travels with the change: the database writes both or neither.
-	const changedFields = changedFieldsForPatientUpdate({
-		currentPatient,
-		currentProfile: permissions.canEditClinicalProfile ? currentProfile : null,
-		updates,
-		clinicalUpdates: permissions.canEditClinicalProfile ? clinicalUpdates : {}
-	});
 	const { data: atomicUpdate, error } = await admin.rpc(
 		'update_patient_with_clinical_profile_safely',
 		{
@@ -461,11 +454,7 @@ export async function updatePatientProfile({
 			p_expected_patient_updated_at: currentPatient.updated_at ?? null,
 			p_expected_clinical_profile_updated_at: permissions.canEditClinicalProfile
 				? (currentProfile?.updated_at ?? null)
-				: null,
-			p_changed_fields: changedFields,
-			p_change_summary: changedFields.length > 0 ? `Se modificó: ${sentenceJoin(changedFields)}.` : null,
-			p_changed_by_professional_id: currentProfessional?.id ?? null,
-			p_changed_by_name: getActorName(context.role, currentProfessional?.name)
+				: null
 		}
 	);
 	if (error) {
@@ -490,5 +479,30 @@ export async function updatePatientProfile({
 			'unavailable',
 			'No se pudo confirmar la actualización de la ficha.'
 		);
+	}
+	const changedFields = changedFieldsForPatientUpdate({
+		currentPatient,
+		currentProfile: permissions.canEditClinicalProfile ? currentProfile : null,
+		updates,
+		clinicalUpdates: permissions.canEditClinicalProfile ? clinicalUpdates : {}
+	});
+	if (changedFields.length > 0) {
+		const summary = `Se modificó: ${sentenceJoin(changedFields)}.`;
+		try {
+			const { error: changeLogError } = await admin.from('patient_profile_change_events').insert({
+				business_id: context.business.id,
+				patient_id: patientId,
+				changed_by_user_id: ownerId,
+				changed_by_professional_id: currentProfessional?.id ?? null,
+				changed_by_name: getActorName(context.role, currentProfessional?.name),
+				changed_fields: changedFields,
+				summary
+			});
+			if (changeLogError) {
+				logServerFailure('Error registrando cambios visibles del paciente', changeLogError);
+			}
+		} catch (cause) {
+			logServerFailure('Error registrando cambios visibles del paciente', cause);
+		}
 	}
 }

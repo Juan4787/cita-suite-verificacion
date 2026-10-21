@@ -12,7 +12,7 @@ import {
 	trimGoogleReviewMessage
 } from '$lib/google-reviews';
 import { demoBusinessContext, resolveActiveBusiness } from '$lib/server/access/public/business';
-import { createSupabaseServerClient } from '$lib/server/platform/supabase';
+import { createSupabaseAdminClient, createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { error as kitError, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -32,13 +32,16 @@ const valuesFromForm = (form: FormData) => ({
 	actionLabel: String(form.get('notification_action_label') ?? '')
 });
 
-// The assistance reads and saves under its own rules, as an administrator of the practice;
-// checking the grant first only gives it a clear message when it expired.
-const assistanceIsActive = async (supabase: CitaSupabaseClient, businessId: string) => {
+const validatedAssistanceClient = async (
+	supabase: CitaSupabaseClient,
+	businessId: string,
+	fetch: typeof globalThis.fetch
+) => {
 	const { data, error } = await supabase.rpc('user_has_active_account_assistance', {
 		target_business_id: businessId
 	});
-	return !error && data === true;
+	if (error || data !== true) return null;
+	return createSupabaseAdminClient('odonto', fetch);
 };
 
 export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
@@ -61,11 +64,14 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 	if (context.role === 'professional') throw redirect(303, '/odonto/mis-turnos');
 	if (!context.canManage) throw redirect(303, '/odonto/agenda');
 
-	if (context.assistance && !(await assistanceIsActive(supabase, context.business.id))) {
-		throw redirect(303, '/odonto/maestro');
+	let readClient = supabase;
+	if (context.assistance) {
+		const admin = await validatedAssistanceClient(supabase, context.business.id, fetch);
+		if (!admin) throw redirect(303, '/odonto/maestro');
+		readClient = admin;
 	}
 
-	const { data, error } = await supabase
+	const { data, error } = await readClient
 		.from('google_review_settings')
 		.select(
 			'enabled, review_url, notification_title, notification_body, notification_action_label'
@@ -159,16 +165,21 @@ export const actions: Actions = {
 			});
 		}
 
-		if (context.assistance && !(await assistanceIsActive(supabase, context.business.id))) {
-			return fail(403, {
-				message:
-					'La autorización para configurar este consultorio ya no está activa. Volvé al panel maestro y abrilo nuevamente.',
-				values
-			});
+		let updateClient = supabase;
+		if (context.assistance) {
+			const admin = await validatedAssistanceClient(supabase, context.business.id, fetch);
+			if (!admin) {
+				return fail(403, {
+					message:
+						'La autorización para configurar este consultorio ya no está activa. Volvé al panel maestro y abrilo nuevamente.',
+					values
+				});
+			}
+			updateClient = admin;
 		}
 
 		const now = new Date().toISOString();
-		const { error } = await supabase.from('google_review_settings').upsert(
+		const { error } = await updateClient.from('google_review_settings').upsert(
 			{
 				business_id: context.business.id,
 				enabled: rawValues.enabled,
