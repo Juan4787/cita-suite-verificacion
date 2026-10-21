@@ -142,8 +142,9 @@ try {
 	receipt.rowMismatches = countMismatches(dumped, restored);
 	// The CLI history may stay out of the dump with the platform schemas. The backup keeps the
 	// list read from the source, so a restore can record it again; when present it must match.
-	const restoredMigrations = JSON.parse(restoredSql(`select case when to_regclass('supabase_migrations.schema_migrations') is null then 'null'
-		else (select coalesce(json_agg(version order by version), '[]'::json)::text from supabase_migrations.schema_migrations) end;`));
+	const historyRestored = restoredSql("select to_regclass('supabase_migrations.schema_migrations') is not null;") === 't';
+	const restoredMigrations = historyRestored ? JSON.parse(restoredSql(
+		"select coalesce(json_agg(version order by version), '[]'::json)::text from supabase_migrations.schema_migrations;")) : null;
 	receipt.migrations = { source: source.migrations.length, inDump: restoredMigrations !== null,
 		same: restoredMigrations === null || JSON.stringify(restoredMigrations) === JSON.stringify(source.migrations) };
 	receipt.migrationHistory = source.migrations;
