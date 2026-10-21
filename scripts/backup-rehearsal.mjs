@@ -58,6 +58,27 @@ const managedObjectsSql = `select json_build_object(
 		join pg_proc f on f.oid = t.tgfoid join pg_namespace fn on fn.oid = f.pronamespace
 		where not t.tgisinternal and n.nspname in ('storage', 'realtime', 'auth') and fn.nspname in ('public', 'private'))
 )::text;`;
+// The schema dump leaves the platform's schemas out, and with them the policies, triggers and
+// Realtime publication entries the migrations add there. The backup keeps them in a fourth
+// file, read from the source's catalog, which the restore applies last.
+const managedDefinitionsSql = `select json_build_object('statements', coalesce(json_agg(statement order by statement), '[]'::json))::text from (
+	select format('CREATE POLICY %I ON %I.%I AS %s FOR %s TO %s%s%s;', p.polname, n.nspname, c.relname,
+		case when p.polpermissive then 'PERMISSIVE' else 'RESTRICTIVE' end,
+		case p.polcmd when 'r' then 'SELECT' when 'a' then 'INSERT' when 'w' then 'UPDATE' when 'd' then 'DELETE' else 'ALL' end,
+		case when p.polroles = '{0}'::oid[] then 'PUBLIC' else (select string_agg(quote_ident(r.rolname), ', ' order by r.rolname) from pg_roles r where r.oid = any(p.polroles)) end,
+		coalesce(' USING (' || pg_get_expr(p.polqual, p.polrelid) || ')', ''),
+		coalesce(' WITH CHECK (' || pg_get_expr(p.polwithcheck, p.polrelid) || ')', '')) as statement
+	from pg_policy p join pg_class c on c.oid = p.polrelid join pg_namespace n on n.oid = c.relnamespace
+	where n.nspname in ('storage', 'realtime', 'auth')
+	union all
+	select pg_get_triggerdef(t.oid) || ';'
+	from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace n on n.oid = c.relnamespace
+	join pg_proc f on f.oid = t.tgfoid join pg_namespace fn on fn.oid = f.pronamespace
+	where not t.tgisinternal and n.nspname in ('storage', 'realtime', 'auth') and fn.nspname in ('public', 'private')
+	union all
+	select format('ALTER PUBLICATION %I ADD TABLE %I.%I;', pubname, schemaname, tablename)
+	from pg_publication_tables where pubname = 'supabase_realtime' and schemaname in ('public', 'private')
+) definitions;`;
 function stagingJson(sql) {
 	const result = stagingPsql(url, ['-Atq', '-f', '-'], {
 		input: `begin transaction read only;\n${sql}\ncommit;\n`,
@@ -77,12 +98,13 @@ try {
 	rehearsalFileCreated = true;
 
 	// 1. Backup, with the commands of the Supabase guide.
-	const files = { roles: join(work, 'roles.sql'), schema: join(work, 'schema.sql'), data: join(work, 'data.sql') };
+	const files = { roles: join(work, 'roles.sql'), schema: join(work, 'schema.sql'), data: join(work, 'data.sql'), managed: join(work, 'managed.sql') };
 	const dumpStarted = performance.now();
 	const dump = (args) => run('pnpm', ['exec', 'supabase', 'db', 'dump', '--db-url', url.href, ...args]);
 	dump(['-f', files.roles, '--role-only']);
 	dump(['-f', files.schema]);
 	dump(['-f', files.data, '--use-copy', '--data-only', '-x', 'storage.buckets_vectors', '-x', 'storage.vector_indexes']);
+	writeFileSync(files.managed, stagingJson(managedDefinitionsSql).statements.join('\n') + '\n');
 	receipt.dumpMs = Math.round(performance.now() - dumpStarted);
 	receipt.files = Object.fromEntries(Object.entries(files).map(([name, path]) => [name, { bytes: statSync(path).size, sha256: sha256(path) }]));
 	const dumped = copyRowCounts(readFileSync(files.data, 'utf8'));
@@ -153,7 +175,8 @@ try {
 	for (const [name, path] of Object.entries(files)) docker(['cp', path, `${database}:/tmp/${name}.sql`]);
 	const restoreStarted = performance.now();
 	const restore = spawnSync('docker', ['exec', '-e', 'PGPASSWORD=postgres', database, 'psql', '-X', '-U', 'postgres', '-d', 'postgres', '--single-transaction', '-v', 'ON_ERROR_STOP=1', '-q',
-		'-f', '/tmp/roles.sql', '-f', '/tmp/schema.sql', '-c', 'SET session_replication_role = replica', '-f', '/tmp/data.sql'],
+		'-f', '/tmp/roles.sql', '-f', '/tmp/schema.sql', '-c', 'SET session_replication_role = replica', '-f', '/tmp/data.sql',
+		'-c', 'SET session_replication_role = origin', '-f', '/tmp/managed.sql'],
 		{ encoding: 'utf8', maxBuffer: 256 * 1024 ** 2, timeout: 900_000 });
 	// The error first, then each distinct warning once: grants on extension functions the
 	// platform owns print one warning each.
