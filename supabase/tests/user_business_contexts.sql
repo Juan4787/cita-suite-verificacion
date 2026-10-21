@@ -4,7 +4,7 @@
 
 begin;
 
-select extensions.plan(1);
+select extensions.plan(2);
 
 do $$
 declare
@@ -87,6 +87,76 @@ end;
 $$;
 
 select extensions.pass('user business contexts contract');
+
+-- An assistance counts only while it is valid. An expired, finished or revoked grant,
+-- a disabled support user and a practice that cannot operate give no context; each
+-- case is undone before the next, and the valid grant is checked before and after.
+do $$
+declare
+	v_owner uuid := gen_random_uuid();
+	v_support uuid := gen_random_uuid();
+	v_business uuid;
+	v_grant uuid;
+	v_leaks text[] := '{}';
+begin
+	insert into auth.users (id, email)
+	values (v_owner, 'context-owner-2@example.test'), (v_support, 'context-support-2@example.test');
+	insert into public.account_assistance_support_users (user_id, email, enabled)
+	values (v_support, 'context-support-2@example.test', true);
+	insert into public.businesses (name, slug, industry)
+	values ('Context assisted 2', 'context-assisted-2-' || gen_random_uuid()::text, 'odontology')
+	returning id into v_business;
+	update public.business_subscriptions
+	set commercial_access_enabled = true,
+		is_permanent = true,
+		subscription_status = 'active',
+		paid_until = null,
+		grace_until = null,
+		restricted_until = null,
+		archived_at = null
+	where business_id = v_business;
+	insert into public.business_users (business_id, user_id, role, status, accepted_at)
+	values (v_business, v_owner, 'owner', 'active', now());
+	insert into public.account_assistance_grants (
+		business_id, requested_by_user_id, support_user_id, status, starts_at, expires_at
+	)
+	values (v_business, v_owner, v_support, 'active', now(), now() + interval '1 hour')
+	returning id into v_grant;
+	perform set_config('request.jwt.claim.sub', v_support::text, true);
+
+	if (select count(*) from public.list_user_business_contexts()) <> 1 then
+		raise exception 'TEST_VALID_ASSISTANCE_WITHOUT_CONTEXT';
+	end if;
+
+	update public.account_assistance_grants
+	set starts_at = now() - interval '2 hours', expires_at = now() - interval '1 hour'
+	where id = v_grant;
+	if exists (select 1 from public.list_user_business_contexts()) then v_leaks := v_leaks || 'expired'; end if;
+	update public.account_assistance_grants set starts_at = now(), expires_at = now() + interval '1 hour' where id = v_grant;
+
+	update public.account_assistance_grants set status = 'expired' where id = v_grant;
+	if exists (select 1 from public.list_user_business_contexts()) then v_leaks := v_leaks || 'finished'; end if;
+	update public.account_assistance_grants set status = 'active' where id = v_grant;
+
+	update public.account_assistance_grants set status = 'revoked', revoked_at = now() where id = v_grant;
+	if exists (select 1 from public.list_user_business_contexts()) then v_leaks := v_leaks || 'revoked'; end if;
+	update public.account_assistance_grants set status = 'active', revoked_at = null where id = v_grant;
+
+	update public.account_assistance_support_users set enabled = false where user_id = v_support;
+	if exists (select 1 from public.list_user_business_contexts()) then v_leaks := v_leaks || 'support disabled'; end if;
+	update public.account_assistance_support_users set enabled = true where user_id = v_support;
+
+	update public.business_subscriptions set commercial_access_enabled = false where business_id = v_business;
+	if exists (select 1 from public.list_user_business_contexts()) then v_leaks := v_leaks || 'practice not operating'; end if;
+	update public.business_subscriptions set commercial_access_enabled = true where business_id = v_business;
+
+	if cardinality(v_leaks) > 0 or (select count(*) from public.list_user_business_contexts()) <> 1 then
+		raise exception 'TEST_INVALID_ASSISTANCE_CONTEXT %', v_leaks;
+	end if;
+end;
+$$;
+
+select extensions.pass('an assistance gives a context only while its grant, support user and practice are valid');
 select * from extensions.finish();
 
 rollback;

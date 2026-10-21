@@ -31,6 +31,9 @@ import type { LayoutServerLoad } from './$types';
 import { env } from '$env/dynamic/private';
 import { canExportPatientData } from '$lib/server/patients/public/patient-permissions';
 
+// A notice the shell could not check. It says so instead of showing nothing to do.
+type UnavailableNotice = 'follow-ups' | 'help-requests' | 'assistance';
+
 export const load: LayoutServerLoad = async ({
 	locals,
 	fetch,
@@ -64,6 +67,7 @@ export const load: LayoutServerLoad = async ({
 	let followUpsTodayISO = '';
 	let accountAssistance: AccountAssistanceView | null = null;
 	let masterAssistanceRequests: MasterAccountAssistanceRequest[] = [];
+	const unavailableNotices: UnavailableNotice[] = [];
 
 	if (env.DEMO_MODE === 'true') {
 		activeBusiness = demoBusinessContext();
@@ -100,27 +104,34 @@ export const load: LayoutServerLoad = async ({
 					) {
 						return null;
 					}
-					return loadAccountAssistanceView({
-						supabase,
-						businessId: activeBusiness.business.id,
-						role: activeBusiness.role,
-						timeZone: activeBusiness.business.timezone,
-						canUseBusiness: activeBusiness.access.canUseBusiness,
-						isAssisting: Boolean(activeBusiness.assistance)
-					});
+					try {
+						return await loadAccountAssistanceView({
+							supabase,
+							businessId: activeBusiness.business.id,
+							role: activeBusiness.role,
+							timeZone: activeBusiness.business.timezone,
+							canUseBusiness: activeBusiness.access.canUseBusiness,
+							isAssisting: Boolean(activeBusiness.assistance)
+						});
+					} catch (assistanceError) {
+						logServerFailure('Error cargando ayuda para configurar', assistanceError);
+						unavailableNotices.push('assistance');
+						return null;
+					}
 				})(),
 				(async (): Promise<MasterAccountAssistanceRequest[]> => {
 					if (!isMaster) return [];
 					try {
 						const supportUserId = await getAuthUserId(supabase, auth.access_token);
 						if (supportUserId) {
-							return loadActiveMasterAccountAssistanceRequests({
+							return await loadActiveMasterAccountAssistanceRequests({
 								admin: await getAdminClient(),
 								supportUserId
 							});
 						}
 					} catch (assistanceError) {
 						logServerFailure('Error cargando solicitudes globales de ayuda', assistanceError);
+						unavailableNotices.push('help-requests');
 					}
 					return [];
 				})(),
@@ -139,8 +150,8 @@ export const load: LayoutServerLoad = async ({
 							todayISO: businessTodayISO(activeBusiness.business.timezone)
 						};
 					} catch (noticeErr) {
-						// The notice is secondary: without it the shell still loads.
 						logServerFailure('Error cargando aviso de seguimientos', noticeErr);
+						unavailableNotices.push('follow-ups');
 						return { notice: { count: 0, single: null, dismissalKey: '0' }, todayISO: '' };
 					}
 				})()
@@ -191,6 +202,7 @@ export const load: LayoutServerLoad = async ({
 		masterAssistanceRequests,
 		followUps,
 		followUpsTodayISO,
+		unavailableNotices,
 		mpAmount: getSubscriptionAmountArs()
 	};
 };

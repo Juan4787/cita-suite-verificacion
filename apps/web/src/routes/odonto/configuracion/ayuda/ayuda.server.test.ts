@@ -141,6 +141,22 @@ describe('configuracion ayuda server', () => {
 		});
 	});
 
+	it('recognizes the master by the identity Auth verified, not by the claim the token carries', async () => {
+		mocks.resolveActiveBusiness.mockResolvedValue(context('owner'));
+		mocks.getEmailFromAccessToken.mockReturnValue('master@test.com');
+		mocks.isMasterEmail.mockImplementation((email?: string | null) => email === 'master@test.com');
+		const event = { ...makeEvent(), locals: { ...makeEvent().locals, verifiedUser: { email: 'owner@test.com' } } };
+
+		await expect(load(event as never)).resolves.toMatchObject({ demo: false });
+	});
+
+	it('says it could not read the help state instead of showing it as available', async () => {
+		mocks.resolveActiveBusiness.mockResolvedValue(context('owner'));
+		mocks.loadAccountAssistanceView.mockRejectedValue(new Error('read failed'));
+
+		await expect(load(makeEvent() as never)).rejects.toMatchObject({ status: 503 });
+	});
+
 	it('blocks a direct master request to activate help', async () => {
 		mocks.isMasterEmail.mockReturnValue(true);
 

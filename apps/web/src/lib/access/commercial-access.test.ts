@@ -42,14 +42,6 @@ describe('getBusinessAccessState', () => {
 		expect(state.allowedCapabilities.canCreateAppointment).toBe(false);
 	});
 
-	it('permite fallback explícito cuando la migración todavía no está disponible', () => {
-		const state = getBusinessAccessState(null, { now, legacyFallback: true });
-
-		expect(state.commercialStatus).toBe('active');
-		expect(state.isPermanent).toBe(true);
-		expect(state.canUseBusiness).toBe(true);
-	});
-
 	it('trata una suscripción permanente como activa y sin vencimiento', () => {
 		const state = getBusinessAccessState(
 			{

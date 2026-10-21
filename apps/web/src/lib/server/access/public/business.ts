@@ -22,29 +22,6 @@ export { BUSINESS_ROLES, BUSINESS_INDUSTRIES, type BusinessRole, type BusinessIn
 
 export const ACTIVE_BUSINESS_COOKIE = 'active-business-id';
 
-const businessSelect = `
-	id,
-	name,
-	slug,
-	industry,
-	phone,
-	email,
-	address,
-	address_instructions,
-	maps_url,
-	logo_url,
-	timezone,
-	public_booking_enabled,
-	whatsapp_enabled,
-	allow_same_day_booking,
-	min_booking_notice_minutes,
-	max_booking_days_ahead,
-	cancellation_policy,
-	is_active,
-	created_at,
-	updated_at
-`;
-
 export const isBusinessRole = (value: string): value is BusinessRole =>
 	(BUSINESS_ROLES as readonly string[]).includes(value);
 
@@ -169,12 +146,10 @@ const mapAssistanceMembership = (value: unknown): BusinessContext => {
 
 const applySubscription = (
 	membership: BusinessContext,
-	subscription: BusinessSubscriptionRow | null | undefined,
-	options: { legacyFallback?: boolean } = {}
+	subscription: BusinessSubscriptionRow | null | undefined
 ): BusinessContext => {
 	const access = getBusinessAccessState(subscription ?? null, {
-		businessCreatedAt: membership.business.created_at,
-		legacyFallback: options.legacyFallback
+		businessCreatedAt: membership.business.created_at
 	});
 	return {
 		...membership,
@@ -203,151 +178,12 @@ const mapRpcMembership = (value: unknown): BusinessContext => {
 	return applySubscription(base, parseBusinessSubscription(row.subscription, business.id));
 };
 
-const isMissingAssistanceSchemaError = (error: unknown) => {
-	const message = errorMessage(error).toLowerCase();
-	const code =
-		typeof error === 'object' && error !== null && 'code' in error
-			? String((error as { code?: unknown }).code ?? '')
-			: '';
-	return (
-		code === '42P01' ||
-		code === 'PGRST205' ||
-		message.includes('account_assistance_grants') ||
-		message.includes('could not find the table')
-	);
-};
-
-const loadAssistanceMemberships = async (
-	supabase: CitaSupabaseClient,
-	userId: string,
-	directBusinessIds: Set<string>
-): Promise<BusinessContext[]> => {
-	try {
-		const { data, error } = await supabase
-			.from('account_assistance_grants')
-			.select(
-				`id, business_id, requested_by_user_id, support_user_id, status, starts_at, expires_at, business:businesses!inner(${businessSelect})`
-			)
-			.eq('support_user_id', userId)
-			.eq('status', 'active')
-			.is('revoked_at', null)
-			.gt('expires_at', new Date().toISOString())
-			.order('expires_at', { ascending: false });
-
-		if (error) {
-			if (!isMissingAssistanceSchemaError(error)) {
-				logServerFailure('Error cargando ayuda para configurar', error);
-			}
-			return [];
-		}
-
-			const activeRows = [];
-			for (const row of data ?? []) {
-				const businessId = String(row?.business_id ?? '');
-				if (!businessId || directBusinessIds.has(businessId)) continue;
-				const { data: hasActiveGrant, error: activeGrantError } = await supabase.rpc(
-					'user_has_active_account_assistance',
-					{ target_business_id: businessId }
-				);
-				if (activeGrantError) {
-					logServerFailure('Error validando ayuda para configurar', activeGrantError);
-					continue;
-				}
-				if (hasActiveGrant === true) activeRows.push(row);
-			}
-
-			return activeRows
-				.map(mapAssistanceMembership)
-				.filter((item): item is BusinessContext => Boolean(item));
-	} catch (error) {
-		if (!isMissingAssistanceSchemaError(error)) {
-			logServerFailure('Error cargando ayuda para configurar', error);
-		}
-		return [];
-	}
-};
-
-const loadMembershipsLegacy = async (
-	supabase: CitaSupabaseClient,
-	userId: string
-): Promise<BusinessContext[]> => {
-	const { data, error } = await supabase
-		.from('business_users')
-		.select(`role, business:businesses!inner(${businessSelect})`)
-		.eq('user_id', userId)
-		.eq('status', 'active')
-		.order('created_at', { ascending: true });
-
-	if (error) {
-		throw error;
-	}
-
-	const directMemberships = (data ?? [])
-		.map(mapMembership)
-		.filter((item): item is BusinessContext => Boolean(item));
-	const assistanceMemberships = await loadAssistanceMemberships(
-		supabase,
-		userId,
-		new Set(directMemberships.map((membership) => membership.business.id))
-	);
-	const memberships = [...directMemberships, ...assistanceMemberships];
-	if (memberships.length === 0) return [];
-
-	const businessIds = memberships.map((membership) => membership.business.id);
-	let subscriptionClient = supabase;
-	try {
-		subscriptionClient = await createSupabaseAdminClient('odonto');
-	} catch {
-		subscriptionClient = supabase;
-	}
-
-	const { data: subscriptions, error: subscriptionError } = await subscriptionClient
-		.from('business_subscriptions')
-		.select(
-			'id, business_id, commercial_access_enabled, is_permanent, subscription_status, access_starts_at, paid_until, grace_until, restricted_until, archived_at, last_payment_at, last_payment_amount, last_grant_duration_seconds, expiration_notice_enabled, access_source, access_note, updated_by, created_at, updated_at'
-		)
-		.in('business_id', businessIds);
-
-	if (subscriptionError) {
-		logServerFailure('Error cargando suscripciones comerciales', subscriptionError);
-		// Compatibility is limited to an absent table during an older schema's
-		// transition. Technical/permission errors cannot manufacture active access.
-		if (!['42P01', 'PGRST205'].includes(subscriptionError.code)) throw subscriptionError;
-		return memberships.map((membership) => applySubscription(membership, null, { legacyFallback: true }));
-	}
-
-	const subscriptionByBusinessId = new Map(
-		readArray(subscriptions ?? [], 'businessSubscriptions').map((value) => {
-			const row = readRecord(value, 'businessSubscription');
-			const businessId = readText(row.business_id, 'businessSubscription.business_id');
-			if (!businessIds.includes(businessId)) throw new InvalidDataContractError('businessSubscription.scope');
-			return [businessId, parseBusinessSubscription(row, businessId)] as const;
-		})
-	);
-
-	return memberships.map((membership) =>
-		applySubscription(membership, subscriptionByBusinessId.get(membership.business.id) ?? null)
-	);
-};
-
-const isMissingBusinessContextsRpcError = (error: unknown) => {
-	const code =
-		typeof error === 'object' && error !== null && 'code' in error
-			? String((error as { code?: unknown }).code ?? '')
-			: '';
-	return code === '42883' || code === 'PGRST202';
-};
-
-const loadMemberships = async (
-	supabase: CitaSupabaseClient,
-	userId: string
-): Promise<BusinessContext[]> => {
+// The contexts come only from their SQL contract: a missing or failing function is an
+// error, never a reason to rebuild memberships, assistance and access another way.
+const loadMemberships = async (supabase: CitaSupabaseClient): Promise<BusinessContext[]> => {
 	const { data, error } = await supabase.rpc('list_user_business_contexts');
-	if (!error) {
-		return readArray(data, 'businessContexts').map(mapRpcMembership);
-	}
-	if (!isMissingBusinessContextsRpcError(error)) throw error;
-	return loadMembershipsLegacy(supabase, userId);
+	if (error) throw error;
+	return readArray(data, 'businessContexts').map(mapRpcMembership);
 };
 
 type MembershipsByRequestEntry = {
@@ -373,7 +209,7 @@ const loadMembershipsForRequest = (
 	if (mode === 'request' && cached?.userId === userId && cached.accessToken === accessToken)
 		return cached.pending;
 
-	const loaded = loadMemberships(supabase, userId);
+	const loaded = loadMemberships(supabase);
 	const guarded = loaded.catch((error) => {
 		if (requestKey && membershipsByRequest.get(requestKey)?.pending === guarded) {
 			membershipsByRequest.delete(requestKey);
@@ -464,7 +300,7 @@ const reloadMembershipsAfterBootstrap = async (
 	if (requestKey) membershipsByRequest.delete(requestKey);
 	for (const delay of [0, 150, 350]) {
 		if (delay > 0) await wait(delay);
-		const memberships = await loadMemberships(supabase, userId);
+		const memberships = await loadMemberships(supabase);
 		if (memberships.length > 0) return memberships;
 	}
 	return [];

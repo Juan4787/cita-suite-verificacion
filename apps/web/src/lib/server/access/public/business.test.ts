@@ -85,24 +85,6 @@ const subscriptionRow = {
 	updated_at: '2026-06-01T00:00:00.000Z'
 };
 
-const queryReturning = (result: unknown) => {
-	const query = {
-		select: vi.fn(() => query),
-		eq: vi.fn(() => query),
-		is: vi.fn(() => query),
-		gt: vi.fn(() => query),
-		order: vi.fn(() => Promise.resolve(result)),
-		in: vi.fn(() => Promise.resolve(result))
-	};
-	return query;
-};
-
-const missingContextsRpc = () =>
-	Promise.resolve({
-		data: null,
-		error: { code: 'PGRST202', message: 'Could not find the function list_user_business_contexts' }
-	});
-
 describe('resolveActiveBusiness', () => {
 	beforeEach(() => {
 	rateLimitMocks.enforceRateLimits.mockReset();
@@ -114,42 +96,32 @@ describe('resolveActiveBusiness', () => {
 
 	it('loads the auto-created owner business after allowed-email bootstrap', async () => {
 		const userId = 'user-allowed';
-		const firstMembershipRead = queryReturning({ data: [], error: null });
-		const recoveredMembershipRead = queryReturning({
-			data: [{ role: 'owner', business: businessRow }],
-			error: null
-		});
-		const subscriptionsRead = queryReturning({
-			data: [
-				{
-					...subscriptionRow,
-					commercial_access_enabled: true,
-					is_permanent: false,
-					subscription_status: 'restricted',
-					paid_until: null,
-					grace_until: null,
-					restricted_until: '2099-07-30T00:00:00.000Z',
-					access_note: 'Cuenta pendiente de activación de suscripción.'
-				}
-			],
-			error: null
-		});
-
+		const pendingSubscription = {
+			...subscriptionRow,
+			commercial_access_enabled: true,
+			is_permanent: false,
+			subscription_status: 'restricted',
+			paid_until: null,
+			grace_until: null,
+			restricted_until: '2099-07-30T00:00:00.000Z',
+			access_note: 'Cuenta pendiente de activación de suscripción.'
+		};
+		let contextReads = 0;
 		const supabase = {
-			from: vi.fn((table: string) => {
-				if (table === 'business_users') {
-					const count = supabase.from.mock.calls.filter(([name]: [string]) => name === 'business_users').length;
-					return count === 1 ? firstMembershipRead : recoveredMembershipRead;
+			from: vi.fn(),
+			rpc: vi.fn((name: string) => {
+				if (name === 'list_user_business_contexts') {
+					contextReads += 1;
+					return Promise.resolve({
+						data:
+							contextReads === 1
+								? []
+								: [{ business: businessRow, role: 'owner', assistance: null, subscription: pendingSubscription }],
+						error: null
+					});
 				}
-				if (table === 'account_assistance_grants') return queryReturning({ data: [], error: null });
-				if (table === 'business_subscriptions') return subscriptionsRead;
-				throw new Error(`Unexpected table ${table}`);
-			}),
-			rpc: vi.fn((name: string) =>
-				name === 'list_user_business_contexts'
-					? missingContextsRpc()
-					: Promise.resolve({ data: [{ business_id: 'business-1', role: 'owner' }], error: null })
-			)
+				return Promise.resolve({ data: [{ business_id: 'business-1', role: 'owner' }], error: null });
+			})
 		} as any;
 
 		const context = await resolveActiveBusiness({
@@ -171,6 +143,7 @@ describe('resolveActiveBusiness', () => {
 			undefined
 		);
 		expect(rateLimitMocks.enforceRateLimits).toHaveBeenCalledOnce();
+		expect(supabase.from).not.toHaveBeenCalled();
 	});
 
 	it('detiene el alta con un error específico si no puede comprobar su límite', async () => {
@@ -307,31 +280,25 @@ describe('resolveActiveBusiness', () => {
 
 	it('recovers an accepted invite membership after bootstrap race', async () => {
 		const userId = 'user-1';
-		const firstMembershipRead = queryReturning({ data: [], error: null });
-		const recoveredMembershipRead = queryReturning({
-			data: [{ role: 'professional', business: businessRow }],
-			error: null
-		});
-		const subscriptionsRead = queryReturning({ data: [subscriptionRow], error: null });
-
+		let contextReads = 0;
 		const supabase = {
-			from: vi.fn((table: string) => {
-				if (table === 'business_users') {
-					const count = supabase.from.mock.calls.filter(([name]: [string]) => name === 'business_users').length;
-					return count === 1 ? firstMembershipRead : recoveredMembershipRead;
+			from: vi.fn(),
+			rpc: vi.fn((name: string) => {
+				if (name === 'list_user_business_contexts') {
+					contextReads += 1;
+					return Promise.resolve({
+						data:
+							contextReads === 1
+								? []
+								: [{ business: businessRow, role: 'professional', assistance: null, subscription: subscriptionRow }],
+						error: null
+					});
 				}
-				if (table === 'account_assistance_grants') return queryReturning({ data: [], error: null });
-				if (table === 'business_subscriptions') return subscriptionsRead;
-				throw new Error(`Unexpected table ${table}`);
-			}),
-			rpc: vi.fn((name: string) =>
-				name === 'list_user_business_contexts'
-					? missingContextsRpc()
-					: Promise.resolve({
-							data: null,
-							error: { message: 'DEFAULT_BUSINESS_CREATION_DISABLED' }
-						})
-			)
+				return Promise.resolve({
+					data: null,
+					error: { message: 'DEFAULT_BUSINESS_CREATION_DISABLED' }
+				});
+			})
 		} as any;
 
 		const context = await resolveActiveBusiness({
@@ -348,6 +315,7 @@ describe('resolveActiveBusiness', () => {
 			p_name: 'Consultorio',
 			p_industry: 'odontology'
 		});
+		expect(supabase.from).not.toHaveBeenCalled();
 	});
 
 	it('recovers the accepted invite when a concurrent bootstrap sees the email association', async () => {
@@ -397,39 +365,29 @@ describe('resolveActiveBusiness', () => {
 
 	it('resolves an active account assistance grant as an admin context for support', async () => {
 		const userId = 'master-user';
-		const membershipsRead = queryReturning({ data: [], error: null });
-		const assistanceRead = queryReturning({
-			data: [
-				{
-					id: 'assist-1',
-					business_id: 'business-1',
-					requested_by_user_id: 'owner-1',
-					support_user_id: userId,
-					status: 'active',
-					starts_at: '2026-07-08T20:45:00.000Z',
-					expires_at: '2026-07-08T21:45:00.000Z',
-					business: businessRow
-				}
-			],
-			error: null
-		});
-		const subscriptionsRead = queryReturning({ data: [subscriptionRow], error: null });
-
-			const supabase = {
-				from: vi.fn((table: string) => {
-					if (table === 'business_users') return membershipsRead;
-					if (table === 'account_assistance_grants') return assistanceRead;
-					if (table === 'business_subscriptions') return subscriptionsRead;
-					throw new Error(`Unexpected table ${table}`);
-				}),
-				rpc: vi.fn((name: string) => {
-					if (name === 'list_user_business_contexts') return missingContextsRpc();
-					if (name === 'user_has_active_account_assistance') {
-						return Promise.resolve({ data: true, error: null });
-					}
-					return Promise.resolve({ data: null, error: null });
-				})
-			} as any;
+		const supabase = {
+			from: vi.fn(),
+			rpc: vi.fn((name: string) => {
+				if (name !== 'list_user_business_contexts') throw new Error(`Unexpected RPC ${name}`);
+				return Promise.resolve({
+					data: [
+						{
+							business: businessRow,
+							role: 'admin',
+							assistance: {
+								grantId: 'assist-1',
+								requestedByUserId: 'owner-1',
+								supportUserId: userId,
+								startsAt: '2026-07-08T20:45:00.000Z',
+								expiresAt: '2099-07-08T21:45:00.000Z'
+							},
+							subscription: subscriptionRow
+						}
+					],
+					error: null
+				});
+			})
+		} as any;
 
 		const context = await resolveActiveBusiness({
 			supabase,
@@ -445,57 +403,9 @@ describe('resolveActiveBusiness', () => {
 			requestedByUserId: 'owner-1',
 			supportUserId: userId
 		});
-			expect(supabase.rpc).toHaveBeenCalledWith('user_has_active_account_assistance', {
-				target_business_id: 'business-1'
-			});
-		});
-
-		it('does not grant admin context when the SQL active-assistance check denies it', async () => {
-			const userId = 'master-user';
-			const membershipsRead = queryReturning({ data: [], error: null });
-			const assistanceRead = queryReturning({
-				data: [
-					{
-						id: 'assist-1',
-						business_id: 'business-1',
-						requested_by_user_id: 'owner-1',
-						support_user_id: userId,
-						status: 'active',
-						starts_at: '2026-07-08T20:45:00.000Z',
-						expires_at: '2026-07-08T21:45:00.000Z',
-						business: businessRow
-					}
-				],
-				error: null
-			});
-
-			const supabase = {
-				from: vi.fn((table: string) => {
-					if (table === 'business_users') return membershipsRead;
-					if (table === 'account_assistance_grants') return assistanceRead;
-					throw new Error(`Unexpected table ${table}`);
-				}),
-				rpc: vi.fn((name: string) => {
-					if (name === 'list_user_business_contexts') return missingContextsRpc();
-					if (name === 'user_has_active_account_assistance') {
-						return Promise.resolve({ data: false, error: null });
-					}
-					return Promise.resolve({ data: null, error: null });
-				})
-			} as any;
-
-			const context = await resolveActiveBusiness({
-				supabase,
-				accessToken: accessTokenFor(userId),
-				ensureDefault: false
-			});
-
-			expect(context).toBeNull();
-			expect(supabase.from).not.toHaveBeenCalledWith('business_subscriptions');
-			expect(supabase.rpc).toHaveBeenCalledWith('user_has_active_account_assistance', {
-				target_business_id: 'business-1'
-			});
-		});
+		// Which grants count is decided in SQL (supabase/tests/user_business_contexts.sql).
+		expect(supabase.from).not.toHaveBeenCalled();
+	});
 
 	it('uses the consolidated RPC and reuses it inside the same request', async () => {
 		const supabase = {

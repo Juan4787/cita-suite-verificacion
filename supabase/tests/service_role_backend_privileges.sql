@@ -120,6 +120,7 @@ begin
 				('public.appointments', 'SELECT'),
 				('public.clinical_entries', 'SELECT'),
 				('public.services', 'SELECT'),
+				('public.follow_ups', 'SELECT'),
 				('public.patients', 'SELECT, INSERT, UPDATE, DELETE'),
 				('public.patient_radiographs', 'SELECT')
 		) as expected(table_name, operations)
@@ -131,12 +132,14 @@ begin
 		end if;
 	end loop;
 
+	-- Follow-ups are read under row level security and change only through their
+	-- functions, which check actor, link, operation and version (20261021040000).
 	if has_table_privilege(
 		'authenticated',
 		'public.follow_ups',
-		'SELECT, INSERT, UPDATE, DELETE'
+		'INSERT, UPDATE, DELETE'
 	) then
-		raise exception 'TEST_AUTHENTICATED_CAN_BYPASS_FOLLOW_UP_BACKEND_CONTROL_PLANE';
+		raise exception 'TEST_AUTHENTICATED_CAN_WRITE_FOLLOW_UPS_DIRECTLY';
 	end if;
 
 	if has_table_privilege(

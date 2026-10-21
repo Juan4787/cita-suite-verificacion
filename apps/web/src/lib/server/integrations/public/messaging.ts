@@ -533,16 +533,11 @@ const canBusinessUseOperationalMessaging = async (supabase: CitaSupabaseClient, 
 		.eq('business_id', businessId)
 		.maybeSingle();
 
-	if (error) {
-		// Compatibility-first fallback: if the migration is not available yet,
-		// do not break legacy messaging paths.
-		logServerFailure('Error cargando suscripción comercial para mensajería', error);
-		return true;
-	}
+	// Without the subscription the access cannot be confirmed, so nothing is sent:
+	// each caller counts the message as failed or retries it.
+	if (error) throw error;
 
-	return getBusinessAccessState(data ?? null, {
-		legacyFallback: false
-	}).canUseBusiness;
+	return getBusinessAccessState(data ?? null).canUseBusiness;
 };
 
 export const generateReminderDispatches = async (
