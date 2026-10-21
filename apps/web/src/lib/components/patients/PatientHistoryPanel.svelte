@@ -5,7 +5,7 @@
 	import type { PatientHistoryEntry } from '$lib/patients/contracts';
 	import { readPatientHistoryPage } from '$lib/patients/history-contract';
 	import { formatDate } from '$lib/utils/format';
-	import { clinicalAmountForEdit } from '$lib/patients/clinical-amount';
+	import { formatClinicalAmount } from '$lib/patients/clinical-amount';
 	let {
 		active,
 		patientId,
@@ -142,7 +142,7 @@
 	};
 
 	const formatCurrency = (value?: number | null) =>
-		value == null ? '' : `$ ${clinicalAmountForEdit(value).display}`;
+		value == null ? '' : formatClinicalAmount(value);
 </script>
 
 {#if active}

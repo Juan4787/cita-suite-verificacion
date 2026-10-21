@@ -479,9 +479,16 @@
 						<span class="inline-flex items-center justify-center gap-2">
 							{tab.label}
 							{#if tabStates[tab.id].missing}
-								<span class="ux-tab-marker ux-tab-marker-danger" aria-label="Dato necesario faltante">!</span>
+								<span class="ux-tab-marker ux-tab-marker-danger" role="img" aria-label="Dato necesario faltante">
+									<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+										<path d="M12 5v9" />
+										<path d="M12 19h.01" />
+									</svg>
+								</span>
 							{:else if tabStates[tab.id].dirty}
-								<span class="ux-tab-marker ux-tab-marker-warning" aria-label="Cambios sin guardar">·</span>
+								<span class="ux-tab-marker ux-tab-marker-warning" role="img" aria-label="Cambios sin guardar">
+									<svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5" /></svg>
+								</span>
 							{/if}
 						</span>
 					</button>

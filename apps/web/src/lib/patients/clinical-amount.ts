@@ -26,6 +26,12 @@ export function clinicalAmountForEdit(value: number | null | undefined) {
 			};
 }
 
+/** A clinical cost as shown: with its cents when it has a fraction, never rounding a historical one. */
+export function formatClinicalAmount(value: number) {
+	const fraction = !Number.isInteger(value);
+	return `$ ${new Intl.NumberFormat('es-AR', { minimumFractionDigits: fraction ? 2 : 0, maximumFractionDigits: 20 }).format(value)}`;
+}
+
 /** Keep display punctuation separate from the canonical submitted number. */
 export function clinicalAmountFromDisplay(value: string) {
 	const text = value.trim();

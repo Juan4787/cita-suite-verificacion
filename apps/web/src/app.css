@@ -321,21 +321,22 @@ a {
 
 	.ux-tab-marker {
 		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		min-width: 0.85rem;
-		font-weight: 700;
-		line-height: 1;
+		flex-shrink: 0;
+		width: 0.85rem;
+		height: 0.85rem;
+	}
+
+	.ux-tab-marker svg {
+		width: 100%;
+		height: 100%;
 	}
 
 	.ux-tab-marker-warning {
 		color: #fcd34d;
-		font-size: 1.15rem;
 	}
 
 	.ux-tab-marker-danger {
 		color: #fecaca;
-		font-size: 0.82rem;
 	}
 
 	/* ------------------------------ Formularios --------------------------- */
