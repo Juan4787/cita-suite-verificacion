@@ -73,6 +73,18 @@ try {
 		'[api]', 'enabled = true', 'port = 56421', '', '[db]', 'port = 56422', 'major_version = 17', '',
 		'[studio]', 'enabled = false', '', '[storage]', 'enabled = true', '', '[analytics]', 'enabled = false', '',
 		'[inbucket]', 'enabled = false', '', '[auth]', 'enabled = true', '', '[edge_runtime]', 'enabled = false', ''].join('\n'));
+	// The hosted services are ahead of the CLI's pinned ones, and the data dump carries their
+	// tables (Auth's MFA recovery codes, for one). The CLI matches a remote project the way
+	// `supabase link` does, through its version files: the new project runs the Auth and
+	// Storage versions that staging serves.
+	const health = await (await fetch(`${storageOrigin}/auth/v1/health`, { headers: { apikey: serviceKey }, signal: AbortSignal.timeout(10_000) })).json();
+	const storageVersion = (await (await fetch(`${storageOrigin}/storage/v1/version`, { signal: AbortSignal.timeout(10_000) })).text()).trim();
+	receipt.serviceVersions = { gotrue: String(health.version ?? ''), storage: storageVersion.startsWith('v') ? storageVersion : 'v' + storageVersion };
+	if (!Object.values(receipt.serviceVersions).every((version) => /^v\d+\.\d+\.\d+$/.test(version)))
+		throw new Error('Staging did not report its Auth and Storage versions.');
+	mkdirSync(join(project, 'supabase/.temp'), { recursive: true });
+	writeFileSync(join(project, 'supabase/.temp/gotrue-version'), receipt.serviceVersions.gotrue);
+	writeFileSync(join(project, 'supabase/.temp/storage-version'), receipt.serviceVersions.storage);
 	started = true;
 	cli(['start']);
 	const local = JSON.parse(cli(['status', '-o', 'json']));
