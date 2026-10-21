@@ -106,7 +106,7 @@
 						name="password"
 						type={showPassword ? 'text' : 'password'}
 						class="ux-input pr-16"
-						placeholder={mode === 'register' ? 'Creá una contraseña segura' : 'Ingresá tu contraseña'}
+						placeholder={mode === 'register' ? 'Nueva contraseña' : 'Tu contraseña'}
 						required
 						bind:value={password}
 						oninput={clearLocalMessage}
@@ -131,7 +131,7 @@
 							name="confirm_password"
 							type={showConfirmPassword ? 'text' : 'password'}
 							class="ux-input pr-16"
-							placeholder="Repetí la misma contraseña"
+							placeholder="Repetila"
 							required
 							bind:value={confirmPassword}
 							oninput={clearLocalMessage}
