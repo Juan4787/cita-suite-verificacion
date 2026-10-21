@@ -2,9 +2,7 @@ import { logServerFailure } from '$lib/server/platform/logging';
 import { readRecord } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
-import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import {
-	buildFollowUpScope,
 	FollowUpError,
 	getFollowUpErrorMessage,
 	getFollowUpErrorStatus,
@@ -20,7 +18,7 @@ export const POST: RequestHandler = async ({ params, request, locals, fetch, coo
 	if (env.DEMO_MODE === 'true')
 		return json({ message: 'No disponible en modo demo.' }, { status: 400 });
 
-	const { business, userId } = await getOdontoContext({ locals, fetch, cookies });
+	const { supabase, business } = await getOdontoContext({ locals, fetch, cookies });
 	if (!roleParticipatesInFollowUps(business.role))
 		return json({ message: 'No tenés permiso para esta acción.' }, { status: 403 });
 	if (!business.access.canUseBusiness)
@@ -29,8 +27,6 @@ export const POST: RequestHandler = async ({ params, request, locals, fetch, coo
 			{ status: 403 }
 		);
 
-	const admin = await createSupabaseAdminClient('odonto', fetch);
-	const scope = await buildFollowUpScope(admin, business, userId);
 	let body: Record<string, unknown> = {};
 	try {
 		const raw = await request.text();
@@ -40,10 +36,8 @@ export const POST: RequestHandler = async ({ params, request, locals, fetch, coo
 	}
 
 	try {
-		await markFollowUpDone(admin, {
-			businessId: scope.businessId,
-			role: scope.role,
-			professionalId: scope.professionalId,
+		await markFollowUpDone(supabase, {
+			businessId: business.business.id,
 			id: params.id,
 			expectedUpdatedAt:
 				typeof body.expected_updated_at === 'string' ? body.expected_updated_at.trim() : null

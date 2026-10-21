@@ -2,9 +2,7 @@ import { logServerFailure } from '$lib/server/platform/logging';
 import { readRecord } from '$lib/contracts/json';
 import { env } from '$env/dynamic/private';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
-import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import {
-	buildFollowUpScope,
 	businessTodayISO,
 	FollowUpError,
 	getFollowUpErrorMessage,
@@ -25,7 +23,7 @@ export const POST: RequestHandler = async ({ params, request, locals, fetch, coo
 	if (env.DEMO_MODE === 'true')
 		return json({ message: 'No disponible en modo demo.' }, { status: 400 });
 
-	const { business, userId } = await getOdontoContext({ locals, fetch, cookies });
+	const { supabase, business } = await getOdontoContext({ locals, fetch, cookies });
 	if (!roleParticipatesInFollowUps(business.role))
 		return json({ message: 'No tenés permiso para esta acción.' }, { status: 403 });
 	if (!business.access.canUseBusiness)
@@ -41,13 +39,10 @@ export const POST: RequestHandler = async ({ params, request, locals, fetch, coo
 		return json({ message: 'Solicitud inválida.' }, { status: 400 });
 	}
 
-	const admin = await createSupabaseAdminClient('odonto', fetch);
-	const scope = await buildFollowUpScope(admin, business, userId);
-
 	let newRemindOn = '';
 	const preset = PRESETS.find(preset => preset === body.preset);
 	if (preset) {
-		newRemindOn = snoozePresetDate(preset, businessTodayISO(scope.timezone));
+		newRemindOn = snoozePresetDate(preset, businessTodayISO(business.business.timezone));
 	} else if (typeof body.date === 'string') {
 		newRemindOn = body.date.trim();
 	} else {
@@ -55,13 +50,10 @@ export const POST: RequestHandler = async ({ params, request, locals, fetch, coo
 	}
 
 	try {
-		await snoozeFollowUp(admin, {
-			businessId: scope.businessId,
-			role: scope.role,
-			professionalId: scope.professionalId,
+		await snoozeFollowUp(supabase, {
+			businessId: business.business.id,
 			id: params.id,
 			newRemindOn,
-			timezone: scope.timezone,
 			expectedUpdatedAt:
 				typeof body.expected_updated_at === 'string' ? body.expected_updated_at.trim() : null
 		});

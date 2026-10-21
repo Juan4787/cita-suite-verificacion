@@ -16,7 +16,7 @@
 	};
 
 	let { data }: {
-		data: { programmed: Item[]; canAssign: boolean; todayISO: string; demo: boolean };
+		data: { programmed: Item[]; programmedTotal: number; canAssign: boolean; todayISO: string; demo: boolean };
 	} = $props();
 	const client = createClientReadiness();
 
@@ -74,6 +74,8 @@
 					title="Sin recordatorios programados"
 					description="No hay recordatorios programados para más adelante."
 				/>
+			{:else if data.programmedTotal > data.programmed.length}
+				<p class="text-sm text-white/55">Se muestran los {data.programmed.length} más próximos de {data.programmedTotal}.</p>
 			{/if}
 		</div>
 	</div>

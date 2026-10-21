@@ -1,9 +1,11 @@
 import type { CitaSupabaseClient, CitaRow } from '$lib/types/database';
+import { readArray, readChoice, readRecord, readText } from '$lib/contracts/json';
 import type { BusinessRole } from '$lib/server/access/public/business';
 
 // Seguimientos: recordar volver a contactar a un paciente. Sin recurrencia.
 // Visibilidad por rol de sistema; asignación a un perfil profesional atendible.
-// Seguridad principal = guards server-side (admin client). RLS = defensa secundaria.
+// Las reglas viven en la base: las lecturas pasan por RLS y cada cambio por su
+// función SQL, que comprueba actor, vínculo, operación y versión en una transacción.
 
 export type FollowUpStatus = 'pending' | 'done';
 
@@ -61,6 +63,8 @@ export const getFollowUpErrorMessage = (code: string): string => {
 			return 'No se encontró el seguimiento.';
 		case 'FOLLOWUP_FORBIDDEN':
 			return 'No tenés permiso para esta acción.';
+		case 'FOLLOWUP_ACCESS_EXPIRED':
+			return 'Tu acceso a Cita Suite venció. Activá tu suscripción para volver a operar.';
 		case 'FOLLOWUP_STATUS_CONFLICT':
 			return 'El seguimiento cambió mientras lo estabas actualizando y no sobrescribimos ese cambio. Recargá la lista para ver el estado actual.';
 		default:
@@ -69,7 +73,7 @@ export const getFollowUpErrorMessage = (code: string): string => {
 };
 
 export const getFollowUpErrorStatus = (code: string): number => {
-	if (code === 'FOLLOWUP_FORBIDDEN') return 403;
+	if (code === 'FOLLOWUP_FORBIDDEN' || code === 'FOLLOWUP_ACCESS_EXPIRED') return 403;
 	if (code === 'FOLLOWUP_NOT_FOUND') return 404;
 	if (code === 'FOLLOWUP_STATUS_CONFLICT') return 409;
 	return 400;
@@ -162,15 +166,15 @@ export const mergeAssignableProfessionals = (
 	});
 };
 
-// ---------- Acceso a datos (admin client; scope server-side) ----------
+// ---------- Acceso a datos (cliente del usuario; reglas en la base) ----------
 
-export type RoleScope = {
-	businessId: string;
-	role: BusinessRole;
-	professionalId: string | null;
-};
+/** Lo que las lecturas necesitan del consultorio activo. */
+export type FollowUpBusiness = { businessId: string; timezone: string };
 
-export type TzScope = RoleScope & { timezone: string };
+/** Las listas muestran hasta este número; el total dice cuántos hay. */
+export const FOLLOW_UP_LIST_LIMIT = 300;
+
+export type FollowUpList = { items: FollowUpListItem[]; total: number };
 
 const FOLLOWUP_SELECT =
 	'id, patient_id, message, remind_on, assigned_professional_id, updated_at, patients(full_name)';
@@ -187,255 +191,109 @@ const mapRow = (row: FollowUpResult): FollowUpListItem => ({
 	updated_at: String(row.updated_at)
 });
 
-/** professional_id del usuario actuante (rol Profesional). Mirror de pacientes/+page.server.ts. */
-export const resolveActingProfessionalId = async (
-	admin: CitaSupabaseClient,
-	businessId: string,
-	userId: string
-): Promise<string | null> => {
-	const { data, error } = await admin
-		.from('professional_users')
-		.select('professional_id')
-		.eq('business_id', businessId)
-		.eq('user_id', userId)
-		.order('created_at', { ascending: true })
-		.limit(1)
-		.maybeSingle();
+const FOLLOW_UP_ERROR_CODES = [
+	'FOLLOWUP_INVALID_DATE', 'FOLLOWUP_MESSAGE_TOO_LONG', 'FOLLOWUP_PATIENT_NOT_FOUND', 'FOLLOWUP_PATIENT_NOT_YOURS',
+	'FOLLOWUP_PROFESSIONAL_PROFILE_REQUIRED', 'FOLLOWUP_ASSIGN_REQUIRED', 'FOLLOWUP_PROFESSIONAL_NOT_LINKED',
+	'FOLLOWUP_NOT_FOUND', 'FOLLOWUP_FORBIDDEN', 'FOLLOWUP_ACCESS_EXPIRED', 'FOLLOWUP_STATUS_CONFLICT'
+] as const;
+
+/** Un rechazo de las funciones SQL llega como su código; cualquier otro error sigue siendo un error. */
+const followUpFailure = (error: { message?: string | null }) => {
+	const code = FOLLOW_UP_ERROR_CODES.find((candidate) => String(error.message ?? '').includes(candidate));
+	return code ? new FollowUpError(code) : error;
+};
+
+/** Las filas que el usuario puede leer ya vienen filtradas por la base, antes del límite. */
+const listPending = async (
+	supabase: CitaSupabaseClient,
+	business: FollowUpBusiness,
+	when: 'executing' | 'programmed'
+): Promise<FollowUpList> => {
+	const today = businessTodayISO(business.timezone);
+	const pending = supabase
+		.from('follow_ups')
+		.select(FOLLOWUP_SELECT, { count: 'exact' })
+		.eq('business_id', business.businessId)
+		.eq('status', 'pending');
+	const { data, count, error } = await (when === 'executing' ? pending.lte('remind_on', today) : pending.gt('remind_on', today))
+		.order('remind_on', { ascending: true })
+		.order('id', { ascending: true })
+		.limit(FOLLOW_UP_LIST_LIMIT);
 	if (error) throw error;
-	return data?.professional_id ? String(data.professional_id) : null;
+	const items = (data ?? []).map(mapRow);
+	return { items, total: count ?? items.length };
 };
 
-/** Resuelve el scope (incluye professionalId para rol Profesional). Una sola fuente para endpoints. */
-export const buildFollowUpScope = async (
-	admin: CitaSupabaseClient,
-	business: { role: BusinessRole; business: { id: string; timezone: string } },
-	userId: string
-): Promise<TzScope> => {
-	const professionalId =
-		business.role === 'professional'
-			? await resolveActingProfessionalId(admin, business.business.id, userId)
-			: null;
-	return {
-		businessId: business.business.id,
-		role: business.role,
-		professionalId,
-		timezone: business.business.timezone
-	};
-};
+/** Ejecutándose: pendientes con fecha hasta hoy. */
+export const listExecutingFollowUps = (supabase: CitaSupabaseClient, business: FollowUpBusiness) =>
+	listPending(supabase, business, 'executing');
 
-const applyRoleScope = <Query extends { eq(column: 'assigned_professional_id', value: string | null): Query }>(query: Query, scope: RoleScope) =>
-	roleSeesAllFollowUps(scope.role) ? query : query.eq('assigned_professional_id', scope.professionalId);
-
-/**
- * La asignación de un seguimiento no conserva acceso si el vínculo del
- * profesional con el paciente fue archivado. Las consultas usan el cliente
- * backend, por lo que esta segunda comprobación es necesaria además del scope
- * por assigned_professional_id.
- */
-const filterActiveProfessionalPatientLinks = async <Row extends { patient_id: string }>(
-	admin: CitaSupabaseClient,
-	scope: RoleScope,
-	rows: Row[]
-) => {
-	if (roleSeesAllFollowUps(scope.role)) return rows;
-	if (!scope.professionalId || rows.length === 0) return [];
-	const patientIds = [...new Set(rows.map((row) => String(row.patient_id)).filter(Boolean))];
-	if (patientIds.length === 0) return [];
-	const { data, error } = await admin
-		.from('professional_patient_links')
-		.select('patient_id')
-		.eq('business_id', scope.businessId)
-		.eq('professional_id', scope.professionalId)
-		.eq('is_active', true)
-		.in('patient_id', patientIds);
-	if (error) throw error;
-	const linkedPatientIds = new Set((data ?? []).map((row) => String(row.patient_id)));
-	return rows.filter((row) => linkedPatientIds.has(String(row.patient_id)));
-};
-
-export const listExecutingFollowUps = async (
-	admin: CitaSupabaseClient,
-	scope: TzScope
-): Promise<FollowUpListItem[]> => {
-	if (!roleSeesAllFollowUps(scope.role) && !scope.professionalId) return [];
-	const today = businessTodayISO(scope.timezone);
-	const { data, error } = await applyRoleScope(
-		admin
-			.from('follow_ups')
-			.select(FOLLOWUP_SELECT)
-			.eq('business_id', scope.businessId)
-			.eq('status', 'pending')
-			.lte('remind_on', today)
-			.order('remind_on', { ascending: true })
-			.limit(300),
-		scope
-	);
-	if (error) throw error;
-	const visibleRows = await filterActiveProfessionalPatientLinks(admin, scope, data ?? []);
-	return visibleRows.map(mapRow);
-};
-
-export const listProgrammedFollowUps = async (
-	admin: CitaSupabaseClient,
-	scope: TzScope
-): Promise<FollowUpListItem[]> => {
-	if (!roleSeesAllFollowUps(scope.role) && !scope.professionalId) return [];
-	const today = businessTodayISO(scope.timezone);
-	const { data, error } = await applyRoleScope(
-		admin
-			.from('follow_ups')
-			.select(FOLLOWUP_SELECT)
-			.eq('business_id', scope.businessId)
-			.eq('status', 'pending')
-			.gt('remind_on', today)
-			.order('remind_on', { ascending: true })
-			.limit(300),
-		scope
-	);
-	if (error) throw error;
-	const visibleRows = await filterActiveProfessionalPatientLinks(admin, scope, data ?? []);
-	return visibleRows.map(mapRow);
-};
+/** Programados: pendientes con fecha futura. */
+export const listProgrammedFollowUps = (supabase: CitaSupabaseClient, business: FollowUpBusiness) =>
+	listPending(supabase, business, 'programmed');
 
 export const getNoticeSummary = async (
-	admin: CitaSupabaseClient,
-	scope: TzScope
+	supabase: CitaSupabaseClient,
+	business: FollowUpBusiness
 ): Promise<FollowUpNotice> => {
-	if (!roleSeesAllFollowUps(scope.role) && !scope.professionalId) return buildNotice([], 0);
-	const today = businessTodayISO(scope.timezone);
-	const { data: identityRows, count, error } = await applyRoleScope(
-		admin
-			.from('follow_ups')
-			.select('id, patient_id', { count: 'exact' })
-			.eq('business_id', scope.businessId)
-			.eq('status', 'pending')
-			.lte('remind_on', today)
-			.order('remind_on', { ascending: true })
-			.order('id', { ascending: true })
-			.limit(300),
-		scope
-	);
+	const today = businessTodayISO(business.timezone);
+	const { data, count, error } = await supabase
+		.from('follow_ups')
+		.select('id', { count: 'exact' })
+		.eq('business_id', business.businessId)
+		.eq('status', 'pending')
+		.lte('remind_on', today)
+		.order('remind_on', { ascending: true })
+		.order('id', { ascending: true })
+		.limit(FOLLOW_UP_LIST_LIMIT);
 	if (error) throw error;
-	const visibleIdentityRows = await filterActiveProfessionalPatientLinks(admin, scope, identityRows ?? []);
-	const identityIds = visibleIdentityRows.map((row) => String(row.id));
-	// Si se filtró un vínculo archivado, el count de PostgREST ya no representa
-	// lo que puede ver el profesional. En ese caso usamos sólo las filas visibles
-	// para no mostrar un aviso huérfano ni filtrar un paciente por accidente.
-	const total = visibleIdentityRows.length === (identityRows ?? []).length ? (count ?? 0) : visibleIdentityRows.length;
+	const identityIds = (data ?? []).map((row) => String(row.id));
+	const total = count ?? identityIds.length;
 	if (total !== 1 || identityIds.length !== 1) return buildNotice([], total, identityIds);
 
-	const { data: singleRow, error: singleError } = await admin
+	const { data: singleRow, error: singleError } = await supabase
 		.from('follow_ups')
 		.select(FOLLOWUP_SELECT)
-		.eq('business_id', scope.businessId)
+		.eq('business_id', business.businessId)
 		.eq('id', identityIds[0])
 		.maybeSingle();
 	if (singleError) throw singleError;
-	if (
-		!roleSeesAllFollowUps(scope.role) &&
-		!(await filterActiveProfessionalPatientLinks(admin, scope, singleRow ? [singleRow] : [])).length
-	) {
-		return buildNotice([], 0);
-	}
-	return buildNotice(singleRow ? [mapRow(singleRow)] : [], total, identityIds);
-};
-
-/** Profesionales atendibles (activos) vinculados a un paciente. */
-const listLinkedProfessionalsForPatient = async (
-	admin: CitaSupabaseClient,
-	businessId: string,
-	patientId: string
-): Promise<AssignableProfessional[]> => {
-	const { data: links, error: linksError } = await admin
-		.from('professional_patient_links')
-		.select('professional_id')
-		.eq('business_id', businessId)
-		.eq('patient_id', patientId)
-		.eq('is_active', true);
-	if (linksError) throw linksError;
-	const ids = [...new Set((links ?? []).map((l) => String(l.professional_id)))];
-	if (ids.length === 0) return [];
-	const { data: profs, error: profsError } = await admin
-		.from('professionals')
-		.select('id, name, is_active')
-		.eq('business_id', businessId)
-		.in('id', ids);
-	if (profsError) throw profsError;
-	return (profs ?? [])
-		.filter((p) => p.is_active !== false)
-		.map((p) => ({
-			id: String(p.id),
-			name: String(p.name),
-			source: 'patient_link' as const
-		}))
-		.sort((a, b) => a.name.localeCompare(b.name, 'es'));
-};
-
-const listOwnerAdminAttendingProfessionals = async (
-	admin: CitaSupabaseClient,
-	businessId: string
-): Promise<AssignableProfessional[]> => {
-	const { data: memberships, error: membershipsError } = await admin
-		.from('business_users')
-		.select('user_id, role')
-		.eq('business_id', businessId)
-		.eq('status', 'active')
-		.in('role', ['owner', 'admin']);
-	if (membershipsError) throw membershipsError;
-
-	const userIds = [
-		...new Set((memberships ?? []).map((row) => row.user_id).filter(Boolean).map(String))
-	];
-	if (userIds.length === 0) return [];
-
-	const { data: links, error: linksError } = await admin
-		.from('professional_users')
-		.select('professional_id, user_id')
-		.eq('business_id', businessId)
-		.in('user_id', userIds);
-	if (linksError) throw linksError;
-
-	const ids = [...new Set((links ?? []).map((row) => String(row.professional_id)))];
-	if (ids.length === 0) return [];
-
-	const { data: professionals, error: professionalsError } = await admin
-		.from('professionals')
-		.select('id, name, is_active')
-		.eq('business_id', businessId)
-		.in('id', ids);
-	if (professionalsError) throw professionalsError;
-
-	return (professionals ?? [])
-		.filter((professional) => professional.is_active !== false)
-		.map((professional) => ({
-			id: String(professional.id),
-			name: String(professional.name),
-			source: 'owner_admin_attending' as const
-		}))
-		.sort((a, b) => a.name.localeCompare(b.name, 'es'));
+	return buildNotice(singleRow ? [mapRow(singleRow)] : [], singleRow ? total : 0, identityIds);
 };
 
 /** Selector de asignación: vinculados al paciente + dueños/admins atendibles. */
 export const listAssignableProfessionalsForPatient = async (
-	admin: CitaSupabaseClient,
+	supabase: CitaSupabaseClient,
 	businessId: string,
 	patientId: string
 ): Promise<AssignableProfessional[]> => {
-	const [linkedProfessionals, ownerAdminProfessionals] = await Promise.all([
-		listLinkedProfessionalsForPatient(admin, businessId, patientId),
-		listOwnerAdminAttendingProfessionals(admin, businessId)
-	]);
-	return mergeAssignableProfessionals(linkedProfessionals, ownerAdminProfessionals);
+	const { data, error } = await supabase.rpc('list_follow_up_assignable_professionals', {
+		p_business_id: businessId,
+		p_patient_id: patientId
+	});
+	if (error) throw followUpFailure(error);
+	const rows = readArray(data, 'followUp.assignableProfessionals').map((value) => {
+		const row = readRecord(value, 'followUp.assignableProfessional');
+		return {
+			id: readText(row.id, 'followUp.assignableProfessional.id'),
+			name: readText(row.name, 'followUp.assignableProfessional.name'),
+			source: readChoice(row.source, ['patient_link', 'owner_admin_attending'] as const, 'followUp.assignableProfessional.source')
+		};
+	});
+	return mergeAssignableProfessionals(
+		rows.filter((row) => row.source === 'patient_link').sort((a, b) => a.name.localeCompare(b.name, 'es')),
+		rows.filter((row) => row.source === 'owner_admin_attending').sort((a, b) => a.name.localeCompare(b.name, 'es'))
+	);
 };
 
 const cleanQuery = (value: string) => value.trim().replace(/\s+/g, ' ');
 
 export type PatientSearchResult = { id: string; full_name: string; phone_e164: string | null };
 
-/** Búsqueda de pacientes para asignar: Dueño/Admin/Recepción todos; Profesional sólo los suyos. */
+/** Búsqueda de pacientes para asignar: la base muestra a cada rol los pacientes que puede leer. */
 export const listAssignablePatientsSearch = async (
-	admin: CitaSupabaseClient,
-	scope: RoleScope,
+	supabase: CitaSupabaseClient,
+	businessId: string,
 	rawQuery: string
 ): Promise<PatientSearchResult[]> => {
 	const query = cleanQuery(rawQuery);
@@ -444,29 +302,11 @@ export const listAssignablePatientsSearch = async (
 	const digits = query.replace(/\D/g, '');
 	const filters = [`full_name.ilike.%${safe}%`, `phone_e164.ilike.%${safe}%`, `dni.ilike.%${safe}%`];
 	if (digits.length >= 3) filters.push(`phone_e164.ilike.%${digits}%`);
-
-	// Profesional: restringir a sus pacientes vinculados activos.
-	let restrictIds: string[] | null = null;
-	if (!roleSeesAllFollowUps(scope.role)) {
-		if (!scope.professionalId) return [];
-		const { data: links, error: linksError } = await admin
-			.from('professional_patient_links')
-			.select('patient_id')
-			.eq('business_id', scope.businessId)
-			.eq('professional_id', scope.professionalId)
-			.eq('is_active', true);
-		if (linksError) throw linksError;
-		restrictIds = [...new Set((links ?? []).map((l) => String(l.patient_id)))];
-		if (restrictIds.length === 0) return [];
-	}
-
-	let q = admin
+	const { data, error } = await supabase
 		.from('patients')
 		.select('id, full_name, phone_e164')
-		.eq('business_id', scope.businessId)
-		.is('archived_at', null);
-	if (restrictIds) q = q.in('id', restrictIds);
-	const { data, error } = await q
+		.eq('business_id', businessId)
+		.is('archived_at', null)
 		.or(filters.join(','))
 		.order('updated_at', { ascending: false })
 		.limit(12);
@@ -478,273 +318,78 @@ export const listAssignablePatientsSearch = async (
 	}));
 };
 
-const patientBelongsToBusiness = async (
-	admin: CitaSupabaseClient,
-	businessId: string,
-	patientId: string
-): Promise<boolean> => {
-	const { data, error } = await admin
-		.from('patients')
-		.select('id')
-		.eq('business_id', businessId)
-		.eq('id', patientId)
-		.is('archived_at', null)
-		.maybeSingle();
-	if (error) throw error;
-	return Boolean(data?.id);
-};
-
-const professionalLinkedToPatient = async (
-	admin: CitaSupabaseClient,
-	businessId: string,
-	professionalId: string,
-	patientId: string
-): Promise<boolean> => {
-	const { data, error } = await admin
-		.from('professional_patient_links')
-		.select('id')
-		.eq('business_id', businessId)
-		.eq('professional_id', professionalId)
-		.eq('patient_id', patientId)
-		.eq('is_active', true)
-		.limit(1)
-		.maybeSingle();
-	if (error) throw error;
-	return Boolean(data?.id);
-};
-
-const professionalCanReceiveFollowUp = async (
-	admin: CitaSupabaseClient,
-	businessId: string,
-	professionalId: string,
-	patientId: string
-): Promise<boolean> => {
-	const assignableProfessionals = await listAssignableProfessionalsForPatient(
-		admin,
-		businessId,
-		patientId
-	);
-	return assignableProfessionals.some((professional) => professional.id === professionalId);
-};
-
 export type CreateFollowUpInput = {
 	businessId: string;
-	role: BusinessRole;
-	userId: string;
-	actingProfessionalId: string | null;
 	patientId: string;
 	remindOn: string;
 	message: string | null;
 	assignToProfessionalId: string | null;
-	timezone: string;
 };
 
-/** El endpoint NUNCA inserta assigned_professional_id null en el flujo normal. */
-export const createFollowUp = async (
-	admin: CitaSupabaseClient,
-	input: CreateFollowUpInput
-): Promise<string> => {
-	const { businessId, role, userId, patientId, timezone } = input;
-	if (!roleParticipatesInFollowUps(role)) throw new FollowUpError('FOLLOWUP_FORBIDDEN');
-
-	const today = businessTodayISO(timezone);
+/** La base decide la asignación: un profesional se asigna a sí mismo. */
+export const createFollowUp = async (supabase: CitaSupabaseClient, input: CreateFollowUpInput): Promise<string> => {
 	const remindOn = (input.remindOn ?? '').trim();
-	if (!isValidISODate(remindOn) || remindOn < today) throw new FollowUpError('FOLLOWUP_INVALID_DATE');
-
-	const message = (input.message ?? '').trim();
-	if (message.length > 500) throw new FollowUpError('FOLLOWUP_MESSAGE_TOO_LONG');
-
-	if (!(await patientBelongsToBusiness(admin, businessId, patientId)))
-		throw new FollowUpError('FOLLOWUP_PATIENT_NOT_FOUND');
-
-	let assignedProfessionalId: string;
-	if (role === 'professional') {
-		if (!input.actingProfessionalId)
-			throw new FollowUpError('FOLLOWUP_PROFESSIONAL_PROFILE_REQUIRED');
-		if (!(await professionalLinkedToPatient(admin, businessId, input.actingProfessionalId, patientId)))
-			throw new FollowUpError('FOLLOWUP_PATIENT_NOT_YOURS');
-		assignedProfessionalId = input.actingProfessionalId;
-	} else {
-		const assignTo = (input.assignToProfessionalId ?? '').trim();
-		if (!assignTo) throw new FollowUpError('FOLLOWUP_ASSIGN_REQUIRED');
-		if (!(await professionalCanReceiveFollowUp(admin, businessId, assignTo, patientId)))
-			throw new FollowUpError('FOLLOWUP_PROFESSIONAL_NOT_LINKED');
-		assignedProfessionalId = assignTo;
-	}
-
-	const { data, error } = await admin
-		.from('follow_ups')
-		.insert({
-			business_id: businessId,
-			patient_id: patientId,
-			assigned_professional_id: assignedProfessionalId,
-			remind_on: remindOn,
-			message: message || null,
-			status: 'pending',
-			created_by: userId
-		})
-		.select('id')
-		.single();
-	if (error) throw error;
-	return String(data.id);
+	if (!isValidISODate(remindOn)) throw new FollowUpError('FOLLOWUP_INVALID_DATE');
+	const { data, error } = await supabase.rpc('create_follow_up', {
+		p_business_id: input.businessId,
+		p_patient_id: input.patientId,
+		p_remind_on: remindOn,
+		p_message: input.message ?? '',
+		...(input.assignToProfessionalId ? { p_assigned_professional_id: input.assignToProfessionalId } : {})
+	});
+	if (error) throw followUpFailure(error);
+	return readText(data, 'followUp.created');
 };
 
-const loadScopedPendingFollowUp = async (admin: CitaSupabaseClient, scope: RoleScope, id: string) => {
-	const { data, error } = await admin
-		.from('follow_ups')
-		.select('id, patient_id, assigned_professional_id, status, remind_on, updated_at')
-		.eq('business_id', scope.businessId)
-		.eq('id', id)
-		.eq('status', 'pending')
-		.maybeSingle();
-	if (error) throw error;
-	if (!data) throw new FollowUpError('FOLLOWUP_NOT_FOUND');
-	if (!roleSeesAllFollowUps(scope.role)) {
-		if (!scope.professionalId || String(data.assigned_professional_id ?? '') !== scope.professionalId)
-			throw new FollowUpError('FOLLOWUP_FORBIDDEN');
-		if (!(await professionalLinkedToPatient(admin, scope.businessId, scope.professionalId, String(data.patient_id))))
-			throw new FollowUpError('FOLLOWUP_FORBIDDEN');
-	}
-	return data;
+/** Una acción sobre un seguimiento lleva la versión que el usuario vio. */
+export type FollowUpChange = { businessId: string; id: string; expectedUpdatedAt: string | null };
+
+const changeResult = (error: { message?: string | null } | null) => {
+	if (error) throw followUpFailure(error);
 };
 
-export const isStaleFollowUpUpdatedAt = (
-	expected: string | null | undefined,
-	current: string | null | undefined,
-	toleranceMs = 1000
-): boolean => {
-	const trimmedExpected = typeof expected === 'string' ? expected.trim() : '';
-	const trimmedCurrent = typeof current === 'string' ? current.trim() : '';
-	if (!trimmedExpected || !trimmedCurrent) return true;
-	if (trimmedExpected === trimmedCurrent) return false;
-
-	const expectedMs = Date.parse(trimmedExpected);
-	const currentMs = Date.parse(trimmedCurrent);
-	if (!Number.isFinite(expectedMs) || !Number.isFinite(currentMs)) {
-		return trimmedExpected !== trimmedCurrent;
-	}
-
-	return Math.abs(currentMs - expectedMs) > toleranceMs;
+export const markFollowUpDone = async (supabase: CitaSupabaseClient, change: FollowUpChange): Promise<void> => {
+	if (!change.expectedUpdatedAt) throw new FollowUpError('FOLLOWUP_STATUS_CONFLICT');
+	const { error } = await supabase.rpc('complete_follow_up', {
+		p_business_id: change.businessId,
+		p_follow_up_id: change.id,
+		p_expected_updated_at: change.expectedUpdatedAt
+	});
+	changeResult(error);
 };
 
-export const assertExpectedFollowUpVersion = (
-	expectedUpdatedAt: string | null | undefined,
-	existing: { updated_at?: string | null } | null
-) => {
-	if (isStaleFollowUpUpdatedAt(expectedUpdatedAt, existing?.updated_at)) {
-		throw new FollowUpError('FOLLOWUP_STATUS_CONFLICT');
-	}
-};
-
-export const markFollowUpDone = async (
-	admin: CitaSupabaseClient,
-	args: RoleScope & { id: string; expectedUpdatedAt: string | null }
-): Promise<void> => {
-	const existing = await loadScopedPendingFollowUp(admin, args, args.id);
-	assertExpectedFollowUpVersion(args.expectedUpdatedAt, existing);
-	const { data: changed, error } = await admin
-		.from('follow_ups')
-		.update({ status: 'done', done_at: new Date().toISOString() })
-		.eq('business_id', args.businessId)
-		.eq('id', args.id)
-		.eq('status', 'pending')
-		.eq('updated_at', String(existing.updated_at))
-		.select('id')
-		.maybeSingle();
-	if (error) throw error;
-	if (!changed) throw new FollowUpError('FOLLOWUP_STATUS_CONFLICT');
-};
-
+/** Posponer siempre lleva el seguimiento a un día futuro (sale de "ejecutándose"). */
 export const snoozeFollowUp = async (
-	admin: CitaSupabaseClient,
-	args: RoleScope & {
-		id: string;
-		newRemindOn: string;
-		timezone: string;
-		expectedUpdatedAt: string | null;
-	}
+	supabase: CitaSupabaseClient,
+	change: FollowUpChange & { newRemindOn: string }
 ): Promise<void> => {
-	const today = businessTodayISO(args.timezone);
-	const remindOn = (args.newRemindOn ?? '').trim();
-	// Snooze siempre a FUTURO (sale de "ejecutándose").
-	if (!isValidISODate(remindOn) || remindOn <= today) throw new FollowUpError('FOLLOWUP_INVALID_DATE');
-	const existing = await loadScopedPendingFollowUp(admin, args, args.id);
-	assertExpectedFollowUpVersion(args.expectedUpdatedAt, existing);
-	const { data: changed, error } = await admin
-		.from('follow_ups')
-		.update({ remind_on: remindOn })
-		.eq('business_id', args.businessId)
-		.eq('id', args.id)
-		.eq('status', 'pending')
-		.eq('updated_at', String(existing.updated_at))
-		.select('id')
-		.maybeSingle();
-	if (error) throw error;
-	if (!changed) throw new FollowUpError('FOLLOWUP_STATUS_CONFLICT');
+	const remindOn = (change.newRemindOn ?? '').trim();
+	if (!isValidISODate(remindOn)) throw new FollowUpError('FOLLOWUP_INVALID_DATE');
+	if (!change.expectedUpdatedAt) throw new FollowUpError('FOLLOWUP_STATUS_CONFLICT');
+	const { error } = await supabase.rpc('snooze_follow_up', {
+		p_business_id: change.businessId,
+		p_follow_up_id: change.id,
+		p_expected_updated_at: change.expectedUpdatedAt,
+		p_remind_on: remindOn
+	});
+	changeResult(error);
 };
 
 /** Editar un seguimiento pendiente: fecha, mensaje y (si corresponde) asignación. El paciente no cambia. */
 export const updateFollowUp = async (
-	admin: CitaSupabaseClient,
-	args: RoleScope & {
-		id: string;
-		remindOn: string;
-		message: string | null;
-		assignToProfessionalId: string | null;
-		timezone: string;
-		expectedUpdatedAt: string | null;
-	}
+	supabase: CitaSupabaseClient,
+	change: FollowUpChange & { remindOn: string; message: string | null; assignToProfessionalId: string | null }
 ): Promise<void> => {
-	const existing = await loadScopedPendingFollowUp(admin, args, args.id);
-	assertExpectedFollowUpVersion(args.expectedUpdatedAt, existing);
-
-	const today = businessTodayISO(args.timezone);
-	const remindOn = (args.remindOn ?? '').trim();
-	if (!isValidISODate(remindOn) || remindOn < today) throw new FollowUpError('FOLLOWUP_INVALID_DATE');
-
-	const message = (args.message ?? '').trim();
-	if (message.length > 500) throw new FollowUpError('FOLLOWUP_MESSAGE_TOO_LONG');
-
-	let assignedProfessionalId: string;
-	if (args.role === 'professional') {
-		if (!args.professionalId) throw new FollowUpError('FOLLOWUP_PROFESSIONAL_PROFILE_REQUIRED');
-		assignedProfessionalId = args.professionalId;
-	} else {
-		const assignTo = (args.assignToProfessionalId ?? '').trim();
-		if (!assignTo) throw new FollowUpError('FOLLOWUP_ASSIGN_REQUIRED');
-		if (!(await professionalCanReceiveFollowUp(admin, args.businessId, assignTo, String(existing.patient_id))))
-			throw new FollowUpError('FOLLOWUP_PROFESSIONAL_NOT_LINKED');
-		assignedProfessionalId = assignTo;
-	}
-
-	const { data: changed, error } = await admin
-		.from('follow_ups')
-		.update({
-			remind_on: remindOn,
-			message: message || null,
-			assigned_professional_id: assignedProfessionalId
-		})
-		.eq('business_id', args.businessId)
-		.eq('id', args.id)
-		.eq('status', 'pending')
-		.eq('updated_at', String(existing.updated_at))
-		.select('id')
-		.maybeSingle();
-	if (error) throw error;
-	if (!changed) throw new FollowUpError('FOLLOWUP_STATUS_CONFLICT');
-};
-
-/** ¿El profesional tiene seguimientos asociados (cualquier estado)? Para el guard de borrado. */
-export const professionalHasFollowUps = async (
-	admin: CitaSupabaseClient,
-	businessId: string,
-	professionalId: string
-): Promise<number> => {
-	const { count, error } = await admin
-		.from('follow_ups')
-		.select('id', { count: 'exact', head: true })
-		.eq('business_id', businessId)
-		.eq('assigned_professional_id', professionalId);
-	if (error) throw error;
-	return count ?? 0;
+	const remindOn = (change.remindOn ?? '').trim();
+	if (!isValidISODate(remindOn)) throw new FollowUpError('FOLLOWUP_INVALID_DATE');
+	if (!change.expectedUpdatedAt) throw new FollowUpError('FOLLOWUP_STATUS_CONFLICT');
+	const { error } = await supabase.rpc('update_follow_up', {
+		p_business_id: change.businessId,
+		p_follow_up_id: change.id,
+		p_expected_updated_at: change.expectedUpdatedAt,
+		p_remind_on: remindOn,
+		p_message: change.message ?? '',
+		...(change.assignToProfessionalId ? { p_assigned_professional_id: change.assignToProfessionalId } : {})
+	});
+	changeResult(error);
 };

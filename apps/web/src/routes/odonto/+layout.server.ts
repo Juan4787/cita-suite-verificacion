@@ -14,7 +14,6 @@ import {
 } from '$lib/server/platform/supabase';
 import { RateLimitExceededError } from '$lib/server/platform/rate-limits';
 import {
-	buildFollowUpScope,
 	businessTodayISO,
 	getNoticeSummary,
 	roleParticipatesInFollowUps,
@@ -131,18 +130,16 @@ export const load: LayoutServerLoad = async ({
 						return { notice: { count: 0, single: null, dismissalKey: '0' }, todayISO: '' };
 					}
 					try {
-						const admin = await getAdminClient();
-						const userId =
-							activeBusiness.role === 'professional'
-								? (await getAuthUserId(supabase, auth.access_token)) ?? ''
-								: '';
-						const scope = await buildFollowUpScope(admin, activeBusiness, userId);
+						// The database counts what each role may read, as the lists do.
 						return {
-							notice: await getNoticeSummary(admin, scope),
+							notice: await getNoticeSummary(supabase, {
+								businessId: activeBusiness.business.id,
+								timezone: activeBusiness.business.timezone
+							}),
 							todayISO: businessTodayISO(activeBusiness.business.timezone)
 						};
 					} catch (noticeErr) {
-						// Degradación elegante: si la tabla aún no existe en remoto, no rompemos el layout.
+						// The notice is secondary: without it the shell still loads.
 						logServerFailure('Error cargando aviso de seguimientos', noticeErr);
 						return { notice: { count: 0, single: null, dismissalKey: '0' }, todayISO: '' };
 					}

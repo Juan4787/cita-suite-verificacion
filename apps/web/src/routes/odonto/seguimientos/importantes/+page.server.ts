@@ -1,8 +1,6 @@
 import { env } from '$env/dynamic/private';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
-import { createSupabaseAdminClient } from '$lib/server/platform/supabase';
 import {
-	buildFollowUpScope,
 	businessTodayISO,
 	listExecutingFollowUps,
 	roleParticipatesInFollowUps,
@@ -17,21 +15,22 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, depends }) 
 	if (env.DEMO_MODE === 'true') {
 		return {
 			executing: [],
+			executingTotal: 0,
 			canAssign: false,
 			todayISO: businessTodayISO('America/Argentina/Cordoba'),
 			demo: true
 		};
 	}
 
-	const { business, userId } = await getOdontoContext({ locals, fetch, cookies });
+	const { supabase, business } = await getOdontoContext({ locals, fetch, cookies });
 	if (!roleParticipatesInFollowUps(business.role)) throw redirect(303, '/odonto/agenda');
 
-	const admin = await createSupabaseAdminClient('odonto', fetch);
-	const scope = await buildFollowUpScope(admin, business, userId);
-	const executing = await listExecutingFollowUps(admin, scope);
+	// The database shows each role what it may read, before the list's limit.
+	const list = await listExecutingFollowUps(supabase, { businessId: business.business.id, timezone: business.business.timezone });
 
 	return {
-		executing,
+		executing: list.items,
+		executingTotal: list.total,
 		canAssign: roleSeesAllFollowUps(business.role),
 		todayISO: businessTodayISO(business.business.timezone),
 		demo: false
