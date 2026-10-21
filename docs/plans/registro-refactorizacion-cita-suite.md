@@ -923,3 +923,30 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
   4. **`messaging.ts` (WhatsApp).** Es una función descartada y dormida: exige el secreto interno y `WHATSAPP_AUTOMATIC_REMINDERS_ENABLED`, y el programador no la llama. Ante un error de la suscripción abría el acceso (`true`). Ahora falla cerrado: el mensaje cuenta como fallido o se reintenta.
   5. **Mercado Pago, cancelación.** El barrido previo devolvía `{ credited: 0 }` ante un error del proveedor, sin registrarlo. El comentario de la cancelación decía que la conciliación podía curarlo, pero la conciliación sólo recorre `pending`, `authorized` y `paused`, y la cancelación marca la fila como `cancelled`: el último mes pagado podía perderse en silencio. Ahora queda un evento que requiere atención (`final_charges_unchecked`). La cancelación sigue, porque frenarla podría cobrar otro mes. El control de doble débito, que se salteaba sin registro ante un error de lectura, ahora lo registra.
   6. **Guardados de la ayuda en negocio y reserva en línea** (R4): pasan al cliente del usuario, con la política de producción verificada.
+- **Auditoría en cadena (21 de octubre).** Cada fast verifica la tanda anterior, ya aplicada, y reproduce la siguiente, cuya corrección espera fuera del árbol en `.verification/pending-audit-fixes-20261021/rN/`.
+  - **fast 39580290457 sobre `d1e8591`:** reproducción de R7. Fallaron exactamente las 14 pruebas nuevas, todas por aserción.
+  - **fast 39581069237 sobre `cc96e60`:** R7 verificada en el servidor, con 1.358 aprobadas y `svelte-check` sin errores. Reproducción del buscador: 4 fallas.
+    - **Defecto:** el texto de las búsquedas de pacientes y de Seguimientos iba sin comillas dentro de `or()` de PostgREST. Una coma o un paréntesis partía el árbol de filtros.
+    - **Corrección:** `platform/postgrest-filters.ts` (`ilikeContains`). Escapa los comodines de LIKE y pone el valor entre comillas, duplicando las barras porque el analizador de PostgREST lee `\x` como `x` (`pQuotedValue` en `QueryParams.hs`, verificado en su fuente). Su prueba replica ese analizador.
+  - **fast 39582448364 sobre `6828e4f`:** buscador verificado. Reproducción de `r9`: 6 fallas. Cinco fueron por aserción y una por la excepción posterior a que el código anterior siguiera consultando con un id inválido; esa prueba se hizo después fiel a PostgREST (22P02).
+    - La agenda diaria aceptaba fechas imposibles: JavaScript movía «2026-02-31» al 3 de marzo bajo el rótulo pedido.
+    - Al cambiar el estado de un turno sin fecha en el formulario, la redirección caía en el día UTC.
+    - Había 21 copias del patrón UUID en dos variantes. Una rechazaba versiones 6 a 8, de modo que el mismo id valía en una ruta y no en otra. Ahora hay un único `isUuid` en `contracts/uuid.ts`, con la forma canónica de cualquier versión.
+    - Un slug con forma de identificador lo lee el enlace de reserva como id. Ahora se rechaza al guardarlo.
+    - Un id mal formado de profesional o de aranceles respondía 503 en vez de 404.
+    - «Hoy en la zona del consultorio» tenía seis copias. Ahora todas delegan en `zonedDate` y `todayInTimeZone` del calculador compartido, que ya cachea sus formateadores. `businessTodayISO` deja de caer en la zona del servidor ante una zona inválida.
+  - **fast 39582965020 sobre `cf25ef1`:** `r9` verificada, con 1.374 aprobadas. Reproducción de los webhooks: 3 fallas, todas por aserción.
+    - El de Mercado Pago leía y parseaba el cuerpo completo antes de verificar una firma que no lo cubre.
+    - El de WhatsApp lo leía completo aunque no hubiera secreto con qué verificarlo.
+    - **Corrección:** `readBoundedBytes` en `form-data.ts`, también usado por el formulario de reservas. Mercado Pago verifica antes de leer, con tope de 64 KB; el cuerpo es informativo. WhatsApp rechaza sin leer si la firma no se puede comprobar, y lee hasta 256 KB.
+  - **fast 39583668308 sobre `3ebdf2f`:** `svelte-check` encontró un error mío en `readBoundedBytes`. Con TypeScript 5.7, `Uint8Array` es genérico y mi anotación lo ensanchó a un tipo que no es `BodyInit`. Se corrigió la anotación.
+  - **fast 39583902412 sobre `4d9e998`:** webhooks verificados, con 1.377 aprobadas. Reproducción de `r11`: 5 fallas.
+    - **Suscripción.** Si fallaba la lectura de la suscripción, o faltaba el cliente de servicio, la página la presentaba como inexistente: ofrecía suscribirse y escondía «Cancelar suscripción». Además, el historial ilegible se veía vacío. Ahora la página dice que no pudo comprobarlo y no ofrece actuar sobre un estado desconocido.
+    - El alta de la suscripción volvía a pedir la identidad a Auth; ahora usa la que verificó `hooks`.
+    - Un profesional inexistente respondía 503 en aranceles; ahora 404.
+  - **Guarda nueva `scripts/lib/request-identity.test.mjs`.** La identidad de un pedido es la que `hooks` verificó, como pide la etapa 2. Decodificar el token queda reservado a `supabase.ts`, `odonto-context.ts`, `business.ts` y `hooks.server.ts`. Se reprodujo localmente con `node --test`, porque es una guarda liviana: falló con 9 archivos (`.verification/request-identity-reproduction-20261021.txt`). Con `r12` aplicada, aprueba.
+  - **Descartados con justificación:**
+    - `reminders.ts`, `usuarios` y `patient-detail.ts` ya fallan explícitamente.
+    - `recordPublicAttempt` sólo registra el error: frenar una reserva legítima por no poder guardar el intento perjudicaría a pacientes, y el límite global por IP es independiente.
+    - El caché de revisión de pacientes sin infraestructura deja la lista sin caché pero completa.
+  - **Pendiente con prioridad:** el historial visible de cambios del paciente (`patient_profile_change_events`) se escribe fuera de la transacción de la ficha, con la clave de servicio y sólo un registro ante un error. Un fallo deja el cambio sin su línea de historial. Corresponde llevarlo a la misma transacción SQL.
