@@ -79,24 +79,23 @@ try {
 	const localApi = local.API_URL;
 	const localKey = local.SERVICE_ROLE_KEY ?? local.SECRET_KEY;
 	if (!localApi || !localKey) throw new Error('The new project did not report its API and service key.');
-	// A new project defines the platform's roles itself, and their settings are the platform's.
-	// A role statement is skipped when it names only platform roles: those the new project
-	// already has, and the reserved supabase_* and pg_* roles (the dump creates Realtime's
-	// supabase_realtime_admin, which the CLI does not reserve). Statements about the project's
-	// own roles stay. The schema gets the fix the guide lists for supabase_admin ownership.
+	// A new project defines the platform's roles itself. As the CLI does for the roles it
+	// reserves, a statement that creates a platform role, grants it anything, or alters one
+	// is skipped; the settings the CLI restores on purpose (statement_timeout, pgrst.*) stay.
+	// Platform roles: those the new project already has, and the reserved supabase_* and pg_*
+	// ones (the dump grants Realtime's supabase_realtime_admin a parameter the CLI does not
+	// reserve). The schema gets the fix the guide lists for supabase_admin ownership.
 	const existingRoles = new Set(JSON.parse(restoredSql("select json_agg(rolname)::text from pg_roles;")));
+	const platform = (role) => existingRoles.has(role) || /^(supabase_|pg_)/.test(role);
+	const restorableSetting = /^ALTER ROLE "(?:[^"]|"")+" SET "(statement_timeout|pgrst\.[^"]+)" /;
 	const skippedRoles = new Set();
 	const rolesLines = readFileSync(files.roles, 'utf8').split('\n').map((line) => {
-		// The roles a statement names: CREATE or ALTER ROLE "x" …, or GRANT "a" TO "b".
-		const identifier = '"((?:[^"]|"")+)"';
-		const altered = new RegExp(`^(?:CREATE|ALTER) ROLE ${identifier}`).exec(line);
-		const granted = new RegExp(`^GRANT ${identifier} TO ${identifier}(?: WITH [A-Z ]+? OPTION)?(?: GRANTED BY ${identifier})?`).exec(line);
-		const match = altered ?? granted;
-		if (!match) return line;
-		const named = match.slice(1).filter(Boolean).map((role) => role.replaceAll('""', '"'));
-		const platform = (role) => existingRoles.has(role) || /^(supabase_|pg_)/.test(role);
-		if (!named.length || !named.every(platform)) return line;
-		named.forEach((role) => skippedRoles.add(role));
+		const created = /^CREATE ROLE "((?:[^"]|"")+)"/.exec(line)?.[1];
+		const grantee = /^GRANT .+ TO "((?:[^"]|"")+)"/.exec(line)?.[1];
+		const altered = restorableSetting.test(line) ? null : /^ALTER ROLE "((?:[^"]|"")+)"/.exec(line)?.[1];
+		const role = (created ?? grantee ?? altered)?.replaceAll('""', '"');
+		if (!role || !platform(role)) return line;
+		skippedRoles.add(role);
 		return '-- ' + line;
 	});
 	writeFileSync(files.roles, rolesLines.join('\n'));
