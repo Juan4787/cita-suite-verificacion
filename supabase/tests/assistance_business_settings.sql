@@ -1,7 +1,8 @@
 -- An active account assistance acts as an administrator of the practice
--- (user_business_role): it reads and saves the practice's settings under row level
--- security, as the settings pages do with the user's own client, and loses both when
--- the grant expires. Synthetic data only; everything is rolled back.
+-- (user_business_role): it reads and saves the practice's settings and its Google review
+-- settings under row level security, as the settings pages do with the user's own
+-- client, and loses both when the grant expires. Synthetic data only; everything is
+-- rolled back.
 begin;
 select extensions.plan(3);
 
@@ -21,31 +22,40 @@ begin
  insert into assistance_fixture values('business',b),('owner',u_owner),('support',u_support),('stranger',u_stranger);
 end $$;
 
--- Whether the actor sees the practice, and whether a settings save returns its row.
+-- Whether the actor sees the practice, whether a settings save returns its row, and
+-- whether it saves the review settings the way their page does (an upsert).
 create function pg_temp.settings_access(p_actor text) returns text language plpgsql as $$
-declare v_business uuid:=(select id from assistance_fixture where label='business'); v_reads boolean; v_saved uuid;
+declare v_business uuid:=(select id from assistance_fixture where label='business'); v_reads boolean; v_saved uuid; v_review uuid;
 begin
  perform set_config('request.jwt.claim.sub',(select id::text from assistance_fixture where label=p_actor),true);
  perform set_config('request.jwt.claim.role','authenticated',true);
  execute 'set local role authenticated';
  v_reads:=exists(select 1 from public.businesses where id=v_business);
  update public.businesses set public_booking_enabled=false where id=v_business returning id into v_saved;
+ begin
+  insert into public.google_review_settings(business_id, enabled) values(v_business, false)
+  on conflict (business_id) do update set enabled = excluded.enabled
+  returning business_id into v_review;
+ exception when insufficient_privilege then
+  v_review:=null;
+ end;
  execute 'reset role';
- return case when v_reads then 'reads' else 'hidden' end||' '||case when v_saved is not null then 'saves' else 'cannot save' end;
+ return case when v_reads then 'reads' else 'hidden' end||' '||case when v_saved is not null then 'saves' else 'cannot save' end
+  ||' '||case when v_review is not null then 'saves reviews' else 'cannot save reviews' end;
 end $$;
 
 -- 1. The active assistance reads the practice it may change and saves its settings.
-select extensions.is(pg_temp.settings_access('support'), 'reads saves',
+select extensions.is(pg_temp.settings_access('support'), 'reads saves saves reviews',
  'an active assistance reads and saves its practice settings under its own rules');
 
 -- 2. Someone without membership or assistance does neither.
-select extensions.is(pg_temp.settings_access('stranger'), 'hidden cannot save',
+select extensions.is(pg_temp.settings_access('stranger'), 'hidden cannot save cannot save reviews',
  'a user without membership or assistance neither reads nor saves the practice');
 
 -- 3. Once the grant expires, the assistance does neither.
 update public.account_assistance_grants set expires_at=now()-interval '1 minute', starts_at=now()-interval '2 hours'
  where business_id=(select id from assistance_fixture where label='business');
-select extensions.is(pg_temp.settings_access('support'), 'hidden cannot save',
+select extensions.is(pg_temp.settings_access('support'), 'hidden cannot save cannot save reviews',
  'an expired assistance neither reads nor saves the practice');
 
 select * from extensions.finish();

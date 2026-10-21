@@ -154,11 +154,12 @@ describe('Configuración · Reseña de Google', () => {
 		});
 	});
 
-	it('una ayuda activa revalida en servidor y escribe con el cliente administrativo', async () => {
+	it('una ayuda activa revalida en servidor y guarda con sus propias reglas, nunca con la clave de servicio', async () => {
 		state.context.assistance = { grantId: 'grant-1' };
 		const regular = createDatabaseClient({ assistanceActive: true });
 		const admin = createDatabaseClient();
 		mocks.createSupabaseServerClient.mockResolvedValue(regular.client);
+		// Were the service role used, it would save too: the test checks which client does.
 		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
 
 		const result = await actions.default(
@@ -176,7 +177,23 @@ describe('Configuración · Reseña de Google', () => {
 		expect(regular.client.rpc).toHaveBeenCalledWith('user_has_active_account_assistance', {
 			target_business_id: 'business-1'
 		});
-		expect(regular.upserts).toHaveLength(0);
-		expect(admin.upserts).toHaveLength(1);
+		expect(regular.upserts).toHaveLength(1);
+		expect(mocks.createSupabaseAdminClient).not.toHaveBeenCalled();
+	});
+
+	it('una ayuda activa lee la configuración con sus propias reglas', async () => {
+		state.context.assistance = { grantId: 'grant-1' };
+		const regular = createDatabaseClient({ assistanceActive: true });
+		mocks.createSupabaseServerClient.mockResolvedValue(regular.client);
+		mocks.createSupabaseAdminClient.mockResolvedValue(createDatabaseClient().client);
+
+		await load({
+			locals: { auth: { access_token: 'access', refresh_token: 'refresh' } },
+			fetch: vi.fn(),
+			cookies: {}
+		} as unknown as Parameters<typeof load>[0]);
+
+		expect(regular.client.from).toHaveBeenCalledWith('google_review_settings');
+		expect(mocks.createSupabaseAdminClient).not.toHaveBeenCalled();
 	});
 });

@@ -5,7 +5,7 @@
 -- public anon key reaches no table at all. Catalog checks and a probe table only;
 -- everything is rolled back.
 begin;
-select extensions.plan(3);
+select extensions.plan(4);
 
 -- 1. The default privileges of the roles that apply migrations give the API roles
 -- nothing: postgres in hosted projects, supabase_admin in this reconstruction.
@@ -44,6 +44,15 @@ begin
  if v_relations is not null then raise exception 'TEST_ANON_RELATION_PRIVILEGES %',v_relations; end if;
 end $$;
 select extensions.pass('the anon key reaches no public table, view or sequence directly');
+
+-- API roles hold no privilege beyond reading and writing rows, as the migrations grant:
+-- the automatic grants also gave TRUNCATE, REFERENCES, TRIGGER and MAINTAIN.
+select extensions.ok(not exists (
+ select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+ where n.nspname = 'public' and c.relkind in ('r','p','v','m')
+  and (has_table_privilege('authenticated', c.oid, 'TRUNCATE,REFERENCES,TRIGGER,MAINTAIN')
+   or has_table_privilege('anon', c.oid, 'TRUNCATE,REFERENCES,TRIGGER,MAINTAIN'))
+), 'API roles hold no privilege beyond reading and writing rows');
 
 select * from extensions.finish();
 rollback;

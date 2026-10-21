@@ -5131,35 +5131,69 @@ export type Database = {
         }
         Returns: undefined
       }
-      update_patient_with_clinical_profile_safely: {
-        Args: {
-          p_actor_id: string
-          p_address: string
-          p_allergies?: string
-          p_background?: string
-          p_birth_date: string
-          p_business_id: string
-          p_dni: string
-          p_email: string
-          p_expected_clinical_profile_updated_at?: string
-          p_expected_patient_updated_at?: string
-          p_full_name: string
-          p_insurance: string
-          p_insurance_plan: string
-          p_medication?: string
-          p_patient_id: string
-          p_phone: string
-          p_phone_e164: string
-          p_phone_raw: string
-          p_update_clinical_profile?: boolean
-        }
-        Returns: {
-          clinical_profile_id: string
-          clinical_profile_updated_at: string
-          patient_id: string
-          patient_updated_at: string
-        }[]
-      }
+      update_patient_with_clinical_profile_safely:
+        | {
+            Args: {
+              p_actor_id: string
+              p_address: string
+              p_allergies?: string
+              p_background?: string
+              p_birth_date: string
+              p_business_id: string
+              p_change_summary: string
+              p_changed_by_name: string
+              p_changed_by_professional_id: string
+              p_changed_fields: string[]
+              p_dni: string
+              p_email: string
+              p_expected_clinical_profile_updated_at?: string
+              p_expected_patient_updated_at?: string
+              p_full_name: string
+              p_insurance: string
+              p_insurance_plan: string
+              p_medication?: string
+              p_patient_id: string
+              p_phone: string
+              p_phone_e164: string
+              p_phone_raw: string
+              p_update_clinical_profile?: boolean
+            }
+            Returns: {
+              clinical_profile_id: string
+              clinical_profile_updated_at: string
+              patient_id: string
+              patient_updated_at: string
+            }[]
+          }
+        | {
+            Args: {
+              p_actor_id: string
+              p_address: string
+              p_allergies?: string
+              p_background?: string
+              p_birth_date: string
+              p_business_id: string
+              p_dni: string
+              p_email: string
+              p_expected_clinical_profile_updated_at?: string
+              p_expected_patient_updated_at?: string
+              p_full_name: string
+              p_insurance: string
+              p_insurance_plan: string
+              p_medication?: string
+              p_patient_id: string
+              p_phone: string
+              p_phone_e164: string
+              p_phone_raw: string
+              p_update_clinical_profile?: boolean
+            }
+            Returns: {
+              clinical_profile_id: string
+              clinical_profile_updated_at: string
+              patient_id: string
+              patient_updated_at: string
+            }[]
+          }
       upsert_business_role_access: {
         Args: {
           target_business_id: string
