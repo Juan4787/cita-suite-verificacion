@@ -122,9 +122,7 @@ jobs:
         env:
           CITA_STAGING_DATABASE_URL: ${{ secrets.CITA_STAGING_DATABASE_URL }}
           CITA_STAGING_SERVICE_ROLE_KEY: ${{ secrets.CITA_STAGING_SERVICE_ROLE_KEY }}
-        run: |
-          node scripts/prepare-ci-services.mjs
-          node scripts/backup-rehearsal.mjs
+        run: node scripts/backup-rehearsal.mjs
       # The management link of the device check is read on the local machine only.
       - name: Operate the real-device push check of one run
         if: startsWith(inputs.operation, 'device-')
