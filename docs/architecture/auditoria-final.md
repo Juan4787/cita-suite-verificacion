@@ -90,7 +90,7 @@ Estados:
 | La base publicada es la probada | Comparación del catálogo después del ensayo: idéntico al de staging en las nueve secciones, salvo la deriva aceptada | Cumplido como preparación; se repite después de publicar |
 | Rutas alternativas que evitan los contratos (sección 5) | Escritura directa de membresías, que dejaba a un admin hacerse dueño, y de pacientes, turnos y auditoría: `20261022010000`, con su prueba que falló primero | Cumplido en CI; producción en la tanda 2 |
 | Sin pérdida de información clínica | El borrado de un usuario borraba su historia clínica: `20261022000000`, con su prueba que falló primero | Cumplido en CI; producción en la tanda 1 |
-| Reversión compatible | Publicación en dos tandas: expandir, desplegar y contraer | Cumplido como preparación |
+| Reversión compatible | Publicación en dos tandas; `313355a` sólo sirve antes de contraer. Nueva puerta `rollback-browser` preparada para verificar el paquete previo `dfb487f` contra las migraciones actuales; todavía sin resultado. | Parcial: faltan prueba del baseline y ensayo de retorno antes de la tanda 2 |
 
 ## Ampliación: identidad Cita Suite
 

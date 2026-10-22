@@ -95,7 +95,7 @@ export async function observeRenderHealth(
 			const hasTitle = Boolean((await page.title()).trim());
 			const report = {
 				scope:
-					'Actual browser diagnostics on owned disposable app; console text/query strings excluded.',
+					'Actual browser diagnostics on an owned disposable origin; console text/query strings excluded.',
 				path: safePath(page.url()),
 				hasTitle,
 				messages,

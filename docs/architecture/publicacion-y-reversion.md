@@ -287,6 +287,25 @@ rm ~/.config/cita-suite/production/capacity-secret
 1. Publicar los archivos exactos de `.verification/natalia-production` en `juan-altamira/web-natalia`, destino `natalia-frutos.vercel.app`, según el procedimiento concreto verificado. La autorización de producción del 17 de octubre ya cubre esta acción; no hace falta volver a solicitarla. Comprobar el HEAD antes de actualizar y conservar el commit anterior para revertir. No publicar mientras falten las puertas anteriores.
 2. `node scripts/verify-production-release.mjs "$D" --natalia` debe aprobar, archivo por archivo.
 
+**Destino comprobado el 22 de octubre:** la CLI soportada `vercel project inspect` y `vercel api /v9/projects/natalia-frutos --scope juanaltamiras-projects` confirmaron proyecto `prj_ddhAhez9VNro373XWSykLkhU5vBS`, cuenta `team_CGSlkRXKKlw98jb3O2wSmcyt`, raíz del repositorio, framework Other, comandos y output sin personalizar, GitHub `juan-altamira/web-natalia` (ID 1416254094), producción desde main. Sólo se conservaron esos campos; no se leyeron archivos de credenciales ni se volcaron variables de entorno. Recibo `.verification/vercel-natalia-project-20261022.json`.
+
+**Preparación revisable, sin publicación:** `.verification/natalia-publication-b826d5c/` contiene los 35 archivos estáticos exactos en `site/`, `vercel.json` y `publication-plan.json` con las huellas y el estado previo. Es del paquete diagnóstico `b826d5c`, **no** una autorización técnica para publicarlo: rehacerla con el release final aprobado, conservando exactamente los mismos pasos. El plan JSON no se publica.
+
+```bash
+node scripts/prepare-natalia-publication.mjs "$D" .verification/vercel-natalia-project-20261022.json <HEAD-main-actual> <arbol-actual>
+```
+
+Usar metadatos filtrados recién leídos del proyecto y los SHA de la consulta actual de GitHub. El script comprueba proyecto/cuenta/Git/raíz, el manifiesto y el enlace de producción; crea una carpeta nueva por revisión y se niega a sobrescribirla. Sólo escribe archivos locales. Si cambió el destino o la configuración, revisar el cambio antes de preparar.
+
+Secuencia exacta por la API de GitHub conectada, después de cumplir las puertas anteriores:
+
+1. Volver a leer main y su árbol en `juan-altamira/web-natalia`; comparar con `expectedHead`/`expectedTree` del plan preparado. Si cambiaron, inspeccionar la diferencia y actualizar la preparación; no sobrescribir trabajo intermedio.
+2. Comprobar `loadBuildArtifact` y `nataliaSite` con el origen y la clave pública de producción. Copiar sólo `.verification/natalia-production/` a `site/`, byte por byte. El único archivo de configuración nuevo es `vercel.json`: `{"framework":null,"buildCommand":"","installCommand":"","outputDirectory":"site"}`. Esto excluye de la publicación el JavaScript de reserva en memoria y conserva el origen anterior en Git. No hay compilación ni instalación en Vercel.
+3. Crear blobs (`github_create_blob`, base64 para binarios), un árbol sobre el árbol previo (`github_create_tree`), y un commit con el HEAD previo como padre (`github_create_commit`). Incluir únicamente los 35 archivos bajo `site/` y `vercel.json`. Conservar SHA y manifiesto. No publicar `publication-plan.json`, recibos ni credenciales.
+4. Actualizar main con `github_update_ref`, `expected_sha` igual al HEAD inspeccionado, sin force. Un rechazo de la comparación exige leer y revisar el nuevo HEAD antes de reintentar. El push activa el despliegue Git del proyecto correcto de Natalia.
+5. Consultar el estado del commit y de Vercel; si no termina `READY`, detenerse. Ejecutar la comprobación servida con `--natalia` y exigir igualdad de los 35 archivos, además del recorrido real de reserva y su lectura persistida. Un status success solo no prueba el recorrido.
+6. **Reversión:** el despliegue previo comprobado es `dpl_GftFq86SmaGL6xWfynd9ZuxFWWa8` (volver a leer antes de publicar). Si main sigue en el commit de publicación, crear un commit nuevo con el árbol previo y ese commit como padre, y actualizar con comparación de SHA; no reescribir historia. Si main cambió, revisar la diferencia primero. Comprobar estado y bytes servidos anteriores; no dejar Git publicando una versión distinta de la restaurada.
+
 ### 14. Repositorio e identidad
 
 Con los disparadores desconectados, la revisión publicada llega a `main` y se aplica la transición de [identidad-cita-suite.md](identidad-cita-suite.md). Sólo se reconectan los disparadores revisados.

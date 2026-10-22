@@ -1,0 +1,1944 @@
+{
+  "at": "2026-10-22T20:37:50.829972+00:00",
+  "sourceSnapshot": "dfb487faa74b8117c46c180c70f368f77f3dbcd2",
+  "files": 161,
+  "bytes": 9619018,
+  "extensions": {
+    ".md": 66,
+    ".json": 32,
+    ".sha256": 8,
+    ".png": 36,
+    ".txt": 16,
+    ".mjs": 2,
+    ".html": 1
+  },
+  "brokenRelativeLinks": [],
+  "documents": [
+    {
+      "path": "docs/admin-panel-replication-spec.md",
+      "bytes": 20386,
+      "sha256": "16e968abb29f29410a0c4a1fcb6a0d3d6c6da090cea30b95d3fe32624712ea4f",
+      "lines": 1374,
+      "headings": [
+        "# Especificación para replicar el panel de administración en Dental Suite",
+        "## 1. Alcance exacto",
+        "## 2. Regla de diseño final",
+        "## 3. Sistema visual Dental Suite que debe usarse",
+        "## 4. Layout que debe replicarse",
+        "## 5. Panel maestro actual: lógica estudiada",
+        "## 6. Acciones actuales del panel maestro",
+        "### 6.1 Cargar lista",
+        "### 6.2 Agregar correo",
+        "### 6.3 Habilitar / deshabilitar",
+        "### 6.4 Eliminar",
+        "## 7. Mejora obligatoria: opción 1 día / 24 horas",
+        "### 7.1 Opciones recomendadas",
+        "### 7.2 Modelo de datos recomendado",
+        "### 7.3 Cambio necesario en función de acceso",
+        "### 7.4 Estado visual del acceso",
+        "### 7.5 Acciones sobre correos vencidos",
+        "## 8. UI final recomendada para el panel maestro en Dental Suite",
+        "### 8.1 Hero",
+        "### 8.2 Card de alta",
+        "### 8.3 Lista de accesos",
+        "### 8.4 Modal de confirmación",
+        "## 9. Panel administrativo de expedientes: lógica estudiada",
+        "### 9.1 Lista principal",
+        "### 9.2 Alta rápida de expediente",
+        "### 9.3 Detalle de expediente",
+        "### 9.4 Timeline",
+        "### 9.5 Nuevo movimiento",
+        "### 9.6 Editar expediente",
+        "### 9.7 Archivar",
+        "## 10. Cómo adaptar la lógica a Dental Suite",
+        "## 11. Pantalla recomendada: Accesos autorizados",
+        "## 12. Estados recomendados de acceso",
+        "## 13. Reglas de seguridad",
+        "## 14. Migración recomendada para 1 día / 24 horas",
+        "## 15. Acciones server-side recomendadas",
+        "### 15.1 add_email",
+        "### 15.2 renew_email",
+        "### 15.3 toggle_email",
+        "### 15.4 delete_email",
+        "## 16. UX exacta para la opción 1 día / 24 horas",
+        "## 17. Diferencias entre lógica y UI",
+        "## 18. Cosas que no deben replicarse",
+        "## 19. Criterios de cierre para futura implementación",
+        "## 20. Resumen ejecutivo"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/architecture/areas-y-fronteras.md",
+      "bytes": 5680,
+      "sha256": "c67c093cf19b9d0852fb2d3f8fb195997f7f6ca25b5d498f3cfe37a5b2b06645",
+      "lines": 43,
+      "headings": [
+        "# Áreas y fronteras de Cita Suite",
+        "## Responsabilidades y contratos",
+        "## Puertas de cierre pendientes",
+        "## Trazabilidad de la extracción inicial",
+        "## Cambios posteriores al mapa inicial de extracción"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/auditoria-final.md",
+      "bytes": 12542,
+      "sha256": "e53998337474c769fb54244c088096e5ab252b6d965c4dfc55406843b1917a26",
+      "lines": 114,
+      "headings": [
+        "# Auditoría final punto por punto",
+        "## 1. Decisiones fijadas",
+        "## 2. Arquitectura y contratos",
+        "## 3. Etapas",
+        "## 4. Capacidad, regresiones y observabilidad",
+        "## 5. Auditoría, publicación y documentación",
+        "## Base de producción",
+        "## Ampliación: identidad Cita Suite",
+        "## Decisión del 20 de octubre: lanzamiento"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/base-de-campana.md",
+      "bytes": 5295,
+      "sha256": "bee26b66f746fda7ce3e0e367f038c1f598a369622dd2d02efaeb63fc0012d76",
+      "lines": 41,
+      "headings": [
+        "# Base efectiva de la campaña",
+        "## Código y preservación",
+        "## Aplicaciones y destinos",
+        "## Automatismos y proveedores de entrada",
+        "## Accesos comprobados",
+        "## Problemas de entrada y evidencia"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/capacidad.md",
+      "bytes": 14130,
+      "sha256": "a102ae8f6912418f581310c1e6fefdf2ac234ae5b25d7fd7bab1d11807496344",
+      "lines": 94,
+      "headings": [
+        "# Capacidad: escenarios, generadores y resultados",
+        "## Qué se mide y dónde",
+        "## Datos sintéticos",
+        "## Carga interna",
+        "## Reserva pública",
+        "## Ensayo alojado de 5 consultorios (staging, planes gratuitos)",
+        "## Hallazgos",
+        "## Límites conocidos",
+        "## Causa de las pausas en Supabase Free (staging, 21 de octubre)"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/clave-de-servicio.md",
+      "bytes": 8369,
+      "sha256": "b95d97fb5df2e05a66b281292709bd8b8d2ba9d5aa7027d612b772d3b8e39cc3",
+      "lines": 101,
+      "headings": [
+        "# Inventario de la clave de servicio",
+        "## Regla",
+        "## Categorías",
+        "### 1. Rutas públicas sin sesión",
+        "### 2. Webhooks firmados",
+        "### 3. Tareas internas",
+        "### 4. Panel maestro",
+        "### 5. Infraestructura de la plataforma",
+        "### 6. Rutas del consultorio con un actor que SQL revalida",
+        "### 7. Tablas sin acceso de `authenticated`, leídas para el consultorio",
+        "## Corregido en la auditoría (21 de octubre)",
+        "## Permisos de los roles de la API"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/contabilidad-documentos.md",
+      "bytes": 10915,
+      "sha256": "ca94e8137f0a01f1be146c6271eb2783952c569fa09b81755ec2285c0d259c32",
+      "lines": 69,
+      "headings": [
+        "# Documentos: capacidades, cuotas y ciclo de vida",
+        "## Autoridades y unidades",
+        "## Activación, permisos y cambios de política",
+        "## Reserva y emisión de URLs",
+        "## Transferencia y confirmación",
+        "## Papelera, fallos, expiración y reconciliación",
+        "## Contratos y regresiones"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/control-de-consumo.md",
+      "bytes": 7954,
+      "sha256": "b3df8fa69c7b64653a6f7c514c8084e5cfb16cffb919a14e411dc5ad04b55acb",
+      "lines": 43,
+      "headings": [
+        "# Control de consumo",
+        "## Qué pasa al exceder los planes gratuitos",
+        "## Implementadas y verificadas",
+        "## Postergadas, con su riesgo y cuándo retomarlas",
+        "## Al contratar infraestructura paga"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/decisiones.md",
+      "bytes": 8933,
+      "sha256": "27d0473ef9de054bf05aef3aa5beb46d5deac9905dfe7906afde63673b5e6706",
+      "lines": 99,
+      "headings": [
+        "# Decisiones arquitectónicas y alternativas descartadas",
+        "## Estructura",
+        "## Agenda, aranceles y documentos",
+        "## Tareas y consumo",
+        "## Verificación y publicación",
+        "## Identidad",
+        "## Postergado, con su riesgo"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/disponibilidad-y-aranceles.md",
+      "bytes": 14219,
+      "sha256": "56a1e660514b44b414c662da3d0aab60ef6d8e28ebed664d896b5cfc2f59088f",
+      "lines": 86,
+      "headings": [
+        "# Disponibilidad y aranceles",
+        "## Propiedad y límites",
+        "## Contratos SQL",
+        "## Coordinación y validación",
+        "## Frontera HTTP y vida de cada petición",
+        "## Aranceles exactos",
+        "## Evidencia y límites",
+        "## Corrección de lock de configuración en comparación"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/etapa5-capturas.json",
+      "bytes": 28704,
+      "sha256": "610d5fe32c89988cdfa91410ab53dc1c2d1bec9d6ac2d3b45c7a0a72c7f4ab73",
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/evidencia-etapa3-documentos.md",
+      "bytes": 5391,
+      "sha256": "12e9690ca290b5e4eac30556af60b4f558bc6d01a04b3be7b139acff8f151a64",
+      "lines": 34,
+      "headings": [
+        "# Etapa 3: matriz de cierre de documentos",
+        "## Límites de esta evidencia"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/evidencia-etapa4-agenda.md",
+      "bytes": 6364,
+      "sha256": "1ee49c4e7ffeb9b0fb2766cb67fd6ad327ccd011651774b5057604584c46338a",
+      "lines": 27,
+      "headings": [
+        "# Evidencia de etapa 4: disponibilidad, reservas y aranceles"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/evidencia-etapa5-estructura.md",
+      "bytes": 11935,
+      "sha256": "09822448ff52c78e16f5347cdfb812a6dd07182d76108d6c8a868258d04c8228",
+      "lines": 59,
+      "headings": [
+        "# Evidencia de etapa 5: estructura, interfaz e identidad",
+        "## Matriz de aceptación",
+        "## Garantías de las operaciones extraídas",
+        "## Verificación reforzada durante el cierre",
+        "## Revisión independiente y cierre formal"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/functional-contracts.md",
+      "bytes": 9998,
+      "sha256": "dd5b20c2798b48e0ab7b424ed9c91f6482dbeae4bc0f03fe55af24c272904e74",
+      "lines": 69,
+      "headings": [
+        "# Matriz funcional y contratos de preservación",
+        "## Verificación de las capas",
+        "## Interfaces y migraciones",
+        "## Operaciones extraídas durante etapa5",
+        "### RPC compatibles incorporados en esta etapa",
+        "### Equipo y registro manual consolidados"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/guia-nuevas-funciones.md",
+      "bytes": 12815,
+      "sha256": "33e5c33dffa9eac31e84ca8a3609613e77d0d6c1c63592062f50e9d177a0b9b6",
+      "lines": 90,
+      "headings": [
+        "# Cómo añadir una función a Cita Suite",
+        "## Delimitar la responsabilidad antes de programar",
+        "## Especificar contrato y autoridad",
+        "## Mantener controladores y UI comprensibles",
+        "## Verificar según la garantía",
+        "## Interfaz y pruebas de navegador",
+        "## Ejecutar y dejar evidencia",
+        "## Cierre de una entrega"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/identidad-cita-suite.md",
+      "bytes": 12307,
+      "sha256": "192e1537adff06594f1abdbf1aa2209987e5de3c8bc292eb1edec1a30d0747fa",
+      "lines": 61,
+      "headings": [
+        "# Unificación de identidad de Cita Suite",
+        "## Inventario y aplicación",
+        "## Evidencia del ensayo de GitHub",
+        "## Secuencia preparada para la transición del principal",
+        "## Reversión compatible",
+        "## Búsqueda reproducible y excepciones"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/identidad-ensayo-github.json",
+      "bytes": 1527,
+      "sha256": "efd530d4daa4bc3350e9284e88e06e6b122f360db1bdbe22990335800b8c7290",
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/matriz-regresiones.md",
+      "bytes": 17316,
+      "sha256": "a794909df5860cbc7fd0422d2664eca4dfc334757a7bfc7f6c4890e08faf3076",
+      "lines": 101,
+      "headings": [
+        "# Matriz de regresiones obligatoria",
+        "## 1. Cruces de consultorio",
+        "## 2. Revocación de membresía, cambio de rol y estados comerciales",
+        "## 3. Capacidades diferentes entre consultorios y acceso histórico autorizado",
+        "## 4. Reservas simultáneas, repetidas y reprogramadas",
+        "## 5. Restricciones de seguimiento y eliminación de una prestación permitida",
+        "## 6. Cuestionarios obligatorios, opcionales y actualización del perfil",
+        "## 7. Historia clínica y documentos bajo cada rol autorizado",
+        "## 8. Límites de archivos, cargas simultáneas, expiraciones y descarga correcta",
+        "## 9. Precios acumulados, excepciones, redondeo, mes 600 y cambios durante la confirmación",
+        "## 10. Proveedores lentos, caídos o con resultado incierto",
+        "## 11. Navegación, tema y notificaciones desde Natalia",
+        "## 12. Vistas de 320, 390, 768, 1280 y 1600 píxeles, contenido largo y teclado",
+        "## Observabilidad"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/module-relocations.json",
+      "bytes": 56298,
+      "sha256": "efcb266fbd909cfab8455175d9cf5c37074df795c05733581974c40b756ff8a5",
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/permisos-y-capacidades.md",
+      "bytes": 6983,
+      "sha256": "6e655f20d01f254d032a349d2fa9f9169dff2d4533045955e9305c9a704d0ad4",
+      "lines": 85,
+      "headings": [
+        "# Matriz de permisos y capacidades",
+        "## Las cuatro cuestiones del plan",
+        "## Estado comercial",
+        "## Roles del consultorio",
+        "## Cuotas de documentos",
+        "## Pruebas que sostienen la matriz"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/publicacion-y-reversion.md",
+      "bytes": 23648,
+      "sha256": "68a56c3a87ac7fecb654a82028b6c3ba93cfa8231be445ddeabd8d4ba1ef55c6",
+      "lines": 313,
+      "headings": [
+        "# Publicación y reversión",
+        "## Candidata vigente",
+        "## Destinos",
+        "## Herramientas",
+        "## Condiciones previas",
+        "## La deriva de producción y su reconciliación",
+        "## Secuencia",
+        "### 0. Preparación (sin cambios)",
+        "### 1. Respaldo",
+        "### 2. Ensayo de las dos tandas",
+        "### 3. Tanda 1: expansión",
+        "### 4. Entradas viejas apagadas",
+        "### 5. App",
+        "### 6. Consultorios sintéticos y prueba de humo",
+        "### 7. Programador",
+        "### 8. Push real",
+        "### 9. Tanda 2: contracción",
+        "### 10. Permisos",
+        "### 11. Medición de dos consultorios",
+        "### 12. Limpieza de la medición",
+        "### 13. Natalia",
+        "### 14. Repositorio e identidad",
+        "## Reversión",
+        "## Pendiente del usuario"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/refactoring-campaign.md",
+      "bytes": 3658,
+      "sha256": "5832f9e66aaa2d485bb7e603e19c43fe2bfd23507a4d9b37931f9350b0cfbc21",
+      "lines": 31,
+      "headings": [
+        "# Campaña de mantenibilidad — 2026-10-15",
+        "## Base y preservación",
+        "## Contrato de cierre",
+        "## Evidencia y límites",
+        "## Registro de avance"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/relaciones-entre-consultorios.md",
+      "bytes": 6137,
+      "sha256": "f493e9fb72e272fba1e35fbb330ba1b7458612fb8fc7c8dca4861e6b3b9a2b8c",
+      "lines": 34,
+      "headings": [
+        "# Identidad de consultorio en relaciones",
+        "## Compatibilidad de aplicación y reversión",
+        "## Ciclo de reseñas y control de borrado",
+        "## Lectura clínica según rol y estado",
+        "## Referencias históricas sin FK viva"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/respaldo-y-recuperacion.md",
+      "bytes": 5777,
+      "sha256": "22e83eae9de9bd521a51e41591e05cc7d6214f5151d822c894c5e286b72e17a2",
+      "lines": 75,
+      "headings": [
+        "# Respaldo y recuperación",
+        "## Qué contiene un respaldo",
+        "## Hacer un respaldo",
+        "## Restaurar en un proyecto nuevo",
+        "## Qué agrega al procedimiento oficial",
+        "## Evidencia",
+        "## Límites y decisiones pendientes"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/revision-ui-agenda-aranceles.md",
+      "bytes": 15623,
+      "sha256": "1ac8f8db252b7dd00233ebabcc8d6c996a80591eb79aea8da9b7964e874fdf64",
+      "lines": 100,
+      "headings": [
+        "# Revisión de interfaz: disponibilidad y aranceles",
+        "## Autoridad, alcance y preservación",
+        "## Decisiones de interacción y estados",
+        "## Correspondencia con el sistema existente",
+        "## Evidencia contrastada",
+        "## Desviaciones previas y límites"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/revision-ui-documentos.md",
+      "bytes": 11512,
+      "sha256": "92fe8fc3a0761e2fc5af3bda76e54dfe90bfe0430ef32a787fbf67d39a8fad4c",
+      "lines": 87,
+      "headings": [
+        "# Revisión de interfaz: documentos y cuotas",
+        "## Autoridad y alcance",
+        "## Coherencia con el sistema heredado",
+        "## Tres correcciones revisadas",
+        "## Evidencia comprobada",
+        "## Desviaciones previas y límites"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/revision-ui-estructura.md",
+      "bytes": 7832,
+      "sha256": "eb0e51e8396ac19cc24c071877a3b184c63af1a278fa9ee2d1483fb8826ba3b7",
+      "lines": 50,
+      "headings": [
+        "# Revisión de interfaz de la etapa 5",
+        "## Recorridos y entorno",
+        "## Cambios que requieren prueba renderizada",
+        "## Alcance del diagnóstico de consola y red",
+        "## Resultado de la ronda 2 (fuente final)",
+        "## Antecedente: ronda 1 y relevo del 19 de octubre",
+        "## Dictamen independiente"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/tareas-automaticas.md",
+      "bytes": 17393,
+      "sha256": "19ae2e4bcc23908880f74f24204f170be81d30f327f33ba04f61af5f5751fb5b",
+      "lines": 102,
+      "headings": [
+        "# Tareas automáticas: programación, presupuestos y recuperación",
+        "## Límites de plataforma verificados (19 de octubre de 2026)",
+        "## Capacidad de la cuenta comprobada (19 de octubre, sólo lectura)",
+        "## Estado de partida (antes de la etapa 6)",
+        "## Costo actual por elemento (lectura del código antes de la etapa 6)",
+        "## Diseño adoptado",
+        "### Cadena y puntos de entrada",
+        "### Presupuesto de la cadena",
+        "### Colas, reparto y recuperación (`20261019010000_scheduled_job_batches.sql`)",
+        "### Evidencia",
+        "### CPU medida y perfil de Workers",
+        "### Pendiente de esta etapa"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/tipado-contexto-aislamiento.md",
+      "bytes": 8960,
+      "sha256": "5c52e4e0f4471e1febf0a4939e46cf75f324a9cc8493138f555e547f6b36e12e",
+      "lines": 66,
+      "headings": [
+        "# Tipado, contexto y aislamiento",
+        "## Contrato de la base",
+        "## Contexto de cada petición",
+        "## Relaciones y procedencia",
+        "## Lectura clínica",
+        "## Resolución de objetos en funciones privilegiadas",
+        "## Creación privilegiada y cambios de rol",
+        "## Evidencia y cierre"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/architecture/verificacion.md",
+      "bytes": 30638,
+      "sha256": "fc950944e125d73e316c0597c8089617167dc3bbdcf7401ff8ca95d89be4db73",
+      "lines": 180,
+      "headings": [
+        "# Verificación reproducible",
+        "## Comandos",
+        "## Recursos locales",
+        "## Exclusión, limpieza y recibos",
+        "## Diagnóstico y límites",
+        "## Release y staging",
+        "## Tipos de la base reconstruida",
+        "### Generación independiente al cambiar migraciones",
+        "### Preparación del staging identificado",
+        "### Despliegue y medición de tareas en staging",
+        "## Unidades sin omisiones y apertura nativa de exportaciones",
+        "### Controles del propio ejecutor",
+        "## Diagnóstico de navegador sin fabricar una verificación completa",
+        "## Tipos de las pruebas de navegador",
+        "## Contrato de usabilidad de layout",
+        "## Sesiones en las pruebas de navegador"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/archive/administrativo-inactivo/+layout.server.ts.txt",
+      "bytes": 450,
+      "sha256": "e8326203b3f6cf2a4ac6d9e0a1fb067a75fd399856814204fe820021bc5941c3",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/archive/administrativo-inactivo/+layout.svelte.txt",
+      "bytes": 1990,
+      "sha256": "f405db4452af8cc4e499b7f01a233fbb78158b8453923750c15ffe9a9025a17b",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/archive/administrativo-inactivo/README.md",
+      "bytes": 945,
+      "sha256": "da5488fbf934fbe354c7773119fd1fd12bc8a71b2790f52fa663b77fb62f8ae0",
+      "lines": 7,
+      "headings": [
+        "# Fuente histórica del módulo administrativo inactivo"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/archive/administrativo-inactivo/configuracion/+page.svelte.txt",
+      "bytes": 393,
+      "sha256": "87ce80e8bf3ac9243bd32740c8c5a15782b15e31e5983c8eba41a01ffb4ad219",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/archive/administrativo-inactivo/expedientes/+page.server.ts.txt",
+      "bytes": 5755,
+      "sha256": "4ca30deef3f2baad65cda6de8d9641e10b34d94c0c9aaeaf1aea9dfc87e834ad",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/archive/administrativo-inactivo/expedientes/+page.svelte.txt",
+      "bytes": 9833,
+      "sha256": "0136316a20dee23ed3ded1432fc9ff410c5331be9353229a73bc47e9c0948b4d",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/archive/administrativo-inactivo/expedientes/[id]/+page.server.ts.txt",
+      "bytes": 7724,
+      "sha256": "edf23b287f85122aa15a927e63797011d740408060c4e68f4ad7f21955daea94",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/archive/administrativo-inactivo/expedientes/[id]/+page.svelte.txt",
+      "bytes": 11614,
+      "sha256": "1233dfcd420978a989a9b082aa0cabc85ffb7fc16b68abbcd2848fb69301a84e",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/archive/administrativo-inactivo/integridad.json",
+      "bytes": 1748,
+      "sha256": "a78086264a80d6237c56e89332131d609f71b92b9262f62c933812172b65170d",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/arquitectura-identidad-pacientes-2026-08-23.md",
+      "bytes": 9929,
+      "sha256": "b7ab697f84431809d5c12402515ad48bba886a0b3682823cf3ca22b933006752",
+      "lines": 178,
+      "headings": [
+        "# Identidad de pacientes y creación de turnos",
+        "## Invariantes",
+        "## Contrato de creación",
+        "## Atomicidad e idempotencia",
+        "## Diagnóstico y procedencia",
+        "## Límite público y abuso",
+        "## Reparación controlada",
+        "## Despliegue y reversión",
+        "## Matriz mínima de regresión"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/auditoria-ux-pacientes-turnos-telefono-2026-08-22.md",
+      "bytes": 17344,
+      "sha256": "b7d94e77981a585486fa0d6d539c3c04ee9bf6a9c4f9e14ee543467fba432dad",
+      "lines": 343,
+      "headings": [
+        "# Próximos turnos, Pacientes y validación de teléfono",
+        "## Estado de entrega",
+        "## 1. Contrato de próximos turnos",
+        "### Definición única",
+        "### Superficies operativas corregidas",
+        "### Historia que se conserva deliberadamente",
+        "## 2. Pacientes: experiencia y rendimiento",
+        "### Búsqueda local inmediata y servidor autorizado",
+        "### Concurrencia y caché",
+        "### Interfaz final",
+        "## 3. Teléfono antes de crear un turno",
+        "### Estados funcionales",
+        "### Flujo de interfaz",
+        "### Doble validación",
+        "### Paciente existente y paciente nuevo",
+        "### Después de confirmar de todos modos",
+        "### Mensajería posterior",
+        "## 4. Persistencia y atomicidad",
+        "### Migración `20260822020000_appointment_phone_decision.sql`",
+        "### Migración `20260822021000_appointment_phone_decision_consistency.sql`",
+        "### Verificación remota",
+        "## 5. Auditoría lateral de consultas de turnos",
+        "## 6. Evidencia de pruebas",
+        "### Estática y unidades",
+        "### Integración E2E específica",
+        "### Build",
+        "### Limpieza de fixtures",
+        "## 7. Hallazgos cerrados durante la auditoría",
+        "## 8. Fuera de alcance"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/2026-10-14-booking-extensions-contract.md",
+      "bytes": 18793,
+      "sha256": "4ff0fa97ca5fa787dd0231010930b86b8094ab8097aa2fe3267aa0ee01c0e58b",
+      "lines": 276,
+      "headings": [
+        "# Contrato de implementación: turnero, documentos y contacto",
+        "## Decisiones confirmadas",
+        "## Aranceles y reservas",
+        "## Horarios, seguimiento y feriados",
+        "## Cuestionarios e historia médica",
+        "## Documentos: almacenamiento, cuotas y validación",
+        "## Permisos y descarga",
+        "## Indicaciones, recordatorios y contacto",
+        "## Presupuesto Free y límites de la garantía",
+        "## Reproducción y publicación",
+        "# Usar únicamente el nombre desechable impreso por ese runner:",
+        "# En otra terminal, con el fixture anterior abierto:",
+        "# Ejecutar después del anterior, con Natalia construida:"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/2026-10-14-implementation-ledger.md",
+      "bytes": 12503,
+      "sha256": "d71aa5d77bc5355d199a543cfc4d05514b696bbfe9890015935d41565aec37d1",
+      "lines": 157,
+      "headings": [
+        "# Implementación y auditoría de Natalia / Cita Suite",
+        "## Alcance y estado",
+        "## Decisiones incorporadas de la última revisión",
+        "## Matriz de evidencia",
+        "## Casos comprobados directamente",
+        "## Hallazgos corregidos durante la auditoría",
+        "## Reproducción y custodia de evidencia",
+        "## Límites y cierre"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/2026-10-14-natalia-cita-suite-propuesta.md",
+      "bytes": 38156,
+      "sha256": "bbbf48f9d4846a0c8fd0b253fa8c99b64f7605577a143ca3d9c1bfbfcd7fa9a6",
+      "lines": 207,
+      "headings": [
+        "# Auditoría de la propuesta de Natalia y Cita Suite",
+        "## Alcance confirmado",
+        "## Estado comprobado",
+        "## Evidencia y sus límites",
+        "## Correcciones necesarias a la propuesta recibida",
+        "## Orden propuesto de implementación actual",
+        "### 1. Cerrar la verificación de cuestionarios",
+        "### 2. Cerrar la verificación de historia clínica y adaptar su presentación",
+        "### 3. Aranceles por fecha con porcentaje mensual recurrente y excepciones",
+        "### 4. Bloqueos de fechas separadas",
+        "### 5. Franjas reservadas para seguimiento",
+        "### 6. PDFs profesionales y de pacientes",
+        "### 7. Descripción e indicaciones del turno",
+        "### 8. Botón de contacto de WhatsApp",
+        "## Cierre de cada entrega",
+        "### Condición adicional: proteger el plan gratuito frente a archivos",
+        "## Fuentes principales del repositorio"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/2026-10-14-patient-confirmation.md",
+      "bytes": 6532,
+      "sha256": "1f1990abb68c23e916488af74f55ac4e6b50c8c8a61368ba2a3fe56489b49c35",
+      "lines": 58,
+      "headings": [
+        "# Formulario final de reserva del paciente",
+        "## Alcance y resultado",
+        "## Evidencia y límites",
+        "## Reproducción local",
+        "## Publicación"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/2026-10-14-production-release.md",
+      "bytes": 8473,
+      "sha256": "b7d4cf2eb015be6df2b85a7addb1ffcccd3dcd24061c64b1b05e47fe5174df41",
+      "lines": 120,
+      "headings": [
+        "# Publicación de las extensiones de Natalia / Cita Suite",
+        "## Destinos y alcance",
+        "## Evidencia previa a la publicación",
+        "## Secuencia y compatibilidad",
+        "## Estado"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/2026-10-14-reservation-ux.md",
+      "bytes": 7094,
+      "sha256": "03474ff387258a381f61e60ba261d24893945d68ad775b3c969505cafecda945",
+      "lines": 97,
+      "headings": [
+        "# Rediseño de configuración de reservas — 14 de octubre de 2026",
+        "## Cambios",
+        "## Auditoría y defectos corregidos",
+        "## Verificación",
+        "## Repetición y mantenimiento"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/2026-10-14-ui-extension-design-notes.md",
+      "bytes": 17426,
+      "sha256": "08379b0c8cdef751db6ff51b68d091be5980e7e34ae337b1b54708e26ab0870c",
+      "lines": 101,
+      "headings": [
+        "# Documentación visual de la extensión Natalia / Cita Suite",
+        "## Autoridad y fuentes contrastadas",
+        "## Sistema observado: continuidad visual",
+        "## Dirección de cinco secciones y comportamiento observado",
+        "## Decisiones funcionales que explican la interfaz",
+        "## Evidencia visual y veredicto",
+        "## Evidencia de ejecución y límites",
+        "## Deriva documental previa y preservación"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/2026-10-14-website-installation.md",
+      "bytes": 7083,
+      "sha256": "7bfcad3020a5c1ac4caebde15175532eeda8f637c12cfd8452a428af8b081037",
+      "lines": 50,
+      "headings": [
+        "# Conexión del sitio y turnero de Natalia",
+        "## Causa comprobada",
+        "## Reparación",
+        "## Validación",
+        "## Reproducir y publicar"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/2026-10-15-architecture-proposal-review.md",
+      "bytes": 18137,
+      "sha256": "03c64c7db4c916a8658865f0e61da16c10f57d5b19e5f6bc71ad1500b7655a09",
+      "lines": 152,
+      "headings": [
+        "# Evaluación de la propuesta externa y alcance estructural previo al lanzamiento",
+        "## Premisas confirmadas por el usuario",
+        "## Dictamen",
+        "## Evaluación de los cinco puntos",
+        "### 1. Frontera SQL/TypeScript y disponibilidad — acuerdo con una corrección factual",
+        "### 2. Capacidades por consultorio — incorporar ahora, con capas distintas",
+        "### 3. Tipado completo — cambiar el criterio de finalización",
+        "### 4. Cuotas por consultorio — adelantar al alcance previo al lanzamiento",
+        "### 5. Subrequests y lotes — incorporar presupuesto explícito y medir recorridos",
+        "## Otras afirmaciones que requieren matiz",
+        "## Hoja de ruta revisada",
+        "## Qué significa terminado antes de incorporar consultorios reales"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/2026-10-15-booking-modal-layout.md",
+      "bytes": 5552,
+      "sha256": "566f305e3c89f7aa7e701e9b6c95786ee8321fc1cf196cebbddee1f95230dbf5",
+      "lines": 40,
+      "headings": [
+        "# Modal de reservas: centrado, ancho y desplazamiento",
+        "## Fallo y causa reproducida",
+        "## Corrección",
+        "## Evidencia y regresión",
+        "## Reproducir y publicar"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/2026-10-15-maintainability-and-growth.md",
+      "bytes": 20980,
+      "sha256": "f3c56e9ab334264dffe6d0ed9dcd7ff82c5a402527e72b79a67f0d2c00f8633c",
+      "lines": 163,
+      "headings": [
+        "# Mantenibilidad y crecimiento de Cita Suite",
+        "## Dictamen",
+        "## Inventario y método",
+        "## Bases que conviene preservar",
+        "## Hallazgos estructurales",
+        "### M1 — Prioridad alta: responsabilidades concentradas en componentes y rutas",
+        "### M2 — Prioridad alta: acceso a datos y casos de uso mezclados con HTTP",
+        "### M3 — Prioridad alta: tipos generados que no protegen el acceso central a la base",
+        "### M4 — Prioridad alta: verificación dispersa y poco reproducible como proceso único",
+        "### M5 — Prioridad media-alta: presentación dependiente de detalles concretos del tema",
+        "### M6 — Prioridad media-alta: las tareas independientes comparten presupuesto de ejecución",
+        "### M7 — Prioridad media: cuesta reconstruir el contrato vigente leyendo sólo documentos y migraciones",
+        "## Escalabilidad: bases existentes, riesgos y límites de la evidencia",
+        "### Disponibilidad",
+        "### Archivos",
+        "### Integraciones y observabilidad",
+        "## Arquitectura objetivo",
+        "## Orden recomendado",
+        "## Qué ocurriría si se sigue agregando sin esta intervención"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/2026-10-15-natalia-booking-color-mode.md",
+      "bytes": 3061,
+      "sha256": "500f80eadb56edcb03c746d5170088519677d9154dd1c18ff59351d5e51746bb",
+      "lines": 20,
+      "headings": [
+        "# Continuidad del modo claro y oscuro en la reserva",
+        "## Causa y corrección",
+        "## Verificación y reproducción"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/2026-10-15-natalia-native-booking.md",
+      "bytes": 5170,
+      "sha256": "1d827abec196f263753e949e5b651c846947f4261ce3021581ca2bff7fdc7e17",
+      "lines": 35,
+      "headings": [
+        "# Natalia abre el turnero completo de Cita Suite",
+        "## Contrato",
+        "## Implementación",
+        "## Verificación",
+        "## Reproducción y publicación"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-booking-extensions/README.md",
+      "bytes": 2350,
+      "sha256": "f4d443a99a973e6cee626bba0ee9676eb6b5ab8b1e441a14da9cffd6c7334394",
+      "lines": 33,
+      "headings": [
+        "# Evidencia de la extensión del turnero — 14/10/2026"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-booking-extensions/builds.json",
+      "bytes": 560,
+      "sha256": "f9c9fd08ab09e74e1434898cf33300c9fc9f5d97e773cecaaafc5a9a1f1c8d53",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-booking-extensions/checks.json",
+      "bytes": 3375,
+      "sha256": "2c54b03272cf1aca7b7d38caa7a4f1fb4d1c819b6e54819842bfd2a46c7bb8e9",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-booking-extensions/cloudflare-build.sha256",
+      "bytes": 12277,
+      "sha256": "200ddbf0f257654a967c302479a09a27e1583717bd098899057ddbb3b6db8ced",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-booking-extensions/core-browser.json",
+      "bytes": 1959,
+      "sha256": "639c59080525e8b6b3ec0ec8cdfa179b81a4c769816c5d764ba5e5e4e811a632",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-booking-extensions/design-detector.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-booking-extensions/documentation.sha256",
+      "bytes": 861,
+      "sha256": "8fbd0ab15bca6200e0e4495b9ee8859ced41038ad7b71ec1cbbbf034060984cb",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-booking-extensions/full-visual-review.md",
+      "bytes": 6394,
+      "sha256": "c4d26cb9b55e1cfb234fbb7a201f98100a8560d61772d08d7198e1b1e0432313",
+      "lines": 41,
+      "headings": [
+        "## persistence",
+        "## fidelity",
+        "## ceiling",
+        "## material_fixes",
+        "## keep"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-booking-extensions/natalia-browser.json",
+      "bytes": 861,
+      "sha256": "35de68b1535732cfd0a49de734eacbdd993bab209e0903f004d196b7fb8fceb2",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-booking-extensions/natalia-build.sha256",
+      "bytes": 3354,
+      "sha256": "accc70caf7583c81f49ff07b5e62c564bed374f89d84a0b975319381742f5201",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-booking-extensions/production-readonly-privileges.json",
+      "bytes": 197,
+      "sha256": "b6170726542f07360ae1caf1583878a7e98faac8c9998119240eb7eb13342522",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-booking-extensions/screenshots.sha256",
+      "bytes": 3139,
+      "sha256": "766531b2fdc799242d26b48ce5709e4863ba12fc0b355fd96163a5060ed4c061",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-booking-extensions/source.sha256",
+      "bytes": 8177,
+      "sha256": "727ab360ac9a768485e7e891cadaf24895686459aeb9f9319027280ce06602e2",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-booking-extensions/visual-fix-verdict.md",
+      "bytes": 690,
+      "sha256": "d083bf257773731a7c41c6d3afd473d25dedc9985c134fc9302f20799c7e52bd",
+      "lines": 9,
+      "headings": [
+        "## verdict",
+        "## remaining"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/booking-e2e.txt",
+      "bytes": 550,
+      "sha256": "6291084e1df2e1c98a93762146a6c72c78b8a609f400f8e4067c37c70eeedc08",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/choice-cita.png",
+      "bytes": 7034,
+      "sha256": "3a07219be4724f54fefea12e2543b500dac22a282e329c66b05acf0c0219a420",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/choice-natalia-dark.png",
+      "bytes": 6853,
+      "sha256": "15958254a2da4fc01837728c0241a4a79038d8a8682bc8fff89f0a28ed2a9560",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/choice-natalia-light.png",
+      "bytes": 6797,
+      "sha256": "09dd87440d4ef827a3dce18b0ddf2faa017bac3c5f5b8779ec7ac39eaafdf4d5",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/client-tests.txt",
+      "bytes": 561,
+      "sha256": "c149fc074115470e7de4040e60e82f5611ecf2b8464120ab775baa962e9a1cb4",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/desktop.png",
+      "bytes": 89258,
+      "sha256": "d7ebf434689bb260fd2a5e58e01d705d3e2e044d024a0af21752259f3d39b197",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/detector.json",
+      "bytes": 16302,
+      "sha256": "52d9659b58a9a8915d67e6991fd5a5290c35712038a4b31ac08af9c6d5d2eecc",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/foundation.txt",
+      "bytes": 546,
+      "sha256": "3cd22482fb648b4228413fe37336509b7a58b766d0639e8ca459a45980649186",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/mobile.png",
+      "bytes": 84106,
+      "sha256": "4b37573eec9061ccc51e7cbcb845b2fab312b90f46cd193fca60696688b0c278",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/natalia-dark.png",
+      "bytes": 76902,
+      "sha256": "162048daa01783eddb970632d61024d8cef071eef7e2a7eb1b9a18ef5e8cc07d",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/natalia-light.png",
+      "bytes": 73632,
+      "sha256": "b986fbf30eac54e2269e0e839a2216e0234633ac4e9697a5da0c48843127e5c0",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/nojs-results.json",
+      "bytes": 404,
+      "sha256": "bf6b62955288a6c71d62aa7154b6463f65eeba2ff0b88fdb6dec37eb10ada5e6",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/nojs.mjs",
+      "bytes": 4879,
+      "sha256": "a6d43f59742a13d92f8aa30133cd9f06af6d40017f507df7ad4a610237eaa16f",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/qa.mjs",
+      "bytes": 12267,
+      "sha256": "272188ed01a79ecf7435c9e244aef5a53d86a55b975da0157b7751ba084ae286",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/results.json",
+      "bytes": 1108,
+      "sha256": "79c910a985085032816439b1b6e19233001566c84173f1389948067890f8b1f4",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/svelte-check.txt",
+      "bytes": 312,
+      "sha256": "04ca52b8d24d55e860bb04dee4333d159e2edf83cf79641bbce1f0531a43ecbc",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-patient-confirmation/user-320.png",
+      "bytes": 85191,
+      "sha256": "b4bf13ad9de8b132678cdaa19320973fb2a40a1dc4d69ade5e213ef4f4a9bfcd",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-production-release/README.md",
+      "bytes": 1623,
+      "sha256": "2e3c523aec502f14a509a3775fe3e206e7173fe03a17b08a21c41d5c1f795b63",
+      "lines": 20,
+      "headings": [
+        "# Comprobantes de publicación — 14/10/2026"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-production-release/backup-summary.json",
+      "bytes": 827,
+      "sha256": "a4f07c0a1e083c174083c00a7e0dfb46be66e62f74ad9b02a8c59ff4e55d1eba",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-production-release/cloudflare-fixed-build.sha256",
+      "bytes": 12277,
+      "sha256": "f5a13d56696211ca457b8daece60e1b91537c9bc23cd78b6b3b955e7739edee0",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-production-release/cloudflare-served.json",
+      "bytes": 3247,
+      "sha256": "15ef5e411e828db68a5fcbd4a74004d573827829b7508e01e148a90334774f2e",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-production-release/data-change-investigation.json",
+      "bytes": 333,
+      "sha256": "887fac7e2d6633b4add92529cabbebe772e63dec6fe6de8ea12f64fe4ba24322",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-production-release/database-application.json",
+      "bytes": 753,
+      "sha256": "d33252ea02bbde98e5c2f4b404e4fcd9c8b9c15c80c303ade7c50771bedf80bb",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-production-release/database-post-release.json",
+      "bytes": 508,
+      "sha256": "729a3ec401db1ab733df0d575bba8911f8dc61868652ac6738f01dd1684eeb7c",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-production-release/deployments.json",
+      "bytes": 620,
+      "sha256": "ad5289bbaf22c778da8323be2cf3f6dc51eda79c9bc4c1639d0987615ae6353f",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-production-release/evidence.sha256",
+      "bytes": 885,
+      "sha256": "976edcd9221f3441e79d012f0cf57aa586a55246d4b1fa13b51fd2f5c570ba2e",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-production-release/natalia-served.json",
+      "bytes": 3810,
+      "sha256": "0c4486231e092cc5db8a3d7c8f844a44626c5234bb59d7c1fa52a93709bf8ed8",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-production-release/reproducibility.json",
+      "bytes": 133,
+      "sha256": "2692281ceed2d14c59984d77dfea59b4bb94dd07b5ce2e398145913134e40f34",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/README.md",
+      "bytes": 786,
+      "sha256": "715ec3c2da61b45006df85ce264cce671da986126a856e578ee8d9134820207b",
+      "lines": 7,
+      "headings": [
+        "# Evidencia local de configuración de reservas"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/browser.json",
+      "bytes": 2815,
+      "sha256": "bf3114d5bf4ef0863598cfa541daa61f9632b97068f8c7d320566e4cf7691f3b",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/calendar-desktop.png",
+      "bytes": 14118,
+      "sha256": "518f2878279f13020821f35f786744a206b8e7d6111d20d2f4d5413a6fa8a997",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/contact-desktop.png",
+      "bytes": 300324,
+      "sha256": "55f09e8a2874cdc59f697d29ea11e159d85fced37d8ab157ab0fd34e1bd257ae",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/detector.json",
+      "bytes": 546,
+      "sha256": "a0cae15f03dde4f269010e9bbd20a64ba4099efd7e55045c85e3f72ea60466e3",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/direction.md",
+      "bytes": 2264,
+      "sha256": "6e835b7d94de2586ef847be732dbf16c09ee1639dbcc44d05cfd8245e65989e7",
+      "lines": 15,
+      "headings": [
+        "# Contrato de dirección: configuración del turnero"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/doctor-mobile.png",
+      "bytes": 337284,
+      "sha256": "e1d1baa219473c260ae65e0da543f12d36e36556809a734843f0003526bd91c0",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/documents-desktop.png",
+      "bytes": 358312,
+      "sha256": "9c4d03146d6826c3a1ae2771b5047d19c9d9672a43b832cddc26c7b19d08a6d7",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/evidence.sha256",
+      "bytes": 2510,
+      "sha256": "26da9f2aae6496765d4ac91f6b23cf241a2a8ea64e4c7ee771caa05d582cb761",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/months-desktop.png",
+      "bytes": 10534,
+      "sha256": "bca376059530fe053c75c0507d361475babba0d310d61e1a2437a1493dfcac03",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/practice-desktop.png",
+      "bytes": 560788,
+      "sha256": "4f2f76708f47902be788377b86b85651cdb35075b8bc22d9e9fb51850fb94319",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/prices-desktop.png",
+      "bytes": 479843,
+      "sha256": "3f8b65722b1c30af6c73729725454f00daa7ab523889f096ed1d59f9195a9b2e",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/prices-mobile.png",
+      "bytes": 313237,
+      "sha256": "3e180fa4c8f449c74fa01f7d1ac1c6e354d32d1b66f453091b61d7beed4896d1",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/questions-320.png",
+      "bytes": 355359,
+      "sha256": "33aa5db2f880e1772eb995e59268ad9b97a87e79c6a7971c41c4b28d4499c688",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/questions-desktop.png",
+      "bytes": 555686,
+      "sha256": "c9a240e9eb99e6ce0269f13706df544cc819e68bf27214c073e581be95d91711",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/questions-mobile.png",
+      "bytes": 371821,
+      "sha256": "7182ea5dc8a24267c92d6e094eb526763b614231e778dde0200333611b3d49ff",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/reservation-320.png",
+      "bytes": 263390,
+      "sha256": "7b624623b0581508b72456680998bd94b7d86f8eddb1b172ddaf022054c4626a",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/reservation-desktop.png",
+      "bytes": 453800,
+      "sha256": "550c14ec0765ffe469c02b131a0c47ca66b8648d7286805610d8c5d60c72f37d",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/reservation-mobile.png",
+      "bytes": 304098,
+      "sha256": "1188f289c8cb354769b8cbf5bd099123a514a965f0537b19451f13bf862e2b2d",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/reservation-select-mobile.png",
+      "bytes": 163975,
+      "sha256": "2c5bcf417f8e04d4f46a9e30ec8e1bba70d07b41920e9bcde7432b13de814969",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/reservation-select-open.png",
+      "bytes": 344686,
+      "sha256": "df8abc03a1d54bf8640ff0e5d26cef96ec7c110b681c22d3b6124fa4f2508b19",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/service-editor-desktop.png",
+      "bytes": 143225,
+      "sha256": "525e286cceb53df5d94bb9ff5d900ed275c62758265f8d0774aba56bdfa296a0",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/settings-desktop.png",
+      "bytes": 67526,
+      "sha256": "acdb8aa43881e1562b25fc780c6782df7f7239ff663394fbec6e16389df16c63",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/unsaved-dialog-desktop.png",
+      "bytes": 17432,
+      "sha256": "0ac27bf45d49f3eb9d15d60f2e28df8c4974d1964165c67e1d968afcdf6862a9",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/unsaved-dialog-mobile.png",
+      "bytes": 17813,
+      "sha256": "9cfdae2c8a9116ee7faa0fd1dfb62cf713882d738415d5c0a59f53c9d5a2049a",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/validation.json",
+      "bytes": 989,
+      "sha256": "c11ca3849582248870be5ae722bd0a5f2d31687d31de79fd5884e3cd20b0b7e9",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/web-editor-320.png",
+      "bytes": 199677,
+      "sha256": "2b1ed79b2d01ad96247506c89dbe2b502a6fe579efad28e2783f30c6eff1e6fa",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/web-editor-desktop.png",
+      "bytes": 400567,
+      "sha256": "1243af98b60304d63b1d86c700aaa44abc1f1053612c25de4469bd478753f8f9",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/web-editor-mobile.png",
+      "bytes": 219114,
+      "sha256": "ad6f5fb45f1543685909ba86f9c72c08ec6659d1b106c60911448999c7aea94d",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-reservation-ux/web-list-desktop.png",
+      "bytes": 52438,
+      "sha256": "4311b50fefcf21f62ae509f644433cd1b7022d3d01cfa23a0e5c9026b3f83a3a",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-website-installation/copied-code.html",
+      "bytes": 305,
+      "sha256": "14c03360627ed7c281eaf4382e2514231959a705375cd8265334edc2dfe2df78",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-website-installation/desktop.png",
+      "bytes": 373329,
+      "sha256": "b894d80e17b2a82dded82652bc1d0cb520da1e7ee3a676c9c0319debcfece41c",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-website-installation/detector.json",
+      "bytes": 1191,
+      "sha256": "e7613de238b5747f3869710e5905235ca009b64cfa3469c3f37c011e79617c27",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-website-installation/empty-key-guard.txt",
+      "bytes": 95,
+      "sha256": "58a8da1e314449f1ab38db4a27382828e1759027049ac9460d5c9398539e0662",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-website-installation/installed-site-mobile.png",
+      "bytes": 120983,
+      "sha256": "6d798a3221fff141fe602f9ba0a5cdc093d492439cb9ff541ced202a6debaafa",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-website-installation/mobile.png",
+      "bytes": 249784,
+      "sha256": "7ace6a9ae771f56bb8010f2d2aa622e05142a180fe388c48a54d021834dd731e",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-website-installation/natalia-browser.txt",
+      "bytes": 707,
+      "sha256": "ad9983ba7a68c7441535d933c17833c083b1075bdb0bff140cd8a85645ef9c34",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-website-installation/natalia-build.txt",
+      "bytes": 652,
+      "sha256": "60c56bc5b9153fa21de4bff34a1b84b28c81e82a703f812b504b95dfe79e1537",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-website-installation/results.json",
+      "bytes": 1082,
+      "sha256": "7d876b675b65ad15a0aaba2f392edbeb5fb483bace97a3a10c0ec9b4d9f33f04",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-website-installation/svelte-check.txt",
+      "bytes": 311,
+      "sha256": "3d31120cfdcc2d8c454683ac271456f1a87e87eb699f81822ce9aa37f8c1372a",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-website-installation/unit.txt",
+      "bytes": 568,
+      "sha256": "a47fe8591eff90848e5e5ecb8174718fd3b70de9ccecd10df4324123c48f7979",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-14-website-installation/user-320.png",
+      "bytes": 227759,
+      "sha256": "043ddeb3956461b675694b3a6eb8dbfe8c4b0456be4166c4d1ffb252f7a0f5c6",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-15-maintainability/inventory.json",
+      "bytes": 5817,
+      "sha256": "3f3d71c14655c2efce1c0d46e096711f00975e5a20b30d9690fb2b22d99fefae",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-15-phase1/baseline.json",
+      "bytes": 6838,
+      "sha256": "1f26021adfcc34a682a2fd6da6f95730a5224473144afec396cfd852552a0643",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-15-phase1/effective-database-contract.json",
+      "bytes": 91723,
+      "sha256": "c23f2945ddad3178a830ba3690bcf618296febabe653cc3d6efcd47a5da23d35",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-15-phase1/source-inventory.json",
+      "bytes": 234823,
+      "sha256": "d9fba4349ee291a0f0860221eeb6bb28d787e500f998730cf1f74d2b5c47bf4c",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/bloque-3-5-pre-whatsapp.md",
+      "bytes": 6304,
+      "sha256": "9a17b072b8e5d372f4e3adb82ceafc59a839229695f13e0609f49ed4f531cbd7",
+      "lines": 385,
+      "headings": [
+        "# Bloque 3.5 - Verificacion real pre-WhatsApp",
+        "## 1. Comandos locales seguros",
+        "## 2. Variables necesarias",
+        "## 3. Supabase staging",
+        "## 4. Auth y usuario owner",
+        "## 5. Netlify staging",
+        "## 6. Datos demo reales",
+        "## 7. Flujo real obligatorio",
+        "## 8. Turnstile",
+        "## 9. Cierre del bloque"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/booking-integration/activation.md",
+      "bytes": 16515,
+      "sha256": "5fce62edfd4817a6cf5c21330d127e6bb6bf2ee2145080d6c4d98e78acde351f",
+      "lines": 143,
+      "headings": [
+        "# Activación futura y verificación",
+        "## Estado inicial",
+        "## Preparación y despliegue",
+        "## Herramienta de configuración",
+        "## Conexión futura en HTML o Astro",
+        "## Apagado y reversión",
+        "## Pruebas reproducibles",
+        "## Evidencia de esta implementación",
+        "## Revisión visual resuelta"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/booking-integration/architecture.md",
+      "bytes": 19621,
+      "sha256": "00e372abc06f87c7507891f4ff9096b9f6e8a0940ed4d03f8193e68c9e13189e",
+      "lines": 135,
+      "headings": [
+        "# Integración de reservas: Cita Suite y Web Natalia",
+        "## Decisión y motivo",
+        "## Presentación dentro del diseño existente",
+        "## Fronteras que deben mantenerse",
+        "## Configuración y datos persistidos",
+        "## Reserva, carreras y recuperación",
+        "## Modalidades y evolución de la agenda",
+        "## Compatibilidad futura",
+        "## Escalabilidad y protección de la base",
+        "## Casos límite y comportamiento",
+        "## Qué sigue pendiente para la web completa"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/booking-integration/implementation-natalia.md",
+      "bytes": 15087,
+      "sha256": "da21d25c7e2b7a7c090b442a742aced94fcb2d4e6fa84f6a8dedfe5e20bbedff",
+      "lines": 86,
+      "headings": [
+        "# Implementación de Natalia y datos exigibles por profesional",
+        "## Comportamiento y alcance",
+        "## Orden de activación",
+        "## Rendimiento",
+        "## Verificación y auditoría"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/booking-integration/natalia.example.json",
+      "bytes": 405,
+      "sha256": "5bedaf3a3f60ad50b53936e48ccfd4f1df68fc071d5b59f695f26828b2086fa8",
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/business-access-subscription-system.md",
+      "bytes": 6537,
+      "sha256": "804306cdeeba652e4c66f23a6e703a11a07c97d2e7a8b2b5081f52a56d8d5cf2",
+      "lines": 418,
+      "headings": [
+        "# Sistema de accesos comerciales de Dental Suite",
+        "## Tablas",
+        "### allowed_emails",
+        "### business_subscriptions",
+        "### access_grants",
+        "## Estados",
+        "### Active",
+        "### Grace",
+        "### Restricted",
+        "### Archived",
+        "## Duraciones",
+        "## Acumulación",
+        "## Permanencia",
+        "## Idempotencia",
+        "## Funciones SQL",
+        "### compute_business_subscription_status",
+        "### business_allows_operation",
+        "### user_can_operate_business",
+        "### grant_business_access",
+        "## Enforcement",
+        "### 1. Helper central",
+        "### 2. Contexto de negocio",
+        "### 3. Rutas y acciones",
+        "## UI",
+        "### Panel maestro",
+        "### Configuración / Suscripción",
+        "### Navbar",
+        "## Compatibilidad"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/exportacion-datos/BITACORA.md",
+      "bytes": 38412,
+      "sha256": "7685e6a943c4ec32f5b95bbe9c6bbfa0d8dc5067d0c0fb2523901cfc5ffefe4b",
+      "lines": 771,
+      "headings": [
+        "# Bitacora de implementacion",
+        "## 2026-08-27 - Fase 0 iniciada",
+        "## 2026-08-27 - Fase 0 completada y Fase 1 abierta",
+        "## 2026-08-27 21:48 - Reconsulta por compactacion durante Fase 1",
+        "## 2026-08-27 21:58 - Fase 1 completada",
+        "## 2026-08-27 22:00 - Fase 2 abierta",
+        "## 2026-08-28 - Reconsulta por interrupcion durante Fase 2",
+        "## 2026-08-28 - Reconsulta despues de reinicio de la PC durante Fase 2",
+        "## 2026-08-28 - Fase 2 completada",
+        "## 2026-08-28 - Fase 3 abierta",
+        "## 2026-08-28 - Reconsulta de continuidad de Fase 3",
+        "## 2026-08-28 - Fase 3 completada",
+        "## 2026-08-28 - Fase 4 abierta",
+        "## 2026-08-28 - Ajuste visual solicitado durante Fase 4",
+        "## 2026-08-28 - Fase 4 completada",
+        "## 2026-08-28 - Fase 5 abierta",
+        "## 2026-08-28 - Fase 5 completada y Fase 6 abierta",
+        "## 2026-08-28 - Fase 6 completada",
+        "## 2026-08-28 - Fase 7 abierta: el Excel debe sobrevivir a la aplicacion",
+        "## 2026-08-28 - Fase 7 implementada y auditada",
+        "## 2026-08-28 - Fase 7 publicada"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/exportacion-datos/CONTRATO-XLSX-V1.md",
+      "bytes": 5134,
+      "sha256": "8fbc05156107684309b47595b4aa517c929c480b336054db59d154f8285f6753",
+      "lines": 217,
+      "headings": [
+        "# Contrato XLSX `cita-suite-patient-export/v1`",
+        "## Reglas generales",
+        "## Orden de hojas",
+        "## Informacion",
+        "## Pacientes",
+        "## Campos personalizados",
+        "## Historial clinico",
+        "## Turnos",
+        "## Profesionales por turno",
+        "## Seguimientos",
+        "## Textos extensos",
+        "## Estados humanos",
+        "## Compatibilidad"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/exportacion-datos/CONTRATO-XLSX-V2.md",
+      "bytes": 3850,
+      "sha256": "91da85bc887bc798d4bf0357431beb486833b95c50ec4590d7732c86552d039b",
+      "lines": 149,
+      "headings": [
+        "# Contrato XLSX vigente",
+        "## Reglas obligatorias",
+        "## Hojas y columnas",
+        "### 1. Resumen",
+        "### 2. Pacientes",
+        "### 3. Datos adicionales",
+        "### 4. Historia clínica",
+        "### 5. Turnos",
+        "### 6. Profesionales de turnos",
+        "### 7. Seguimientos",
+        "### 8. Textos extensos",
+        "## Criterio automático de aceptación"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/exportacion-datos/IMPLEMENTACION.md",
+      "bytes": 24627,
+      "sha256": "530331cb04ccc1da2bbfc3880318d0285275a3b6b5275965f69dbd28a90be6bb",
+      "lines": 746,
+      "headings": [
+        "# Implementacion detallada",
+        "## 1. Objetivo de producto",
+        "## 2. Alcance funcional",
+        "### 2.1 Modalidades",
+        "### 2.2 Acceso comercial",
+        "### 2.3 Exclusiones v1",
+        "## 3. Autorizacion",
+        "## 4. Recurso y contrato HTTP",
+        "### 4.1 Crear sesion",
+        "### 4.2 Obtener paginas",
+        "### 4.3 Validar dataset",
+        "### 4.4 Cancelar",
+        "### 4.5 Contrato de errores",
+        "## 5. Modelo de base de datos",
+        "### 5.1 Huella de consistencia sin costo sobre escrituras",
+        "### 5.2 Tabla de sesiones",
+        "### 5.3 Auditoria",
+        "### 5.4 Rate limits",
+        "## 6. Fuentes y listas de campos",
+        "### 6.1 Pacientes",
+        "### 6.2 Campos personalizados",
+        "### 6.3 Historial clinico",
+        "### 6.4 Turnos",
+        "### 6.5 Profesionales por turno",
+        "### 6.6 Seguimientos",
+        "## 7. Serializacion XLSX",
+        "### 7.1 Arquitectura cliente",
+        "### 7.2 Tipos",
+        "### 7.3 Textos extensos",
+        "### 7.4 Archivo",
+        "## 8. Contrato visual y UX",
+        "### 8.1 Pantalla global",
+        "### 8.2 Paciente individual",
+        "### 8.3 Acceso restringido",
+        "### 8.4 Estados y accesibilidad",
+        "## 9. Rendimiento",
+        "### 9.1 Principio",
+        "### 9.2 Baseline obligatorio antes de codigo funcional",
+        "### 9.3 Controles de no regresion",
+        "## 10. Pruebas",
+        "### 10.1 Base de datos/autorizacion",
+        "### 10.2 Completitud",
+        "### 10.3 XLSX",
+        "### 10.4 UI/integracion",
+        "### 10.5 Cierre secuencial de bajo consumo",
+        "## 11. Fases y puertas de salida",
+        "### Fase 0 - Especificacion",
+        "### Fase 1 - Baseline e inventario",
+        "### Fase 2 - Base de datos y servidor",
+        "### Fase 3 - XLSX",
+        "### Fase 4 - UI",
+        "### Fase 5 - Auditoria",
+        "### Fase 6 - Publicacion",
+        "## 12. Riesgos que bloquean publicacion"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/exportacion-datos/README.md",
+      "bytes": 5379,
+      "sha256": "31f3660382e4a2bdbc9637c41be07a24c707048cf502f7dd0bb2082fbc742d36",
+      "lines": 103,
+      "headings": [
+        "# Exportacion de datos de pacientes",
+        "## Protocolo obligatorio por fase",
+        "## Estado general",
+        "## Decisiones no negociables",
+        "## Definicion de terminado"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/mercadopago-suscripciones.md",
+      "bytes": 7911,
+      "sha256": "415f0182766cd7ddb84b22b110f09f9484ca2a5cf700864db3eaa61721633b09",
+      "lines": 122,
+      "headings": [
+        "# Mercado Pago — Suscripciones de Cita Suite",
+        "## Modelo (por qué \"pagó pero está bloqueado\" es estructuralmente imposible)",
+        "## Variables de entorno",
+        "## Prueba de integración (antes del go-live)",
+        "## Checklist de salida a producción",
+        "## Diagnóstico rápido",
+        "## Decisiones de producto registradas"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/plan-calendario-direccion-recordatorios.md",
+      "bytes": 37344,
+      "sha256": "9eb89da95ed1a36e629ef56603fc66bac41c5aaae553ddf20c260d330244a667",
+      "lines": 559,
+      "headings": [
+        "# Plan de implementación — Calendario, dirección, push y recordatorios de turno",
+        "## 1. Restricciones externas verificadas (condicionan el diseño)",
+        "## 2. Hechos del repo que condicionan el diseño",
+        "## 3. Decisiones de diseño centrales",
+        "## 4. Correcciones incorporadas de la revisión quirúrgica",
+        "## FASE 0 — Timezone correcta en todo lo público",
+        "## FASE 1 — Migración única de base de datos",
+        "## FASE 2 — Ubicación: librería + configuración + readiness",
+        "## FASE 3 — Librería ICS (`apps/web/src/lib/server/ics.ts`)",
+        "## FASE 4 — Endpoints públicos (tracking sin JS, por redirect)",
+        "## FASE 5 — Detección de dispositivo (`apps/web/src/lib/device.ts`)",
+        "## FASE 6 — Rediseño de `/turno/[token]`",
+        "## FASE 7 — Integración con reprogramación / cancelación",
+        "## FASE 8 — Recordatorios (`/odonto/recordatorios`)",
+        "## FASE 9 — Push (Android/desktop, opt-in, PR independiente)",
+        "## FASE 10 — Tests",
+        "## FASE 11 — Rollout",
+        "## FASE 12 — Android sin `.ics`: intent nativo + jerarquía de avisos (post-prueba real)",
+        "### Restricciones verificadas (se suman a §1)",
+        "### Decisiones",
+        "### Implementación",
+        "### Matriz de prueba (dispositivos reales, con `?ci=data` y `?ci=type`)",
+        "## Orden de PRs",
+        "## Registro de avance",
+        "### Pendiente de rollout (manual, fuera del repo)"
+      ],
+      "classification": "historical-or-domain-reference"
+    },
+    {
+      "path": "docs/plans/refactorizacion-cita-suite.integridad.json",
+      "bytes": 2353,
+      "sha256": "d8a17c4e85af5c300e890b7259fabe162d4ba575a2d8c75067d6e9e9699b38b1",
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/plans/refactorizacion-cita-suite.md",
+      "bytes": 56860,
+      "sha256": "796853d3fca1d82dfe3a8c0129d80f937180948cb0a75a24518c1721d20e60b9",
+      "lines": 660,
+      "headings": [
+        "# Plan integral de refactorización de Cita Suite",
+        "## 1. Objetivo, alcance y condiciones de partida",
+        "### Decisiones que quedan fijadas",
+        "### Qué está comprobado y qué sigue pendiente",
+        "## 2. Arquitectura de destino y contratos",
+        "### Seis áreas, sin fragmentación burocrática",
+        "### Propiedad de las reglas",
+        "### Tipado, autorización y contratos públicos",
+        "## 3. Ejecución ordenada y criterios de cierre",
+        "### Etapa 0. Establecer una base real y preservar el trabajo existente",
+        "### Etapa 1. Hacer confiable la verificación",
+        "### Etapa 2. Completar tipos, contexto y aislamiento",
+        "### Etapa 3. Integrar capacidades y cuotas",
+        "### Etapa 4. Consolidar disponibilidad, reservas y aranceles",
+        "### Etapa 5. Extraer las áreas y descomponer la interfaz",
+        "### Etapa 6. Separar y presupuestar las tareas automáticas",
+        "## 4. Verificación de capacidad, regresiones y mantenibilidad",
+        "### Entornos",
+        "### Datos y carga",
+        "### Criterios de aceptación",
+        "### Matriz de regresiones obligatoria",
+        "## 5. Auditoría final, publicación y documentación",
+        "### Auditoría final",
+        "### Publicación",
+        "### Documentación entregable",
+        "# Instrucción de ejecución aprobada por el usuario",
+        "# Directivas de preservación y continuidad",
+        "# Ampliación aprobada por el usuario: identidad unificada «Cita Suite»",
+        "## Pedido original íntegro — 16 de octubre de 2026",
+        "## Incorporación al alcance y secuencia obligatoria",
+        "## Garantías técnicas de la unificación",
+        "## Criterios de aceptación adicionales",
+        "## Información operativa aportada por el usuario",
+        "# Autorización adicional del usuario: producción y pruebas masivas",
+        "## Pedido original íntegro — 17 de octubre de 2026",
+        "## Aplicación a la campaña",
+        "# Decisión del usuario: lanzamiento con dos consultorios, infraestructura gratuita y control de consumo",
+        "## Pedido original íntegro — 20 de octubre de 2026",
+        "### 1. Situación actual y contratación",
+        "### 2. Escalabilidad y prioridades",
+        "### 3. Control de consumo y riesgos de facturación",
+        "### 4. Pruebas, rendimiento y limitaciones actuales",
+        "### 5. Autonomía técnica y documentación",
+        "### Objetivo final",
+        "## Aplicación a la campaña"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/plans/registro-refactorizacion-cita-suite.md",
+      "bytes": 470076,
+      "sha256": "836fa464902cfd74f5962db56e1c87731f9cd2d0a9b669a2271c6228e20e938a",
+      "lines": 1451,
+      "headings": [
+        "# Registro de ejecución de la refactorización de Cita Suite",
+        "## Regla de continuidad",
+        "## Estado por etapa",
+        "## Cambios efectuados",
+        "## Pruebas ejecutadas y resultados",
+        "### Verificación rápida inicial — aprobada",
+        "### Reconstrucción SQL inicial — aprobada",
+        "### Plataforma con Auth real — fallo diagnosticado, corrección por verificar",
+        "## Decisiones y desviaciones justificadas",
+        "## Bloqueos y límites conocidos",
+        "## Próximo trabajo, en orden",
+        "## Actualización del 15 de octubre — continuación verificada",
+        "## Continuación después de la interrupción",
+        "## Comprobación final obligatoria",
+        "### Etapa 2: generación y contexto en curso",
+        "### CI externo: primera ejecución y corrección de preparación",
+        "## Ampliación explícita del 16 de octubre: identidad Cita Suite",
+        "## Etapa 2: evidencia acumulada y punto de continuación",
+        "### Continuación verificada del 16 de octubre",
+        "### Entorno y segundo cierre completo de verificación",
+        "### Restricciones compuestas: generación real y verificación pendiente",
+        "### Acceso Cloudflare recuperado y contratos de consumidores",
+        "### Staging accesible y auditoría SQL más profunda",
+        "### Conexión de staging resuelta y comprobaciones clínicas ampliadas",
+        "### Continuación: perfil Free confirmado y resolución privilegiada comprobada",
+        "### Autorización ampliada y continuación del 17 de octubre",
+        "### Continuación: agotamiento de conexiones observado en una corrida verde",
+        "### Etapa 3: contabilidad por consultorio y activación",
+        "### Etapa 3: SQL comprobado y verificación integral siguiente",
+        "### Etapa 4: aranceles, reproducción compartida",
+        "## Continuación con Opus 5.5 — 19 de octubre de 2026",
+        "## Etapa 6: tareas automáticas",
+        "## Capacidad y matriz de regresiones"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/plans/traspaso-refactorizacion-cita-suite.md",
+      "bytes": 54898,
+      "sha256": "37645c6abe9aa993f28aa8160a89e4ed5bd03e4e505b81796bd70bd2c7ec0f3e",
+      "lines": 355,
+      "headings": [
+        "# Traspaso de la campaña de refactorización de Cita Suite",
+        "## Estado de este documento",
+        "## Alcance de lanzamiento vigente (enmienda del usuario del 20 de octubre)",
+        "## Punto exacto actual (21 de octubre, Opus 5.5)",
+        "## Antecedente: relevo de GPT-6.1 Sol (19 de octubre, ~06:02 UTC)",
+        "### Punto exacto del relevo de GPT-6.1 Sol (histórico, ya resuelto)",
+        "### Corrida que quedó trabajando",
+        "### Últimos resultados comprobados",
+        "### Qué encontró la inspección visual propia y qué quedó editado SIN VERIFICAR",
+        "### Siguiente trabajo concreto, sin reconstruir el plan",
+        "### Capturas y diagnósticos que recibe el siguiente agente",
+        "## Autoridad, orden de lectura y conservación",
+        "## Espacio de trabajo y destinos",
+        "## RAM y disciplina de pruebas",
+        "### Ciclo reproducible de snapshot y CI",
+        "### Recuperar evidencia sin perder binarios",
+        "## Qué se hizo y qué conserva cada área",
+        "### Acceso",
+        "### Equipo",
+        "### Pacientes y clínica",
+        "### Agenda/reservas",
+        "### Sitios",
+        "### Integraciones",
+        "## SQL nuevo y transición",
+        "## Identidad: aplicado, ensayado y preparado",
+        "## Evidencia y limitaciones de entorno",
+        "## Continuidad después del cierre de fase 5",
+        "### Etapa 6: tareas automáticas",
+        "### Capacidad y regresión transversal",
+        "### Release, producción y auditoría final",
+        "## Fuera del alcance actual",
+        "## Entrega requerida al usuario"
+      ],
+      "classification": "campaign-current"
+    },
+    {
+      "path": "docs/supabase-clinical-files-phase-1.md",
+      "bytes": 34942,
+      "sha256": "41fe50db1646c7f2c3afbbf5f4c62be1f7fcf9c046fbad6a6fc0c7fdec999ee8",
+      "lines": 660,
+      "headings": [
+        "# Cita Suite: archivos clínicos en Supabase Storage — fase 1",
+        "## Actualización de alcance — 14 de octubre de 2026",
+        "## Estado y propósito",
+        "## Alcance aprobado",
+        "## Riesgo residual aceptado temporalmente",
+        "## Arquitectura",
+        "## Bucket y rutas",
+        "## Modelo de metadata",
+        "### Ciclo de vida",
+        "### Integridad",
+        "## Matriz de permisos",
+        "## Contratos HTTP",
+        "## Subida y validación",
+        "## Acceso a originales y miniaturas",
+        "## Papelera de radiografías",
+        "## Límites y protección de costo",
+        "## Pacientes: actividad, búsqueda y paginación",
+        "## Legado Google Drive y corte",
+        "## Legal y comunicación",
+        "## Invariantes verificables",
+        "## Decisiones técnicas de cierre",
+        "## Ejecutor E2E local",
+        "## Estrategia de pruebas y salida",
+        "## Resultado final de auditoría — 21 de agosto de 2026",
+        "### Base de datos y seguridad",
+        "### Aplicación",
+        "### Verificación del sitio publicada antes del lanzamiento",
+        "### Hallazgos encontrados y cerrados",
+        "## Cierre en producción — 22 de agosto de 2026",
+        "## Estado de entrega",
+        "## Fase 2 reservada",
+        "## Evolución posterior: visor clínico de detalle — 22 de agosto de 2026",
+        "### Decisiones de experiencia clínica",
+        "### Continuidad de lectura comercial",
+        "### Validación de esta evolución"
+      ],
+      "classification": "historical-or-domain-reference"
+    }
+  ]
+}
