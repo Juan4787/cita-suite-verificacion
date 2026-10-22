@@ -9,8 +9,10 @@ import assert from 'node:assert/strict';
 import {randomInt} from 'node:crypto';
 import {STAGING_PROJECT_REF} from './lib/staging-database.mjs';
 import {STAGING_APP_ORIGIN,STAGING_NATALIA_ORIGIN,STAGING_RELEASE_PRACTICE,stagingSupabaseKey} from './lib/staging-deploy.mjs';
+import {assertHostedIntegrationResources} from './lib/verification-resources.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url)).replace(/\/$/,'');
+assertHostedIntegrationResources();
 const require=createRequire(root+'/apps/web/package.json');
 const {chromium,expect}=require('@playwright/test');
 const {createClient}=require('@supabase/supabase-js');

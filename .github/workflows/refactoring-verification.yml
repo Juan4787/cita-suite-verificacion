@@ -10,7 +10,7 @@ on:
         type: choice
         required: true
         default: full
-        options: [fast, full, release, types, sql, browser, capacity, capacity-seed, capacity-quick, capacity-profile]
+        options: [fast, full, release, rollback, types, sql, browser, capacity, capacity-seed, capacity-quick, capacity-profile]
       browser_grep:
         description: Diagnostic selection only; never certifies full verification
         type: string
@@ -22,7 +22,7 @@ on:
         required: false
         default: ''
       rollback_run:
-        description: Successful packaging run of the distinct compatible rollback baseline (required by release)
+        description: Successful packaging run of the distinct compatible rollback baseline (required by release and rollback)
         type: string
         required: false
         default: ''
@@ -68,12 +68,12 @@ jobs:
           JS
       # Preparation only downloads and installs: a stalled mirror fails here, not at the job's limit.
       - name: Prepare disposable service images
-        if: inputs.level != 'fast'
+        if: inputs.level != 'fast' && inputs.level != 'rollback'
         timeout-minutes: 15
         run: |
           node scripts/prepare-ci-services.mjs
       - name: Use the existing official Ubuntu fallback mirror
-        if: inputs.level == 'full' || inputs.level == 'release' || inputs.level == 'browser'
+        if: inputs.level == 'full' || inputs.level == 'release' || inputs.level == 'browser' || inputs.level == 'rollback'
         timeout-minutes: 1
         run: |
           mkdir -p .verification
@@ -90,7 +90,7 @@ jobs:
           print(updated)
           PY
       - name: Prepare one browser
-        if: inputs.level == 'full' || inputs.level == 'release' || inputs.level == 'browser'
+        if: inputs.level == 'full' || inputs.level == 'release' || inputs.level == 'browser' || inputs.level == 'rollback'
         timeout-minutes: 20
         run: pnpm --filter web exec playwright install --with-deps chromium
       - name: Prepare pinned native spreadsheet reader
@@ -113,7 +113,7 @@ jobs:
           test -n "$ARTIFACT_RUN"
           gh run download "$ARTIFACT_RUN" --repo "$GITHUB_REPOSITORY" --name "cloudflare-staging-$GITHUB_SHA" --dir "$RUNNER_TEMP/release"
       - name: Download the explicitly identified rollback baseline
-        if: inputs.level == 'release'
+        if: inputs.level == 'release' || inputs.level == 'rollback'
         env:
           GH_TOKEN: ${{ github.token }}
           ROLLBACK_RUN: ${{ inputs.rollback_run }}
@@ -131,12 +131,16 @@ jobs:
           BROWSER_GREP: ${{ inputs.browser_grep }}
           ARTIFACT_RUN: ${{ inputs.artifact_run }}
           CITA_RELEASE_ARTIFACT: ${{ (inputs.level == 'release' || inputs.artifact_run != '') && format('{0}/release', runner.temp) || '' }}
-          CITA_ROLLBACK_ARTIFACT: ${{ inputs.level == 'release' && format('{0}/release-rollback', runner.temp) || '' }}
-          CITA_STAGING_SERVICE_ROLE_KEY: ${{ inputs.level == 'release' && secrets.CITA_STAGING_SERVICE_ROLE_KEY || '' }}
-          CITA_STAGING_ANON_KEY: ${{ inputs.level == 'release' && secrets.CITA_STAGING_ANON_KEY || '' }}
+          CITA_ROLLBACK_ARTIFACT: ${{ (inputs.level == 'release' || inputs.level == 'rollback') && format('{0}/release-rollback', runner.temp) || '' }}
+          CITA_STAGING_SERVICE_ROLE_KEY: ${{ (inputs.level == 'release' || inputs.level == 'rollback') && secrets.CITA_STAGING_SERVICE_ROLE_KEY || '' }}
+          CITA_STAGING_ANON_KEY: ${{ (inputs.level == 'release' || inputs.level == 'rollback') && secrets.CITA_STAGING_ANON_KEY || '' }}
         run: |
           case "$VERIFICATION_LEVEL" in
             fast|full|release) pnpm "verify:$VERIFICATION_LEVEL" ;;
+            rollback)
+              echo 'Deployed staging rollback check only; this does not certify the candidate or full release.'
+              node scripts/verify-campaign-staging.mjs --rollback
+              ;;
             types) node scripts/run-campaign-type-generation.mjs ;;
             sql) node scripts/run-campaign-type-generation.mjs --verify-sql ;;
             capacity) node scripts/run-campaign-capacity.mjs ;;

@@ -39,6 +39,7 @@ const extras = [
 	'scripts/prepare-natalia-publication.mjs',
 	'scripts/staging/push-sink/supabase/config.toml', 'scripts/staging/push-sink/supabase/functions/push-sink/index.ts',
 	'docs/README.md', 'docs/architecture/inventario-documental-20261022.json',
+	'docs/architecture/clave-de-servicio.md', 'docs/booking-integration/activation.md',
 	'docs/plans/refactorizacion-cita-suite.md', 'docs/plans/refactorizacion-cita-suite.integridad.json',
 	'docs/plans/registro-refactorizacion-cita-suite.md',
 	'docs/architecture/base-de-campana.md', 'docs/architecture/verificacion.md',
