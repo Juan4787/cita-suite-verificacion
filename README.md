@@ -9,6 +9,7 @@ La campaña actual se rige por el [plan aprobado íntegro](docs/plans/refactoriz
 ```text
 apps/web              App SvelteKit existente
 apps/natalia          Web pública Astro de Natalia
+apps/scheduler        Programador Cloudflare con Service Binding
 packages/shared       Tipos, constantes y helpers compartidos
 supabase/migrations   SQL versionado
 supabase/functions    Edge Functions futuras
@@ -28,7 +29,7 @@ pnpm verify:full
 pnpm verify:release
 ```
 
-Usar Node de `.node-version` y pnpm de `packageManager`. Las verificaciones ejecutan una sola tarea a la vez y fallan si una suite obligatoria no se ejecuta. `full` necesita las imágenes de pruebas y Playwright instalados; reconstruye exclusivamente contenedores descartables propios. `release` añade los artefactos y la evidencia de staging aislado; no despliega. Los niveles todavía pendientes de cierre se identifican en el registro de campaña.
+Usar Node de `.node-version` y pnpm de `packageManager`. Las verificaciones ejecutan una sola tarea a la vez y fallan si una suite obligatoria no se ejecuta. `full` y `release` corren exclusivamente en GitHub Actions: reconstruyen contenedores descartables propios y ejecutan navegador y compilaciones secuencialmente. No ejecutar bases, navegadores ni builds en esta máquina durante la campaña. `fast` comprueba la memoria disponible antes de cada proceso. `release` exige el paquete de su revisión exacta y comprueba el artefacto compilado y el staging; no despliega. Ver [verificación](docs/architecture/verificacion.md) y [traspaso vigente](docs/plans/traspaso-refactorizacion-cita-suite.md).
 
 ## Supabase
 
@@ -43,27 +44,18 @@ Las variables de entorno viven en la raíz. `apps/web/vite.config.ts` usa `envDi
 
 ## Despliegues
 
-Cloudflare Workers es el único destino de publicación del candidato comercial.
-El Worker se
-llama `app` y usa el artefacto de SvelteKit generado exclusivamente por
-el adaptador de Cloudflare.
+Cloudflare Workers es el destino de la app (`app`) y del programador (`cita-suite-scheduler`). Natalia conserva `natalia-frutos.vercel.app`. Staging tiene destinos separados. El lanzamiento inicial usa Workers Free y Supabase Free para dos consultorios; no se contratan servicios ni se cambian planes sin autorización.
 
-Antes del primer despliegue, configurá el proyecto de Workers con **Root
-Directory** en `apps/web` y la versión Node fijada en `.node-version`. En **Settings → Builds** usá
-estos comandos:
+La [publicación y reversión](docs/architecture/publicacion-y-reversion.md) es el procedimiento operativo. CI empaqueta el release una sola vez, con manifiesto y hashes; staging, `verify:release` y producción usan esos archivos exactos. No compilar de nuevo para publicar ni ejecutar `pnpm deploy:cloudflare` como atajo de la campaña. Antes de cualquier intervención de producción deben cumplirse las condiciones previas del procedimiento, incluidos los disparadores automáticos desconectados.
 
-```text
-Build command: pnpm run build
-Deploy command: pnpm exec wrangler deploy
-Non-production branch deploy command: pnpm exec wrangler versions upload
-```
-
-El nombre del Worker creado en el panel debe ser exactamente `app`, como
-en `apps/web/wrangler.jsonc`. Para un despliegue desde una máquina autorizada:
+La candidata aprobada se publica con los scripts de destino explícito:
 
 ```sh
-pnpm deploy:cloudflare
+node scripts/deploy-staging-workers.mjs app <release-descargado>
+node scripts/deploy-production-workers.mjs app <release-descargado>
 ```
+
+Estos son pasos distintos del procedimiento; no ejecutarlos juntos ni antes de sus controles de respaldo, migraciones, staging y auditoría. El programador y Natalia tienen su propia secuencia de publicación y comprobación.
 
 No copies valores privados al repositorio ni a `wrangler.jsonc`. Cargá en
 Cloudflare, en **Settings → Variables and Secrets**, las mismas variables de
@@ -74,7 +66,7 @@ sin definir o con valor distinto de `true` en producción. Definí también
 URLs de Supabase y a los redirect URIs de las integraciones externas que estén
 habilitadas.
 
-`keep_vars: true` en `apps/web/wrangler.jsonc` evita que un despliegue automático
+`keep_vars: true` en `apps/web/wrangler.jsonc` evita que un despliegue
 borre los bindings cargados desde el panel. No lo elimines mientras las variables
 y los secretos de producción se administren fuera del repositorio.
 

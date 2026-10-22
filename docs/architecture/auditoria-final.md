@@ -2,7 +2,7 @@
 
 Contraste del [plan aprobado](../plans/refactorizacion-cita-suite.md) con la evidencia, como exige su instrucción de ejecución: «antes de declarar terminada la campaña, verificá punto por punto el cumplimiento del documento original utilizando evidencia comprobable». Las corridas y su detalle están en el [registro](../plans/registro-refactorizacion-cita-suite.md).
 
-**Estado: borrador abierto.** La campaña **no** está terminada: faltan los pasos de producción y las decisiones del usuario marcados abajo. Una fila se cierra sólo con su evidencia.
+**Estado al 22 de octubre, reanudación desde las 20:25 UTC: auditoría abierta.** La campaña **no** está terminada: `verify:release` 39783349541 de `dfb487f` aprobó el nivel completo, pero falló después sobre el artefacto compilado (dos advertencias de consola desconocidas); el paso de staging no se ejecutó. Diagnóstico 39850821824 sobre `3c11ed0`, paquete 39850442948. También faltan producción, capacidad y las decisiones marcadas abajo. Una fila se cierra sólo con su evidencia; una corrida detenida no aprueba las suites posteriores.
 
 Estados:
 - **Cumplido:** con su evidencia.
@@ -23,7 +23,7 @@ Estados:
 | Programación nativa de Cloudflare con presupuestos medidos | [tareas automáticas](tareas-automaticas.md); staging con los cinco cron | Cumplido en staging; producción pendiente |
 | Push y calendario cada cinco minutos, inicio dentro de diez | Etapa 6: escenario del plan y entrega real por FCM a un Samsung | Cumplido en staging; producción pendiente |
 | Pruebas pesadas en CI descartable, sin cargar la computadora | [verificación](verificacion.md) | Cumplido |
-| Natalia navega al turnero real | Reserva nativa en el full y en el staging desplegado (`verify:release`) | Cumplido, con la evidencia del release |
+| Natalia navega al turnero real | Reserva nativa comprobada en el nivel completo; copia de Natalia desplegada en staging. Su recorrido alojado se exige en el último paso de `verify:release`. | Cumplido en CI; recorrido alojado de la candidata pendiente de release aprobado |
 | Cursos y noticias fuera; sin WhatsApp | Medición de Natalia; secciones intactas en `check-public.mjs` | Cumplido |
 
 ## 2. Arquitectura y contratos
@@ -71,15 +71,15 @@ Estados:
 | Requisito | Evidencia | Estado |
 |---|---|---|
 | Rutas alternativas, tipos, duplicación, paginación, consultorio nuevo | Auditoría transversal cerrada: full 39667993859 | Cumplido |
-| Recorridos cruzados sensibles sobre los artefactos construidos | `verify:release`: la suite de navegador completa y la reserva nativa sobre el paquete de producción en workerd. Las corridas sobre el paquete encontraron tres diferencias con el servidor de desarrollo, todas corregidas: orígenes HTTP en el escenario (39709379322), la CSP que bloqueaba el proyecto configurado (39731246349) y la integración predeterminada del escenario (39737443779, con el nivel completo aprobado entero). La quinta (39777244477) se canceló por un `apt-get` colgado en CI. | Pendiente: `verify:release` de la candidata final `dfb487f` |
+| Recorridos cruzados sensibles sobre los artefactos construidos | `verify:release` exige toda la suite y Natalia nativa sobre workerd. Diferencias anteriores corregidas: HTTPS del anfitrión, CSP y origen predeterminado. En 39783349541, `dfb487f`, el full aprueba pero el artefacto queda en 5 aprobadas, 1 fallida y 35 sin ejecutar por dos advertencias desconocidas del recorrido de profesional. Evidencia `.verification/remote-39783349541/`, paquete `28516c4e…`. | Pendiente: resolver la causa, repetir el recorrido y release íntegro de la revisión final |
 | Ampliación de cuota y cambio de recursos conservando datos, permisos y pendientes | Prueba de ampliación en `clinical-files.spec.ts`: aprobada en los fulls 39731246349 y 39737443779; se repite sobre el paquete. El cambio de Workers a Paid no se ensaya alojado sin contratar: lo cubren las pruebas del perfil de presupuesto. | Pendiente: la corrida sobre el paquete de `dfb487f` |
 | Respaldo y recuperación ensayados en un entorno aislado | 39682517594; [respaldo y recuperación](respaldo-y-recuperacion.md) | Cumplido |
-| Migraciones compatibles en staging | 39683852264: 124 migraciones | Cumplido |
-| App, Natalia y programador desplegados y comprobados en staging | App y Natalia desde el paquete de cada candidata; la última, `f83bbc2` (`83b60e2f…` y `ed419cbc…`). El programador corre desde la etapa 6, y el 22 de octubre se ensayó en staging su despliegue sin cron y su restitución. La prueba de humo de publicación (reserva pública y documento clínico) aprobó en staging con 14 comprobaciones. | Pendiente: `verify:release` de `dfb487f` |
+| Migraciones compatibles en staging | 39736239031: 126 migraciones; producción mantiene 97 hasta la publicación en dos tandas. | Cumplido en staging |
+| App, Natalia y programador desplegados y comprobados en staging | Última revisión servida `dfb487f`: app `04ef8a10…`, Natalia `b52e723b…`; programador `49636b6a…`. La prueba de humo aprobó 14 comprobaciones y su limpieza posterior 7 (dos documentos); capacity-cleanup 39850817211 dejó cero consultorios/dueños sintéticos. | Pendiente: paso alojado de `verify:release` de la revisión final |
 | Auditoría de release | 39685702630, más `verify:release` | Pendiente: la corrida del release |
 | Programador anterior detenido | cron-job.org 7795525, deshabilitado; Netlify 404 y Vercel 503 (`check-previous-scheduler.mjs`, 22 de octubre, 12:43 UTC) | Cumplido; se repite en el paso 0 |
 | Publicar migraciones y aplicaciones; activar el programador nuevo; versión, permisos, reserva, almacenamiento y tareas | [Publicación y reversión](publicacion-y-reversion.md): 14 pasos con comando, resultado esperado, criterio de detención y reversión. Cada comprobación posterior tiene su herramienta: `verify-production-release.mjs`, `release-smoke.mjs`, `tail-metrics.mjs production`, `production-device-push.mjs`, `compare-access-catalog.mjs` y `check-api-exposure.mjs`. | Pendiente: requiere las acciones del usuario en los paneles |
-| Reversión sin restauraciones destructivas | Procedimiento documentado y compatibilidad de las 27 migraciones con `313355a` | Cumplido como preparación |
+| Reversión sin restauraciones destructivas | Compatibilidad de `313355a` con la tanda de expansión documentada. Después de la contracción `20261022010000`, esa versión pierde las escrituras directas que utilizaba: no es una reversión completa compatible sin un procedimiento adicional verificado. | Preparación parcial: cerrar una reversión compatible también después de la tanda 2 antes de publicarla |
 | Documentación entregable | Áreas, contratos, [permisos y capacidades](permisos-y-capacidades.md), documentos, tareas, verificación, capacidad, [decisiones](decisiones.md), publicación y [guía](guia-nuevas-funciones.md) | Cumplido |
 
 ## Base de producción

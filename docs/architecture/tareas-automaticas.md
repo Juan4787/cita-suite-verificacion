@@ -1,6 +1,6 @@
 # Tareas automáticas: programación, presupuestos y recuperación
 
-**Etapa 6 en curso: implementada y probada en el entorno descartable; falta la medición desplegada en staging y la transición.** La fuente normativa es la etapa 6 del [plan íntegro](../plans/refactorizacion-cita-suite.md). Este documento registra límites verificados, el estado de partida y el diseño adoptado. Nada de lo descrito aquí está publicado mientras el registro no acredite el despliegue.
+**Estado al 22 de octubre:** implementación y recuperación verificadas en CI y staging, con entrega real a un Samsung y cierre funcional de etapa 6 registrado el 20 de octubre. La transición a producción y la garantía de CPU de Workers Free siguen pendientes: la tolerancia observada por encima de 10 ms no demuestra cumplimiento. La fuente normativa es la etapa 6 y la decisión del 20 de octubre del [plan íntegro](../plans/refactorizacion-cita-suite.md). Los apartados de partida son históricos; el [registro](../plans/registro-refactorizacion-cita-suite.md) y el [procedimiento de publicación](publicacion-y-reversion.md) fijan el estado operativo.
 
 ## Límites de plataforma verificados (19 de octubre de 2026)
 
@@ -96,7 +96,7 @@ Cada ejecución usa una sola hora lógica para reclamar, revalidar y registrar: 
 
 ### Pendiente de esta etapa
 
-1. Decisión del usuario sobre Workers Paid antes de activar el programador en producción.
+1. La decisión sobre Workers Paid **ya está tomada:** el usuario lo rechazó el 20 de octubre y no autoriza servicios de consumo variable sin tope. Conservar las mediciones anteriores como evidencia; no presentar Paid como una decisión todavía pendiente. Demostrar los criterios del lanzamiento de dos consultorios en Free y registrar cualquier corte o límite que impida cumplirlos, con alternativas que respeten el tope de gasto. Las mediciones anteriores por encima de 10 ms no certifican esa garantía.
 2. Transición según la secuencia de publicación del plan: liberar los cron de staging, detener el programador anterior (interruptor de base), activar el nuevo y verificar sus eventos reales.
 
 Restricción de cuenta: Workers Free admite cinco Cron Triggers **por cuenta**. Staging y producción no pueden tener sus cinco triggers activos al mismo tiempo. La validación desplegada en staging usará la cuota durante una ventana acotada y la liberará antes de activar producción; se documentará el orden exacto.

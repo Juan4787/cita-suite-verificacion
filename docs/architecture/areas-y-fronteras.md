@@ -1,6 +1,6 @@
 # Áreas y fronteras de Cita Suite
 
-Fuente normativa: [plan aprobado](../plans/refactorizacion-cita-suite.md), etapas2/5/6. Estado: etapa5 en ejecución; no se declara completada por reorganizar directorios. La fuente/resultado de cada lote pertenece al [registro](../plans/registro-refactorizacion-cita-suite.md).
+Fuente normativa: [plan aprobado](../plans/refactorizacion-cita-suite.md), etapas 2/5/6. Estado al 22 de octubre: etapa 5 cerrada sobre `6746491`, full 39276578152, con la [matriz de evidencia](evidencia-etapa5-estructura.md); etapa 6 verificada en staging, con transición de producción y límites de CPU pendientes de release. La fuente/resultado de cada lote pertenece al [registro](../plans/registro-refactorizacion-cita-suite.md).
 
 ## Responsabilidades y contratos
 
@@ -19,7 +19,9 @@ Cada entrada pública por operación contiene su implementación y exporta su co
 
 La primera extracción elimina la separación artificial entre formas de UI y tipos dentro de módulos privados: contexto de negocio y recordatorios tienen contratos propios; la política comercial pura conserva sus funciones y validación en un único módulo sin env ni sesión. La autorización definitiva continúa en servidor/SQL.
 
-## Puertas de cierre pendientes
+## Criterios de cierre y evidencia
+
+Los criterios siguientes se verificaron para el cierre de etapa 5 en su matriz; no son una lista actual de tareas por implementar. El release sobre el artefacto compilado, la capacidad alojada y la identidad externa conservan las puertas de la [auditoría final](auditoria-final.md).
 
 - Extraer recorridos completos, controladores delgados y componentes por tarea/estado; mover archivos no satisface por sí solo este objetivo.
 - Aplicar fronteras a las seis áreas sin una exclusión general del código anterior, con pruebas adversarias reales de imports privados/servidor/ciclos.

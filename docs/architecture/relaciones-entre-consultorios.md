@@ -1,6 +1,6 @@
 # Identidad de consultorio en relaciones
 
-Estado: preparación de etapa 2, pendiente de generación y pruebas sobre migraciones reconstruidas. No aplicado a producción.
+Estado al 22 de octubre: etapa 2 verificada en el entorno descartable, full 39002014621 sobre `02af5ff` (45 controles de relaciones, 34 clínicos, tipos reproducibles y Auth/Storage/navegador reales). Staging tiene 126 migraciones; producción conserva las 97 previas a la campaña. Las secciones de preparación siguientes describen el proceso histórico, no tareas aún sin verificar. Ver [registro](../plans/registro-refactorizacion-cita-suite.md) y [publicación](publicacion-y-reversion.md).
 
 La migración `20261016010000_tenant_relation_identity.sql` completa dieciséis relaciones que tenían FK por identificador global sin incluir el consultorio. La autorización de funciones/RLS y los triggers vigentes se conservan; la restricción añade una garantía estructural para escrituras futuras, incluidas las privilegiadas. El hallazgo de una FK incompleta por sí solo no demuestra una explotación de la aplicación vigente.
 

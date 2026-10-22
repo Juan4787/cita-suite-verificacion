@@ -66,7 +66,19 @@ export function observeRenderHealth(
 									? 'supabase-realtime-rest-fallback'
 									: text.includes('WebSocket is already in CLOSING or CLOSED state')
 										? 'websocket-send-after-close'
-										: 'other',
+										: text.includes('WebSocket is closed before the connection is established')
+											? 'websocket-close-before-open'
+											: text.startsWith('WebSocket connection to ')
+												? 'websocket-connection-failure'
+												: text.includes('AuthRetryableFetchError')
+													? 'supabase-auth-retryable-fetch-error'
+													: text.includes('NavigatorLockAcquireTimeoutError')
+														? 'supabase-auth-lock-acquire-timeout'
+														: text.includes('@supabase/gotrue-js: Session as retrieved from URL')
+															? 'supabase-session-from-url'
+															: text.includes('WebCrypto API is not supported.')
+																? 'supabase-webcrypto-unavailable'
+																: 'other',
 			source: safePath(message.location().url),
 			line: message.location().lineNumber
 		});

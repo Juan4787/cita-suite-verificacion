@@ -21,7 +21,7 @@ Después de cada compactación y antes de cada etapa: releer íntegramente el pl
 | 6. Tareas automáticas                   | Cerrada el 20 de octubre: fulls 39364962358 y 39366010644 sobre `c0f883d` (40/40 navegador, `hosted_request_guards.sql` 10/10, escenarios de colas 6/6). En staging desplegado, recuperación de reclamaciones abandonadas, inicio de los 25 consultorios ordinarios a los 209 s, cinco cron en su minuto y entrega real por FCM a un teléfono. La ampliación por CPU quedó medida y documentada: push usa 64–124 ms por ejecución frente a los 10 ms de Free, y la solución medida es Workers Paid, que requiere la decisión del usuario. La transición en producción se ejecuta en la secuencia de publicación. |
 | Capacidad y matriz de regresiones       | **Matriz de regresiones cerrada** el 21 de octubre ([matriz](../architecture/matriz-regresiones.md); evidencia de conjunto: full 39667993859 sobre `7fea901`). **Capacidad del lanzamiento, dos consultorios en staging:** Workers Free cumple; Supabase Free no cumple p95 ni p99 (2 ensayos y 6 repeticiones) y la causa dentro de la instancia no está atribuida. Impedimento de publicación informado; por el análisis que aportó el usuario, antes de decidir se mide la producción de São Paulo en Free con eventos de espera. Se conservan como evidencia el CI de 5 y 25 consultorios y el ensayo alojado de 5, que no cumplió por la CPU de Workers Free. |
 | Auditoría transversal                   | **Cerrada el 21 de octubre** sobre `7fea901`: full 39667993859, 17 de 17 etapas: 97 guardas, 1.384 servidor, 171 cliente, 124 migraciones con todas las suites y carreras, 40/40 navegador, 2/2 demo y Natalia con un cambio declarado. Tandas `r1` a `r18`, cada una reproducida antes de corregirse, más la tanda de interfaz del punto 5 y los textos de ayuda recortados. Postergados con riesgo documentado: los comparadores de parámetros de ruta. |
-| Release, publicación y comprobaciones   | En preparación desde el 21 de octubre: 27 migraciones pendientes en producción, compatibles con la versión servida (`313355a`); respaldo y restauración, staging, auditoría de release y medición de producción. Publicación para clientes reales frenada hasta la decisión del usuario sobre Supabase Free. Publicación y pruebas masivas en producción autorizadas el 17 de octubre. |
+| Release, publicación y comprobaciones   | Abierto al 22 de octubre: 29 migraciones pendientes en producción (28 de expansión y 1 de contracción); staging tiene 126. Última corrida `39783349541`, intento 2, falló sobre el artefacto después de aprobar full: dos advertencias de consola desconocidas. Diagnóstico dirigido en curso; no se certifica release. Publicación y pruebas masivas autorizadas el 17 de octubre, con las condiciones previas del procedimiento y sin contrataciones. |
 
 ## Cambios efectuados
 
@@ -1449,3 +1449,46 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
   - **No se puede afirmar ni descartar** que contribuyeran al congelamiento.
   - **Disciplina desde ahora:** ningún bucle ni proceso en segundo plano en la máquina local; las esperas de CI con `gh run watch` en primer plano y con límite; nunca dos procesos de wrangler a la vez; `free -m` antes de cada paso no trivial.
   - **Estado después del reinicio:** sin procesos del agente, 5,4 GB disponibles y árbol de trabajo intacto. El directorio temporal con el release descargado se perdió, y se vuelve a descargar cuando haga falta.
+
+## Reanudación del 22 de octubre, desde las 20:25 UTC
+
+Pedido vigente: analizar exhaustivamente la app, plan, documentos y estado, y continuar desde el punto exacto con rigor extremo. No cambia autorizaciones ni restricciones. Se leyó el plan original completo con sus ampliaciones, AGENTS, traspaso y documentación operativa; se contrastaron corridas actuales con los recibos conservados. Rama local `refactor/maintainability-20261015`, HEAD `80268e2a501198243996e1bdb0048ce066434727`, sin mover la carpeta ni alterar el índice del usuario.
+
+### Preservación y revisión documental
+
+- Estado de entrada conservado en `.verification/resume-20261022-git-status.z` y `.verification/resume-20261022-tracked.diff`. El plan original no se modifica: SHA-256 `796853d3fca1d82dfe3a8c0129d80f937180948cb0a75a24518c1721d20e60b9`.
+- Inventario de **todos** los 161 archivos de `docs/` (9.619.018 bytes; 66 Markdown, 32 JSON, 36 PNG y otros), con ruta, tamaño, SHA-256, encabezados y clasificación de campaña/referencia histórica: `.verification/resume-20261022-document-inventory.json`. El barrido de enlaces relativos Markdown encontró cero destinos ausentes; no prueba vigencia de enlaces externos ni inspección visual de cada imagen histórica.
+- Contraste prioritario de plan/registro/traspaso, seis áreas, contratos, permisos/capacidades, aislamiento, documentos, disponibilidad/aranceles, evidencias de etapas 3/4/5, tareas, consumo, capacidad, respaldo, publicación, identidad y auditoría punto por punto.
+- **Contradicciones documentales confirmadas y corregidas:**
+  - README aún recomendaba builds automáticos y recompilar para desplegar, en contradicción con el release único: ahora remite al procedimiento, exige los archivos exactos y explicita la prohibición de pruebas/builds pesados locales.
+  - `areas-y-fronteras.md` seguía declarando etapa 5 en curso; ahora enlaza el cierre real sin atribuirle publicación.
+  - `evidencia-etapa4-agenda.md` y `disponibilidad-y-aranceles.md` conservaban abierta la carrera ya verificada: se incorporó full 39093599146 (`366dcf5`, paquete `86895cba…`), sin reescribir sus reproducciones negativas.
+  - `relaciones-entre-consultorios.md` decía generación/pruebas pendientes: ahora identifica cierre descartable 39002014621 y distingue staging/producción.
+  - `refactoring-campaign.md` todavía exigía 5/25 para cerrar: ahora refleja la decisión de dos consultorios del 20 de octubre.
+  - `tareas-automaticas.md` decía que faltaba staging y que Paid era una decisión pendiente: staging ya está demostrado y Paid fue rechazado. Sigue abierto demostrar el límite de CPU de Free; la ausencia de cortes por encima de 10 ms no certifica ese límite.
+  - `decisiones.md` afirmaba apagado el interruptor heredado en producción, donde aún no existe: ahora indica su paso de aplicación real.
+  - La guía atribuía al proveedor un cambio desde el 30 de octubre, una fecha futura respecto de esta revisión: se sustituyó esa afirmación por el contrato comprobable de `20261021020000`, sin atribuciones externas no verificadas.
+- No se ejecutaron builds, navegadores ni bases locales. Sin bucles de espera ni procesos locales en segundo plano. Cada paso no trivial comprueba `free -m`; cargas y suites quedan en un único job secuencial externo.
+
+### Última corrida recuperada: `39783349541`, intento 2
+
+- **Fuente:** `dfb487faa74b8117c46c180c70f368f77f3dbcd2`, digest `533ec8814e32923bb7d41459abdc9a0d8ac544c9306ea8405784f347a693715d`. Job `119859939963`, 13:41:33–14:02:45 UTC. La consulta actual confirma `completed/failure`; el traspaso anterior todavía lo mostraba en curso.
+- **Evidencia recuperada:** `.verification/remote-39783349541-logs.zip`, colector → `.verification/remote-39783349541/` (330 archivos). Paquete SHA-256 **`28516c4e1fe68be9eb8c1095315cd81e1791964e7b5ce515715cf659f3ccfa1a`**. Log de ejecución extraído: `.verification/remote-39783349541-verify.log`.
+- **Recibo:** `ff318c5e-45a4-4632-a38e-a75438e48347`, 13:54:53–14:02:26 UTC. El nivel completo aprobó: tipos, guardas, fronteras, **1.388 servidor, 171 cliente, 1 nativa**, migraciones/SQL/carreras/servicios reales, **41/41 navegador**, **2/2 demo** y 12 muestras de Natalia. La preparación de LibreOffice sí terminó en este intento.
+- **Primer fallo real:** `artifact-browser`, `booking-embed.spec.ts:835`, recorrido de profesional. Cinco casos aprobados, uno fallido, 35 sin ejecutar por detención; **no** se consideran aprobados los restantes. `staging` del release tampoco se ejecutó.
+- **Fallo observado:** dos advertencias `unclassified` en `/_app/immutable/chunks/CKKE2KNF.js:8`. La interacción, persistencia, conflictos y layout llegaron al final; falló `observeRenderHealth.assertAndAttach`. El informe conserva rutas/categorías y excluye texto crudo; esa falta de diagnóstico impide establecer aún la causa. No se las descarta como ruido ni como fallo de infraestructura.
+- **Cambio diagnóstico:** `e2e/helpers/render-health.ts` agrega etiquetas estáticas para advertencias conocidas del SDK/WebSocket, sin mensajes/identificadores/claves. La categoría `unclassified` y su rechazo permanecen: identificar una advertencia no la exceptúa.
+- **Snapshot diagnóstico:** `3c11ed049d927babcd7af5cdc1e9487fe64a4444`, digest `d94dc8203196de78fa908ceb7e412b38cd37b6bd5bc20a62dabe749dc2d7e81f`, 1.118 archivos. Sólo se sube al auxiliar; ningún push al principal. **Empaquetado 39850442948 aprobado**, 20:37:22–20:38:50 UTC. Se prepara diagnóstico `level=browser`, `artifact_run=39850442948`, `browser_grep=professional tasks preserve persisted edits`. Su resultado no sustituye `verify:release`.
+
+### Limpieza pendiente retomada
+
+- Se inspeccionó `release-smoke.mjs staging cleanup` antes de ejecutarlo. Todas las URL sintéticas vencieron desde las 15:08:57 UTC; la ejecución actual confirmó esa precondición.
+- **Resultado:** 7 comprobaciones aprobadas, dos documentos sintéticos retirados mediante Storage API, sin filas/slots/objetos propios, contadores individuales en cero y desplazamiento global exactamente igual al individual. Recibo `release-smoke-staging-cleanup-<fecha>.json` en `.verification/`.
+- Después se solicita `staging-operations capacity-cleanup`, con dos consultorios. Comparte exclusión de CI con el diagnóstico siguiente; no se ejecutan dos trabajos pesados en paralelo.
+
+### Pendientes conservados
+
+- Identificar y corregir el mecanismo real de las advertencias, repetir el caso y `verify:release` de la candidata exacta, con staging desplegado desde su mismo paquete.
+- Completar limpieza de `capacity-` y guardar recibo. No volver a sembrar sólo para borrar los datos ya limpiados.
+- Antes de producción, comprobar las condiciones de disparadores y publicación de Natalia del procedimiento. Se pidió al usuario su estado actual mediante una consulta asíncrona; el resto del trabajo continúa.
+- No abrir a clientes reales sin resolver capacidad en el despliegue gratuito, correo para recuperación y destino privado de respaldos. No se contrata nada ni se rebajan los criterios.

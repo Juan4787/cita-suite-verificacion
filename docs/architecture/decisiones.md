@@ -38,7 +38,7 @@ Entregable de la sección 5 del [plan](../plans/refactorizacion-cita-suite.md). 
 ## Tareas y consumo
 
 **Programador propio:** un Worker pequeño con cinco cron y un Service Binding a la app. Cada evento ejecuta una sola categoría con presupuesto de toda la cadena y reclamaciones persistentes.
-- **Descartado:** cron-job.org y los puntos de entrada que ejecutaban varias categorías. Están retirados y apagados con `set_legacy_job_entrypoints(false)`.
+- **Descartado:** cron-job.org y los puntos de entrada que ejecutaban varias categorías. El trabajo de cron-job.org está deshabilitado. El interruptor `set_legacy_job_entrypoints(false)` se apaga en la secuencia de publicación después de aplicar la tanda 1; aún no existe en las 97 migraciones de producción. No confundir la preparación del interruptor con su aplicación remota.
 - **Descartado:** suponer que el Service Binding agrega presupuesto.
 - **Detalle:** [tareas automáticas](tareas-automaticas.md).
 

@@ -17,7 +17,7 @@ HEAD de entrada: `c4a2417`; el árbol contiene reversiones de la ejecución ante
 5. Seis áreas: acceso/comercial, equipo, agenda/reservas, pacientes/clínica, integraciones/tareas y sitios/presentación. Interfaces públicas cruzadas permitidas, detalles privados y ciclos prohibidos. Sin capas vacías.
 6. Interfaz y recorridos conservados; Natalia usa navegación nativa a Cita Suite. No tocar cursos/noticias ni activar WhatsApp.
 7. Programador Cloudflare con tareas independientes, presupuestos completos y recuperación persistente. Push/calendario cada cinco minutos; inicio ordinario dentro de diez minutos.
-8. Carga sintética de 5 y 25 consultorios: 30.000/150.000 pacientes y 60.000/300.000 turnos. Entorno pesado externo; computadora local excluida. La ampliación posterior permite producción con datos sintéticos identificables y límites de interrupción, después de los ensayos y puertas previas del plan.
+8. Desde la decisión del 20 de octubre, la condición de lanzamiento es demostrar los criterios con **dos consultorios en Workers Free y Supabase Free**. Se conserva la evidencia de 5 y 25 en CI y del ensayo alojado de 5; esos tamaños ya no son condición de cierre. Entorno pesado externo; computadora local excluida. La ampliación del 17 permite producción con datos sintéticos identificables y límites de interrupción, después de los ensayos y puertas previas del plan.
 9. Auditoría transversal, documentación, artefactos, reversión y limitaciones comprobadas. Ningún cierre parcial equivale a campaña terminada.
 
 ## Evidencia y límites

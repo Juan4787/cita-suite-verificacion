@@ -19,7 +19,7 @@ Instructivo de la sección 5 del [plan](../plans/refactorizacion-cita-suite.md) 
 | Release | Operación `artifact` 39782403651, artefacto `cloudflare-staging-dfb487faa74b8117c46c180c70f368f77f3dbcd2` (216 archivos en el manifiesto) |
 | Paquete del Worker | `_worker.js` idéntico en staging y producción, SHA-256 `607528d8d6ee78b315ad25f4c968002b60cdb1ae5f9ca8170e3c990677ef3cb8` |
 | Staging | Se despliega desde ese paquete antes de su `verify:release`; 126 migraciones |
-| `verify:release` | Pendiente para `dfb487f`. La corrida de `f83bbc2` (39777244477) se canceló por un `apt-get` colgado en CI |
+| `verify:release` | `39783349541` de `dfb487f`, intento 2: full aprobado, fallo posterior en `artifact-browser` por dos advertencias desconocidas. Diagnóstico 39850821824 sobre `3c11ed0` con artefacto 39850442948; no certifica release. |
 | Base de producción | 97 migraciones aplicadas; quedan 29, en dos tandas (28 y 1) |
 | Versión de reversión de `app` | `9b2df65c-f89c-4940-a625-4d7b3e5858f2`, del 15 de octubre: sirve `313355a` |
 
@@ -80,7 +80,7 @@ Todas deben cumplirse antes del paso 1. Estado al 22 de octubre, 13:05 UTC:
 | 4 | Release empaquetado una sola vez, sobre la revisión exacta. | Hecho para `dfb487f` | Operación `artifact` 39782403651 |
 | 5 | Ensayo de respaldo y restauración aprobado. | Hecho | `staging-operations` 39682517594 |
 | 6 | Staging con el mismo release: migraciones, app, Natalia, consultorio de release y tareas observadas. | App y Natalia de `dfb487f` desplegadas (`04ef8a10…` y `b52e723b…`); tareas observadas el 22 de octubre de 12:55 a 13:00 UTC: push dos veces y calendario una, cada una en su horario | Registro; `staging-tail-6fa828d2f6af-summary.json` |
-| 7 | `verify:release` aprobado con ese release. | En curso: 39783349541 sobre `dfb487f`. La de `f83bbc2` (39777244477) se canceló por un `apt-get` colgado en CI | — |
+| 7 | `verify:release` aprobado con ese release. | **Pendiente:** 39783349541 de `dfb487f` terminó fallido sobre el paquete, después de full aprobado. Se investiga antes de repetir release. | `.verification/remote-39783349541/`; registro de reanudación del 22 de octubre |
 | 8 | Ensayo de la base sobre producción, con `ROLLBACK`: cero fallas y catálogo igual al de staging, salvo la deriva aceptada. | Hecho el 22 de octubre a las 06:52 UTC; se repite en el paso 2 | `production-migration-rehearsal-2026-10-22T06-52-19-008Z.json` |
 | 9 | Compatibilidad de cada tanda con la versión servida, analizada. | Hecho | Registro y «Reversión» |
 | 10 | Programador anterior detenido. | Hecho: cron-job.org 7795525 deshabilitado desde el 31 de agosto; Netlify 404 y Vercel 503 a las 12:43 UTC | `previous-scheduler-2026-10-22T12-43-14-864Z.json` |
