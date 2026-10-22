@@ -20,7 +20,7 @@ test.describe('isolated booking integration', () => {
 		request
 	}) => {
 		test.setTimeout(120_000);
-		for (const origin of [fixture.appOrigin, fixture.apiOrigin])
+		for (const origin of [fixture.appOrigin, fixture.apiOrigin, fixture.hostOrigin])
 			expect(new URL(origin).hostname).toBe('127.0.0.1');
 		const db = createClient<CitaDatabase>(fixture.apiOrigin, fixture.service, {
 			auth: { persistSession: false, autoRefreshToken: false }
@@ -29,7 +29,7 @@ test.describe('isolated booking integration', () => {
 		const page = await desktop.newPage();
 		const exceptions: string[] = [];
 		page.on('pageerror', (error) => exceptions.push(error.message));
-		await page.goto(fixture.apiOrigin + '/harness');
+		await page.goto(fixture.hostOrigin + '/harness');
 		await expect(page).toHaveTitle('Prueba aislada de integración');
 		await page.getByRole('button', { name: 'Reservar consulta', exact: true }).click();
 		const booking = page.frameLocator('iframe');
@@ -208,14 +208,14 @@ test.describe('isolated booking integration', () => {
 				'/embed/v1/' +
 				fixture.key +
 				'?parent_origin=' +
-				encodeURIComponent(fixture.apiOrigin) +
+				encodeURIComponent(fixture.hostOrigin) +
 				'&instance_id=' +
 				'b'.repeat(32)
 		);
 		expect(allowed.status()).toBe(200);
 		expect(allowed.headers()['x-frame-options']).toBeUndefined();
 		expect(allowed.headers()['content-security-policy']).toContain(
-			'frame-ancestors ' + fixture.apiOrigin
+			'frame-ancestors ' + fixture.hostOrigin
 		);
 		expect(allowed.headers()['cache-control']).toBe('no-store');
 		expect(allowed.headers()['referrer-policy']).toBe('no-referrer');
@@ -268,7 +268,7 @@ test.describe('isolated booking integration', () => {
 		});
 		const phone = await mobile.newPage();
 		phone.on('pageerror', (error) => exceptions.push(error.message));
-		await phone.goto(fixture.apiOrigin + '/harness');
+		await phone.goto(fixture.hostOrigin + '/harness');
 		await phone.evaluate(() => {
 			if (!window.widget) throw new Error('The host page did not mount the booking widget.');
 			window.widget.setTheme('dark');

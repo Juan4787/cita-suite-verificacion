@@ -2,8 +2,10 @@ import { expect, test, type Page } from '@playwright/test';
 import { signInWithPassword } from './helpers/shared-auth';
 import { createFixtureClient, must, write, type FixtureClient } from './helpers/fixture-db';
 import { spawnSync } from 'node:child_process';
+import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { clinicalPdfFixture } from './helpers/clinical-pdf';
+import { syntheticMasterId } from './helpers/master-identity';
 
 const supabaseUrl = process.env.ODONTO_SUPABASE_URL;
 const serviceRoleKey = process.env.ODONTO_SUPABASE_SERVICE_ROLE_KEY;
@@ -786,5 +788,103 @@ test.describe('Archivos clínicos privados', () => {
 		await expect(receptionPage.getByRole('button', { name: 'Historial', exact: true })).toHaveCount(0);
 		await expect(receptionPage.getByText(privateClinicalDescription)).toHaveCount(0);
 		await receptionContext.close();
+	});
+
+	// Final audit of the plan: raising a practice's quota and the global capacity, as a plan change
+	// does, keeps stored documents, their permissions and a pending upload. The master raises the
+	// quota with its own form; the operator raises the capacity as a versioned migration would.
+	test('ampliar la cuota y la capacidad global conserva documentos, permisos y cargas pendientes', async ({ page, browser }) => {
+		if (!fixture || !databaseUrl) throw new Error('Fixture no preparado.');
+		const target = fixture;
+		const connection = databaseUrl;
+		const masterEmail = process.env.MASTER_EMAIL;
+		const masterPassword = process.env.E2E_MASTER_PASSWORD;
+		if (!masterEmail || !masterPassword) throw new Error('Explicit synthetic master identity is required.');
+		const admin = adminClient();
+		const masterId = await syntheticMasterId(admin.auth.admin, masterEmail, masterPassword);
+		const operator = (sql: string) => {
+			const result = spawnSync('psql', ['-X', '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', sql], { env: psqlEnvironment(connection), encoding: 'utf8' });
+			if (result.status !== 0) throw new Error(`No se pudo operar la capacidad global: ${result.stderr || 'psql falló.'}`);
+			return result.stdout.trim();
+		};
+		const endpoint = `/odonto/pacientes/${target.patientId}/radiografias`;
+		const accounting = async () => ({
+			business: await must(admin.from('clinical_business_storage_budget').select('max_bytes,used_bytes,reserved_bytes,uploads_enabled')
+				.eq('business_id', target.businessId).single()),
+			global: await must(admin.from('clinical_storage_budget').select('max_bytes,used_bytes,reserved_bytes').eq('singleton', true).single()),
+			files: await must(admin.from('patient_radiographs').select('id,status,bytes,storage_bucket,storage_path')
+				.eq('business_id', target.businessId).order('created_at'))
+		});
+
+		await login(page, target.ownerEmail);
+		await page.goto(`/odonto/pacientes/${target.patientId}?tab=radiografias`);
+		await uploadFixtureImage(page, 'antes-del-cambio.png', 'Documento anterior al cambio');
+		// A pending upload: its signed URL is issued and its reservation stays while the resources change.
+		const started = await page.request.post(`${endpoint}/uploads`, { data: {
+			clientRequestId: randomUUID(), originalFilename: 'pendiente.png', mimeType: 'image/png', bytes: onePixelPng.length,
+			sha256: createHash('sha256').update(onePixelPng).digest('hex'), takenAt: null, note: 'Carga pendiente durante el cambio' } });
+		expect(started.status()).toBe(200);
+		const pending = (await started.json()) as { id: string; upload_url: string };
+		const before = await accounting();
+		expect(before.files.map((file) => file.status)).toEqual(['ready', 'uploading']);
+		expect(before.business.reserved_bytes).toBeGreaterThan(0);
+		const capacity = Number(operator('select max_bytes from public.clinical_storage_budget where singleton'));
+		const masterContext = await browser.newContext();
+		try {
+			const masterPage = await masterContext.newPage();
+			await signInWithPassword(masterPage, masterEmail, masterPassword);
+			await masterPage.goto('/odonto/maestro/almacenamiento');
+			const { name } = await must(admin.from('businesses').select('name').eq('id', target.businessId).single());
+			const row = masterPage.locator('form').filter({ has: masterPage.getByRole('heading', { name, exact: true }) });
+			const quota = before.business.max_bytes + 50_000_000;
+			await row.getByLabel(`Límite de ${name} (MB)`).fill(String(quota / 1_000_000));
+			await row.getByRole('button', { name: 'Guardar límite', exact: true }).click();
+			await expect(row.getByRole('status')).toContainText('Los documentos y las cargas pendientes se conservaron.');
+			operator(`update public.clinical_storage_budget set max_bytes=${capacity + 100_000_000} where singleton`);
+			// The new limit still refuses a reduction below what is stored and reserved.
+			const below = await admin.rpc('set_business_clinical_storage_policy', { p_actor_id: masterId, p_business_id: target.businessId,
+				p_max_bytes: before.business.used_bytes + before.business.reserved_bytes - 1, p_uploads_enabled: true });
+			expect(below.error?.message).toContain('CLINICAL_STORAGE_COMMITTED');
+			const changed = await accounting();
+			expect(changed).toEqual({ business: { ...before.business, max_bytes: quota }, global: { ...before.global, max_bytes: capacity + 100_000_000 },
+				files: before.files });
+
+			// The pending upload completes under the new limits: its original's 5 MB become the stored bytes.
+			// Its thumbnail URL was not used and stays backed until it expires.
+			const uploaded = await page.request.put(pending.upload_url, { headers: { 'x-upsert': 'false', 'content-type': 'image/png' }, data: onePixelPng });
+			expect(uploaded.ok()).toBe(true);
+			const completed = await page.request.post(`${endpoint}/${pending.id}/complete`, { data: { thumbnailUploaded: false } });
+			expect(completed.status()).toBe(200);
+			const after = await accounting();
+			expect(after.files.map((file) => [file.id, file.status])).toEqual([[before.files[0].id, 'ready'], [pending.id, 'ready']]);
+			expect(after.business).toEqual({ ...changed.business, used_bytes: before.business.used_bytes + onePixelPng.length,
+				reserved_bytes: before.business.reserved_bytes - 5_000_000 });
+			expect(after.global.used_bytes - before.global.used_bytes).toBe(onePixelPng.length);
+			expect(before.global.reserved_bytes - after.global.reserved_bytes).toBe(5_000_000);
+			for (const file of after.files) {
+				if (!file.storage_bucket || !file.storage_path) throw new Error('A stored document lost its object.');
+				const { data, error } = await admin.storage.from(file.storage_bucket).download(file.storage_path);
+				if (error || !data) throw error ?? new Error('A stored document could not be read.');
+				expect(Buffer.from(await data.arrayBuffer()).equals(onePixelPng)).toBe(true);
+			}
+
+			// Permissions are unchanged: the owner reads both documents, reception reads none.
+			const listed = await page.request.get(endpoint);
+			expect(listed.status()).toBe(200);
+			const { items } = (await listed.json()) as { items: { id: string }[] };
+			expect(items.map((item) => item.id).sort()).toEqual(after.files.map((file) => file.id).sort());
+			const receptionContext = await browser.newContext();
+			try {
+				const receptionPage = await receptionContext.newPage();
+				await login(receptionPage, target.receptionEmail);
+				expect((await receptionPage.request.get(endpoint)).status()).toBe(403);
+			} finally { await receptionContext.close(); }
+			// Reconciliation of the stored objects finds this practice's counters already exact.
+			await write(admin.rpc('reconcile_clinical_storage_budget', { p_max_businesses: 1000 }));
+			expect((await accounting()).business).toEqual(after.business);
+		} finally {
+			await masterContext.close();
+			operator(`update public.clinical_storage_budget set max_bytes=${capacity} where singleton`);
+		}
 	});
 });

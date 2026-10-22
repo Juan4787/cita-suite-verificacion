@@ -23,6 +23,9 @@ export default defineConfig({
 	retries: process.env.CI ? 1 : 0,
 	use: {
 		baseURL,
+		// The disposable fixture serves its embedding website over loopback HTTPS, with a
+		// certificate created for that run only; every other origin there is loopback too.
+		ignoreHTTPSErrors: process.env.CITA_E2E_ENVIRONMENT === 'disposable',
 		actionTimeout: 15_000,
 		navigationTimeout: 60_000,
 		extraHTTPHeaders,

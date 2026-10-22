@@ -1190,6 +1190,7 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
     - abuso bloqueado, con la lectura 120 rechazada y la reserva al tercer intento;
     - reservas públicas sin fallas.
   - **Rendimiento:** el p95 de lecturas se cumple en las tres repeticiones; el p99 no (2.046, 4.124 y 3.619 ms; pública 2.214 ms), y las esperas máximas van de 5,9 a 7,1 s.
+  - **Corrección del 22 de octubre (omisión de esta entrada):** tampoco se cumplió el p95 de escrituras de la repetición 1, que fue de 1.758 ms; en las repeticiones 2 y 3 fue de 1.088 y 921 ms. El p99 de escrituras sí se cumple en las tres (2.936, 2.839 y 1.263 ms). Lo muestran las líneas `acceptance` de `.verification/remote-39685702630-capacity.txt` (`writeP95: false` en la repetición 1). No se atribuyó por separado: la atribución de pausas usó los pedidos de 2 s o más.
   - **Errores de red:** hubo 4 en total, uno o dos por fase: dos al registrar una entrada clínica, uno en la reserva pública y uno en la integración. Cada fase quedó por debajo del 1 %.
 - **Atribución de las pausas, pedida por el análisis que aportó el usuario.**
   - **Instrumentación nueva:**
@@ -1242,3 +1243,49 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
   - **Staging de Natalia:** el plan lo pide («staging aislado de Cloudflare, Natalia y Supabase»; publicación, paso 3) y no se hizo.
   - **Ensayo de cambio de recursos y cuotas** de la auditoría final: queda para el release.
   - Los tres son condición previa a publicar según la sección 5 del plan, y ninguno depende del usuario.
+- **`verify:release` rediseñado (22 de octubre).** Detalle en `docs/architecture/verificacion.md`, «Release y staging».
+  - **El release se compila una sola vez:** `scripts/package-release-artifact.mjs`, en la operación `artifact`, arma la app para staging y producción y el sitio de Natalia para cada entorno, con su manifiesto. Los despliegues y la verificación usan esos archivos.
+    - `loadBuildArtifact` reemplaza las dos copias de la lectura del paquete en los scripts de despliegue.
+    - `nataliaSite` rechaza un sitio de Natalia que reserva en otro entorno.
+  - **Nivel `release`** del workflow de verificación, con `artifact_run`: el nivel completo, después `run-campaign-integration.mjs --artifact` y al final `verify-campaign-staging.mjs`.
+    - `--artifact` corre la suite de navegador completa y la reserva nativa contra el paquete de producción, servido por workerd con los servicios descartables.
+    - El paso de staging comprueba cada archivo servido de la app y de Natalia, corre la sonda de la clave anónima y hace una reserva real desde la copia de Natalia. La reserva se recupera, se abre con el comprobante anterior y se cancela.
+  - **Diseño viejo retirado:** el descriptor de staging que nunca existió y el modo `isolated-staging` de las pruebas de navegador. El preflight sigue rechazando producción y claves de otro proyecto: 4 pruebas nuevas en `staging-environment.test.mjs`.
+  - **Staging nuevo:**
+    - el Worker de sólo archivos `natalia-frutos-staging`, con `X-Robots-Tag: noindex, nofollow`;
+    - el consultorio sintético `release-staging`, de `staging-release-fixture.mjs`, idempotente, que falla si se desvía;
+    - el secreto `CITA_STAGING_ANON_KEY` en el repositorio de verificación, comprobado contra la ref de staging y pasado por tubería sin imprimirse.
+  - **Sonda de exposición** (`scripts/lib/api-exposure.mjs`, 3 pruebas): cada relación que expone la API alojada, leída con la clave anónima, debe rechazarla con 401 y `42501`. `check-api-exposure.mjs staging|production` la corre desde esta máquina.
+  - **Guardas locales:** 106 de 106.
+- **Primera corrida del release: snapshot `017b26f`, empaquetado 39708965987.**
+  - **Consultorio de release:** la operación `release-fixture` 39708973829 falló porque `allowed_service_ids` no admite nulo. Se corrigió con su valor por omisión `'{}'` y se aseguró desde esta máquina; la segunda corrida sólo lo verificó.
+  - **Staging desplegado desde ese paquete:** app `85aa471c-b533-4f15-adae-ed7f453d85f3` y Natalia `1926a654-0fa8-44b9-b8d6-496485663844` (35 archivos, `noindex`).
+  - **`verify:release` 39709379322: nivel completo aprobado entero**, con 106 guardas, 1.384 de servidor, 171 de cliente, 40 de 40 en el navegador, 2 de 2 en la demo y Natalia.
+  - **El paso `artifact-browser` falló sin llegar al navegador.** workerd arrancó en dos segundos, pero `/embed/v1/<clave>` respondió 503 (`booking.integration_unavailable`). Después respondió 429, por la propia espera.
+    - **Causa:** el paquete de producción valida los orígenes de las integraciones con `normalizeBookingOrigin(origen, dev)` y, sin `dev`, sólo acepta HTTPS. El entorno descartable guardaba orígenes `http://127.0.0.1`, válidos sólo en desarrollo, y la integración entera queda inválida.
+    - **No es un defecto de la app:** es la regla correcta de producción, y la ejecución sobre el paquete la hizo visible.
+    - **Corrección del entorno de prueba, no del producto:**
+      - el sitio anfitrión de la integración embebida se sirve por HTTPS en loopback, con un certificado creado para cada corrida;
+      - la integración permite sólo ese origen, y se quitó el `:8778` sin uso;
+      - las pruebas leen `hostOrigin`;
+      - Playwright acepta ese certificado sólo en el entorno descartable.
+      El anfitrión queda en otro sitio que la app, como en producción. El flujo público de reserva no usa cookies, porque sólo las usan las sesiones.
+    - **Además:** los secretos del Worker del modo artefacto pasan por `.dev.vars`, que wrangler no imprime.
+- **Producción, sonda anónima previa a publicar** (`.verification/api-exposure-production-2026-10-22.json`):
+  - **Resultado:** 69 relaciones, 20 de ellas con HTTP 200 para la clave anónima.
+  - **Conteo de filas rechazado:** un conteo de las filas visibles fue rechazado por el control de permisos por tratarse de datos de producción, y no se intentó otra vía.
+  - **Catálogo en sólo lectura** (`transaction_read_only=on`, sin leer filas ni imprimir expresiones):
+    - las 20 tienen RLS activo y `anon` conserva su `SELECT` de tabla;
+    - 19 no tienen ninguna política para `anon` o `public`, y RLS no devuelve filas;
+    - `allowed_emails` tiene una sola, atada a la identidad del JWT, que el rol anónimo no cumple.
+    No hay filas expuestas, pero sobran privilegios.
+  - **Lo cierra** la migración pendiente `20261021020000_explicit_api_grants.sql` (`revoke all on all tables in schema public from anon`). Staging, con las 124 migraciones, rechaza a `anon` en las 61 relaciones. La sonda posterior a publicar debe dar cero.
+  - **Divergencia de producción:** la política `master read allowed_emails`, con un correo fijo, no está en ninguna migración. La app lee esa tabla sólo con la clave de servicio, que no pasa por RLS. Se decide con la comparación completa del catálogo de producción contra el de staging, que ya está entre las comprobaciones posteriores a publicar.
+- **Entregables de la sección 5 que faltaban:** `docs/architecture/permisos-y-capacidades.md` (matriz por rol y estado comercial, tomada del código) y `docs/architecture/decisiones.md`. El borrador de la auditoría final punto por punto está en `docs/architecture/auditoria-final.md`.
+- **Ensayo de ampliación de cuota y capacidad** (auditoría final), en `clinical-files.spec.ts`. Con un documento guardado y una carga pendiente:
+  - el maestro amplía la cuota del consultorio desde su pantalla y el operador amplía la capacidad global;
+  - una reducción por debajo de lo comprometido sigue rechazada;
+  - la carga pendiente termina con los límites nuevos, y la URL de miniatura sin usar conserva su reserva hasta vencer, como exige el plan;
+  - los dos documentos conservan sus bytes, el dueño los lista y recepción recibe 403;
+  - la reconciliación no encuentra diferencias.
+  Corre en el full y sobre el paquete del release. El cambio de Workers a Paid no se ensaya alojado sin contratar; lo cubren las pruebas del perfil de presupuesto (`job-budget.test.ts`, `scheduled-jobs.test.ts`).

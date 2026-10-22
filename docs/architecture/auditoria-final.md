@@ -1,0 +1,104 @@
+# Auditoría final punto por punto
+
+Contraste del [plan aprobado](../plans/refactorizacion-cita-suite.md) con la evidencia, como exige su instrucción de ejecución: «antes de declarar terminada la campaña, verificá punto por punto el cumplimiento del documento original utilizando evidencia comprobable». Las corridas y su detalle están en el [registro](../plans/registro-refactorizacion-cita-suite.md).
+
+**Estado: borrador abierto.** La campaña **no** está terminada: faltan los pasos de producción y las decisiones del usuario marcados abajo. Una fila se cierra sólo con su evidencia.
+
+Estados:
+- **Cumplido:** con su evidencia.
+- **Pendiente:** trabajo que sigue, con su puerta.
+- **Decisión del usuario:** requiere gasto o un compromiso suyo.
+- **Impedimento:** límite demostrado del proveedor, informado con alternativas.
+- **Postergado:** con su riesgo documentado.
+
+## 1. Decisiones fijadas
+
+| Requisito | Evidencia | Estado |
+|---|---|---|
+| Seis áreas con subdivisiones útiles | [áreas y fronteras](areas-y-fronteras.md); reglas de `dependency-cruiser` en `verify:fast` | Cumplido |
+| Calculador TS común y lecturas SQL acotadas | [disponibilidad y aranceles](disponibilidad-y-aranceles.md), [evidencia de etapa 4](evidencia-etapa4-agenda.md) | Cumplido |
+| SQL confirma el importe, TS previsualiza, paridad comprobada | Vectores comunes y pruebas de paridad (etapa 4) | Cumplido |
+| Presupuesto global de 700 MB y cuota base de 100 MB | [contabilidad de documentos](contabilidad-documentos.md), [evidencia de etapa 3](evidencia-etapa3-documentos.md) | Cumplido |
+| Cuotas como máximos, no espacio reservado | Ídem | Cumplido |
+| Programación nativa de Cloudflare con presupuestos medidos | [tareas automáticas](tareas-automaticas.md); staging con los cinco cron | Cumplido en staging; producción pendiente |
+| Push y calendario cada cinco minutos, inicio dentro de diez | Etapa 6: escenario del plan y entrega real por FCM a un Samsung | Cumplido en staging; producción pendiente |
+| Pruebas pesadas en CI descartable, sin cargar la computadora | [verificación](verificacion.md) | Cumplido |
+| Natalia navega al turnero real | Reserva nativa en el full y en el staging desplegado (`verify:release`) | Cumplido, con la evidencia del release |
+| Cursos y noticias fuera; sin WhatsApp | Medición de Natalia; secciones intactas en `check-public.mjs` | Cumplido |
+
+## 2. Arquitectura y contratos
+
+| Requisito | Evidencia | Estado |
+|---|---|---|
+| Importaciones sólo entre interfaces públicas, sin ciclos ni código de servidor en el navegador | `dependency-cruiser` fijado, sin excepciones permanentes | Cumplido |
+| Propiedad de las reglas | [contratos funcionales](functional-contracts.md) | Cumplido |
+| Fábricas Supabase y consumidores tipados; tipos reproducibles | Doble generación con igualdad exacta en cada full; guarda `type-escapes` | Cumplido |
+| JSON validados en ejecución | Contratos `readRecord` y `InvalidDataContractError`; tandas de la auditoría transversal | Cumplido |
+| Contexto común sin caché global de permisos | [tipado, contexto y aislamiento](tipado-contexto-aislamiento.md) | Cumplido |
+| Cuatro cuestiones de capacidades | [permisos y capacidades](permisos-y-capacidades.md) | Cumplido |
+| Rutas públicas y enlaces de gestión conservados; RPC con transición explícita | Reserva nativa con recuperación y comprobante anterior compatible | Cumplido |
+| `/odonto` histórica; el módulo administrativo inactivo no se activa | [identidad](identidad-cita-suite.md); archivo en `docs/archive/administrativo-inactivo` | Cumplido |
+
+## 3. Etapas
+
+| Etapa | Cierre exigido | Evidencia | Estado |
+|---|---|---|---|
+| 0 | Base identificada, cambios preservados y alcance trazable | [base de campaña](base-de-campana.md) | Cumplido |
+| 1 | Los comandos detectan una falla deliberada y no informan éxito si omiten una suite | Registro, etapa 1: pruebas adversarias del ejecutor | Cumplido |
+| 2 | Clientes tipados, JSON comprobados, contexto común, negativas entre consultorios y tras revocar | Suites `tenant_*`; [matriz de regresiones](matriz-regresiones.md), puntos 1 y 2 | Cumplido |
+| 3 | Carreras, expiración, repetición, reconciliación, descarga correcta y ampliación de cuotas | [Evidencia de etapa 3](evidencia-etapa3-documentos.md); el ensayo de ampliación también sobre el paquete del release | Cumplido |
+| 4 | Equivalencia pública e interna, paridad, reservas simultáneas, reprogramación, excepciones, márgenes, cambios de política y respuestas perdidas | [Evidencia de etapa 4](evidencia-etapa4-agenda.md) | Cumplido |
+| 5 | Equivalencia funcional y visual, capturas y recorridos | [Evidencia de etapa 5](evidencia-etapa5-estructura.md); full 39276578152; dictamen independiente `ship` | Cumplido |
+| 6 | Recuperación y trabajo ordinario dentro de diez minutos | [Tareas automáticas](tareas-automaticas.md); fulls 39364962358 y 39366010644; recuperación en staging | Cumplido en staging; producción pendiente |
+
+## 4. Capacidad, regresiones y observabilidad
+
+| Requisito | Evidencia | Estado |
+|---|---|---|
+| Escenarios de 5 y 25 consultorios en CI | [capacidad](capacidad.md) | Evidencia conservada. Ya no es condición de cierre (decisión del 20 de octubre). |
+| Dos consultorios en el despliegue gratuito: lecturas p95 < 1 s y p99 < 2 s | Staging, 39685702630: p95 cumplido; p99 de 2.046, 4.124 y 3.619 ms | **Impedimento.** Atribuido a la memoria de Supabase Nano. La medición de producción en São Paulo está pendiente y el plan lo decide el usuario. |
+| Escrituras p95 < 1,5 s y p99 < 3 s | Ídem: p99 cumplido en las tres repeticiones; p95 de 1.758, 1.088 y 921 ms | **Impedimento:** la repetición 1 supera el p95. No se atribuyó por separado. Pendiente la medición de producción. |
+| Errores técnicos < 1 % | Ídem: 4 errores de red, ninguno de la aplicación. Sobre el total de cada fase, debajo del 1 % (0,48 %, 0 %, 0,48 % y 0,64 %). | Cumplido en staging |
+| Sin violaciones de aislamiento, doble reserva ni cuotas | Integridad antes y después de cada carga: 0 cruces y 0 superposiciones | Cumplido |
+| Disponibilidad completa o error explícito | Contratos de la etapa 4 y auditoría transversal (`r2`, `R7`, `r11`) | Cumplido |
+| Colas: cinco pendientes por consultorio y escenario desigual | Etapa 6 en staging | Cumplido |
+| Planes, índices, bloqueos y crecimiento de consultas | [capacidad](capacidad.md); correcciones `20261020020000` a `20261020050000` | Cumplido |
+| Matriz de regresiones | [matriz de regresiones](matriz-regresiones.md): 12 puntos con sus capas | Cumplido |
+| Observabilidad: viajes HTTP, proveedores y SQL separados; registros sin datos clínicos | Contadores de los trabajos (`databaseRequests`, `providerRequests`); `staging-tail-metrics.mjs` | Cumplido |
+
+## 5. Auditoría, publicación y documentación
+
+| Requisito | Evidencia | Estado |
+|---|---|---|
+| Rutas alternativas, tipos, duplicación, paginación, consultorio nuevo | Auditoría transversal cerrada: full 39667993859 | Cumplido |
+| Recorridos cruzados sensibles sobre los artefactos construidos | `verify:release`: la suite de navegador completa sobre el paquete de producción en workerd | Pendiente: la corrida del release |
+| Ampliación de cuota y cambio de recursos conservando datos, permisos y pendientes | Prueba de ampliación en `clinical-files.spec.ts`, sobre el paquete. El cambio de Workers a Paid no se ensaya alojado: se cubre con las pruebas del perfil de presupuesto. | Pendiente: la corrida del release |
+| Respaldo y recuperación ensayados en un entorno aislado | 39682517594; [respaldo y recuperación](respaldo-y-recuperacion.md) | Cumplido |
+| Migraciones compatibles en staging | 39683852264: 124 migraciones | Cumplido |
+| App, Natalia y programador desplegados y comprobados en staging | App y programador en la etapa 6 y el release. Natalia desde el 22 de octubre (`natalia-frutos-staging`). | Pendiente: la corrida del release |
+| Auditoría de release | 39685702630, más `verify:release` | Pendiente: la corrida del release |
+| Programador anterior detenido | cron-job.org 7795525, deshabilitado | Cumplido |
+| Publicar migraciones y aplicaciones; activar el programador nuevo; versión, permisos, reserva, almacenamiento y tareas | [Publicación y reversión](publicacion-y-reversion.md) | Pendiente: requiere las acciones del usuario en los paneles |
+| Reversión sin restauraciones destructivas | Procedimiento documentado y compatibilidad de las 27 migraciones con `313355a` | Cumplido como preparación |
+| Documentación entregable | Áreas, contratos, [permisos y capacidades](permisos-y-capacidades.md), documentos, tareas, verificación, capacidad, [decisiones](decisiones.md), publicación y [guía](guia-nuevas-funciones.md) | Cumplido |
+
+## Ampliación: identidad Cita Suite
+
+| Requisito | Evidencia | Estado |
+|---|---|---|
+| Inventario completo, con excepciones clasificadas | [identidad](identidad-cita-suite.md) | Cumplido |
+| Código, paquetes y documentación unificados | Workspace `@cita-suite/shared`, raíz `cita-suite` | Cumplido |
+| Renombre ensayado en un recurso descartable | [ensayo en GitHub](identidad-ensayo-github.json) | Cumplido |
+| Repositorio `Juan4787/cita-suite`, nombres visibles de Supabase y proveedores conectados | Nombre libre (404) y permisos de administración comprobados | Pendiente: va después de publicar, con los disparadores desconectados |
+| Directorio local `Cita Suite` | Preparado | Pendiente: al final, con los procesos detenidos |
+
+## Decisión del 20 de octubre: lanzamiento
+
+| Requisito | Estado |
+|---|---|
+| Ninguna contratación ni cobro variable sin tope | Cumplido: Workers Free y Supabase Free, nada contratado |
+| Protecciones de consumo decididas por mérito | Cumplido: [control de consumo](control-de-consumo.md) |
+| Defectos propios de eficiencia corregidos y separados de los límites del proveedor | Cumplido: [capacidad](capacidad.md) |
+| Dos consultorios cumplen los criterios en el despliegue gratuito antes de publicar para clientes reales | **Impedimento** (p99 de lecturas). Hay que medir producción y decidir el plan. |
+| Correo de Auth para restablecer contraseñas | Decisión del usuario: SMTP propio |
+| Destino de los respaldos de datos reales | Decisión del usuario |

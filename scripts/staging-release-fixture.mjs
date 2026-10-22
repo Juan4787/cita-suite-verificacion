@@ -41,7 +41,7 @@ begin
   select v_business,v_professional,n,'09:00','17:00',30,10 from generate_series(0,6) n;
   insert into public.booking_integrations(business_id,public_key,name,is_active,is_default,theme,allowed_origins,allowed_service_ids,allowed_professional_ids,allowed_modalities,intake_schema)
   values(v_business,'${practice.integrationKey}','Sitio de Natalia en staging',true,false,'natalia',array['${STAGING_NATALIA_ORIGIN}'],array[v_service,v_follow_up],array[v_professional],array['in_person'],'${intake}'),
-   (v_business,'${sharedKey}','Enlace compartido',true,true,'cita-suite',array['${STAGING_APP_ORIGIN}'],null,null,array['in_person'],'${intake}');
+   (v_business,'${sharedKey}','Enlace compartido',true,true,'cita-suite',array['${STAGING_APP_ORIGIN}'],'{}','{}',array['in_person'],'${intake}');
  end if;
 end $$;
 select json_build_object(

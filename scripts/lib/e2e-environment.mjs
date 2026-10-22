@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 
 export function inspectOwnedFixture(receipt) {
 	if (!/^cita-booking-test-[a-f0-9]{12}$/.test(receipt.container) || !/^[a-f0-9-]{32,36}$/.test(receipt.runId) ||
-		![receipt.appOrigin, receipt.apiOrigin].every(value => new URL(value).hostname === '127.0.0.1'))
+		![receipt.appOrigin, receipt.apiOrigin, receipt.hostOrigin].every(value => typeof value === 'string' && new URL(value).hostname === '127.0.0.1'))
 		throw new Error('Only an owned loopback fixture is accepted.');
 	const inspected = spawnSync('docker', ['inspect', receipt.container], { encoding: 'utf8' });
 	if (inspected.status !== 0) throw new Error('The owned E2E database is not running.');

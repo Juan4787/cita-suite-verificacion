@@ -2,7 +2,7 @@
 
 ## Estado de este documento
 
-**Actualizado por Opus 5.5 — 22 de octubre de 2026, ~02:00 UTC.** La **etapa 5 está cerrada** sobre `674649108bc2caa87e82c8bca25d93f82d584d51` (full 39276578152, dictamen independiente `ship`, DESIGN.md documentado) y se avisó al usuario. La **etapa 6 está cerrada** (ver abajo). La campaña completa **no** está terminada.
+**Actualizado por Opus 5.5 — 22 de octubre de 2026, ~02:15 UTC.** La **etapa 5 está cerrada** sobre `674649108bc2caa87e82c8bca25d93f82d584d51` (full 39276578152, dictamen independiente `ship`, DESIGN.md documentado) y se avisó al usuario. La **etapa 6 está cerrada** (ver abajo). La campaña completa **no** está terminada.
 
 **Alcance vigente (instrucción del usuario del 19 de octubre al retomar con Opus 5.5):** completar y verificar íntegramente la fase 5, avisar al usuario cuando esté realmente cerrada y **continuar automáticamente con la fase 6 y todas las etapas restantes** hasta terminar la campaña, incluida la auditoría transversal, release, publicación y comprobaciones posteriores según las autorizaciones vigentes. Esta instrucción sustituye la restricción anterior de «detenerse antes de fase 6», que se conserva abajo sólo como antecedente de la intervención de GPT-6.1 Sol. Cambia únicamente el punto de detención: no reduce requisitos, garantías, controles ni procedimientos de seguridad.
 
@@ -67,6 +67,25 @@ Leer la decisión literal al final del plan. En resumen: no hay usuarios reales 
      - el correo transaccional para restablecer contraseñas;
      - el destino de los respaldos de datos reales.
    - **Postergado con riesgo documentado:** los comparadores de parámetros de ruta.
+3g. **Punto exacto (22 de octubre, ~02:15 UTC).** Reemplaza a 3f en lo que cambia; el detalle está en el registro.
+   - **Huecos del release encontrados al contrastar el plan:**
+     - los recorridos de navegador no corrían sobre el paquete compilado, sino contra el servidor de desarrollo;
+     - faltaba el staging de Natalia;
+     - faltaba el ensayo de cuotas y recursos.
+     Los tres son condición previa a publicar y no dependen del usuario.
+   - **`verify:release` rediseñado** ([verificación](../architecture/verificacion.md), «Release y staging»):
+     - **Release:** `package-release-artifact.mjs` lo arma una sola vez. Contiene la app para staging y producción, y el sitio de Natalia para cada entorno.
+     - **Nivel `release`** del workflow de verificación, con `artifact_run`: full, recorridos sobre el paquete en workerd (`--artifact`) y staging desplegado. Staging se comprueba con los archivos del release, la sonda anónima y la reserva desde la copia de Natalia, incluida su cancelación.
+   - **Staging nuevo:**
+     - Worker `natalia-frutos-staging`: sólo archivos, con `noindex`;
+     - consultorio sintético `release-staging`, asegurado con `staging-release-fixture.mjs` y la operación `release-fixture`;
+     - secreto `CITA_STAGING_ANON_KEY` en el repositorio de verificación.
+   - **Primera corrida:** snapshot `017b26f`, release 39708965987, staging desplegado (app `85aa471c…`, Natalia `1926a654…`) y `verify:release` 39709379322. Ver el registro para su resultado.
+   - **Ensayo de cuota y capacidad:** prueba nueva en `clinical-files.spec.ts`. Corre en el full y sobre el paquete del release.
+   - **Entregables nuevos:**
+     - [permisos y capacidades](../architecture/permisos-y-capacidades.md);
+     - [decisiones](../architecture/decisiones.md).
+   - **Sigue vigente de 3f:** la espera de las acciones del usuario en los paneles y la secuencia de publicación, que ahora exige además `verify:release` aprobado con el paquete que se publica.
 4. **Copias antiguas retiradas por el usuario (resuelto el 19 de octubre):** `https://cita-suite.netlify.app` servía una copia completa de la aplicación con endpoint de tareas. El usuario desactivó ese proyecto y también pausó `https://cita-suite-app.vercel.app`, otra copia que no figuraba en el inventario. Comprobado por HTTP a las 21:12 UTC: Netlify responde 404 y Vercel 503. Ambas están en el inventario de `identidad-cita-suite.md`. El interruptor de base de la migración sigue siendo parte de la transición: neutraliza cualquier llamador antiguo (por ejemplo cron-job.org contra el Worker) sin depender de esas cuentas. Antes de activar el programador nuevo, volver a comprobar que las dos copias siguen fuera de servicio.
 5. **Pendiente para la auditoría transversal** (debe corregirse ahí): con el criterio de retención de la sección 4, revisar las tablas de historia que no se depuran (`audit_logs`, `mp_webhook_events`, `patient_profile_change_events`, `whatsapp_webhook_events`) y decidir cuáles son historia del producto y cuáles registros; `public_booking_attempts` ya se conserva 7 días (`20261020040000`). La carga pública (`defaultIntegration` en `/reservar` y `readBookingIntegrationRequest`) convierte cualquier excepción en 503 sin registrar la causa. Tres `as unknown as` en producción (transporte `ws` del cliente Supabase de servidor, `configuracion/negocio/+page.svelte` y `patient-export.worker.ts`); deuda de interfaz preexistente no canonizada por el documentador (kickers/eyebrows, glifos como íconos en `.ux-tab-marker`, 14 tamaños literales, `truncate` en superficies no cubiertas, pesos 650–900 con Inter cargada en 400–700, `ThemeToggle.svelte` sin uso, fechas «4 de / noviembre» partidas a 320 y costo «$ 125,5»). Detalle en el registro. Resueltos en etapa 6: los casts de errores de `push.ts` (ahora `PushServiceError` y el error tipado del SDK) y la auditoría de las tareas fuera del `fetch` presupuestado (`insertAuditLog` recibe el cliente de la tarea).
 

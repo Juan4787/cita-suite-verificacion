@@ -10,22 +10,33 @@ Procedimiento de la sección 5 del [plan](../plans/refactorizacion-cita-suite.md
 | Programador | Worker `cita-suite-scheduler`: los cinco cron del plan y un binding a `app` | `scripts/deploy-production-workers.mjs scheduler`, desde el código del snapshot verificado. |
 | Base | Supabase `yjzferwuzbtgpmdnzlcb`, sa-east-1 | `scripts/apply-production-migrations.mjs <respaldo>`. Exige un respaldo de producción de menos de seis horas, tomado en el mismo estado de migraciones. |
 | Respaldo | Carpeta privada fuera del repositorio | `scripts/backup-production.mjs` ([respaldo y recuperación](respaldo-y-recuperacion.md)). |
-| Natalia | `natalia-frutos.vercel.app` | No se despliega desde este repositorio; el usuario indica cómo se publica. |
+| Natalia | `natalia-frutos.vercel.app` | No se despliega desde este repositorio; el usuario indica cómo se publica. El release trae su sitio ya compilado para producción (`.verification/natalia-production`): se publican esos archivos exactos. |
+
+**Staging**, para la verificación del release:
+
+| Recurso | Identificador | Cómo se publica |
+|---|---|---|
+| App | Worker `cita-suite-staging`, `https://cita-suite-staging.cita-suite.workers.dev` | `deploy-staging-workers.mjs app <release>` |
+| Natalia | Worker de sólo archivos `natalia-frutos-staging`, `https://natalia-frutos-staging.cita-suite.workers.dev`, fuera de los buscadores (`X-Robots-Tag: noindex`) | `deploy-staging-workers.mjs natalia <release>` |
+| Programador | Worker `cita-suite-scheduler-staging` | `deploy-staging-workers.mjs scheduler` |
+| Consultorio de release | `release-staging`, sintético y fijo | operación `release-fixture` del workflow de staging |
 
 ## Antes de publicar
 
 1. **Disparadores automáticos desconectados, desde los paneles del usuario:**
    - Cloudflare Workers Builds de `app`: hoy despliega cada push a `main` de `Juan4787/dashboard`;
    - el proyecto `cita-suite` de Vercel, la copia vieja pausada.
-2. **Full verde sobre la revisión exacta** del release.
+2. **Release empaquetado una sola vez** por la operación `artifact` del workflow de staging, sobre la revisión exacta.
 3. **Ensayo de respaldo y restauración aprobado**, en staging.
-4. **Staging con la misma revisión:**
+4. **Staging con el mismo release:**
    - migraciones aplicadas;
-   - app desplegada desde el mismo flujo de artefactos;
+   - app y copia de Natalia desplegadas desde ese paquete;
+   - consultorio de release asegurado;
    - tareas observadas;
    - medición de auditoría con integridad sin fallas.
-5. **Compatibilidad de las migraciones pendientes con la versión servida**, analizada en el registro.
-6. **Programador anterior detenido:** cron-job.org (7795525) está deshabilitado desde el 31 de agosto.
+5. **`verify:release` aprobado** con ese paquete (`level=release`, `artifact_run`). Incluye el nivel completo, todos los recorridos de navegador sobre el paquete de producción servido por workerd y las comprobaciones del staging desplegado ([verificación](verificacion.md)).
+6. **Compatibilidad de las migraciones pendientes con la versión servida**, analizada en el registro.
+7. **Programador anterior detenido:** cron-job.org (7795525) está deshabilitado desde el 31 de agosto.
 
 ## Secuencia
 
@@ -38,7 +49,7 @@ Procedimiento de la sección 5 del [plan](../plans/refactorizacion-cita-suite.md
    - después, `deploy-production-workers.mjs scheduler`.
 6. **Comprobaciones posteriores:**
    - revisión servida;
-   - permisos, con la consulta del catálogo en sólo lectura;
+   - permisos, con la consulta del catálogo en sólo lectura y la sonda de la clave anónima sobre la API;
    - reserva pública de un consultorio sintético;
    - almacenamiento;
    - tareas, observando el Worker;

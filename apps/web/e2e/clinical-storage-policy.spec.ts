@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@cita-suite/shared';
 import { randomUUID } from 'node:crypto';
 import { signInWithPassword } from './helpers/shared-auth';
+import { syntheticMasterId } from './helpers/master-identity';
 
 async function captureStorageSurface(page: Page, name: string) {
 	for (const width of [1280, 320]) {
@@ -36,20 +37,7 @@ test('master storage policy preserves drafts, enforces clinic scope and renders 
 	const admin = createClient<Database>(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 	const original = await admin.from('clinical_storage_budget').select('default_business_max_bytes,uploads_enabled').eq('singleton', true).single();
 	if (original.error || !original.data) throw new Error('Cannot preserve the original storage policy.');
-	let masterId: string | undefined;
-	for (let index = 1; !masterId; index++) {
-		const users = await admin.auth.admin.listUsers({ page: index, perPage: 200 });
-		if (users.error) throw users.error;
-		masterId = users.data.users.find(user => user.email?.toLowerCase() === masterEmail.toLowerCase())?.id;
-		if (users.data.users.length < 200) break;
-	}
-	if (!masterId) {
-		const result = await admin.auth.admin.createUser({ email: masterEmail, password: masterPassword, email_confirm: true });
-		if (result.error || !result.data.user) throw new Error('Could not prepare the synthetic master identity.');
-		masterId = result.data.user.id;
-	}
-	// This shared synthetic identity also owns global audit entries; keep it for
-	// the disposable platform teardown / provisioned isolated staging environment.
+	const masterId = await syntheticMasterId(admin.auth.admin, masterEmail, masterPassword);
 	const ownerEmail = 'storage-policy-' + randomUUID() + '@example.test';
 	const password = 'CitaStoragePolicy!2026';
 	const owner = await admin.auth.admin.createUser({ email: ownerEmail, password, email_confirm: true });

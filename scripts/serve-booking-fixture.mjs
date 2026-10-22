@@ -1,5 +1,6 @@
 import { fixturePath } from './lib/fixture-path.mjs';
 import { createServer } from "node:http";
+import { createServer as createSecureServer } from "node:https";
 import { spawnSync, spawn } from "node:child_process";
 import { createHmac, randomBytes } from "node:crypto";
 import { writeFileSync, openSync, rmSync, readFileSync, mkdtempSync } from "node:fs";
@@ -84,6 +85,8 @@ function jwt(role, sub) {
 let child,
   artifactConfig,
   gateway,
+  host,
+  hostCertificate,
   cleaned = false,
   verified = false;
 function cleanup() {
@@ -95,6 +98,8 @@ function cleanup() {
     } catch {}
   if (artifactConfig) rmSync(artifactConfig, { recursive: true, force: true });
   if (gateway) gateway.close();
+  if (host) host.close();
+  if (hostCertificate) rmSync(hostCertificate, { recursive: true, force: true });
   if (!verified) { verificationLease.release(); return; }
   writeFileSync(fixturePath(`platform-state-${fixtureRunId}.json`), JSON.stringify(capturePlatformDiagnostics((args, input) => docker(args, input, args[0] === 'logs'), {
     database: db, auth: authCreated ? authContainer : undefined, rest, storage: storageFixture?.container
@@ -220,13 +225,6 @@ try {
       res.end();
       return;
     }
-    if (req.url === "/harness") {
-      res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.end(
-        `<!doctype html><html lang="es"><meta charset="utf-8"><title>Prueba aislada de integración</title><meta name="viewport" content="width=device-width,initial-scale=1"><body style="margin:24px;background:#f3eee5;font:18px sans-serif"><h1>Host de prueba</h1><button id="book">Reservar consulta</button><script src="${appOrigin}/booking/embed-v1.js"></script><script>window.completions=[];window.widget=CitaSuiteBooking.mount({integrationKey:'${key}',baseURL:'${appOrigin}',onComplete:function(){window.completions.push(Array.from(arguments))}});document.querySelector('#book').onclick=()=>widget.open();</script></body></html>`,
-      );
-      return;
-    }
     // Local Auth simulator only; it validates this fixture's signature and known identities.
     // This is not evidence of a real Supabase Auth session or deployment.
     if (!realAuth && req.url === "/auth/v1/user" && req.method === "GET") {
@@ -331,6 +329,25 @@ try {
   });
   await new Promise((resolve) => gateway.listen(0, "127.0.0.1", resolve));
   const apiOrigin = "http://127.0.0.1:" + gateway.address().port;
+  // The website that embeds the booking, on its own HTTPS origin as every real site is: the
+  // production build accepts only HTTPS origins. Its certificate exists for this run only.
+  hostCertificate = mkdtempSync(join(tmpdir(), "cita-host-tls-"));
+  const certificate = spawnSync("openssl", ["req", "-x509", "-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:P-256", "-nodes", "-days", "1",
+    "-subj", "/CN=127.0.0.1", "-addext", "subjectAltName=IP:127.0.0.1",
+    "-keyout", join(hostCertificate, "key.pem"), "-out", join(hostCertificate, "certificate.pem")], { encoding: "utf8" });
+  if (certificate.status !== 0) throw new Error("Could not create the certificate of the isolated host page.");
+  host = createSecureServer({ key: readFileSync(join(hostCertificate, "key.pem")), cert: readFileSync(join(hostCertificate, "certificate.pem")) }, (req, res) => {
+    if (req.url !== "/harness") {
+      res.writeHead(404).end();
+      return;
+    }
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.end(
+      `<!doctype html><html lang="es"><meta charset="utf-8"><title>Prueba aislada de integración</title><meta name="viewport" content="width=device-width,initial-scale=1"><body style="margin:24px;background:#f3eee5;font:18px sans-serif"><h1>Host de prueba</h1><button id="book">Reservar consulta</button><script src="${appOrigin}/booking/embed-v1.js"></script><script>window.completions=[];window.widget=CitaSuiteBooking.mount({integrationKey:'${key}',baseURL:'${appOrigin}',onComplete:function(){window.completions.push(Array.from(arguments))}});document.querySelector('#book').onclick=()=>widget.open();</script></body></html>`,
+    );
+  });
+  await new Promise((resolve) => host.listen(0, "127.0.0.1", resolve));
+  const hostOrigin = "https://127.0.0.1:" + host.address().port;
   if (realAuth) {
     const authImage = 'public.ecr.aws/supabase/gotrue:v2.196.0';
     docker(['image', 'inspect', authImage]);
@@ -406,7 +423,7 @@ try {
  insert into public.service_price_policies(business_id,service_id,professional_id,base_amount,currency,base_month,first_adjustment_month,monthly_percentage,rounding_unit) values('${businessId}','${serviceId}','${professionalId}',20000,'ARS',date_trunc('month',now())::date,(date_trunc('month',now())+interval '1 month')::date,2,1);
  update public.services set patient_instructions=E'Indicaciones sintéticas\nTraer los estudios previos.',public_reminder_description='Aviso público sintético' where id='${serviceId}';
  insert into public.availability_rules(business_id,professional_id,weekday,start_time,end_time,slot_interval_minutes,break_minutes) select '${businessId}','${professionalId}',n,'09:00','17:00',30,10 from generate_series(0,6)n;
- insert into public.booking_integrations(business_id,public_key,name,is_active,is_default,theme,allowed_origins,allowed_service_ids,allowed_professional_ids,allowed_modalities,video_instructions,intake_schema) values('${businessId}','${key}','Host de prueba',true,false,'natalia',array['${apiOrigin}','http://127.0.0.1:8778'],array['${serviceId}','90000000-0000-4000-8000-000000000008']::uuid[],array['${professionalId}']::uuid[],array['in_person','video'],'Instrucciones virtuales sintéticas: se coordina el acceso.','[{"id":"insurance","label":"Obra social y plan","kind":"text","required":true,"maxLength":120},{"id":"labs","label":"Estudios recientes","kind":"boolean","required":false}]');
+ insert into public.booking_integrations(business_id,public_key,name,is_active,is_default,theme,allowed_origins,allowed_service_ids,allowed_professional_ids,allowed_modalities,video_instructions,intake_schema) values('${businessId}','${key}','Host de prueba',true,false,'natalia',array['${hostOrigin}'],array['${serviceId}','90000000-0000-4000-8000-000000000008']::uuid[],array['${professionalId}']::uuid[],array['in_person','video'],'Instrucciones virtuales sintéticas: se coordina el acceso.','[{"id":"insurance","label":"Obra social y plan","kind":"text","required":true,"maxLength":120},{"id":"labs","label":"Estudios recientes","kind":"boolean","required":false}]');
  insert into public.booking_integrations(business_id,public_key,name,is_active,is_default,theme,allowed_origins,allowed_modalities,intake_schema)
  values('${businessId}','${'cd'.repeat(16)}','Agenda general de prueba',true,true,'cita-suite',array['${appOrigin}'],array['in_person'],
  '[{"id":"insurance","label":"Obra social y plan","kind":"text","required":true,"maxLength":120},{"id":"labs","label":"Estudios recientes","kind":"boolean","required":false}]');
@@ -433,6 +450,7 @@ try {
     JSON.stringify({
       appOrigin,
       apiOrigin,
+      hostOrigin,
       key,
       businessId,
       serviceId,
@@ -481,6 +499,9 @@ try {
       // Production's configuration with this fixture's variables: none of production's values.
       const production = JSON.parse(readFileSync(root + "/apps/web/wrangler.jsonc", "utf8").replace(/^\s*\/\/.*$/gm, ""));
       artifactConfig = mkdtempSync(join(tmpdir(), "cita-artifact-app-"));
+      // Secrets travel in .dev.vars, which wrangler never prints; the rest are plain variables.
+      const secrets = ["ODONTO_SUPABASE_SERVICE_ROLE_KEY", "INTERNAL_JOB_SECRET", "RATE_LIMIT_SALT"];
+      writeFileSync(join(artifactConfig, ".dev.vars"), secrets.map((name) => `${name}=${variables[name]}`).join("\n") + "\n", { mode: 0o600 });
       writeFileSync(join(artifactConfig, "wrangler.json"), JSON.stringify({
         name: "cita-suite-artifact",
         main: join(artifact, ".verification/cloudflare-bundle-production/_worker.js"),
@@ -488,7 +509,7 @@ try {
         assets: { ...production.assets, directory: join(artifact, "apps/web/.svelte-kit/cloudflare") },
         compatibility_date: production.compatibility_date,
         compatibility_flags: production.compatibility_flags,
-        vars: variables,
+        vars: Object.fromEntries(Object.entries(variables).filter(([name]) => !secrets.includes(name))),
       }), { mode: 0o600 });
     }
     child = spawn(
@@ -524,7 +545,7 @@ try {
             "READY: local integration at " +
               appOrigin +
               "; host " +
-              apiOrigin +
+              hostOrigin +
               "/harness",
           );
           break;
