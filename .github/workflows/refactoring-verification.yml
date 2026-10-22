@@ -72,6 +72,23 @@ jobs:
         timeout-minutes: 15
         run: |
           node scripts/prepare-ci-services.mjs
+      - name: Use the existing official Ubuntu fallback mirror
+        if: inputs.level == 'full' || inputs.level == 'release' || inputs.level == 'browser'
+        timeout-minutes: 1
+        run: |
+          mkdir -p .verification
+          sudo python3 - <<'PY'
+          from pathlib import Path
+          path = Path('/etc/apt/apt-mirrors.txt')
+          original = path.read_text()
+          lines = [line for line in original.splitlines() if 'azure.archive.ubuntu.com' not in line]
+          if not any(line.startswith('https://archive.ubuntu.com/ubuntu/') for line in lines):
+              raise SystemExit('The runner has no reviewed official Ubuntu fallback mirror.')
+          updated = '\n'.join(lines) + '\n'
+          path.write_text(updated)
+          Path('.verification/apt-mirrors.log').write_text('Before:\n' + original + '\nAfter:\n' + updated)
+          print(updated)
+          PY
       - name: Prepare one browser
         if: inputs.level == 'full' || inputs.level == 'release' || inputs.level == 'browser'
         timeout-minutes: 20
