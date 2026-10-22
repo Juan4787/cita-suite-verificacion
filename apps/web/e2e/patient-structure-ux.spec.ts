@@ -13,7 +13,7 @@ test('patient structure preserves role scope, keyboard access and long content a
 	page
 }, testInfo) => {
 	test.setTimeout(180_000);
-	const health = observeRenderHealth(
+	const health = await observeRenderHealth(
 		page,
 		(failure) =>
 			failure.status === 500 && failure.method === 'GET' && failure.path.endsWith('/datos'),

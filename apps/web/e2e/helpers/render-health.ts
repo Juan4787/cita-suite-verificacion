@@ -1,35 +1,48 @@
 import { expect, type Page, type TestInfo } from '@playwright/test';
+import { fixtureRealtimeDiagnostic } from './realtime-diagnostics';
+declare global {
+	interface Window {
+		__citaFixtureSocketClose: (readyState: number) => Promise<void>;
+	}
+}
 type Failure = { status: number; method: string; path: string };
 /** Diagnostic metadata only: never serialize console text, tokens, query strings or clinical values. */
-export function observeRenderHealth(
+export async function observeRenderHealth(
 	page: Page,
 	allowResponse: (failure: Failure) => boolean = () => false,
 	expectedFailureCount = 0
 ) {
-	const messages: { type: string; category: string; diagnostic: string; source: string; line: number }[] = [];
+	const messages: { type: string; category: string; source: string; line: number }[] = [];
 	const failedResponses: Failure[] = [],
 		networkFailures: { path: string; code: string }[] = [];
 	let overflow = false;
+	const socketCloseStates = [0, 0, 0, 0];
+	// Observe the native close call without changing its arguments, result or network.
+	// A known cancellation message alone is insufficient: a fixture socket must
+	// actually have been closed while CONNECTING during this very browser run.
+	if (process.env.CITA_E2E_ENVIRONMENT === 'disposable') {
+		const api = new URL(process.env.PUBLIC_ODONTO_SUPABASE_URL ?? '');
+		if (api.hostname !== '127.0.0.1' || api.protocol !== 'http:') throw new Error('The socket probe needs the owned loopback fixture.');
+		await page.exposeFunction('__citaFixtureSocketClose', (state: number) => {
+			if (!Number.isInteger(state) || state < 0 || state > 3) throw new Error('Invalid socket lifecycle metadata.');
+			socketCloseStates[state]++;
+		});
+		await page.addInitScript((apiOrigin) => {
+			const api = new URL(apiOrigin);
+			const close = WebSocket.prototype.close;
+			WebSocket.prototype.close = function (this: WebSocket, code?: number, reason?: string) {
+				const target = new URL(this.url);
+				if (target.protocol === 'ws:' && target.host === api.host && target.pathname === '/realtime/v1/websocket')
+					void window.__citaFixtureSocketClose(this.readyState).catch(() => {});
+				return close.call(this, code, reason);
+			};
+		}, api.origin);
+	}
 	const safePath = (raw: string) => {
 		try {
 			return new URL(raw).pathname.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, ':id');
 		} catch {
 			return 'unknown';
-		}
-	};
-	// The disposable fixture deliberately runs Auth/Storage/PostgREST, not Realtime.
-	// Match only a failed 404 handshake against its exact configured loopback origin.
-	// Do not serialize the message: its WebSocket URL contains an API key.
-	const isMissingFixtureRealtime = (text: string) => {
-		const match = /^WebSocket connection to '(ws:\/\/[^']+)' failed: Error during WebSocket handshake: Unexpected response code: 404$/.exec(text);
-		if (!match || process.env.CITA_E2E_ENVIRONMENT !== 'disposable') return false;
-		try {
-			const socket = new URL(match[1]);
-			const api = new URL(process.env.PUBLIC_ODONTO_SUPABASE_URL ?? '');
-			return api.hostname === '127.0.0.1' && socket.host === api.host &&
-				api.protocol === 'http:' && socket.pathname === '/realtime/v1/websocket';
-		} catch {
-			return false;
 		}
 	};
 	page.on('console', (message) => {
@@ -44,41 +57,11 @@ export function observeRenderHealth(
 			? 'resource-failure'
 			: text.includes('Avoid calling `fetch` eagerly during server side rendering')
 				? 'known-svelte-dev-fetch-warning'
-				: isMissingFixtureRealtime(text)
-					? 'fixture-realtime-unavailable'
-					: 'unclassified';
+				: fixtureRealtimeDiagnostic(text, process.env.CITA_E2E_ENVIRONMENT, process.env.PUBLIC_ODONTO_SUPABASE_URL)
+					?? 'unclassified';
 		messages.push({
 			type,
 			category,
-			// Diagnostic labels only. These warnings remain unclassified and fail the
-			// assertion below; identifying their source never grants an exemption.
-			diagnostic: text.includes('Multiple GoTrueClient instances detected')
-				? 'supabase-multiple-auth-clients'
-				: text.includes('@supabase/gotrue-js: Lock ')
-					? 'supabase-auth-lock-timeout'
-					: text.includes('@supabase/gotrue-js: Navigator LockManager')
-						? 'supabase-auth-lock-manager'
-						: text.includes('Using the user object as returned from supabase.auth.getSession()')
-							? 'supabase-unverified-session-user'
-							: text.includes('Failed to set initial Realtime auth token:')
-								? 'supabase-initial-realtime-auth'
-								: text.includes('Realtime send() is automatically falling back to REST API.')
-									? 'supabase-realtime-rest-fallback'
-									: text.includes('WebSocket is already in CLOSING or CLOSED state')
-										? 'websocket-send-after-close'
-										: text.includes('WebSocket is closed before the connection is established')
-											? 'websocket-close-before-open'
-											: text.startsWith('WebSocket connection to ')
-												? 'websocket-connection-failure'
-												: text.includes('AuthRetryableFetchError')
-													? 'supabase-auth-retryable-fetch-error'
-													: text.includes('NavigatorLockAcquireTimeoutError')
-														? 'supabase-auth-lock-acquire-timeout'
-														: text.includes('@supabase/gotrue-js: Session as retrieved from URL')
-															? 'supabase-session-from-url'
-															: text.includes('WebCrypto API is not supported.')
-																? 'supabase-webcrypto-unavailable'
-																: 'other',
 			source: safePath(message.location().url),
 			line: message.location().lineNumber
 		});
@@ -116,6 +99,7 @@ export function observeRenderHealth(
 				path: safePath(page.url()),
 				hasTitle,
 				messages,
+				fixtureSocketCloseStates: socketCloseStates,
 				failedResponses,
 				networkFailures,
 				overflow
@@ -130,6 +114,8 @@ export function observeRenderHealth(
 			expect(failedResponses.filter((failure) => !allowResponse(failure))).toEqual([]);
 			expect(failedResponses.filter(allowResponse)).toHaveLength(expectedFailureCount);
 			expect(messages.filter((message) => message.category === 'unclassified')).toEqual([]);
+			expect(messages.filter((message) => message.category === 'fixture-realtime-cancelled').length,
+				'A cancellation warning needs an observed native close while CONNECTING in this run').toBeLessThanOrEqual(socketCloseStates[0]);
 			// Every resource error must have a response already checked above; connection failures have their own channel.
 			expect(
 				messages.filter((message) => message.category === 'resource-failure').length === 0 ||

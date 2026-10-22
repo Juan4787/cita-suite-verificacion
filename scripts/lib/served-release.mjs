@@ -10,10 +10,26 @@ const digest = (contents) => createHash('sha256').update(contents).digest('hex')
 /** One served file, which must answer 200 without a redirect and within the bounded size. */
 export async function servedFile(url, fetchFn = fetch) {
 	const response = await fetchFn(url, { redirect: 'manual', signal: AbortSignal.timeout(15_000) });
-	if (response.status !== 200) throw new Error(`${new URL(url).origin} answered ${response.status} for ${new URL(url).pathname}.`);
-	const contents = Buffer.from(await response.arrayBuffer());
-	if (contents.length > MAX_FILE_BYTES) throw new Error('A served file exceeded its bounded verification size.');
-	return contents;
+	if (response.status !== 200) {
+		await response.body?.cancel().catch(() => {});
+		throw new Error(`${new URL(url).origin} answered ${response.status} for ${new URL(url).pathname}.`);
+	}
+	const reader = response.body?.getReader();
+	if (!reader) return Buffer.alloc(0);
+	const chunks = [];
+	let bytes = 0;
+	try {
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done) return Buffer.concat(chunks, bytes);
+			bytes += value.byteLength;
+			if (bytes > MAX_FILE_BYTES) throw new Error('A served file exceeded its bounded verification size.');
+			chunks.push(Buffer.from(value));
+		}
+	} finally {
+		await reader.cancel().catch(() => {});
+		reader.releaseLock();
+	}
 }
 
 /** Every [path, contents] entry served identically by `origin`, four requests at a time; the count. */
@@ -41,8 +57,9 @@ export async function assertAppEntry(origin, revision, fetchFn = fetch) {
 	if (served.version !== revision) throw new Error(`${origin} serves ${served.version} instead of ${revision}.`);
 	const login = await fetchFn(origin + '/login', { redirect: 'manual', signal: AbortSignal.timeout(15_000) });
 	const privateRoute = await fetchFn(origin + '/odonto', { redirect: 'manual', signal: AbortSignal.timeout(15_000) });
+	const destination = new URL(privateRoute.headers.get('location') ?? '/', origin);
 	if (login.status !== 200 || ![302, 303, 307].includes(privateRoute.status) ||
-		new URL(privateRoute.headers.get('location') ?? '/', origin).pathname !== '/login')
+		destination.origin !== new URL(origin).origin || destination.username || destination.password || destination.pathname !== '/login')
 		throw new Error(`${origin} does not answer the login and the private redirect as the release does.`);
 	return login.headers.get('content-security-policy');
 }
@@ -52,13 +69,28 @@ export async function assertAppEntry(origin, revision, fetchFn = fetch) {
  * uploads and Realtime, and its images. A wildcard over every Supabase project is refused.
  */
 export function assertSupabaseOrigin(policy, apiOrigin) {
-	const directives = new Map(String(policy ?? '').split(';').map((part) => part.trim().split(/\s+/)).filter(([name]) => name)
-		.map(([name, ...sources]) => [name.toLowerCase(), sources]));
+	const refused = () => new Error('The content security policy does not admit exactly the configured Supabase project.');
+	const directives = new Map();
+	for (const [name, ...sources] of String(policy ?? '').split(';').map((part) => part.trim().split(/\s+/)).filter(([name]) => name)) {
+		const key = name.toLowerCase();
+		// Browsers use the first duplicate directive. Refuse ambiguity instead of
+		// inspecting only the last one and certifying a broader effective policy.
+		if (directives.has(key)) throw refused();
+		directives.set(key, sources);
+	}
 	const socket = apiOrigin.replace(/^https:/, 'wss:');
 	const connect = directives.get('connect-src') ?? [];
 	const images = directives.get('img-src') ?? [];
+	const allowsOtherProject = source => {
+		if (['*', 'http:', 'https:', 'ws:', 'wss:'].includes(source.toLowerCase())) return true;
+		try {
+			const candidate = new URL(source.replace(/:\*(?=\/|$)/, ''));
+			const host = candidate.hostname;
+			if (host.includes('*')) return 'another-project.supabase.co'.endsWith(host.slice(host.lastIndexOf('*') + 1));
+			return (host === 'supabase.co' || host.endsWith('.supabase.co')) && source !== apiOrigin && source !== socket;
+		} catch { return false; }
+	};
 	if (!connect.includes(apiOrigin) || !connect.includes(socket) || !images.includes(apiOrigin) ||
-		[...connect, ...images].some((source) => /\*\.supabase\.co/i.test(source)))
-		throw new Error('The content security policy does not admit exactly the configured Supabase project.');
+		[...connect, ...images].some(allowsOtherProject)) throw refused();
 	return { connect: [apiOrigin, socket], images: [apiOrigin] };
 }

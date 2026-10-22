@@ -668,7 +668,7 @@ test.describe('isolated booking integration', () => {
 				{ name: 'active-business-id', value: fixture.businessId, url: fixture.appOrigin }
 			]);
 			const page = await context.newPage();
-			const health = observeRenderHealth(page);
+			const health = await observeRenderHealth(page);
 			let fail = false;
 			const requests: URL[] = [];
 			await page.route('**/odonto/disponibilidad/slots?**', async (route) => {
@@ -927,7 +927,7 @@ test.describe('isolated booking integration', () => {
 				{ name: 'active-business-id', value: fixture.businessId, url: fixture.appOrigin }
 			]);
 			const page = await context.newPage();
-			const health = observeRenderHealth(page);
+			const health = await observeRenderHealth(page);
 			page.on('pageerror', (e) => errors.push(e.message));
 			const editorURL = fixture.appOrigin + '/odonto/profesionales/' + professionalId;
 			let releaseEditorScripts!: () => void;
@@ -1255,7 +1255,7 @@ test.describe('isolated booking integration', () => {
 		let writes = 0;
 		try {
 			const page = await context.newPage();
-			const health = observeRenderHealth(page);
+			const health = await observeRenderHealth(page);
 			page.on('pageerror', (error) => errors.push(error.message));
 			page.on('request', (request) => {
 				if (request.method() === 'POST' && new URL(request.url()).origin === fixture.appOrigin)

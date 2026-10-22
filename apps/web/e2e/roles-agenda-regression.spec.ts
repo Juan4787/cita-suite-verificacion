@@ -406,7 +406,7 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 
 		const pendingProfessionalEmail = `e2e-prof-${fixture.suffix}@example.com`;
 		const pendingProfessionalName = `E2E Profesional Nuevo ${fixture.suffix}`;
-		const wizardHealth = observeRenderHealth(page);
+		const wizardHealth = await observeRenderHealth(page);
 
 		await page.goto('/odonto/configuracion/usuarios');
 		await expect(page.getByRole('heading', { name: 'Equipo' })).toBeVisible();
