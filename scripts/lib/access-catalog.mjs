@@ -48,16 +48,62 @@ export function isForeign(section, key) {
 	return FOREIGN_TABLES.has(table);
 }
 
-/** Entries only in the expected catalog, only in the actual one, or different, per section; foreign ones apart. */
+// Inert drift of production, kept on purpose and nothing else (publicacion-y-reversion.md):
+// - functions of earlier membership, invitation and hold operations: no migration creates them, the
+//   code never calls them, and after the reconciliation no API role executes them;
+// - the columns of an earlier public hold and risk feature, with their checks and keys: nullable or
+//   with defaults that satisfy them, and the code neither reads nor writes them;
+// - indexes that change no behavior: performance only, or unique over one of those columns.
+// Only objects that exist in production alone can be accepted, by their exact name.
+const LEGACY_FUNCTIONS = [
+		'accept_pending_business_invites_for_user(text,uuid)', 'assign_business_role_to_email_safely(uuid,text,text,uuid,boolean)',
+		'business_commercial_status(uuid)', 'change_business_user_role_safely(uuid,text)',
+		'disable_allowed_email_as_authenticated_master_safely(text,text)', 'disable_allowed_email_as_master_safely(text,uuid,text,text)',
+		'disable_allowed_email_safely(text,text)', 'disable_business_user_safely(uuid,text)', 'disable_professional_patient_link(uuid,text)',
+		'expire_public_booking_holds()', 'link_patient_to_professional_safely(uuid,uuid,uuid,text)',
+		'link_professional_user_safely(uuid,uuid,uuid)', 'sync_patient_last_entry()', 'unlink_professional_user_safely(uuid,uuid)',
+		'user_is_active_owner(uuid,uuid)'
+];
+export const ACCEPTED_PRODUCTION_DRIFT = Object.freeze({
+	functions: LEGACY_FUNCTIONS,
+	bodies: LEGACY_FUNCTIONS,
+	columns: [
+		'appointments.expired_at', 'appointments.hold_expires_at', 'appointments.public_confirmed_at', 'appointments.public_device_hash',
+		'appointments.public_email_hash', 'appointments.public_identity_bundle_hash', 'appointments.public_identity_hash',
+		'appointments.public_ip_hash', 'appointments.public_phone_hash', 'appointments.public_risk_flags', 'appointments.public_risk_score',
+		'business_user_invites.expires_at', 'business_users.last_seen_at', 'patients.created_from_public_hold_at', 'patients.has_clinical_alert',
+		'patients.internally_touched_at', 'patients.internally_touched_by', 'patients.origin', 'patients.origin_metadata',
+		'patients.public_hold_archived_at', 'professionals.name_source', 'professionals.profile_status',
+		'public_booking_attempts.appointment_id', 'public_booking_attempts.device_hash', 'public_booking_attempts.email_hash',
+		'public_booking_attempts.idempotency_key', 'public_booking_attempts.identity_bundle_hash', 'public_booking_attempts.risk_flags',
+		'public_booking_attempts.risk_score'
+	],
+	constraints: [
+		'appointments:appointments_public_risk_score_check', 'patients:patients_internally_touched_by_fkey', 'patients:patients_origin_check',
+		'professionals:professionals_name_source_check', 'professionals:professionals_profile_status_check',
+		'public_booking_attempts:public_booking_attempts_appointment_fk', 'public_booking_attempts:public_booking_attempts_risk_score_check'
+	],
+	indexes: [
+		'appointments:appointments_public_hold_expiry_idx', 'appointments:appointments_public_identity_future_idx',
+		'audit_logs:audit_logs_reason_created_idx', 'business_user_invites:business_user_invites_business_role_status_idx',
+		'business_user_invites:business_user_invites_professional_idx', 'business_users:business_users_business_status_role_idx',
+		'business_users:business_users_user_status_idx', 'clinical_entries:clinical_entries_patient_created_at_idx',
+		'public_booking_attempts:public_booking_attempts_success_idempotency_uq'
+	]
+});
+
+/** Entries only in the expected catalog, only in the actual one, or different, per section; foreign ones and accepted drift apart. */
 export function compareCatalogs(expected, actual) {
 	const differences = {};
 	for (const section of CATALOG_SECTIONS) {
 		const left = expected[section] ?? {}, right = actual[section] ?? {};
 		const keys = [...new Set([...Object.keys(left), ...Object.keys(right)])].sort().filter(key => !isForeign(section, key));
+		const accepted = new Set(ACCEPTED_PRODUCTION_DRIFT[section] ?? []);
 		differences[section] = {
 			onlyInMigrations: keys.filter(key => !(key in right)),
-			onlyInProduction: keys.filter(key => !(key in left)),
-			different: keys.filter(key => key in left && key in right && JSON.stringify(left[key]) !== JSON.stringify(right[key]))
+			onlyInProduction: keys.filter(key => !(key in left) && !accepted.has(key)),
+			different: keys.filter(key => key in left && key in right && JSON.stringify(left[key]) !== JSON.stringify(right[key])),
+			accepted: keys.filter(key => !(key in left) && accepted.has(key)).length
 		};
 	}
 	return differences;
