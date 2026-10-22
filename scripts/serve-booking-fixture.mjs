@@ -425,7 +425,7 @@ try {
  insert into public.availability_rules(business_id,professional_id,weekday,start_time,end_time,slot_interval_minutes,break_minutes) select '${businessId}','${professionalId}',n,'09:00','17:00',30,10 from generate_series(0,6)n;
  insert into public.booking_integrations(business_id,public_key,name,is_active,is_default,theme,allowed_origins,allowed_service_ids,allowed_professional_ids,allowed_modalities,video_instructions,intake_schema) values('${businessId}','${key}','Host de prueba',true,false,'natalia',array['${hostOrigin}'],array['${serviceId}','90000000-0000-4000-8000-000000000008']::uuid[],array['${professionalId}']::uuid[],array['in_person','video'],'Instrucciones virtuales sintéticas: se coordina el acceso.','[{"id":"insurance","label":"Obra social y plan","kind":"text","required":true,"maxLength":120},{"id":"labs","label":"Estudios recientes","kind":"boolean","required":false}]');
  insert into public.booking_integrations(business_id,public_key,name,is_active,is_default,theme,allowed_origins,allowed_modalities,intake_schema)
- values('${businessId}','${'cd'.repeat(16)}','Agenda general de prueba',true,true,'cita-suite',array['${appOrigin}'],array['in_person'],
+ values('${businessId}','${'cd'.repeat(16)}','Agenda general de prueba',true,true,'cita-suite',array['${hostOrigin}'],array['in_person'],
  '[{"id":"insurance","label":"Obra social y plan","kind":"text","required":true,"maxLength":120},{"id":"labs","label":"Estudios recientes","kind":"boolean","required":false}]');
  notify pgrst,'reload schema';
  commit;
