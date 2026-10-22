@@ -119,14 +119,18 @@ Leer la decisión literal al final del plan. En resumen: no hay usuarios reales 
      - `deploy-production-workers.mjs scheduler-without-crons`, el primer paso de la reversión;
      - `tail-metrics.mjs`, que reemplaza a `staging-tail-metrics.mjs`.
      Guardas locales: 124 de 124.
+   - **Hecho después (13:00 UTC):**
+     - cancelación de 39777244477 confirmada;
+     - siembra `capacity-` en staging (39781320040);
+     - prueba de humo en staging aprobada con 14 comprobaciones, después de corregir su limpieza. La reserva de 5 MB por URL vigente es el diseño correcto de la etapa 3;
+     - ensayo del programador sin cron y su restitución en staging (`6266c45a…` y `49636b6a…`);
+     - snapshot final `dfb487f`, sin cambios de app, base ni paquetes respecto de `f83bbc2`;
+     - empaquetado 39782403651, con `_worker.js` `607528d8…`.
    - **Siguiente, en orden:**
-     1. confirmar la cancelación de 39777244477;
-     2. sembrar `capacity-` en staging (`capacity-seed`, 2 consultorios);
-     3. ensayar `release-smoke.mjs staging`;
-     4. limpiar con `capacity-cleanup`;
-     5. ensayar en staging `scheduler-without-crons` y su restitución;
-     6. snapshot final, empaquetado, staging y `verify:release` de la candidata definitiva;
-     7. registrar todo y actualizar la candidata del instructivo.
+     1. desplegar staging desde 39782403651;
+     2. `verify:release` de `dfb487f`;
+     3. después de las 15:08:57 UTC, `release-smoke.mjs staging cleanup` y la operación `capacity-cleanup`;
+     4. registrar todo y actualizar la candidata del instructivo.
      Después se espera al usuario, que sigue sin responder las condiciones previas 1, 2 y 3.
    - **Corrección de 3g:** la política `master read allowed_emails` no queda para después de publicar. La reconciliación ya la borra (`reconcile-drift.sql`, línea 77), y el ensayo con `ROLLBACK` mostró el catálogo igual al de staging.
 4. **Copias antiguas retiradas por el usuario (resuelto el 19 de octubre):** `https://cita-suite.netlify.app` servía una copia completa de la aplicación con endpoint de tareas. El usuario desactivó ese proyecto y también pausó `https://cita-suite-app.vercel.app`, otra copia que no figuraba en el inventario. Comprobado por HTTP a las 21:12 UTC: Netlify responde 404 y Vercel 503. Ambas están en el inventario de `identidad-cita-suite.md`. El interruptor de base de la migración sigue siendo parte de la transición: neutraliza cualquier llamador antiguo (por ejemplo cron-job.org contra el Worker) sin depender de esas cuentas. Antes de activar el programador nuevo, volver a comprobar que las dos copias siguen fuera de servicio.

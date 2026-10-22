@@ -15,15 +15,15 @@ Instructivo de la sección 5 del [plan](../plans/refactorizacion-cita-suite.md) 
 
 | Dato | Valor |
 |---|---|
-| Revisión | Snapshot `f83bbc25585d092656ec5673cac0f61d23cce78e` |
-| Release | Operación `artifact` 39776901415, artefacto `cloudflare-staging-f83bbc25585d092656ec5673cac0f61d23cce78e` (216 archivos en el manifiesto) |
-| Paquete del Worker | `_worker.js` idéntico en staging y producción, SHA-256 `8e54c06e267636906283753c7be4d12b72809071a3c9b5f42120b65eaf80ddd6` |
-| Staging | App `83b60e2f-b66d-4744-a80a-9a91b7946ffd` y Natalia `ed419cbc-29a7-4a65-92c7-bba92e0306be`, desde ese paquete; 126 migraciones |
-| `verify:release` | 39777244477, en curso |
+| Revisión | Snapshot `dfb487faa74b8117c46c180c70f368f77f3dbcd2`: el código de la app de `f83bbc2` más las herramientas de publicación |
+| Release | Operación `artifact` 39782403651, artefacto `cloudflare-staging-dfb487faa74b8117c46c180c70f368f77f3dbcd2` (216 archivos en el manifiesto) |
+| Paquete del Worker | `_worker.js` idéntico en staging y producción, SHA-256 `607528d8d6ee78b315ad25f4c968002b60cdb1ae5f9ca8170e3c990677ef3cb8` |
+| Staging | Se despliega desde ese paquete antes de su `verify:release`; 126 migraciones |
+| `verify:release` | Pendiente para `dfb487f`. La corrida de `f83bbc2` (39777244477) se canceló por un `apt-get` colgado en CI |
 | Base de producción | 97 migraciones aplicadas; quedan 29, en dos tandas (28 y 1) |
 | Versión de reversión de `app` | `9b2df65c-f89c-4940-a625-4d7b3e5858f2`, del 15 de octubre: sirve `313355a` |
 
-Las herramientas de publicación agregadas el 22 de octubre todavía no corrieron en un `verify:release`. La candidata final será el snapshot que las incluya, con su propio release y su `verify:release` aprobado. Esta tabla se actualiza entonces.
+Esta tabla se actualiza con cada candidata. Sólo se publica una candidata con su `verify:release` aprobado.
 
 ## Destinos
 
@@ -43,7 +43,7 @@ Las herramientas de publicación agregadas el 22 de octubre todavía no corriero
 |---|---|---|
 | App | Worker `cita-suite-staging`, `https://cita-suite-staging.cita-suite.workers.dev` | `deploy-staging-workers.mjs app <release>` |
 | Natalia | Worker de sólo archivos `natalia-frutos-staging`, `https://natalia-frutos-staging.cita-suite.workers.dev`, fuera de los buscadores (`X-Robots-Tag: noindex`) | `deploy-staging-workers.mjs natalia <release>` |
-| Programador | Worker `cita-suite-scheduler-staging`, versión `5519dc77-c66f-4b29-8fe9-b5c3ae8bc976`; hoy tiene los cinco cron de la cuenta Free | `deploy-staging-workers.mjs scheduler`, o `scheduler-without-crons` para liberarlos |
+| Programador | Worker `cita-suite-scheduler-staging`, versión `49636b6a-b43d-4468-8b46-8daf749e9b88`; hoy tiene los cinco cron de la cuenta Free | `deploy-staging-workers.mjs scheduler`, o `scheduler-without-crons` para liberarlos |
 | Consultorio de release | `release-staging`, sintético y fijo | operación `release-fixture` del workflow de staging |
 
 ## Herramientas
@@ -62,7 +62,7 @@ Todas corren desde esta máquina con la configuración privada (`.env` ignorado 
 | `deploy-staging-workers.mjs scheduler-without-crons` | Libera los cinco cron de staging, que la cuenta Free necesita para producción. | Igual que el anterior, en staging. | Salida del comando |
 | `verify-production-release.mjs <release> [--natalia]` | Revisión servida, login, redirección privada, cada archivo cliente del release, CSP con sólo el proyecto Supabase de producción y la sonda de la clave anónima. Con `--natalia`, los archivos exactos de Natalia. | — (falla ante la primera diferencia) | `production-release-<fecha>.json` |
 | `production-capacity.mjs secret\|seed\|integrity\|measure\|report\|cleanup` | Consultorios sintéticos `capacity-01` y `capacity-02`, su medición y su limpieza ([capacidad](capacidad.md)). | Ya hay consultorios `capacity-`; la base no deja margen; falta el secreto de la medición. | `production-capacity-*.json` |
-| `release-smoke.mjs production` | Prueba de humo sobre `capacity-01`: reserva pública desde el enlace compartido y su cancelación; documento clínico subido, completado, listado, descargado con los mismos bytes y llevado a la papelera. El operador quita después el objeto y su fila, y los contadores deben quedar como estaban. | `capacity-01` no es el consultorio sintético de la siembra; ya tiene documentos. | `release-smoke-production-<fecha>.json` |
+| `release-smoke.mjs production [cleanup]` | Prueba de humo sobre `capacity-01`: reserva pública desde el enlace compartido y su cancelación; documento clínico subido, completado, listado, descargado con los mismos bytes y llevado a la papelera, con los contadores exactos. `cleanup` quita después esos documentos y deja los contadores del consultorio en cero. | `capacity-01` no es el consultorio sintético de la siembra o tiene documentos ajenos a la prueba; en `cleanup`, mientras alguna URL de carga siga vigente. | `release-smoke-production-run-<fecha>.json` y `-cleanup-<fecha>.json` |
 | `tail-metrics.mjs production <corrida> <minutos> [jobs\|requests]` | Observa el Worker `app`: resultado, CPU y tiempo de cada tarea, o de cada pedido por plantilla de ruta. | Destino desconocido. | `production-tail-<corrida>*.json*` |
 | `production-device-push.mjs seed\|link\|report\|cleanup` | Push real a un teléfono, con un consultorio sintético por corrida. El enlace de gestión sólo se imprime en esta terminal. | Identificador de corrida inválido. | `production-device-<corrida>.json` |
 | `compare-access-catalog.mjs` | Compara en sólo lectura el catálogo de producción con el de staging. | — | `access-catalog-<fecha>.json` |
@@ -70,21 +70,22 @@ Todas corren desde esta máquina con la configuración privada (`.env` ignorado 
 
 ## Condiciones previas
 
-Todas deben cumplirse antes del paso 1. Estado al 22 de octubre, 12:45 UTC:
+Todas deben cumplirse antes del paso 1. Estado al 22 de octubre, 13:05 UTC:
 
 | # | Condición | Estado | Evidencia |
 |---|---|---|---|
 | 1 | Workers Builds desconectado del Worker `app`. Hoy despliega cada push a `main` de `Juan4787/dashboard`, y pisaría la app publicada con el código de `main`. | **Pendiente del usuario** | Panel de Cloudflare: Workers & Pages → `app` → Settings → Builds → Disconnect. |
 | 2 | Proyecto `cita-suite` de Vercel desconectado o borrado. Es la copia vieja pausada; se construye con cada push a `main`. | **Pendiente del usuario** | Panel de Vercel. |
 | 3 | Forma de publicar Natalia definida, o autorización para usar la sesión de la CLI de Vercel sin leer sus archivos. | **Pendiente del usuario** | — |
-| 4 | Release empaquetado una sola vez, sobre la revisión exacta. | Hecho para `f83bbc2` | Operación `artifact` 39776901415 |
+| 4 | Release empaquetado una sola vez, sobre la revisión exacta. | Hecho para `dfb487f` | Operación `artifact` 39782403651 |
 | 5 | Ensayo de respaldo y restauración aprobado. | Hecho | `staging-operations` 39682517594 |
-| 6 | Staging con el mismo release: migraciones, app, Natalia, consultorio de release y tareas observadas. | Hecho para `f83bbc2`; tareas observadas con `cd8e9ad` | Ver registro |
-| 7 | `verify:release` aprobado con ese release. | En curso: 39777244477 | — |
-| 8 | Ensayo de la base sobre producción, con `ROLLBACK`: cero fallas y catálogo igual al de staging, salvo la deriva aceptada. | Hecho el 22 de octubre a las 06:52 UTC; se repite en el paso 3 | `production-migration-rehearsal-2026-10-22T06-52-19-008Z.json` |
+| 6 | Staging con el mismo release: migraciones, app, Natalia, consultorio de release y tareas observadas. | App y Natalia de `dfb487f` desplegadas (`04ef8a10…` y `b52e723b…`); tareas observadas el 22 de octubre de 12:55 a 13:00 UTC: push dos veces y calendario una, cada una en su horario | Registro; `staging-tail-6fa828d2f6af-summary.json` |
+| 7 | `verify:release` aprobado con ese release. | En curso: 39783349541 sobre `dfb487f`. La de `f83bbc2` (39777244477) se canceló por un `apt-get` colgado en CI | — |
+| 8 | Ensayo de la base sobre producción, con `ROLLBACK`: cero fallas y catálogo igual al de staging, salvo la deriva aceptada. | Hecho el 22 de octubre a las 06:52 UTC; se repite en el paso 2 | `production-migration-rehearsal-2026-10-22T06-52-19-008Z.json` |
 | 9 | Compatibilidad de cada tanda con la versión servida, analizada. | Hecho | Registro y «Reversión» |
 | 10 | Programador anterior detenido. | Hecho: cron-job.org 7795525 deshabilitado desde el 31 de agosto; Netlify 404 y Vercel 503 a las 12:43 UTC | `previous-scheduler-2026-10-22T12-43-14-864Z.json` |
-| 11 | Prueba de humo ensayada en staging. | Pendiente | — |
+| 11 | Prueba de humo ensayada en staging. | Hecho: 14 comprobaciones aprobadas; su limpieza se habilita a las 15:08:57 UTC | `release-smoke-staging-run-2026-10-22T12-54-08-566Z.json` |
+| 12 | Programador sin cron y su restitución, ensayados en staging. | Hecho: versiones `6266c45a…` (sin cron) y `49636b6a…` (con los cinco) | Registro |
 
 ## La deriva de producción y su reconciliación
 
@@ -188,7 +189,8 @@ node scripts/release-smoke.mjs production
 
 - **Esperado:**
   - la siembra crea `capacity-01` y `capacity-02`, con sus dueños sintéticos;
-  - la prueba de humo aprueba: reserva pública con su página de gestión y su cancelación, y el documento clínico de ida y vuelta, con los contadores de vuelta en sus valores.
+  - la prueba de humo aprueba sus 14 comprobaciones: reserva pública con su página de gestión y su cancelación, y documento clínico de ida y vuelta, con los contadores exactos y el documento en la papelera;
+  - informa `cleanupAfter`, la hora desde la que su limpieza es posible (paso 12).
 - **Detenerse si:** falla cualquier comprobación. Revertir la app y diagnosticar.
 
 ### 7. Programador
@@ -244,7 +246,7 @@ node scripts/check-api-exposure.mjs production
 ```
 
 - **Esperado:** el catálogo coincide con el de staging, salvo la deriva aceptada y los objetos de otros productos. La clave anónima no alcanza ninguna relación.
-- **Pendiente de esa comparación:** la política `master read allowed_emails`, que sólo existe en producción. La reconciliación la borra, y la comparación confirma que no queda.
+- **Confirma además:** que no queda la política `master read allowed_emails`, que sólo existía en producción y la reconciliación borra (`reconcile-drift.sql`, línea 77).
 
 ### 11. Medición de dos consultorios
 
@@ -257,7 +259,7 @@ node scripts/check-api-exposure.mjs production
 4. `gh workflow run production-measurement.yml --repo Juan4787/cita-suite-verificacion --ref refactor/maintainability-20261015`. Son tres repeticiones de 12 minutos y la fase pública.
 5. Descargar el artefacto `production-measure-<corrida>`.
 6. `production-capacity.mjs report` e `integrity`, después de la carga.
-7. `node scripts/attribute-pauses.mjs <muestras> <pedidos del tail>`.
+7. `node scripts/attribute-pauses.mjs .verification/instance-samples-production-<etiqueta>.jsonl .verification/production-tail-<12 hex>.jsonl`.
 
 - **Criterio de la decisión del 20 de octubre:**
   - lecturas p95 < 1 s y p99 < 2 s;
@@ -269,12 +271,14 @@ node scripts/check-api-exposure.mjs production
 ### 12. Limpieza de la medición
 
 ```bash
+node scripts/release-smoke.mjs production cleanup
 node scripts/production-capacity.mjs cleanup
 gh secret delete CITA_PRODUCTION_CAPACITY_SECRET --repo Juan4787/cita-suite-verificacion
 rm ~/.config/cita-suite/production/capacity-secret
 ```
 
-- **Esperado:** la limpieza informa cero consultorios y cero dueños `capacity-` restantes.
+- **El orden importa:** la limpieza de capacidad se niega mientras `capacity-01` tenga documentos (`CAPACITY_CLEANUP_HAS_DOCUMENTS`). Antes corre la de la prueba de humo, que espera el `cleanupAfter` de la última corrida: dos horas y cuarto después de su subida.
+- **Esperado:** la prueba de humo deja los contadores del consultorio en cero, y los globales se mueven igual que los del consultorio. La limpieza de capacidad informa cero consultorios y cero dueños `capacity-` restantes.
 
 ### 13. Natalia
 
@@ -295,7 +299,10 @@ Con los disparadores desconectados, la revisión publicada llega a `main` y se a
    - **Después de la tanda 2:** la versión anterior pierde las operaciones que escribían directamente: el alta de pacientes, las prestaciones, las asignaciones, los profesionales y las excepciones. Antes de volver a ella habría que devolver esas escrituras con una migración nueva, nunca deshaciendo la anterior.
 3. **Entradas viejas:** volver a encenderlas sólo si hace falta (`production-legacy-jobs.mjs on`). El programador anterior está deshabilitado y no se reactiva sin decisión del usuario.
 4. **Base:** las migraciones no se deshacen destructivamente. Restaurar el respaldo es para un desastre, no para una reversión, porque perdería las escrituras posteriores.
-5. **Datos sintéticos:** si la publicación se interrumpe con consultorios sintéticos en producción, `production-capacity.mjs cleanup` y `production-device-push.mjs cleanup <corrida>` los quitan.
+5. **Datos sintéticos:** si la publicación se interrumpe con consultorios sintéticos en producción, se quitan en este orden:
+   - `release-smoke.mjs production cleanup`, cuando venzan sus URL de carga;
+   - `production-capacity.mjs cleanup`;
+   - `production-device-push.mjs cleanup <corrida>`.
 
 ## Pendiente del usuario
 

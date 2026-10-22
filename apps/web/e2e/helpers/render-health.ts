@@ -6,7 +6,7 @@ export function observeRenderHealth(
 	allowResponse: (failure: Failure) => boolean = () => false,
 	expectedFailureCount = 0
 ) {
-	const messages: { type: string; category: string; source: string; line: number }[] = [];
+	const messages: { type: string; category: string; diagnostic: string; source: string; line: number }[] = [];
 	const failedResponses: Failure[] = [],
 		networkFailures: { path: string; code: string }[] = [];
 	let overflow = false;
@@ -50,6 +50,23 @@ export function observeRenderHealth(
 		messages.push({
 			type,
 			category,
+			// Diagnostic labels only. These warnings remain unclassified and fail the
+			// assertion below; identifying their source never grants an exemption.
+			diagnostic: text.includes('Multiple GoTrueClient instances detected')
+				? 'supabase-multiple-auth-clients'
+				: text.includes('@supabase/gotrue-js: Lock ')
+					? 'supabase-auth-lock-timeout'
+					: text.includes('@supabase/gotrue-js: Navigator LockManager')
+						? 'supabase-auth-lock-manager'
+						: text.includes('Using the user object as returned from supabase.auth.getSession()')
+							? 'supabase-unverified-session-user'
+							: text.includes('Failed to set initial Realtime auth token:')
+								? 'supabase-initial-realtime-auth'
+								: text.includes('Realtime send() is automatically falling back to REST API.')
+									? 'supabase-realtime-rest-fallback'
+									: text.includes('WebSocket is already in CLOSING or CLOSED state')
+										? 'websocket-send-after-close'
+										: 'other',
 			source: safePath(message.location().url),
 			line: message.location().lineNumber
 		});

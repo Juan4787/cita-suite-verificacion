@@ -33,6 +33,8 @@ El plazo inicial conserva dos horas más quince minutos. Después de obtener las
 
 Renovar nunca duplica la reserva ni acorta un plazo anterior. Una ruta cuyo objeto ya existe conserva el slot con reserva cero. Borrar o renombrar ese objeto no revoca una URL todavía válida: el trigger vuelve a respaldar su máximo y comprueba si ese crecimiento cabe. Una operación que no cabe revierte completa. Un fallo entre emisión y devolución puede dejar una reserva temporal conservadora; no autoriza a liberarla antes de la expiración.
 
+**Consecuencia para el operador:** una limpieza que borra documentos tiene que esperar el vencimiento de sus URL de carga. El 22 de octubre, en el staging alojado, borrar el objeto de un documento recién subido volvió a reservar 5.000.000 bytes hasta su vencimiento, dos horas y cuarto después. Así, la protección quedó comprobada fuera del entorno descartable. `release-smoke.mjs <entorno> cleanup` espera ese plazo: después borra el objeto por la API de Storage, libera las reservas vencidas con `private.release_expired_clinical_reservations()` y recién entonces borra la fila.
+
 ## Transferencia y confirmación
 
 La transferencia va del navegador a Storage con `upsert: false`. El trigger AFTER del catálogo calcula el estado completo posterior a la sentencia, sustituye reserva por bytes reales y aplica límites; un rechazo revierte la modificación de metadatos. No hay una descarga del PDF completo dentro del Worker.

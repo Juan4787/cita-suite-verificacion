@@ -67,6 +67,7 @@ Los despliegues de staging y producción y la verificación usan esos archivos e
 4. **Staging desplegado** (`verify-campaign-staging.mjs`):
    - la app sirve la revisión y cada archivo de `_app/immutable` del release;
    - el login responde y una ruta privada redirige al login;
+   - la CSP de la página admite exactamente el proyecto Supabase de staging, su WebSocket y sus imágenes, sin el comodín `*.supabase.co` (`assertSupabaseOrigin`);
    - la copia de Natalia (`natalia-frutos-staging`) sirve cada archivo de su sitio;
    - la clave anónima no alcanza ninguna relación de la API alojada (`probeAnonymousExposure`);
    - un navegador reserva desde la copia de Natalia en el consultorio sintético de release, en escritorio y en móvil: navegación nativa, recuperación sin duplicar, comprobante anterior compatible y cancelación desde la gestión del turno.
@@ -74,6 +75,10 @@ Los despliegues de staging y producción y la verificación usan esos archivos e
 **Consultorio de release.** Es fijo y sintético, y se asegura con la operación `release-fixture` (`scripts/staging-release-fixture.mjs`). Si su configuración se desvía, el release falla, no se repara en silencio. Las reservas canceladas quedan en staging, cada una con un teléfono sintético nuevo.
 
 **Diagnóstico sobre un paquete.** `level=browser` con `artifact_run` ejecuta la selección contra el paquete descargado, igual que el paso 3. Es diagnóstico y no reemplaza al release.
+
+**Después de publicar.** Las comprobaciones de staging y producción comparten `scripts/lib/served-release.mjs` (revisión, login, redirección privada, archivos por SHA-256 y CSP). En producción las corre `verify-production-release.mjs`. La reserva pública y un documento clínico de ida y vuelta las prueba `release-smoke.mjs staging|production` sobre el consultorio sintético `capacity-01`; su limpieza espera a que venzan las URL de carga, porque Storage vuelve a reservar 5 MB mientras una URL siga vigente. El orden y los comandos están en [publicación y reversión](publicacion-y-reversion.md).
+
+**Límites de la preparación.** Las imágenes, el navegador y LibreOffice tienen límite propio (15, 20 y 10 minutos). El 22 de octubre un `apt-get` colgado retuvo 25 minutos una corrida que antes tardaba 19 s en ese paso. Un espejo trabado falla ahí y no consume el límite del trabajo.
 
 El workflow de GitHub fija acciones por SHA y comprueba recursos antes de levantar servicios. Su presencia local no acredita una corrida hospedada. Tampoco una prueba en contenedores acredita capacidad de Supabase alojado o límites reales de Cloudflare. Esas evidencias siguen sus criterios propios y deben adjuntarse antes del cierre de campaña.
 
