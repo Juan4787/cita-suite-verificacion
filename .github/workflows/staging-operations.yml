@@ -1,8 +1,9 @@
 name: Operaciones de staging de Cita Suite
 
-# Manual only. Builds and bundles the Cloudflare artifact without deploying it, and
-# operates only on the dedicated staging project. Production credentials are never
-# available to this workflow; deployment to Cloudflare is done outside it.
+# Manual only. Builds and bundles the Cloudflare artifact without deploying it, for staging and
+# with the production configuration (a bundle needs no credentials), and operates only on the
+# dedicated staging project. Production credentials are never available to this workflow;
+# deployment to Cloudflare is done outside it.
 on:
   workflow_dispatch:
     inputs:
@@ -59,6 +60,7 @@ jobs:
           pnpm --filter web build:cloudflare
           cd apps/web
           pnpm exec wrangler deploy --dry-run --config wrangler.staging.jsonc --outdir ../../.verification/cloudflare-bundle
+          pnpm exec wrangler deploy --dry-run --config wrangler.jsonc --outdir ../../.verification/cloudflare-bundle-production
           cd ../..
           node --input-type=module - <<'JS'
           import { createHash } from 'node:crypto';
@@ -67,6 +69,7 @@ jobs:
           const files = [];
           const walk = directory => { for (const name of readdirSync(directory)) { const path = join(directory, name); statSync(path).isDirectory() ? walk(path) : files.push(path); } };
           walk('.verification/cloudflare-bundle');
+          walk('.verification/cloudflare-bundle-production');
           walk('apps/web/.svelte-kit/cloudflare');
           const manifest = { revision: process.env.CITA_BUILD_VERSION, version: JSON.parse(readFileSync('apps/web/.svelte-kit/output/client/_app/version.json', 'utf8')).version,
             files: files.sort().map(path => ({ path, bytes: statSync(path).size, sha256: createHash('sha256').update(readFileSync(path)).digest('hex') })) };
@@ -81,6 +84,7 @@ jobs:
           path: |
             apps/web/.svelte-kit/cloudflare
             .verification/cloudflare-bundle
+            .verification/cloudflare-bundle-production
             .verification/cloudflare-bundle-manifest.json
           include-hidden-files: true
           if-no-files-found: error

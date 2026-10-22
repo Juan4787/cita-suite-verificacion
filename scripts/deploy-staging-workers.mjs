@@ -14,8 +14,8 @@ import {
 // outside the repository and travel in a temporary file readable only by this user.
 const root = fileURLToPath(new URL('../', import.meta.url));
 const [target, artifactArgument] = process.argv.slice(2);
-if (!['app', 'scheduler'].includes(target) || (target === 'app') !== Boolean(artifactArgument) || process.argv.length > 4)
-	throw new Error('Usage: deploy-staging-workers.mjs app <downloaded build directory> | scheduler');
+if (!['app', 'scheduler', 'scheduler-without-crons'].includes(target) || (target === 'app') !== Boolean(artifactArgument) || process.argv.length > 4)
+	throw new Error('Usage: deploy-staging-workers.mjs app <downloaded build directory> | scheduler | scheduler-without-crons');
 const readJson = path => JSON.parse(readFileSync(path, 'utf8'));
 const privateDirectory = join(homedir(), '.config/cita-suite/staging');
 const workerSecrets = readJson(join(privateDirectory, 'worker-secrets.json'));
@@ -67,7 +67,8 @@ if (target === 'app') {
 	}
 	console.log(JSON.stringify({ deployed: 'app', revision, origin: STAGING_APP_ORIGIN }));
 } else {
-	assertStagingSchedulerConfig(readJson(join(root, 'apps/scheduler/wrangler.jsonc')));
+	const schedulerConfig = readJson(join(root, 'apps/scheduler/wrangler.jsonc'));
+	assertStagingSchedulerConfig(schedulerConfig);
 	// The scheduler is bundled from the working tree: it must be the verified source.
 	const snapshot = readJson(join(root, '.verification/ci-source.json'));
 	const blob = contents => createHash('sha1').update(`blob ${contents.length}\0`).update(contents).digest('hex');
@@ -75,7 +76,13 @@ if (target === 'app') {
 	if (!sources.some(({ path }) => path === 'apps/scheduler/src/index.ts') ||
 		sources.some(({ path, blob: expected }) => blob(readFileSync(join(root, path))) !== expected))
 		throw new Error('The scheduler differs from the verified snapshot. Nothing was deployed.');
-	deploy('scheduler', null, ['--env', 'staging', '--message', `Cita Suite scheduler ${snapshot.commit}`],
+	// The Free account holds five crons: releasing them from staging lets the production
+	// scheduler take them. The staging scheduler stays deployed, without triggers.
+	const { $schema, ...scheduler } = schedulerConfig;
+	const config = target === 'scheduler-without-crons'
+		? { ...scheduler, main: join(root, 'apps/scheduler', scheduler.main), env: { ...scheduler.env, staging: { ...scheduler.env.staging, triggers: { crons: [] } } } }
+		: null;
+	deploy('scheduler', config, ['--env', 'staging', '--message', `Cita Suite scheduler ${snapshot.commit}${config ? ' without crons' : ''}`],
 		{ INTERNAL_JOB_SECRET: stagingAppSecrets(workerSecrets, readJson(join(privateDirectory, 'api-keys.json'))).INTERNAL_JOB_SECRET });
-	console.log(JSON.stringify({ deployed: 'scheduler', snapshot: snapshot.commit }));
+	console.log(JSON.stringify({ deployed: target, snapshot: snapshot.commit }));
 }
