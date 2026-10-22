@@ -68,3 +68,27 @@ Conclusión: con los planes gratuitos, el escenario de 5 consultorios no cumple 
 
 - El escenario alojado de 25 consultorios necesita Supabase Pro: su base mide 1,02 GB frente a los 500 MB del plan gratuito. Requiere autorización del usuario.
 - La CPU de Workers Free (10 ms documentados) se supera en tareas y páginas comunes, y bajo la carga de 5 consultorios Cloudflare corta entre 15 % y 52 % de los pedidos (ver arriba y [tareas automáticas](tareas-automaticas.md)). El usuario decidió no contratar Workers Paid, porque su consumo excedente no tiene tope: la app y el programador tienen que entrar en el límite de Free, y esa reducción se mide ruta por ruta en staging.
+
+## Causa de las pausas en Supabase Free (staging, 21 de octubre)
+
+La medición de dos consultorios sobre `08cba81` (`staging-operations` 39685702630) se repitió con instrumentación:
+- `scripts/instance-sampler.mjs` toma las métricas de la instancia del endpoint de métricas de Supabase, disponible en Free, y lo que espera cada sesión de PostgreSQL;
+- `scripts/attribute-pauses.mjs` compara las ventanas de un minuto con pedidos lentos (2 s o más) contra las demás.
+
+Valores medianos, con evidencia en `.verification/staging-pause-attribution-20261021.json`:
+
+| Métrica | Ventanas con pausas (6) | Ventanas normales (32) |
+|---|---:|---:|
+| CPU robada por la máquina compartida | 0 % | 0 % |
+| CPU de trabajo (usuario y sistema) | 10 % | 2,5 % |
+| Espera de disco | 30 % | 3 % |
+| Tiempo detenido por I/O | 31 % | 3,5 % |
+| Tiempo detenido por memoria | 13 % | 0,9 % |
+| Páginas enviadas a swap por segundo | 925 | 39 |
+| Páginas traídas de swap por segundo | 871 | 128 |
+| Disco ocupado | 42 % | 6 % |
+| Checkpoints | 0 | 0 |
+
+**Conclusión.** La instancia Nano, de 0,5 GB, tiene unos 125 MB disponibles y medio GB en swap incluso en reposo. Con la carga intercambia memoria con un disco limitado a 250 IOPS, y PostgreSQL queda esperando sus páginas: así pasa una consulta de 20 ms a varios segundos. Las pausas no vienen de la CPU compartida, de los checkpoints ni del trabajo de la app, porque la CPU de trabajo es baja. Es un límite del tamaño del cómputo.
+
+Micro duplica la memoria, a 1 GB, y el rendimiento de disco base, a 500 IOPS ([cómputo](https://supabase.com/docs/guides/platform/compute-and-disk)). Por lo medido, es razonable esperar que elimine la mayor parte del intercambio, pero se comprueba midiendo, como cualquier criterio.

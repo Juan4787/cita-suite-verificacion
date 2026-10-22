@@ -1157,3 +1157,60 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
     - **Contenido:** 101 tablas con 4.409 filas; historial de 97 migraciones; 1 política y 1 disparador de los esquemas de la plataforma; 32 archivos almacenados, sin fallas. Los datos ocupan 1,27 MB y el esquema 858 KB.
     - **Primer intento fallido:** la CLI corrió en la raíz del repositorio, cuyo `supabase/.temp` vinculado a producción fija la imagen `17.6.1.054`. Ahora corre en una carpeta de trabajo vacía, como en el ensayo, y el error incluye la salida estándar.
     - **Carpeta parcial borrada:** la que había creado ese intento, que estaba incompleta.
+- **`r19`, copias sueltas del patrón de identificador** (halladas al revisar la configuración de producción).
+  - **Defecto:** tres validaciones usaban la forma de 36 caracteres hexadecimales y guiones (`/^[0-9a-f-]{36}$/i`), que la guarda de `r14` no buscaba.
+  - **Dónde:**
+    - la reserva pública decidía con esa forma si buscar el consultorio por id o por slug. Un slug de 36 letras hexadecimales, que el guardado acepta porque `isUuid` lo rechaza, se habría buscado como id y la reserva habría fallado;
+    - el alta de Equipo validaba así el id que devuelve la RPC;
+    - el editor de profesional, el id de solicitud de una excepción.
+  - **Reproducción:** la guarda `uuid-pattern.test.mjs` ahora cuenta también esa forma. Falló localmente con los 3 archivos (`.verification/uuid-loose-pattern-reproduction-20261021.txt`).
+  - **Corrección:** los tres usan `isUuid` de `@cita-suite/shared/uuid`, y la guarda aprueba. Se verifica en el próximo full.
+- **Configuración de producción para el release, sólo nombres:** el Worker `app` tiene 27 secretos. Los 11 nombres que la versión nueva lee y producción no tiene son opcionales o tienen un respaldo seguro:
+  - el cursor de pacientes y el límite por IP derivan su secreto de la clave de servicio;
+  - Turnstile se aplica sólo si está configurado;
+  - `JOB_BUDGET_PROFILE` vale `free` por omisión;
+  - el resto son interruptores apagados o variables del módulo administrativo inactivo.
+- **Disparadores automáticos del repositorio principal**, en lectura:
+  - `Workers Builds: app` (Cloudflare) corrió sobre `313355a`: cada push a `main` despliega el Worker de producción;
+  - el proyecto de Vercel `cita-suite`, la copia vieja pausada, también se construye con cada push y falla desde el 15 de octubre;
+  - Natalia (`natalia-frutos`) no se despliega desde este repositorio.
+  - Se pidió al usuario desconectar ambos disparadores antes de publicar e indicar cómo se publica Natalia.
+- **Release, pasos 2 y 3 en staging (21 de octubre).**
+  - **Migraciones:** `staging-operations` 39683852264 aplicó las 7 pendientes, de 117 a 124, con huellas iguales a las versionadas.
+  - **App:** el artefacto 39683947835 se compiló en CI sobre `08cba81` y `deploy-staging-workers.mjs` lo desplegó como versión `344d8e22-5148-4788-994e-b8bb870aa498`.
+    - Por HTTP, staging sirve exactamente `08cba81`, `/login` responde 200 y una ruta privada redirige al login.
+    - El programador no cambió desde `c0f883d` y sigue vigente.
+  - **Tareas con la versión nueva:** se observó el Worker 8 minutos (`.verification/staging-tail-08cba813ac55-summary.json`).
+    - Corrieron bien el push dos veces, el calendario una y las reseñas una.
+    - El push usó hasta 46 ms de CPU, por encima de los 10 ms de Free, sin corte. Es el riesgo ya registrado en la etapa 6.
+- **Auditoría del release en staging: medición `capacity-measure` 39685702630** sobre `08cba81`, con dos consultorios sembrados (39685360419) y limpiados después (39703252757).
+  - **Funcional, aprobado:**
+    - 0 superposiciones, 0 cruces y 0 interbloqueos;
+    - 45 turnos y 53 entradas clínicas creados por la carga;
+    - abuso bloqueado, con la lectura 120 rechazada y la reserva al tercer intento;
+    - reservas públicas sin fallas.
+  - **Rendimiento:** el p95 de lecturas se cumple en las tres repeticiones; el p99 no (2.046, 4.124 y 3.619 ms; pública 2.214 ms), y las esperas máximas van de 5,9 a 7,1 s.
+  - **Errores de red:** hubo 4 en total, uno o dos por fase: dos al registrar una entrada clínica, uno en la reserva pública y uno en la integración. Cada fase quedó por debajo del 1 %.
+- **Atribución de las pausas, pedida por el análisis que aportó el usuario.**
+  - **Instrumentación nueva:**
+    - `scripts/instance-sampler.mjs` registra, durante la medición, las métricas de la instancia desde el endpoint de métricas de Supabase, disponible en Free: CPU por modo, presión de CPU, de I/O y de memoria, swap, disco y checkpoints. Un error de muestreo de las esperas de sesión, en el que `\watch` no repetía la consulta, ya está corregido para producción;
+    - `scripts/attribute-pauses.mjs` compara las ventanas con pedidos lentos (2 s o más) contra el resto. El endpoint se actualiza cerca de una vez por minuto, y la comparación usa esas ventanas.
+  - **Resultado, 38 ventanas de un minuto: 6 con pausas y 32 normales** (`.verification/staging-pause-attribution-20261021.json`, medianas):
+    | Métrica | Con pausas | Normales |
+    |---|---|---|
+    | CPU robada | 0 | 0 |
+    | CPU de trabajo | 10 % | 2,5 % |
+    | Espera de disco | 30 % | 3 % |
+    | Tiempo detenido por I/O | 31 % | 3,5 % |
+    | Tiempo detenido por memoria | 13 % | 0,9 % |
+    | Páginas enviadas a swap por segundo | 925 | 39 |
+    | Páginas traídas de swap por segundo | 871 | 128 |
+    | Fallos de página mayores por segundo | 1.334 | 254 |
+    | Disco ocupado | 42 % | 6 % |
+    | Checkpoints | 0 | 0 |
+  - **Conclusión:**
+    - La instancia Nano, de 0,5 GB, tiene unos 125 MB disponibles y medio GB en swap incluso en reposo.
+    - Con la carga intercambia memoria con un disco limitado a 250 IOPS, y PostgreSQL espera sus páginas.
+    - No es CPU compartida ni son checkpoints. La CPU de trabajo es baja y las consultas de la app son livianas.
+    - Es un límite de tamaño del cómputo, no un defecto de la aplicación.
+  - **Una consulta vieja, no del código actual:** `pg_stat_statements` acumula desde el 2 de octubre y muestra una lectura pesada de `appointments`, de 425 ms de media. Es la agenda semanal anterior a `20261020050000`. En producción se miden diferencias entre fotografías.

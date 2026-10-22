@@ -1,3 +1,4 @@
+import { isUuid } from '@cita-suite/shared/uuid';
 import {
 	canonicalScheduleBlocks,
 	serializeScheduleBlocks,
@@ -130,10 +131,7 @@ export function sanitizeProfessionalDraft(
 						: 'single',
 			dates: strings(exception.dates),
 			allowedServiceIds: strings(exception.allowedServiceIds),
-			requestId:
-				typeof exception.requestId === 'string' && /^[0-9a-f-]{36}$/i.test(exception.requestId)
-					? exception.requestId
-					: crypto.randomUUID(),
+			requestId: isUuid(exception.requestId) ? exception.requestId : crypto.randomUUID(),
 			date: text(exception.date, fallback.exception.date),
 			dateFrom: text(exception.dateFrom, fallback.exception.dateFrom),
 			dateTo: text(exception.dateTo, fallback.exception.dateTo),

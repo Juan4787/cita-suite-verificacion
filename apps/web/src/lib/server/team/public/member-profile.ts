@@ -1,3 +1,4 @@
+import { isUuid } from '@cita-suite/shared/uuid';
 import {
 	isRecord,
 	readChoice,
@@ -180,8 +181,7 @@ export async function makeTeamMemberAttending(
 		p_name: name
 	});
 	if (error) throw error;
-	if (typeof data !== 'string' || !/^[0-9a-f-]{36}$/i.test(data))
-		throw new InvalidDataContractError('team.member.attending.id');
+	if (!isUuid(data)) throw new InvalidDataContractError('team.member.attending.id');
 	return data;
 }
 

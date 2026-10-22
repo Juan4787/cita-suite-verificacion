@@ -305,7 +305,7 @@ export const submitPublicBookingPage = async ({ request, params, fetch, url, get
             if (bookingInformationEnabled()) {
                 let businessId = integration?.businessId;
                 if (!businessId) {
-                    const lookup = await supabase.from('businesses').select('id').eq(/^[a-f0-9-]{36}$/i.test(params.businessSlug ?? '') ? 'id' : 'slug', params.businessSlug ?? '').maybeSingle();
+                    const lookup = await supabase.from('businesses').select('id').eq(isUuid(params.businessSlug) ? 'id' : 'slug', params.businessSlug ?? '').maybeSingle();
                     if (lookup.error || !lookup.data) throw new Error('PUBLIC_BOOKING_UNAVAILABLE');
                     businessId = lookup.data.id;
                 }
