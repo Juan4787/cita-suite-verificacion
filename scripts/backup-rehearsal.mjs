@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { STAGING_PROJECT_REF, psqlDiagnostics, stagingConnection, stagingPsql } from './lib/staging-database.mjs';
 import { countMismatches, objectMismatches } from './lib/backup-verification.mjs';
 import { MANAGED_OBJECTS_SQL, createSupabaseBackup, restoreArguments, restoreSupabaseBackup } from './lib/supabase-backup.mjs';
+import { createBackupStorageProbe } from './lib/backup-storage-probe.mjs';
+import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
 
 // Rehearses the backup and its restore (lib/supabase-backup.mjs) on staging and an isolated
 // target: the backup is written to disk, then restored from those files into a new project,
@@ -15,6 +17,7 @@ import { MANAGED_OBJECTS_SQL, createSupabaseBackup, restoreArguments, restoreSup
 // its migration history, the objects the migrations add to the platform's schemas, and every
 // stored file with the same fingerprint. The receipt holds counts and fingerprints, never data.
 const root = fileURLToPath(new URL('../', import.meta.url));
+assertHostedIntegrationResources();
 const url = stagingConnection(process.env.CITA_STAGING_DATABASE_URL);
 const serviceKey = process.env.CITA_STAGING_SERVICE_ROLE_KEY ?? '';
 if (!/^[\w.-]{20,}$/.test(serviceKey)) throw new Error('The staging service key is required to back up stored files.');
@@ -27,9 +30,8 @@ const receipt = { projectRef: STAGING_PROJECT_REF, target: 'Supabase CLI local s
 let started = false;
 // A synthetic stored file in a bucket of its own, so the file path of the backup is exercised
 // whether or not staging holds clinical files. It is removed at the end, whatever happens.
-const rehearsalBucket = 'cita-backup-rehearsal';
-const rehearsalObject = `rehearsal/${projectId}.txt`;
-let rehearsalFileCreated = false;
+let rehearsalProbe;
+receipt.rehearsalBucket = projectId;
 // No output of a failed command may carry the connection: it is removed before any message.
 const redact = (text) => String(text ?? '').replaceAll(url.href, '[staging-url]').replaceAll(decodeURIComponent(url.password), '[secret]').slice(-4000);
 const sha256 = (data) => createHash('sha256').update(data).digest('hex');
@@ -68,14 +70,10 @@ async function storage(origin, key, path, init = {}) {
 const objectPath = (bucket, name) => `${encodeURIComponent(bucket)}/${name.split('/').map(encodeURIComponent).join('/')}`;
 
 try {
-	// An existing bucket answers 400 or 409, and is used as is.
-	await storage(apiOrigin, serviceKey, 'bucket', { method: 'POST', headers: { 'content-type': 'application/json' },
-		body: JSON.stringify({ id: rehearsalBucket, name: rehearsalBucket, public: false }) }).catch((error) => {
-		if (!/answered (400|409)/.test(error.message)) throw error;
-	});
-	await storage(apiOrigin, serviceKey, `object/${rehearsalBucket}/${rehearsalObject}`, { method: 'POST',
-		headers: { 'content-type': 'text/plain' }, body: `Archivo sintético del ensayo de respaldo ${projectId}.\n`.repeat(32) });
-	rehearsalFileCreated = true;
+	// Never adopt an existing bucket. Once its creation is confirmed, cleanup owns
+	// both the bucket and exact object, even if the upload answer is lost.
+	rehearsalProbe = await createBackupStorageProbe((path, init) => storage(apiOrigin, serviceKey, path, init), projectId);
+	await rehearsalProbe.upload(`Archivo sintético del ensayo de respaldo ${projectId}.\n`.repeat(32));
 
 	// 1. Backup to disk.
 	const manifest = await createSupabaseBackup({
@@ -176,11 +174,8 @@ try {
 	receipt.error = redact(error.message);
 	process.exitCode = 1;
 } finally {
-	if (rehearsalFileCreated) {
-		const removed = await storage(apiOrigin, serviceKey, `object/${rehearsalBucket}`, { method: 'DELETE', headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ prefixes: [rehearsalObject] }) }).catch(() => null);
-		const bucketRemoved = await storage(apiOrigin, serviceKey, `bucket/${rehearsalBucket}`, { method: 'DELETE' }).catch(() => null);
-		receipt.rehearsalFileRemoved = Boolean(removed) && Boolean(bucketRemoved);
+	if (rehearsalProbe) {
+		receipt.rehearsalFileRemoved = await rehearsalProbe.remove();
 		if (!receipt.rehearsalFileRemoved) { receipt.ok = false; process.exitCode = 1; }
 	}
 	// Only the new project this run created, with its volumes.

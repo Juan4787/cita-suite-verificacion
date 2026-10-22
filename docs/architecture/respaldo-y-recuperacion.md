@@ -21,6 +21,8 @@ Cita Suite sigue ese procedimiento con `scripts/lib/supabase-backup.mjs`, que ad
   - Las consultas corren en transacciones de sólo lectura.
   - El destino predeterminado es `~/.local/share/cita-suite/backups/production-<fecha>`, privado (700). Un respaldo nunca sobrescribe otro.
 - **Staging:** lo hace el ensayo `staging-operations` → `backup-rehearsal`.
+  - Sólo corre en CI; el punto de entrada directo rechaza la máquina local antes de cargar servicios.
+  - El archivo sintético vive en un bucket privado único por corrida. Un 400/409 al crearlo se rechaza, sin adoptar ni borrar un bucket anterior. Una vez confirmada la creación, la limpieza se intenta incluso si se pierde la respuesta de subida. Sólo quita el objeto exacto y su bucket vacío; si apareció otro objeto no vacía el bucket para forzar un verde. El recibo identifica el nombre y rechaza la falta de limpieza.
 
 ## Restaurar en un proyecto nuevo
 
@@ -57,6 +59,8 @@ Además, Storage se consulta con hasta tres intentos ante una respuesta transito
 
 **Ensayo `staging-operations` 39682517594, sobre `0618b35`**, con la siembra sintética de dos consultorios. La carga quedó en 83.335 filas en 96 tablas, con 35 MB de datos.
 
+Este resultado cubre las **117 migraciones de esa corrida**. Staging tiene ahora 126; la restauración del esquema actual se repite antes del próximo release. No presentar la evidencia anterior como prueba de las migraciones posteriores.
+
 | Comprobación | Resultado |
 |---|---|
 | Filas por tabla | Restauradas en 3,6 s, sin ninguna diferencia. |
@@ -67,6 +71,7 @@ Además, Storage se consulta con hasta tres intentos ante una respuesta transito
 - **Recibo:** `.verification/backup-rehearsal-staging-20261021.json`.
 - **Limpieza:** `capacity-cleanup` 39683097818 dejó staging sin consultorios sintéticos.
 - **Pruebas livianas:** `scripts/lib/backup-verification.test.mjs`. Cubren el conteo de filas por los bloques `COPY`, las diferencias de filas y de archivos, y la regla de roles de la plataforma.
+- **Propiedad y limpieza del recurso de prueba:** `scripts/lib/backup-storage-probe.test.mjs`: colisión que no adopta recursos ajenos, buckets distintos, subida con respuesta perdida y objeto ajeno que impide borrar el bucket. Reproducción negativa y resultado corregido en el registro; no sustituyen el ensayo de restauración real.
 
 ## Límites y decisiones pendientes
 
