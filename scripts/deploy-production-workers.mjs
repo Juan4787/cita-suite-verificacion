@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { lstatSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, relative, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { assertBuildArtifact } from './lib/staging-deploy.mjs';
+import { loadBuildArtifact } from './lib/staging-deploy.mjs';
 import {
 	PRODUCTION_APP_ORIGIN, PRODUCTION_APP_WORKER, assertProductionAppConfig, assertProductionSchedulerConfig, missingSecrets
 } from './lib/production-deploy.mjs';
@@ -38,21 +38,7 @@ function wrangler(workspace, config, args, secrets) {
 
 if (target === 'app') {
 	const artifact = resolve(artifactArgument);
-	const files = new Map();
-	const walk = (directory) => {
-		for (const name of readdirSync(directory)) {
-			const path = join(directory, name);
-			const stat = lstatSync(path);
-			if (stat.isSymbolicLink()) throw new Error('The downloaded build contains a link.');
-			if (stat.isDirectory()) walk(path);
-			else files.set(relative(artifact, path), readFileSync(path));
-		}
-	};
-	walk(artifact);
-	const manifestPath = '.verification/cloudflare-bundle-manifest.json';
-	const manifest = JSON.parse(files.get(manifestPath)?.toString('utf8') ?? 'null');
-	files.delete(manifestPath);
-	const revision = assertBuildArtifact(manifest, files);
+	const { revision, files } = loadBuildArtifact(artifact);
 	if (!files.has('.verification/cloudflare-bundle-production/_worker.js')) throw new Error('The build lacks the production bundle. Nothing was deployed.');
 	const { $schema, ...config } = assertProductionAppConfig(readJson(join(root, 'apps/web/wrangler.jsonc')));
 	const listed = spawnSync('pnpm', ['--filter', 'web', 'exec', 'wrangler', 'secret', 'list', '--name', PRODUCTION_APP_WORKER], { cwd: root, encoding: 'utf8', timeout: 120_000 });

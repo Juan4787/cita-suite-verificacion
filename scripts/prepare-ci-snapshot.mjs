@@ -33,6 +33,7 @@ const extras = [
 	'scripts/inspect-staging-database.mjs', 'scripts/apply-staging-migrations.mjs', 'scripts/staging-queue-scenario.mjs',
 	'scripts/deploy-staging-workers.mjs', 'scripts/staging-tail-metrics.mjs', 'scripts/staging-device-push.mjs',
 	'scripts/run-campaign-capacity.mjs', 'scripts/capacity/seed-practices.sql', 'scripts/capacity/cleanup-practices.sql', 'scripts/staging-capacity.mjs', 'scripts/backup-rehearsal.mjs', 'scripts/backup-production.mjs', 'scripts/instance-sampler.mjs', 'scripts/attribute-pauses.mjs', 'scripts/apply-production-migrations.mjs', 'scripts/deploy-production-workers.mjs', 'scripts/production-capacity.mjs',
+	'scripts/package-release-artifact.mjs', 'scripts/staging-release-fixture.mjs',
 	'scripts/staging/push-sink/supabase/config.toml', 'scripts/staging/push-sink/supabase/functions/push-sink/index.ts',
 	'docs/plans/refactorizacion-cita-suite.md', 'docs/plans/refactorizacion-cita-suite.integridad.json',
 	'docs/plans/registro-refactorizacion-cita-suite.md',

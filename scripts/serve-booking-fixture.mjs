@@ -2,7 +2,9 @@ import { fixturePath } from './lib/fixture-path.mjs';
 import { createServer } from "node:http";
 import { spawnSync, spawn } from "node:child_process";
 import { createHmac, randomBytes } from "node:crypto";
-import { writeFileSync, openSync, rmSync, readFileSync } from "node:fs";
+import { writeFileSync, openSync, rmSync, readFileSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { acquireVerificationLock } from './lib/verification-lock.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
@@ -15,8 +17,14 @@ const options = process.argv.slice(3);
 const realAuth = options.includes('--real-auth');
 // The capacity scenarios run the built Worker themselves instead of the dev server.
 const withoutApp = options.includes('--no-app');
+// The release verification serves the downloaded release itself: the production bundle in
+// workerd, Cloudflare's runtime, instead of the dev server.
+const artifactOption = options.find((option) => option.startsWith('--artifact='));
+const artifact = artifactOption ? resolve(artifactOption.slice('--artifact='.length)) : null;
+const runtimeLog = artifact ? 'workerd' : 'vite';
 if (
-  options.some((option) => !['--real-auth', '--no-app'].includes(option)) ||
+  options.some((option) => !['--real-auth', '--no-app'].includes(option) && option !== artifactOption) ||
+  (artifact && withoutApp) ||
   new Set(options).size !== options.length ||
   !/^cita-booking-test-[a-f0-9]{12}$/.test(db ?? "")
 )
@@ -74,6 +82,7 @@ function jwt(role, sub) {
   );
 }
 let child,
+  artifactConfig,
   gateway,
   cleaned = false,
   verified = false;
@@ -84,6 +93,7 @@ function cleanup() {
     try {
       process.kill(-child.pid, "SIGTERM");
     } catch {}
+  if (artifactConfig) rmSync(artifactConfig, { recursive: true, force: true });
   if (gateway) gateway.close();
   if (!verified) { verificationLease.release(); return; }
   writeFileSync(fixturePath(`platform-state-${fixtureRunId}.json`), JSON.stringify(capturePlatformDiagnostics((args, input) => docker(args, input, args[0] === 'logs'), {
@@ -437,6 +447,7 @@ try {
       container: db,
       storageOrigin: storageFixture?.origin,
       realAuth,
+      runtime: runtimeLog,
       runId: fixtureRunId,
       followupId: "90000000-0000-4000-8000-000000000008",
     }),
@@ -444,45 +455,68 @@ try {
   );
   if (withoutApp) console.log("READY: local services at " + apiOrigin + " without the application");
   else {
+    const variables = {
+      ODONTO_SUPABASE_URL: apiOrigin,
+      ODONTO_SUPABASE_ANON_KEY: anon,
+      ODONTO_SUPABASE_SERVICE_ROLE_KEY: service,
+      PUBLIC_ODONTO_SUPABASE_URL: apiOrigin,
+      PUBLIC_ODONTO_SUPABASE_ANON_KEY: anon,
+      PUBLIC_SITE_URL: appOrigin,
+      BOOKING_INTEGRATIONS_ENABLED: "true",
+      BOOKING_CONTEXTS_AVAILABLE: "true",
+      BOOKING_INFORMATION_ENABLED: "true",
+      DEMO_MODE: "false",
+      MASTER_EMAIL: 'master@cita-suite-test.local',
+      GOOGLE_CALENDAR_MANAGED_ENABLED: "false",
+      MP_ACCESS_TOKEN: "",
+      TURNSTILE_SECRET_KEY: "",
+      PUBLIC_TURNSTILE_SITE_KEY: "",
+      VAPID_PUBLIC_KEY: "",
+      VAPID_PRIVATE_KEY: "",
+      RATE_LIMIT_SALT: "cita-disposable-local-only",
+      INTERNAL_JOB_SECRET: internalJobSecret,
+      JOB_BUDGET_PROFILE: "free",
+    };
+    if (artifact) {
+      // Production's configuration with this fixture's variables: none of production's values.
+      const production = JSON.parse(readFileSync(root + "/apps/web/wrangler.jsonc", "utf8").replace(/^\s*\/\/.*$/gm, ""));
+      artifactConfig = mkdtempSync(join(tmpdir(), "cita-artifact-app-"));
+      writeFileSync(join(artifactConfig, "wrangler.json"), JSON.stringify({
+        name: "cita-suite-artifact",
+        main: join(artifact, ".verification/cloudflare-bundle-production/_worker.js"),
+        no_bundle: true,
+        assets: { ...production.assets, directory: join(artifact, "apps/web/.svelte-kit/cloudflare") },
+        compatibility_date: production.compatibility_date,
+        compatibility_flags: production.compatibility_flags,
+        vars: variables,
+      }), { mode: 0o600 });
+    }
     child = spawn(
       "pnpm",
-      ["dev", "--host", "127.0.0.1", "--port", "5177", "--strictPort"],
+      artifact
+        ? ["exec", "wrangler", "dev", "--config", join(artifactConfig, "wrangler.json"), "--ip", "127.0.0.1", "--port", "5177", "--local"]
+        : ["dev", "--host", "127.0.0.1", "--port", "5177", "--strictPort"],
       {
         cwd: root + "/apps/web",
         detached: true,
         stdio: [
           "ignore",
-          openSync(fixturePath(`vite-${fixtureRunId}.log`), "w", 0o600),
-          openSync(fixturePath(`vite-errors-${fixtureRunId}.log`), "w", 0o600),
+          openSync(fixturePath(`${runtimeLog}-${fixtureRunId}.log`), "w", 0o600),
+          openSync(fixturePath(`${runtimeLog}-errors-${fixtureRunId}.log`), "w", 0o600),
         ],
-        env: {
-          ...process.env,
-          NODE_OPTIONS: "--max-old-space-size=1024" + (process.env.CITA_VERIFICATION_RUN_ID
-            ? " --import=" + new URL('./lib/ssr-fetch-diagnostics.mjs', import.meta.url).href : ""),
-          ODONTO_SUPABASE_URL: apiOrigin,
-          ODONTO_SUPABASE_ANON_KEY: anon,
-          ODONTO_SUPABASE_SERVICE_ROLE_KEY: service,
-          PUBLIC_ODONTO_SUPABASE_URL: apiOrigin,
-          PUBLIC_ODONTO_SUPABASE_ANON_KEY: anon,
-          PUBLIC_SITE_URL: appOrigin,
-          BOOKING_INTEGRATIONS_ENABLED: "true",
-          BOOKING_CONTEXTS_AVAILABLE: "true",
-          BOOKING_INFORMATION_ENABLED: "true",
-          DEMO_MODE: "false",
-          MASTER_EMAIL: 'master@cita-suite-test.local',
-          GOOGLE_CALENDAR_MANAGED_ENABLED: "false",
-          MP_ACCESS_TOKEN: "",
-          TURNSTILE_SECRET_KEY: "",
-          PUBLIC_TURNSTILE_SITE_KEY: "",
-          VAPID_PUBLIC_KEY: "",
-          VAPID_PRIVATE_KEY: "",
-          RATE_LIMIT_SALT: "cita-disposable-local-only",
-          INTERNAL_JOB_SECRET: internalJobSecret,
-          JOB_BUDGET_PROFILE: "free",
-        },
+        env: artifact
+          ? { ...process.env, NODE_OPTIONS: "--max-old-space-size=1024", WRANGLER_SEND_METRICS: "false" }
+          : {
+              ...process.env,
+              NODE_OPTIONS: "--max-old-space-size=1024" + (process.env.CITA_VERIFICATION_RUN_ID
+                ? " --import=" + new URL('./lib/ssr-fetch-diagnostics.mjs', import.meta.url).href : ""),
+              ...variables,
+            },
       },
     );
-    for (let n = 0; n < 60; n++) {
+    // workerd starts the 4 MB bundle more slowly than the dev server answers.
+    const attempts = artifact ? 240 : 60;
+    for (let n = 0; n < attempts; n++) {
       try {
         const response = await fetch(appOrigin + "/embed/v1/" + key);
         if (response.ok) {
@@ -495,10 +529,10 @@ try {
           );
           break;
         }
-        if (n === 59)
+        if (n === attempts - 1)
           throw new Error("Application did not load: " + response.status);
       } catch (error) {
-        if (n === 59) throw error;
+        if (n === attempts - 1) throw error;
       }
       await new Promise((resolve) => setTimeout(resolve, 500));
     }

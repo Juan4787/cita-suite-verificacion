@@ -1234,3 +1234,11 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
   - **Realtime:** tiene particiones diarias de `realtime.messages` del 18 al 24 de octubre. El servicio las mantiene, y los avisos que emiten los disparadores tienen dónde guardarse.
   - **Identidad:** el nombre `Juan4787/cita-suite` sigue libre (404), y `Juan4787/dashboard` (1115936156) mantiene permisos de administración.
   - **Correo de Auth:** la configuración de SMTP no se lee por la base ni por la configuración pública. Lo comprueba el usuario en el panel, junto con la decisión del correo transaccional.
+- **Tareas de staging con la candidata `cd8e9ad`:** se observó el Worker 6 minutos (`.verification/staging-tail-cd8e9ad76216-summary.json`). Corrieron bien, una vez cada una, las cuatro que tocaban en esa ventana: calendario, reseñas, limpieza de cargas y push.
+  - **CPU:** calendario 16 ms, sin trabajo porque staging no tiene Google Calendar; limpieza 43 ms; reseñas y push 6 ms.
+  - Las dos primeras superan los 10 ms de Free sin corte. Es el riesgo ya registrado en la etapa 6: el arranque del isolate cuenta como CPU.
+- **Huecos del release encontrados al contrastar el plan (22 de octubre):**
+  - **Recorridos sobre el artefacto construido:** el navegador de CI corre contra el servidor de desarrollo de Vite, no contra el paquete compilado. `verify:release` existe desde la etapa 1, pero nunca corrió: su diseño pide un staging de Natalia y un descriptor que no existen, y ejecutaría contra staging pruebas que sólo admiten el entorno descartable.
+  - **Staging de Natalia:** el plan lo pide («staging aislado de Cloudflare, Natalia y Supabase»; publicación, paso 3) y no se hizo.
+  - **Ensayo de cambio de recursos y cuotas** de la auditoría final: queda para el release.
+  - Los tres son condición previa a publicar según la sección 5 del plan, y ninguno depende del usuario.

@@ -1,6 +1,7 @@
 name: Verificación de Cita Suite
 
-# Manual only. This workflow never deploys or receives production credentials.
+# Manual only. This workflow never deploys or receives production credentials. The release level
+# also reads the deployed staging, with staging's own keys.
 on:
   workflow_dispatch:
     inputs:
@@ -9,15 +10,22 @@ on:
         type: choice
         required: true
         default: full
-        options: [fast, full, types, sql, browser, capacity, capacity-seed, capacity-quick, capacity-profile]
+        options: [fast, full, release, types, sql, browser, capacity, capacity-seed, capacity-quick, capacity-profile]
       browser_grep:
         description: Diagnostic selection only; never certifies full verification
         type: string
         required: false
         default: 'isolated booking integration|patient structure|roles, profesionales' 
+      artifact_run:
+        description: Run of the staging workflow that packaged this revision's release (required by release; optional for a browser diagnostic of the build)
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
+  # Only to download the release packaged by the staging workflow of this repository.
+  actions: read
 
 concurrency:
   group: cita-refactoring-verification
@@ -27,7 +35,7 @@ jobs:
   verify:
     runs-on: ubuntu-24.04
     # The capacity scenarios run three repetitions of twelve minutes for each of two sizes.
-    timeout-minutes: ${{ startsWith(inputs.level, 'capacity') && 240 || 75 }}
+    timeout-minutes: ${{ startsWith(inputs.level, 'capacity') && 240 || inputs.level == 'release' && 120 || 75 }}
     env:
       ASTRO_TELEMETRY_DISABLED: '1'
       NODE_OPTIONS: --max-old-space-size=1536
@@ -58,10 +66,10 @@ jobs:
         run: |
           node scripts/prepare-ci-services.mjs
       - name: Prepare one browser
-        if: inputs.level == 'full' || inputs.level == 'browser'
+        if: inputs.level == 'full' || inputs.level == 'release' || inputs.level == 'browser'
         run: pnpm --filter web exec playwright install --with-deps chromium
       - name: Prepare pinned native spreadsheet reader
-        if: inputs.level == 'full'
+        if: inputs.level == 'full' || inputs.level == 'release'
         run: |
           sudo apt-get update -qq
           sudo apt-get install --yes --no-install-recommends libreoffice-calc=4:24.2.7-0ubuntu0.24.04.7
@@ -69,13 +77,26 @@ jobs:
           dpkg-query -W -f='${Package} ${Version}\n' libreoffice-calc libreoffice-core libreoffice-common > .verification/office-toolchain.log
           /usr/bin/libreoffice --version >> .verification/office-toolchain.log
           sha256sum /usr/lib/libreoffice/program/soffice.bin >> .verification/office-toolchain.log
+      # The release of this exact revision, as the staging workflow packaged it; its manifest is checked before use.
+      - name: Download the packaged release
+        if: inputs.level == 'release' || (inputs.level == 'browser' && inputs.artifact_run != '')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_RUN: ${{ inputs.artifact_run }}
+        run: |
+          test -n "$ARTIFACT_RUN"
+          gh run download "$ARTIFACT_RUN" --repo "$GITHUB_REPOSITORY" --name "cloudflare-staging-$GITHUB_SHA" --dir "$RUNNER_TEMP/release"
       - name: Verify sequentially
         env:
           VERIFICATION_LEVEL: ${{ inputs.level }}
           BROWSER_GREP: ${{ inputs.browser_grep }}
+          ARTIFACT_RUN: ${{ inputs.artifact_run }}
+          CITA_RELEASE_ARTIFACT: ${{ (inputs.level == 'release' || inputs.artifact_run != '') && format('{0}/release', runner.temp) || '' }}
+          CITA_STAGING_SERVICE_ROLE_KEY: ${{ inputs.level == 'release' && secrets.CITA_STAGING_SERVICE_ROLE_KEY || '' }}
+          CITA_STAGING_ANON_KEY: ${{ inputs.level == 'release' && secrets.CITA_STAGING_ANON_KEY || '' }}
         run: |
           case "$VERIFICATION_LEVEL" in
-            fast|full) pnpm "verify:$VERIFICATION_LEVEL" ;;
+            fast|full|release) pnpm "verify:$VERIFICATION_LEVEL" ;;
             types) node scripts/run-campaign-type-generation.mjs ;;
             sql) node scripts/run-campaign-type-generation.mjs --verify-sql ;;
             capacity) node scripts/run-campaign-capacity.mjs ;;
@@ -94,7 +115,11 @@ jobs:
             browser)
               test -n "$BROWSER_GREP"
               echo 'Diagnostic browser execution only; this is not full verification.'
-              node scripts/run-campaign-integration.mjs --grep "$BROWSER_GREP"
+              if [ -n "$ARTIFACT_RUN" ]; then
+                node scripts/run-campaign-integration.mjs --grep "$BROWSER_GREP" "--artifact=$CITA_RELEASE_ARTIFACT"
+              else
+                node scripts/run-campaign-integration.mjs --grep "$BROWSER_GREP"
+              fi
               ;;
             *) exit 2 ;;
           esac

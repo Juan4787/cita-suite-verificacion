@@ -1,16 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
-export function assertStagingDatabaseTarget(value, projectRef) {
-	if (!/^[a-z0-9]{8,32}$/.test(projectRef)) throw new Error('Invalid separate staging project.');
-	let url;
-	try { url = new URL(value); } catch { throw new Error('Invalid staging SQL connection.'); }
-	const direct = url.hostname === `db.${projectRef}.supabase.co`;
-	const pooled = url.hostname.endsWith('.pooler.supabase.com') && decodeURIComponent(url.username) === `postgres.${projectRef}`;
-	if (!['postgres:', 'postgresql:'].includes(url.protocol) || (!direct && !pooled))
-		throw new Error('The staging SQL connection belongs to a different project.');
-}
-
 export function inspectOwnedFixture(receipt) {
 	if (!/^cita-booking-test-[a-f0-9]{12}$/.test(receipt.container) || !/^[a-f0-9-]{32,36}$/.test(receipt.runId) ||
 		![receipt.appOrigin, receipt.apiOrigin].every(value => new URL(value).hostname === '127.0.0.1'))
@@ -48,16 +38,6 @@ export function assertE2EEnvironment(env, baseURL) {
 	if (mode === 'supabase-local') {
 		if (!local(app) || !local(api) || !env.SUPABASE_DB_URL || !local(new URL(env.SUPABASE_DB_URL)) || env.E2E_ALLOW_DESTRUCTIVE !== 'true')
 			throw new Error('Supabase local E2E requires explicit loopback targets and destructive-fixture opt-in.');
-		return;
-	}
-	if (mode === 'isolated-staging') {
-		const receipt = JSON.parse(readFileSync(env.CITA_STAGING_DESCRIPTOR, 'utf8'));
-		if (receipt.environment !== 'isolated-synthetic-staging' || app.origin !== receipt.appOrigin || api.origin !== receipt.supabaseOrigin ||
-			app.protocol !== 'https:' || api.protocol !== 'https:' ||
-			['app.cita-suite.workers.dev', 'yjzferwuzbtgpmdnzlcb.supabase.co'].includes(app.hostname) ||
-			['app.cita-suite.workers.dev', 'yjzferwuzbtgpmdnzlcb.supabase.co'].includes(api.hostname))
-			throw new Error('Only the declared separate synthetic staging project is accepted.');
-		assertStagingDatabaseTarget(env.SUPABASE_DB_URL, receipt.supabaseProjectRef);
 		return;
 	}
 	throw new Error('Select a verified isolated E2E environment; use pnpm verify:full. Production tests are forbidden during this campaign.');

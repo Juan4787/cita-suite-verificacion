@@ -1,10 +1,11 @@
 import { mkdirSync, writeFileSync, renameSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { acquireVerificationLock } from './lib/verification-lock.mjs';
 import { runVerificationProcess } from './lib/verification-process.mjs';
-import { loadStagingEnvironment } from './lib/staging-environment.mjs';
+import { loadStagingRelease } from './lib/staging-environment.mjs';
 import { assertHostedIntegrationResources, assertLightVerificationResources } from './lib/verification-resources.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -34,9 +35,10 @@ if (level !== 'fast') steps.push(
 	['demo-browser', 'node', ['scripts/run-campaign-demo.mjs']],
 	['natalia-performance', 'node', ['scripts/measure-natalia-baseline.mjs']]
 );
+// The release is the build the staging workflow packaged for this revision, never a rebuild: its
+// production bundle runs the browser suite in workerd, and the deployed staging must serve it.
 if (level === 'release') steps.push(
-	['cloudflare-build', 'pnpm', ['--filter', 'web', 'build:cloudflare']],
-	['natalia-build', 'pnpm', ['--filter', 'natalia', 'build']],
+	['artifact-browser', 'node', ['scripts/run-campaign-integration.mjs', `--artifact=${process.env.CITA_RELEASE_ARTIFACT}`]],
 	['staging', 'node', ['scripts/verify-campaign-staging.mjs']]
 );
 
@@ -61,9 +63,8 @@ for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, interrupt);
 try {
 	// A killed invocation must never leave a previous successful receipt current.
 	saveEvidence();
-	// Reject an absent or unsafe release target before spending time on local
-	// verification. Never build Natalia against production .env fallbacks.
-	const staging = level === 'release' ? loadStagingEnvironment(root, process.env) : null;
+	// Reject an absent or unsafe release target before spending time on local verification.
+	if (level === 'release') loadStagingRelease(root, process.env, spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).stdout?.trim());
 	if (level !== 'fast') assertHostedIntegrationResources();
 	for (const [name, command, args] of steps) {
 		assertLightVerificationResources();
@@ -71,13 +72,7 @@ try {
 		const started = performance.now();
 		const result = await runVerificationProcess(command, args, {
 			cwd: root, stdio: 'inherit', signal: controller.signal,
-			env: { ...process.env, CI: 'true', ASTRO_TELEMETRY_DISABLED: '1',
-				...(staging && ['cloudflare-build', 'natalia-build'].includes(name) ? {
-					CITA_BUILD_VERSION: staging.descriptor.revision,
-					PUBLIC_CITA_BASE_URL: staging.app.origin,
-					PUBLIC_NATALIA_INTEGRATION_KEY: staging.descriptor.bookingIntegrationKey,
-					NATALIA_LOCAL_FIXTURE: 'false'
-				} : {}) }
+			env: { ...process.env, CI: 'true', ASTRO_TELEMETRY_DISABLED: '1' }
 		});
 		evidence.steps.push({ name, status: result.status, signal: result.signal, durationMs: Math.round(performance.now() - started) });
 		saveEvidence();

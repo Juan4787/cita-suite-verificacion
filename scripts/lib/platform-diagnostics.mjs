@@ -54,5 +54,5 @@ export function assertPlatformDiagnostics(state) {
 /** A passing browser assertion cannot certify a crashed auxiliary runtime. */
 export function assertRuntimeDiagnostics(log) {
  if (typeof log !== 'string' || /Fatal uncaught|kj::Exception|SQLITE_BUSY|JavaScript heap out of memory/i.test(log))
-  throw new Error('Application runtime diagnostics are unavailable or report a fatal infrastructure error. See the owned Vite logs.');
+  throw new Error('Application runtime diagnostics are unavailable or report a fatal infrastructure error. See the owned runtime logs.');
 }

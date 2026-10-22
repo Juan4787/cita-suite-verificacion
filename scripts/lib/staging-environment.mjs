@@ -1,24 +1,19 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { assertStagingDatabaseTarget } from './e2e-environment.mjs';
+import { join, resolve } from 'node:path';
+import { STAGING_PROJECT_REF } from './staging-database.mjs';
+import {
+	STAGING_APP_ORIGIN, STAGING_NATALIA_ORIGIN, STAGING_RELEASE_PRACTICE, loadBuildArtifact, nataliaSite, stagingSupabaseKey
+} from './staging-deploy.mjs';
 
-// Local validation only. This function never creates resources or sends HTTP.
-export function loadStagingEnvironment(root, env) {
-	if (!env.CITA_STAGING_DESCRIPTOR)
-		throw new Error('Staging is not verified: provide CITA_STAGING_DESCRIPTOR for a separate synthetic environment. No remote requests were sent.');
-	const descriptor = JSON.parse(readFileSync(env.CITA_STAGING_DESCRIPTOR, 'utf8'));
-	if (descriptor.environment !== 'isolated-synthetic-staging')
-		throw new Error('Only an explicitly isolated synthetic staging environment is accepted.');
-	const origin = value => {
-		let url;
-		try { url = new URL(value); } catch { throw new Error('Invalid staging origin.'); }
-		if (url.protocol !== 'https:' || url.origin !== value || url.username || url.password)
-			throw new Error('Staging origins must be exact HTTPS origins.');
-		return url;
-	};
-	const app = origin(descriptor.appOrigin);
-	const natalia = origin(descriptor.nataliaOrigin);
-	const api = origin(descriptor.supabaseOrigin);
+// The release target: the repository's staging constants, the staging keys and the downloaded
+// release of the revision under test. Never a descriptor file or the production .env. Local
+// validation only: this function never creates resources or sends HTTP.
+export function loadStagingRelease(root, env, revision) {
+	if (!env.CITA_RELEASE_ARTIFACT)
+		throw new Error('Staging is not verified: provide CITA_RELEASE_ARTIFACT, the downloaded release of this revision. No remote requests were sent.');
+	const app = new URL(STAGING_APP_ORIGIN);
+	const natalia = new URL(STAGING_NATALIA_ORIGIN);
+	const api = new URL(`https://${STAGING_PROJECT_REF}.supabase.co`);
 	const deniedHosts = new Set(['app.cita-suite.workers.dev', 'natalia-frutos.vercel.app', 'yjzferwuzbtgpmdnzlcb.supabase.co']);
 	const envFile = join(root, '.env');
 	if (existsSync(envFile)) for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
@@ -29,15 +24,13 @@ export function loadStagingEnvironment(root, env) {
 		}
 	}
 	if ([app, natalia, api].some(url => deniedHosts.has(url.hostname))) throw new Error('Production targets are forbidden.');
-	if (!/^[a-z0-9]{8,32}$/.test(descriptor.supabaseProjectRef) || api.hostname !== `${descriptor.supabaseProjectRef}.supabase.co`)
-		throw new Error('Staging API does not match its declared separate Supabase project.');
-	if (!/^[0-9a-f]{40}$/.test(descriptor.revision)) throw new Error('An exact candidate revision is required.');
-	if (!/^[0-9a-f]{32}$/.test(descriptor.bookingIntegrationKey)) throw new Error('The staging booking integration key is required.');
-	if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(descriptor.syntheticBusinessId) ||
-		!/@[^@]+\.test$/.test(descriptor.testEmail) || !/@[^@]+\.test$/.test(descriptor.masterEmail))
-		throw new Error('Dedicated synthetic business and test identities are required.');
-	for (const key of ['CITA_STAGING_ANON_KEY', 'CITA_STAGING_SERVICE_ROLE_KEY', 'CITA_STAGING_TEST_PASSWORD', 'CITA_STAGING_MASTER_PASSWORD', 'CITA_STAGING_DATABASE_URL'])
-		if (!env[key]?.trim()) throw new Error(`Missing ${key}; staging coverage cannot pass.`);
-	assertStagingDatabaseTarget(env.CITA_STAGING_DATABASE_URL, descriptor.supabaseProjectRef);
-	return { descriptor, app, natalia, api };
+	if (!/@[^@]+\.test$/.test(STAGING_RELEASE_PRACTICE.ownerEmail)) throw new Error('The release practice needs a synthetic identity.');
+	// Legacy keys are JWTs that name their project and role: a key of another project is refused.
+	const serviceKey = stagingSupabaseKey([{ name: 'service_role', type: 'legacy', api_key: env.CITA_STAGING_SERVICE_ROLE_KEY }], 'service_role');
+	const anonKey = stagingSupabaseKey([{ name: 'anon', type: 'legacy', api_key: env.CITA_STAGING_ANON_KEY }], 'anon');
+	const release = loadBuildArtifact(resolve(env.CITA_RELEASE_ARTIFACT));
+	if (!/^[0-9a-f]{40}$/.test(revision ?? '') || release.revision !== revision)
+		throw new Error('The downloaded release is not the build of the revision under test.');
+	nataliaSite(release.files, 'natalia-staging', { base: app.origin, key: STAGING_RELEASE_PRACTICE.integrationKey });
+	return { release, app, natalia, api, practice: STAGING_RELEASE_PRACTICE, serviceKey, anonKey };
 }

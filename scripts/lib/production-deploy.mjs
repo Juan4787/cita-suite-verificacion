@@ -5,6 +5,9 @@ import { CLOUDFLARE_ACCOUNT_ID } from './staging-deploy.mjs';
 export const PRODUCTION_APP_WORKER = 'app';
 export const PRODUCTION_SCHEDULER_WORKER = 'cita-suite-scheduler';
 export const PRODUCTION_APP_ORIGIN = 'https://app.cita-suite.workers.dev';
+// Natalia's published site and the public key of the integration it books through.
+export const PRODUCTION_NATALIA_ORIGIN = 'https://natalia-frutos.vercel.app';
+export const PRODUCTION_NATALIA_INTEGRATION_KEY = '9af3540420584670a6f1bad47711501b';
 const refused = () => new Error('The configuration is not the production target. Nothing was deployed.');
 
 // Secrets the application reads at runtime and production must already hold. The deployment

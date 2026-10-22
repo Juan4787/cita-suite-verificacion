@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import { lstatSync, readFileSync, readdirSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { STAGING_PROJECT_REF } from './staging-database.mjs';
 
 // The only Cloudflare targets the staging deployment accepts. Production is the
@@ -7,6 +9,17 @@ export const CLOUDFLARE_ACCOUNT_ID = '52b358653379c162b5a07b10ae5e84b3';
 export const STAGING_APP_WORKER = 'cita-suite-staging';
 export const STAGING_SCHEDULER_WORKER = 'cita-suite-scheduler-staging';
 export const STAGING_APP_ORIGIN = 'https://cita-suite-staging.cita-suite.workers.dev';
+// Natalia's staging copy: the same static site, built for the staging booking and served
+// by an assets-only Worker of this account.
+export const STAGING_NATALIA_WORKER = 'natalia-frutos-staging';
+export const STAGING_NATALIA_ORIGIN = 'https://natalia-frutos-staging.cita-suite.workers.dev';
+// The synthetic practice the release verification books into from Natalia's staging copy.
+export const STAGING_RELEASE_PRACTICE = Object.freeze({
+	businessId: 'a953ba42-aa6e-4bd9-81cc-fde7ab9874b2', ownerId: '12be4144-c713-4630-a303-dfac4d392f52',
+	serviceId: '4c10ffbb-ce06-41e0-a0d4-ca2f7868cafa', followUpServiceId: 'bb468885-eda6-4c12-95da-ac1227c8f0fa',
+	professionalId: '04ce4991-0503-4464-894a-e09e9c3812c4',
+	slug: 'release-staging', integrationKey: '54ad088d35aca1fb427b0240531c52ab', ownerEmail: 'release-owner@cita-suite-staging.test'
+});
 const STAGING_API = `https://${STAGING_PROJECT_REF}.supabase.co`;
 const refused = () => new Error('The configuration is not the staging target. Nothing was deployed.');
 
@@ -83,4 +96,41 @@ export function assertBuildArtifact(manifest, files) {
 	if (!files.get('apps/web/.svelte-kit/cloudflare/.assetsignore').toString('utf8').split('\n').includes('_worker.js'))
 		throw new Error('The assets directory would publish the server bundle.');
 	return manifest.revision;
+}
+
+/** A downloaded build, read whole and checked against its manifest before anything uses it. */
+export function loadBuildArtifact(directory) {
+	const files = new Map();
+	const walk = path => {
+		for (const name of readdirSync(path)) {
+			const entry = join(path, name);
+			const stat = lstatSync(entry);
+			if (stat.isSymbolicLink()) throw new Error('The downloaded build contains a link.');
+			if (stat.isDirectory()) walk(entry);
+			else files.set(relative(directory, entry), readFileSync(entry));
+		}
+	};
+	walk(directory);
+	const manifestPath = '.verification/cloudflare-bundle-manifest.json';
+	const manifest = JSON.parse(files.get(manifestPath)?.toString('utf8') ?? 'null');
+	files.delete(manifestPath);
+	return { revision: assertBuildArtifact(manifest, files), files };
+}
+
+/**
+ * One of Natalia's builds inside the release, by its path in the site: it must exist and
+ * link to the expected booking and integration, never to another environment's.
+ */
+export function nataliaSite(files, name, { base, key }) {
+	const prefix = `.verification/${name}/`;
+	const site = new Map([...files].filter(([path]) => path.startsWith(prefix)).map(([path, contents]) => [path.slice(prefix.length), contents]));
+	const home = site.get('index.html')?.toString('utf8') ?? '';
+	const foreign = [...site].filter(([path]) => path.endsWith('.html')).some(([, contents]) => {
+		const html = contents.toString('utf8');
+		return [...html.matchAll(/data-booking-base="([^"]*)"/g)].some(match => match[1] !== base) ||
+			[...html.matchAll(/data-booking-key="([^"]*)"/g)].some(match => match[1] !== key);
+	});
+	if (foreign || !home.includes(`data-booking-base="${base}"`) || !home.includes(`data-booking-key="${key}"`))
+		throw new Error(`The build of ${name} does not link to its own booking. Nothing was used.`);
+	return site;
 }

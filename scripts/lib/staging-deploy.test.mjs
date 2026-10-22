@@ -1,10 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-	STAGING_APP_WORKER, assertBuildArtifact, assertStagingAppConfig, assertStagingSchedulerConfig, stagingAppSecrets, stagingSupabaseKey
+	STAGING_APP_WORKER, assertBuildArtifact, assertStagingAppConfig, assertStagingSchedulerConfig, loadBuildArtifact, stagingAppSecrets, stagingSupabaseKey
 } from './staging-deploy.mjs';
 
 const read = path => JSON.parse(readFileSync(fileURLToPath(new URL('../../' + path, import.meta.url)), 'utf8'));
@@ -89,4 +91,23 @@ test('the downloaded build must match its manifest exactly and keep the server b
 	assert.throws(() => assertBuildArtifact({ ...manifestOf(build()), version: 'b'.repeat(40) }, build()), /one exact revision/);
 	const withoutBundle = build(); withoutBundle.delete('.verification/cloudflare-bundle/_worker.js');
 	assert.throws(() => assertBuildArtifact(manifestOf(withoutBundle), withoutBundle), /lacks/);
+});
+
+test('a downloaded build is read whole from disk, and a link inside it is refused', () => {
+	const revision = 'a'.repeat(40);
+	const directory = mkdtempSync(join(tmpdir(), 'cita-build-'));
+	try {
+		const files = { '.verification/cloudflare-bundle/_worker.js': 'export default {}', 'apps/web/.svelte-kit/cloudflare/.assetsignore': '_worker.js\n' };
+		for (const [path, contents] of Object.entries(files)) {
+			mkdirSync(dirname(join(directory, path)), { recursive: true });
+			writeFileSync(join(directory, path), contents);
+		}
+		writeFileSync(join(directory, '.verification/cloudflare-bundle-manifest.json'), JSON.stringify({ revision, version: revision,
+			files: Object.entries(files).map(([path, contents]) => ({ path, bytes: contents.length, sha256: createHash('sha256').update(contents).digest('hex') })) }));
+		const loaded = loadBuildArtifact(directory);
+		assert.equal(loaded.revision, revision);
+		assert.deepEqual([...loaded.files.keys()].sort(), Object.keys(files).sort());
+		symlinkSync('/etc/hostname', join(directory, 'apps/web/.svelte-kit/cloudflare/linked'));
+		assert.throws(() => loadBuildArtifact(directory), /contains a link/);
+	} finally { rmSync(directory, { recursive: true, force: true }); }
 });

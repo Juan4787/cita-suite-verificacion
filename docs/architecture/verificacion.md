@@ -8,7 +8,7 @@ El [plan aprobado](../plans/refactorizacion-cita-suite.md) fija los criterios; e
 |---|---|
 | `pnpm verify:fast` | Integridad del plan, inventario, tipos compartidos/Svelte/Natalia, **tipos de las pruebas de navegador** (`browser-test-types`), pruebas del propio verificador, dependencias y unidades de servidor/cliente. |
 | `pnpm verify:full` | Lo anterior; reapertura nativa del Excel exportado en LibreOffice, compilación estática de Natalia, reconstrucción SQL, todas las suites SQL y carreras, GoTrue/PostgREST/Storage reales, navegador, reserva nativa de Natalia y perfil demo separado. |
-| `pnpm verify:release` | Exige primero un staging explícito y ajeno a producción. Ejecuta el nivel completo, construye los artefactos para ese staging y comprueba identidad/artefactos y navegador remoto. No despliega. |
+| `pnpm verify:release` | Exige primero el release descargado de la misma revisión y las claves de staging. Ejecuta el nivel completo; después, todos los recorridos de navegador sobre el paquete de producción del release, servido por workerd; al final, las comprobaciones del staging desplegado. No compila ni despliega. |
 
 Se utiliza Node fijado en `.node-version`, pnpm fijado en `package.json` y el lockfile. Todas las suites, compilaciones y navegadores se ejecutan secuencialmente, con un único trabajador. Las dos conexiones de una carrera SQL pertenecen a un solo escenario controlado; no habilitan suites paralelas. `verify:full`, `verify:release`, la demo y los diagnósticos de navegador sólo arrancan en un runner estándar hospedado de GitHub con recursos comprobados. La ejecución local de esos recorridos quedó deshabilitada después de medir agotamiento de RAM y swap. `verify:fast` comprueba la memoria disponible antes de cada proceso.
 
@@ -51,11 +51,29 @@ El perfil local excluye los dos recorridos que dependen de cuentas Google extern
 
 La comparación de Natalia (`measure-natalia-baseline.mjs`) construye la versión de referencia `c0129e4` y la candidata con las mismas herramientas, y mide doce cargas frías. Exige que no haya hidratación nueva y que el JavaScript de la candidata sea idéntico al de la referencia, salvo los cambios declarados en `scripts/lib/natalia-declared-changes.json`. Cada declaración lleva su motivo y los artefactos exactos de ambas versiones: nombre, bytes y SHA-256. Cualquier otro cambio, o una declaración que ya no coincide con la referencia, hace fallar la comparación. Un cambio deliberado de Natalia se declara en el mismo lote que lo introduce, con las huellas medidas por el full.
 
-## Staging y CI
+## Release y staging
 
-`CITA_STAGING_DESCRIPTOR` apunta a un descriptor explícito con origen de Cita Suite, origen de Natalia, otro proyecto Supabase, revisión completa, integración de reserva, consultorio sintético e identidades `.test`. Las credenciales se suministran únicamente mediante variables `CITA_STAGING_*`; no se toman de `.env`. El descriptor también debe incluir las huellas de los archivos reales de Natalia al comprobar los artefactos desplegados.
+**El release se compila una sola vez.** Lo arma `scripts/package-release-artifact.mjs`, en la operación `artifact` del workflow de staging. Contiene:
+- el paquete de Cloudflare de la app con la configuración de staging y con la de producción: el mismo código, sólo cambia la configuración;
+- el sitio de Natalia para cada entorno (`.verification/natalia-staging` y `.verification/natalia-production`), cada uno enlazado al turnero y a la integración de su entorno;
+- un manifiesto con tamaño y SHA-256 de cada archivo.
 
-El preflight rechaza los dominios de producción conocidos, el proyecto configurado en `.env`, direcciones ambiguas y una conexión SQL de otro proyecto. Natalia se construye para el origen y la integración del staging. Las sumas y la versión servida deben coincidir con los artefactos locales revisados. No se imprime el contenido de las credenciales cuando una conexión es inválida.
+Los despliegues de staging y producción y la verificación usan esos archivos exactos, nunca una compilación nueva. `loadBuildArtifact` rechaza un paquete que no coincide con su manifiesto o que contiene enlaces simbólicos, y `nataliaSite`, un sitio de Natalia que reserva en otro entorno.
+
+**`verify:release`** corre en el workflow de verificación con `level=release` y `artifact_run`, la corrida que empaquetó esa revisión:
+1. **Preflight.** Rechaza, antes de cualquier trabajo, un release de otra revisión, claves de otro proyecto o rol, los dominios de producción conocidos y el proyecto configurado en `.env`. No imprime las claves.
+2. **Nivel completo** sobre la revisión.
+3. **Recorridos sobre el artefacto** (`run-campaign-integration.mjs --artifact=<release>`). La suite de navegador completa y la reserva nativa desde Natalia corren contra el paquete de producción del release, servido por workerd (`wrangler dev --local`) con los servicios reales descartables. Antes de abrir el navegador se comprueba que workerd sirve la revisión del release. Las suites SQL ya corrieron en el paso anterior.
+4. **Staging desplegado** (`verify-campaign-staging.mjs`):
+   - la app sirve la revisión y cada archivo de `_app/immutable` del release;
+   - el login responde y una ruta privada redirige al login;
+   - la copia de Natalia (`natalia-frutos-staging`) sirve cada archivo de su sitio;
+   - la clave anónima no alcanza ninguna relación de la API alojada (`probeAnonymousExposure`);
+   - un navegador reserva desde la copia de Natalia en el consultorio sintético de release, en escritorio y en móvil: navegación nativa, recuperación sin duplicar, comprobante anterior compatible y cancelación desde la gestión del turno.
+
+**Consultorio de release.** Es fijo y sintético, y se asegura con la operación `release-fixture` (`scripts/staging-release-fixture.mjs`). Si su configuración se desvía, el release falla, no se repara en silencio. Las reservas canceladas quedan en staging, cada una con un teléfono sintético nuevo.
+
+**Diagnóstico sobre un paquete.** `level=browser` con `artifact_run` ejecuta la selección contra el paquete descargado, igual que el paso 3. Es diagnóstico y no reemplaza al release.
 
 El workflow de GitHub fija acciones por SHA y comprueba recursos antes de levantar servicios. Su presencia local no acredita una corrida hospedada. Tampoco una prueba en contenedores acredita capacidad de Supabase alojado o límites reales de Cloudflare. Esas evidencias siguen sus criterios propios y deben adjuntarse antes del cierre de campaña.
 

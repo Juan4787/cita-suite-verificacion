@@ -1,77 +1,66 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadStagingEnvironment } from './lib/staging-environment.mjs';
-import { assertBrowserReport } from './lib/browser-report.mjs';
+import { loadStagingRelease } from './lib/staging-environment.mjs';
+import { probeAnonymousExposure } from './lib/api-exposure.mjs';
+import { nataliaSite } from './lib/staging-deploy.mjs';
 
-// Explicit opt-in only: never load staging credentials from the production .env.
+// The deployed staging against the downloaded release: the app serves this revision and every
+// client file of it, Natalia's staging copy serves its exact site, the anonymous key reaches no
+// relation, and a real browser books from Natalia's copy into the release practice, recovers the
+// booking without duplicating it and cancels it. Explicit opt-in only; nothing is deployed here.
 const root = fileURLToPath(new URL('../', import.meta.url));
-const { descriptor, app, natalia, api } = loadStagingEnvironment(root, process.env);
-const builtVersion = JSON.parse(readFileSync(join(root, 'apps/web/.svelte-kit/output/client/_app/version.json'), 'utf8')).version;
-if (builtVersion !== descriptor.revision) throw new Error('The built artifact does not match the staging revision.');
+const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).stdout?.trim();
+const { release, app, natalia, api, practice, serviceKey, anonKey } = loadStagingRelease(root, process.env, head);
 
-async function get(url) {
-	const response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(10000) });
-	if (!response.ok) throw new Error('Staging HTTP verification failed: ' + response.status);
-	return response;
+// A redirect would serve another file than the one asked for: it fails like a wrong file.
+async function body(url) {
+	const response = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(15_000) });
+	if (response.status !== 200) throw new Error(`Staging answered ${response.status} for ${new URL(url).pathname}.`);
+	const contents = Buffer.from(await response.arrayBuffer());
+	if (contents.length > 5_000_000) throw new Error('A staging file exceeded its bounded verification size.');
+	return contents;
+}
+const digest = contents => createHash('sha256').update(contents).digest('hex');
+async function compare(origin, entries) {
+	const different = [];
+	for (let start = 0; start < entries.length; start += 4)
+		await Promise.all(entries.slice(start, start + 4).map(async ([path, expected]) => {
+			if (digest(await body(origin + path)) !== digest(expected)) different.push(path);
+		}));
+	if (different.length) throw new Error(`${origin} serves files different from the release: ${different.slice(0, 5).join(', ')}`);
+	return entries.length;
 }
 
-const deployedVersion = await (await get(app.origin + '/_app/version.json')).json();
-if (deployedVersion.version !== builtVersion) throw new Error('Staging serves a different app revision.');
-await get(app.origin + '/login');
-await get(natalia.origin + '/');
-if (!Array.isArray(descriptor.nataliaAssets) || !descriptor.nataliaAssets.length)
-	throw new Error('Natalia must have a manifest of actual built asset hashes.');
-for (const asset of descriptor.nataliaAssets) {
-	if (!/^\/[a-zA-Z0-9_./-]+$/.test(asset.path) || asset.path.includes('..') || !/^[a-f0-9]{64}$/.test(asset.sha256))
-		throw new Error('Invalid Natalia asset manifest.');
-	const localArtifact = readFileSync(join(root, 'apps/natalia/dist', asset.path));
-	if (createHash('sha256').update(localArtifact).digest('hex') !== asset.sha256)
-		throw new Error('Natalia manifest does not match the locally built artifact.');
-	const response = await get(natalia.origin + asset.path);
-	const reader = response.body.getReader();
-	const chunks = [];
-	let total = 0;
-	for (;;) {
-		const { done, value } = await reader.read();
-		if (done) break;
-		total += value.byteLength;
-		if (total > 5_000_000) { await reader.cancel(); throw new Error('Staging asset exceeded its bounded verification size.'); }
-		chunks.push(value);
-	}
-	if (createHash('sha256').update(Buffer.concat(chunks)).digest('hex') !== asset.sha256)
-		throw new Error('Natalia serves an asset different from the reviewed artifact.');
-}
+const served = JSON.parse(await body(app.origin + '/_app/version.json'));
+if (served.version !== release.revision) throw new Error(`Staging serves ${served.version} instead of ${release.revision}.`);
+const login = await fetch(app.origin + '/login', { redirect: 'manual', signal: AbortSignal.timeout(15_000) });
+const privateRoute = await fetch(app.origin + '/odonto', { redirect: 'manual', signal: AbortSignal.timeout(15_000) });
+if (login.status !== 200 || ![302, 303, 307].includes(privateRoute.status) || new URL(privateRoute.headers.get('location') ?? '/', app.origin).pathname !== '/login')
+	throw new Error('Staging does not answer the login and the private redirect as the release does.');
+const client = 'apps/web/.svelte-kit/cloudflare';
+const clientFiles = await compare(app.origin, [...release.files].filter(([path]) => path.startsWith(`${client}/_app/immutable/`))
+	.map(([path, contents]) => [path.slice(client.length), contents]));
+// Cloudflare serves `page/index.html` at `/page/` and `page.html` at `/page`.
+const site = nataliaSite(release.files, 'natalia-staging', { base: app.origin, key: practice.integrationKey });
+const nataliaFiles = await compare(natalia.origin, [...site].map(([path, contents]) =>
+	['/' + (path.endsWith('index.html') ? path.slice(0, -'index.html'.length) : path.replace(/\.html$/, '')), contents]));
+const exposure = await probeAnonymousExposure({ api: api.origin, serviceKey, anonKey });
+if (exposure.exposed.length) throw new Error('The anonymous key reaches staging relations: ' + JSON.stringify(exposure.exposed));
 
-const directory = join(root, '.verification');
-mkdirSync(directory, { recursive: true });
-const reportPath = join(directory, 'browser-staging.json');
-const env = {
-	...process.env, CI: 'true', CITA_E2E_ENVIRONMENT: 'isolated-staging', DEMO_MODE: 'false', E2E_BASE_URL: app.origin,
-	PUBLIC_SITE_URL: app.origin, ODONTO_SUPABASE_URL: api.origin, PUBLIC_ODONTO_SUPABASE_URL: api.origin,
-	ODONTO_SUPABASE_ANON_KEY: process.env.CITA_STAGING_ANON_KEY,
-	PUBLIC_ODONTO_SUPABASE_ANON_KEY: process.env.CITA_STAGING_ANON_KEY,
-	ODONTO_SUPABASE_SERVICE_ROLE_KEY: process.env.CITA_STAGING_SERVICE_ROLE_KEY,
-	SUPABASE_DB_URL: process.env.CITA_STAGING_DATABASE_URL,
-	E2E_ALLOW_DESTRUCTIVE: 'true', E2E_ALLOW_PRODUCTION_CLINICAL: 'true',
-	E2E_EMAIL: descriptor.testEmail, CITA_SUITE_TEST_EMAIL: descriptor.testEmail,
-	E2E_PASSWORD: process.env.CITA_STAGING_TEST_PASSWORD, CITA_SUITE_TEST_PASSWORD: process.env.CITA_STAGING_TEST_PASSWORD,
-	CITA_SUITE_TEST_BUSINESS_ID: descriptor.syntheticBusinessId,
-	MASTER_EMAIL: descriptor.masterEmail, E2E_MASTER_PASSWORD: process.env.CITA_STAGING_MASTER_PASSWORD,
-	ADMIN_SUPABASE_URL: '', ADMIN_SUPABASE_ANON_KEY: '', ADMIN_SUPABASE_SERVICE_ROLE_KEY: '',
-	MP_ACCESS_TOKEN: '', MP_WEBHOOK_SECRET: '', E2E_VALIDATE_MP_REDIRECT: 'false', E2E_CLOUDFLARE_VERSION: '',
-	E2E_LOCAL_BOOKING_FIXTURE_PATH: '', PLAYWRIGHT_JSON_OUTPUT_NAME: reportPath
-};
-const result = spawnSync('pnpm', ['exec', 'playwright', 'test', '--workers=1', '--retries=0', '--max-failures=1', '--forbid-only', '--reporter=line,json',
-	'--grep-invert', 'isolated booking integration|Reserva pública - modo demo|Google Auth real'],
-	{ cwd: join(root, 'apps/web'), env, stdio: 'inherit' });
-if (result.error || result.status !== 0) throw new Error('Staging browser coverage failed.');
-const report = JSON.parse(readFileSync(reportPath, 'utf8'));
-assertBrowserReport(report);
-writeFileSync(join(directory, 'staging.json'), JSON.stringify({
-	scope: 'Dedicated staging; external Google-account login is not certified by this profile.',
-	revision: descriptor.revision, appOrigin: app.origin, nataliaOrigin: natalia.origin,
-	passed: report.stats.expected, finishedAt: new Date().toISOString()
+const journey = spawnSync('node', ['scripts/qa-natalia-direct-booking.mjs', '--staging'], { cwd: root, stdio: 'inherit',
+	env: { ...process.env, CITA_STAGING_SERVICE_ROLE_KEY: serviceKey } });
+if (journey.error || journey.status !== 0) throw new Error('The booking from Natalia\'s staging copy failed.');
+const booked = JSON.parse(readFileSync(join(root, '.verification/native-booking-staging/results.json'), 'utf8'));
+if (booked.passed !== true || booked.checks.length !== 2 || booked.transportSubstitution !== false)
+	throw new Error('The staging booking receipt is incomplete.');
+mkdirSync(join(root, '.verification'), { recursive: true });
+writeFileSync(join(root, '.verification/staging.json'), JSON.stringify({
+	scope: 'Deployed staging: Cloudflare Workers Free and Supabase Free. External Google-account login is not certified by this profile.',
+	revision: release.revision, appOrigin: app.origin, nataliaOrigin: natalia.origin, clientFiles, nataliaFiles,
+	anonymousRelations: exposure.relations, bookings: booked.checks.map(({ name, nativeSameTab, recoveryWithoutDuplicate, cancelled }) =>
+		({ name, nativeSameTab, recoveryWithoutDuplicate, cancelled })), finishedAt: new Date().toISOString()
 }, null, 2) + '\n');
+console.log(JSON.stringify({ staging: 'passed', revision: release.revision, clientFiles, nataliaFiles, anonymousRelations: exposure.relations }));
