@@ -103,6 +103,8 @@ La campaña usa temporalmente `Juan4787/cita-suite-verificacion`, un repositorio
 
 Los resultados y capturas sintéticos se empaquetan con tamaño acotado y SHA-256 en los logs del workflow. No se habilita almacenamiento facturable de artifacts ni cachés. Los logs no consumen la cuota de artifacts según la [documentación de GitHub](https://docs.github.com/en/billing/concepts/product-billing/github-actions). Tras descargar el ZIP de logs, `python3 scripts/collect-verification-evidence.py <logs.zip> <directorio-nuevo>` comprueba integridad y rutas antes de recuperar la evidencia; no sobrescribe resultados anteriores.
 
+El release conserva por separado los tres perfiles de la reserva nativa: desarrollo, artefacto candidato y artefacto de reversión, cada uno bajo su `runs/<corrida>/<perfil>/native-booking/`. No comparten capturas ni resultados. El presupuesto de evidencia es de 48 MiB extraídos, 24 MiB comprimidos y 2.000 archivos; el colector admite ZIP y miembros de logs de hasta 64 MiB por la codificación base64 y la duplicación de logs de job/paso. Superar cualquier tope falla, sin omitir archivos. Estas cotas de transporte se ampliaron por el tercer perfil obligatorio; no cambian criterios funcionales ni retención. Las pruebas preservan 36 MiB repartidos entre perfiles y siguen rechazando 49 MiB, corrupción, rutas fuera de alcance y sobrescritura.
+
 `python3 scripts/test-verification-evidence.py` comprueba el circuito completo con archivos descartables: conserva el estado fallido, oculta tokens, rechaza alteraciones y rutas que escapan del destino, y no sobrescribe evidencia anterior. Está incluido en la verificación rápida.
 
 

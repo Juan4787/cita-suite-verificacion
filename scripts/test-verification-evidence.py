@@ -78,6 +78,26 @@ class EvidenceTests(unittest.TestCase):
         self.assertFalse((self.root / "result").exists())
         self.assertFalse((self.root / "escaped.json").exists())
 
+    def test_three_profiles_preserve_all_bounded_evidence(self):
+        for profile in ["integration", "integration-artifact", "integration-rollback"]:
+            directory = self.root / ".verification" / "runs" / "owned-run" / profile
+            directory.mkdir(parents=True)
+            (directory / "synthetic.log").write_text("x" * (12 * 1024 ** 2))
+        packed = subprocess.run(["python3", str(self.root / "scripts/package-verification-evidence.py")],
+                                capture_output=True, text=True, check=True).stdout
+        result = self.collect(packed)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(list((self.root / "result").rglob("synthetic.log"))), 3)
+
+    def test_evidence_still_rejects_an_excessive_payload(self):
+        (self.root / ".verification").mkdir()
+        with (self.root / ".verification/too-large.log").open("wb") as stream:
+            stream.truncate(49 * 1024 ** 2)
+        result = subprocess.run(["python3", str(self.root / "scripts/package-verification-evidence.py")],
+                                capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn("CITA_EVIDENCE_COMPLETE", result.stdout)
+
     def test_absent_evidence_cannot_be_packaged_as_success(self):
         result = subprocess.run(["python3", str(self.root / "scripts/package-verification-evidence.py")],
                                 capture_output=True, text=True)

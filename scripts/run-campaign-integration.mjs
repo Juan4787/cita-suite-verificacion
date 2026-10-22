@@ -163,7 +163,9 @@ try {
 		const reset = spawnSync('docker', ['exec', '-i', database, 'psql', '-X', '-U', 'supabase_admin', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-q'],
 			{ input: `delete from public.public_booking_attempts where business_id='${runtime.businessId}';`, encoding: 'utf8' });
 		if (reset.status !== 0) throw new Error('Could not isolate synthetic attempt history between browser profiles.');
-		await run('node', ['scripts/qa-natalia-direct-booking.mjs']);
+		await run('node', ['scripts/qa-natalia-direct-booking.mjs'], {
+			env: { ...process.env, CITA_NATIVE_BOOKING_EVIDENCE_DIRECTORY: join(evidence, 'native-booking') }
+		});
 	}
 } catch (error) {
 	console.error(error.message);

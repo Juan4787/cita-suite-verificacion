@@ -10,6 +10,7 @@ import {randomInt} from 'node:crypto';
 import {STAGING_PROJECT_REF} from './lib/staging-database.mjs';
 import {STAGING_APP_ORIGIN,STAGING_NATALIA_ORIGIN,STAGING_RELEASE_PRACTICE,stagingSupabaseKey} from './lib/staging-deploy.mjs';
 import {assertHostedIntegrationResources} from './lib/verification-resources.mjs';
+import {nativeBookingEvidencePath} from './lib/native-booking-evidence.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url)).replace(/\/$/,'');
 assertHostedIntegrationResources();
@@ -21,7 +22,9 @@ const {createClient}=require('@supabase/supabase-js');
 // substituted, and each booking is cancelled from its management page.
 const staging=process.argv[2]==='--staging';
 if(process.argv.length!==(staging?3:2))throw new Error('Usage: qa-natalia-direct-booking.mjs [--staging]');
-const output=root+(staging?'/.verification/native-booking-staging':'/.verification/native-booking');
+const evidenceDirectory=process.env.CITA_NATIVE_BOOKING_EVIDENCE_DIRECTORY || undefined;
+const output=nativeBookingEvidencePath(root,{staging,directory:evidenceDirectory});
+if(evidenceDirectory&&existsSync(output))throw new Error('The owned native booking evidence already exists; it will not be overwritten.');
 mkdirSync(output,{recursive:true});
 let f,natalia,server,result;
 if(staging){
