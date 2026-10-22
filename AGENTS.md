@@ -18,6 +18,7 @@
 - Antes de declarar la campaña terminada, verificar punto por punto todos los requisitos y criterios de aceptación del documento original mediante evidencia comprobable.
 - Alcance vigente (19 de octubre): al cerrar una etapa, avisar al usuario y continuar con la siguiente sin detenerse, hasta terminar la campaña. Esto no reduce ningún control.
 - Alcance de lanzamiento (20 de octubre, decisión literal al final del plan): Cita Suite no tiene usuarios ni consultorios reales, y todos sus datos son ficticios. El lanzamiento es para dos consultorios sobre Workers Free y Supabase Free, y el despliegue gratuito debe demostrar los criterios del plan con esa carga antes de publicar; si un límite del proveedor lo impide, es un impedimento que se informa con alternativas. La capacidad para 5 y 25 consultorios deja de ser condición de cierre, sin rebajar calidad, seguridad ni integridad. No contratar nada, ni ningún servicio con cobro variable sin tope. Las protecciones de consumo se deciden por mérito: ahora si se justifican, o postergadas con su riesgo residual documentado.
+- Documentación (22 de octubre, pedido literal del usuario: «deja todo extremadamente documentado»): cada corrida, falla, causa, corrección, decisión, bloqueo y pendiente queda en el registro con su identificador de corrida, SHA y ruta de evidencia; el traspaso refleja el punto exacto; los procedimientos llevan comandos exactos, precondiciones, comprobaciones y reversión. No sustituye ningún control.
 
 ## Pruebas de navegador
 

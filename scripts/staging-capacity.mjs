@@ -1,4 +1,3 @@
-import { createHmac } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
@@ -6,8 +5,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { STAGING_PROJECT_REF, psqlDiagnostics, stagingConnection, stagingPsql } from './lib/staging-database.mjs';
 import { STAGING_APP_ORIGIN } from './lib/staging-deploy.mjs';
 import {
-	INTEGRITY_SQL, createRandom, evaluateAcceptance, login, practiceData, removeCapacityOwners, runPublicAbuse, runPublicGenerator, runVirtualUser,
-	summarize, uuidFrom
+	INTEGRITY_SQL, capacityOwnersPassword, createRandom, evaluateAcceptance, login, practiceData, removeCapacityOwners, runPublicAbuse, runPublicGenerator,
+	runVirtualUser, summarize, uuidFrom
 } from './lib/capacity-load.mjs';
 
 // The capacity scenario on the deployed staging, from an external runner: the Worker
@@ -28,7 +27,7 @@ const serviceKey = process.env.CITA_STAGING_SERVICE_ROLE_KEY ?? '';
 if (!/^ey[\w-]+\.[\w-]+\.[\w-]+$/.test(serviceKey)) throw new Error('The staging service key is required. Nothing was done.');
 // The owners' password is derived from the staging key: seeding and measuring run in
 // separate workflow runs, and no password is stored anywhere.
-const password = createHmac('sha256', serviceKey).update('cita-suite-staging-capacity-owners').digest('base64url');
+const password = capacityOwnersPassword(serviceKey, 'staging');
 const api = `https://${STAGING_PROJECT_REF}.supabase.co`;
 const options = '-c application_name=cita_suite_staging_capacity';
 const sql = (text, variables = {}) => {

@@ -1,15 +1,16 @@
-import { createHmac, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { PRODUCTION_API_ORIGIN, productionEnvironment } from './lib/production-database.mjs';
 import { psqlDiagnostics } from './lib/staging-database.mjs';
 import { PRODUCTION_APP_ORIGIN } from './lib/production-deploy.mjs';
 import {
-	INTEGRITY_SQL, createRandom, evaluateAcceptance, login, practiceData, removeCapacityOwners, runPublicAbuse, runPublicGenerator, runVirtualUser,
-	summarize, uuidFrom
+	INTEGRITY_SQL, capacityOwnersPassword, createRandom, evaluateAcceptance, login, practiceData, removeCapacityOwners, runPublicAbuse, runPublicGenerator,
+	runVirtualUser, summarize, uuidFrom
 } from './lib/capacity-load.mjs';
 
 // The two-practice measurement on production, the criterion of the 20 October decision, with
@@ -20,7 +21,6 @@ import {
 // secret of this measurement (~/.config/cita-suite/production/capacity-secret, mode 600, also a
 // temporary Actions secret), never from a production credential. Every row belongs to a
 // `capacity-` practice, and `cleanup` removes them and the owners.
-const PRODUCTION_REF = 'yjzferwuzbtgpmdnzlcb';
 const PRACTICES = 2;
 const root = fileURLToPath(new URL('../', import.meta.url));
 const [operation] = process.argv.slice(2);
@@ -40,7 +40,7 @@ if (operation === 'secret') {
 }
 const measurementSecret = operation === 'measure' ? process.env.CITA_PRODUCTION_CAPACITY_SECRET ?? '' : readFileSync(secretPath, 'utf8').trim();
 if (measurementSecret.length < 32) throw new Error('The measurement secret is missing. Nothing was done.');
-const password = createHmac('sha256', measurementSecret).update('cita-suite-production-capacity-owners').digest('base64url');
+const password = capacityOwnersPassword(measurementSecret, 'production');
 
 if (operation === 'measure') {
 	const kitRequire = createRequire(createRequire(join(root, 'apps/web/package.json')).resolve('@sveltejs/kit/package.json'));
@@ -86,14 +86,8 @@ if (operation === 'measure') {
 }
 
 // Everything else runs on this machine, against production, with the private configuration.
-const env = Object.fromEntries(readFileSync(join(root, '.env'), 'utf8').split('\n')
-	.map((line) => /^([A-Z0-9_]+)=(.*)$/.exec(line.trim())).filter(Boolean)
-	.map(([, key, value]) => [key, value.replace(/^["']|["']$/g, '')]));
-const database = new URL(env.SUPABASE_DB_URL);
-if (!/^aws-\d+-sa-east-1\.pooler\.supabase\.com$/.test(database.hostname) || decodeURIComponent(database.username) !== `postgres.${PRODUCTION_REF}`)
-	throw new Error('The connection is not the production project. Nothing was done.');
-database.port = '5432';
-const api = `https://${PRODUCTION_REF}.supabase.co`;
+const { env, database } = productionEnvironment(root);
+const api = PRODUCTION_API_ORIGIN;
 const serviceKey = env.ODONTO_SUPABASE_SERVICE_ROLE_KEY ?? '';
 if (env.ODONTO_SUPABASE_URL?.replace(/\/$/, '') !== api || !/^ey[\w-]+\.[\w-]+\.[\w-]+$/.test(serviceKey)) throw new Error('The production API key is not the expected one. Nothing was done.');
 const sql = (text, { readOnly = false, variables = {} } = {}) => {

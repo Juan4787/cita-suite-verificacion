@@ -1,23 +1,18 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CATALOG_QUERY, compareCatalogs } from './lib/access-catalog.mjs';
+import { productionEnvironment, readEnvFile } from './lib/production-database.mjs';
 import { psqlDiagnostics, stagingConnection } from './lib/staging-database.mjs';
 
 // The catalog of production against staging, which is built only from the versioned migrations,
 // read in read-only transactions. Objects of other products in the project are reported apart.
 const root = fileURLToPath(new URL('../', import.meta.url));
 if (process.argv.length !== 2) throw new Error('Usage: compare-access-catalog.mjs');
-const readEnv = path => Object.fromEntries(readFileSync(path, 'utf8').split('\n')
-	.map(line => /^([A-Z0-9_]+)=(.*)$/.exec(line.trim())).filter(Boolean)
-	.map(([, key, value]) => [key, value.replace(/^["']|["']$/g, '')]));
-const staging = stagingConnection(readEnv(join(homedir(), '.config/cita-suite/staging/connection.env')).CITA_STAGING_DATABASE_URL);
-const production = new URL(readEnv(join(root, '.env')).SUPABASE_DB_URL);
-if (!/^aws-\d+-sa-east-1\.pooler\.supabase\.com$/.test(production.hostname) || decodeURIComponent(production.username) !== 'postgres.yjzferwuzbtgpmdnzlcb')
-	throw new Error('The production connection is not the production project. Nothing was read.');
-production.port = '5432';
+const staging = stagingConnection(readEnvFile(join(homedir(), '.config/cita-suite/staging/connection.env')).CITA_STAGING_DATABASE_URL);
+const { database: production } = productionEnvironment(root);
 
 function catalog(url, application) {
 	const result = spawnSync('psql', ['-X', '-h', url.hostname, '-p', url.port, '-U', decodeURIComponent(url.username), '-d', 'postgres',

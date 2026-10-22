@@ -4,6 +4,7 @@ import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CATALOG_QUERY, compareCatalogs } from './lib/access-catalog.mjs';
+import { PRODUCTION_REF, productionEnvironment, readEnvFile } from './lib/production-database.mjs';
 import { productionTransaction, sourceOf } from './lib/production-migration-plan.mjs';
 import { psqlDiagnostics, stagingConnection } from './lib/staging-database.mjs';
 
@@ -17,14 +18,8 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const untilOption = process.argv[2];
 const until = untilOption?.startsWith('--until=') ? untilOption.slice('--until='.length) : null;
 if (process.argv.length > 3 || (untilOption && until === null)) throw new Error('Usage: rehearse-production-migrations.mjs [--until=<migration version>]');
-const readEnv = path => Object.fromEntries(readFileSync(path, 'utf8').split('\n')
-	.map(line => /^([A-Z0-9_]+)=(.*)$/.exec(line.trim())).filter(Boolean)
-	.map(([, key, value]) => [key, value.replace(/^["']|["']$/g, '')]));
-const url = new URL(readEnv(join(root, '.env')).SUPABASE_DB_URL);
-if (!/^aws-\d+-sa-east-1\.pooler\.supabase\.com$/.test(url.hostname) || decodeURIComponent(url.username) !== 'postgres.yjzferwuzbtgpmdnzlcb')
-	throw new Error('The connection is not the production project. Nothing was sent.');
-url.port = '5432';
-const staging = stagingConnection(readEnv(join(homedir(), '.config/cita-suite/staging/connection.env')).CITA_STAGING_DATABASE_URL);
+const { database: url } = productionEnvironment(root);
+const staging = stagingConnection(readEnvFile(join(homedir(), '.config/cita-suite/staging/connection.env')).CITA_STAGING_DATABASE_URL);
 const psql = (target, input, args, application) => spawnSync('psql', ['-X', '-h', target.hostname, '-p', target.port, '-U', decodeURIComponent(target.username),
 	'-d', 'postgres', ...args, '-f', '-'], { input, encoding: 'utf8', timeout: 600_000, maxBuffer: 32 * 1024 ** 2,
 	env: { ...process.env, PGPASSWORD: decodeURIComponent(target.password), PGSSLMODE: 'require', PGCONNECT_TIMEOUT: '10', PGAPPNAME: application } });
@@ -47,7 +42,7 @@ try {
 	const read = psql(staging, `begin transaction read only;\n${CATALOG_QUERY}\ncommit;\n`, ['-v', 'ON_ERROR_STOP=1', '-Atq'], 'cita_suite_catalog_staging');
 	if (read.status !== 0) throw new Error('The staging catalog could not be read.\n' + redact(staging, read.stderr));
 	const differences = compareCatalogs(JSON.parse(read.stdout.trim()), JSON.parse(readFileSync(catalogFile, 'utf8').trim()));
-	const receipt = { at: new Date().toISOString(), project: 'yjzferwuzbtgpmdnzlcb', applied: applied.length, until, pending, rolledBack: true,
+	const receipt = { at: new Date().toISOString(), project: PRODUCTION_REF, applied: applied.length, until, pending, rolledBack: true,
 		exitStatus: result.status, failures, differences };
 	mkdirSync(join(root, '.verification'), { recursive: true });
 	writeFileSync(join(root, `.verification/production-migration-rehearsal-${receipt.at.replace(/[:.]/g, '-')}.json`), JSON.stringify(receipt, null, 2) + '\n');

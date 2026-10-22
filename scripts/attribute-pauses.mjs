@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 // Compares the instance metrics (instance-sampler.mjs) of the windows in which a request was
 // slow with the other windows of the same measurement. The metrics endpoint refreshes about
 // once a minute, so a window spans two distinct refreshes. Counters become rates per second;
-// CPU modes, fractions of the instance's CPU time. Requests come from staging-tail-metrics.mjs.
+// CPU modes, fractions of the instance's CPU time. Requests come from tail-metrics.mjs.
 const [samplesPath, requestsPath, thresholdArgument = '2000'] = process.argv.slice(2);
 if (!samplesPath || !requestsPath) throw new Error('Usage: attribute-pauses.mjs <instance samples.jsonl> <tail requests.jsonl> [slow ms]');
 const slowMs = Number(thresholdArgument);

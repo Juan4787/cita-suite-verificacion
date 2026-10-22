@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PRODUCTION_REF, productionEnvironment } from './lib/production-database.mjs';
 import { productionTransaction, sourceOf } from './lib/production-migration-plan.mjs';
 import { psqlDiagnostics } from './lib/staging-database.mjs';
 
@@ -12,22 +13,13 @@ import { psqlDiagnostics } from './lib/staging-database.mjs';
 // same transaction and rolls it back. It refuses to start without a production backup
 // (backup-production.mjs) taken at the current migration state within the last six hours, and when
 // the history is not a prefix of the local list.
-const PRODUCTION_REF = 'yjzferwuzbtgpmdnzlcb';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const [backupDirectory, untilOption] = process.argv.slice(2);
 const until = untilOption?.startsWith('--until=') ? untilOption.slice('--until='.length) : null;
 if (!backupDirectory || process.argv.length > 4 || (untilOption && until === null))
 	throw new Error('Usage: apply-production-migrations.mjs <backup directory> [--until=<migration version>]');
-const env = Object.fromEntries(readFileSync(join(root, '.env'), 'utf8').split('\n')
-	.map((line) => /^([A-Z0-9_]+)=(.*)$/.exec(line.trim())).filter(Boolean)
-	.map(([, key, value]) => [key, value.replace(/^["']|["']$/g, '')]));
-let database;
-try { database = new URL(env.SUPABASE_DB_URL); } catch { throw new Error('The production connection is missing or invalid. Nothing was applied.'); }
-if (!/^aws-\d+-sa-east-1\.pooler\.supabase\.com$/.test(database.hostname) || decodeURIComponent(database.username) !== `postgres.${PRODUCTION_REF}`
-	|| database.pathname !== '/postgres' || !database.password)
-	throw new Error('The connection is not the production project. Nothing was applied.');
-// A session, so the transaction runs as one psql session does in the reconstruction.
-database.port = '5432';
+// A session on port 5432, so the transaction runs as one psql session does in the reconstruction.
+const { database } = productionEnvironment(root);
 const redact = (text) => String(text ?? '').replaceAll(decodeURIComponent(database.password), '[secret]');
 
 function psql(args, input) {

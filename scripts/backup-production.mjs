@@ -1,8 +1,9 @@
 import { spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PRODUCTION_API_ORIGIN, PRODUCTION_REF, productionEnvironment } from './lib/production-database.mjs';
 import { createSupabaseBackup } from './lib/supabase-backup.mjs';
 import { psqlDiagnostics } from './lib/staging-database.mjs';
 
@@ -10,21 +11,10 @@ import { psqlDiagnostics } from './lib/staging-database.mjs';
 // (lib/supabase-backup.mjs, scripts/backup-rehearsal.mjs), from this machine into a private
 // directory outside the repository. Production credentials come from the existing private
 // configuration and never reach a log, the repository or CI. Every query is read-only.
-const PRODUCTION_REF = 'yjzferwuzbtgpmdnzlcb';
 const root = fileURLToPath(new URL('../', import.meta.url));
-const env = Object.fromEntries(readFileSync(join(root, '.env'), 'utf8').split('\n')
-	.map((line) => /^([A-Z0-9_]+)=(.*)$/.exec(line.trim()))
-	.filter(Boolean)
-	.map(([, key, value]) => [key, value.replace(/^["']|["']$/g, '')]));
-let database;
-try { database = new URL(env.SUPABASE_DB_URL); } catch { throw new Error('The production connection is missing or invalid. Nothing was read.'); }
-if (!/^aws-\d+-sa-east-1\.pooler\.supabase\.com$/.test(database.hostname) || decodeURIComponent(database.username) !== `postgres.${PRODUCTION_REF}`
-	|| database.pathname !== '/postgres' || !database.password)
-	throw new Error('The connection is not the production project. Nothing was read.');
 // pg_dump needs a session, which the pooler serves on port 5432.
-database.port = '5432';
-const apiOrigin = `https://${PRODUCTION_REF}.supabase.co`;
-if (env.ODONTO_SUPABASE_URL?.replace(/\/$/, '') !== apiOrigin) throw new Error('The production API is not the expected one. Nothing was read.');
+const { env, database } = productionEnvironment(root);
+if (env.ODONTO_SUPABASE_URL?.replace(/\/$/, '') !== PRODUCTION_API_ORIGIN) throw new Error('The production API is not the expected one. Nothing was read.');
 const serviceKey = env.ODONTO_SUPABASE_SERVICE_ROLE_KEY ?? '';
 if (!/^[\w.-]{20,}$/.test(serviceKey)) throw new Error('The production service key is required to back up stored files.');
 const directory = process.argv[2] ?? join(homedir(), '.local/share/cita-suite/backups', `production-${new Date().toISOString().replace(/[:.]/g, '-')}`);
@@ -57,7 +47,7 @@ const manifest = await createSupabaseBackup({
 	storageGet: async (bucket, name) => {
 		const path = `${encodeURIComponent(bucket)}/${name.split('/').map(encodeURIComponent).join('/')}`;
 		for (let attempt = 1; ; attempt++) {
-			const response = await fetch(`${apiOrigin}/storage/v1/object/authenticated/${path}`, {
+			const response = await fetch(`${PRODUCTION_API_ORIGIN}/storage/v1/object/authenticated/${path}`, {
 				headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey }, redirect: 'error', signal: AbortSignal.timeout(30_000)
 			}).catch(() => null);
 			if (response?.ok) return { body: Buffer.from(await response.arrayBuffer()), contentType: response.headers.get('content-type') ?? 'application/octet-stream' };

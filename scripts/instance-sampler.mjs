@@ -3,6 +3,8 @@ import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PRODUCTION_REF, productionEnvironment, readEnvFile } from './lib/production-database.mjs';
+import { STAGING_PROJECT_REF, stagingConnection } from './lib/staging-database.mjs';
 
 // Samples a hosted Supabase project while a measurement runs, to attribute its pauses: the
 // instance's own metrics every 5 s (CPU time by mode, including steal and iowait; CPU, I/O and
@@ -15,25 +17,19 @@ const minutes = Number(minutesArgument);
 if (!['staging', 'production'].includes(target) || !Number.isInteger(minutes) || minutes < 1 || minutes > 120 || !/^[a-z0-9-]{3,40}$/.test(label ?? ''))
 	throw new Error('Usage: instance-sampler.mjs staging|production <minutes 1-120> <label>');
 
-const readEnv = (path) => Object.fromEntries(readFileSync(path, 'utf8').split('\n')
-	.map((line) => /^([A-Z0-9_]+)=(.*)$/.exec(line.trim())).filter(Boolean)
-	.map(([, key, value]) => [key, value.replace(/^["']|["']$/g, '')]));
-const projects = { staging: 'ikaudqoilclfnztkxubz', production: 'yjzferwuzbtgpmdnzlcb' };
-const ref = projects[target];
+const ref = target === 'staging' ? STAGING_PROJECT_REF : PRODUCTION_REF;
 let database;
 let serviceKey;
 if (target === 'staging') {
 	const staging = join(homedir(), '.config/cita-suite/staging');
-	database = new URL(readEnv(join(staging, 'connection.env')).CITA_STAGING_DATABASE_URL);
+	database = stagingConnection(readEnvFile(join(staging, 'connection.env')).CITA_STAGING_DATABASE_URL);
 	serviceKey = JSON.parse(readFileSync(join(staging, 'api-keys.json'), 'utf8')).find((key) => key?.name === 'service_role' && key?.type === 'legacy')?.api_key;
 } else {
-	const env = readEnv(join(root, '.env'));
-	database = new URL(env.SUPABASE_DB_URL);
-	serviceKey = env.ODONTO_SUPABASE_SERVICE_ROLE_KEY;
+	const production = productionEnvironment(root);
+	database = production.database;
+	serviceKey = production.env.ODONTO_SUPABASE_SERVICE_ROLE_KEY;
 }
-if (decodeURIComponent(database.username) !== `postgres.${ref}` || !/\.pooler\.supabase\.com$/.test(database.hostname) || !serviceKey)
-	throw new Error('The connection is not the expected project. Nothing was sampled.');
-database.port = '5432';
+if (!serviceKey) throw new Error('The service key of the project is missing. Nothing was sampled.');
 
 const output = join(root, '.verification', `instance-samples-${target}-${label}.jsonl`);
 mkdirSync(join(root, '.verification'), { recursive: true });

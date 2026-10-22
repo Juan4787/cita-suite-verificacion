@@ -1,5 +1,6 @@
-// Parsing of `wrangler tail --format json` for the staging job measurements. Only
-// the fields below survive; request headers, other logs and other paths never do.
+// Parsing of `wrangler tail --format json` for the job and request measurements of an app
+// Worker, staging or production. Only the fields below survive; request headers, other logs
+// and other paths never do.
 const JOB_LOG = 'Tarea programada';
 
 /** Wrangler prints each event as one JSON object, which may span lines and chunks. */

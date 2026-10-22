@@ -14,10 +14,12 @@ import {
 // no local build. It never writes the app's secrets, and refuses to deploy when one the
 // application needs is missing. The scheduler is bundled from the verified snapshot's source
 // and receives the job secret from the private configuration, never from a log or the repository.
+// `scheduler-without-crons` deploys it with no trigger: the first step of a rollback, which stops
+// the new scheduler before anything else (docs/architecture/publicacion-y-reversion.md).
 const root = fileURLToPath(new URL('../', import.meta.url));
 const [target, artifactArgument] = process.argv.slice(2);
-if (!['app', 'scheduler'].includes(target) || (target === 'app') !== Boolean(artifactArgument) || process.argv.length > 4)
-	throw new Error('Usage: deploy-production-workers.mjs app <downloaded build directory> | scheduler');
+if (!['app', 'scheduler', 'scheduler-without-crons'].includes(target) || (target === 'app') !== Boolean(artifactArgument) || process.argv.length > 4)
+	throw new Error('Usage: deploy-production-workers.mjs app <downloaded build directory> | scheduler | scheduler-without-crons');
 const readJson = (path) => JSON.parse(readFileSync(path, 'utf8').replace(/^\s*\/\/.*$/gm, ''));
 
 function wrangler(workspace, config, args, secrets) {
@@ -61,7 +63,7 @@ if (target === 'app') {
 	}
 	console.log(JSON.stringify({ deployed: 'app', revision, origin: PRODUCTION_APP_ORIGIN }));
 } else {
-	assertProductionSchedulerConfig(readJson(join(root, 'apps/scheduler/wrangler.jsonc')));
+	const { $schema, ...scheduler } = assertProductionSchedulerConfig(readJson(join(root, 'apps/scheduler/wrangler.jsonc')));
 	// The scheduler is bundled from the working tree: it must be the verified source.
 	const snapshot = readJson(join(root, '.verification/ci-source.json'));
 	const blob = (contents) => createHash('sha1').update(`blob ${contents.length}\0`).update(contents).digest('hex');
@@ -74,6 +76,10 @@ if (target === 'app') {
 		.map(([, key, value]) => [key, value.replace(/^["']|["']$/g, '')]));
 	const secret = env.INTERNAL_JOB_SECRET ?? '';
 	if (secret.length < 32 || /\s/.test(secret)) throw new Error('The production job secret is missing or malformed. Nothing was deployed.');
-	wrangler('scheduler', null, ['--message', `Cita Suite scheduler ${snapshot.commit}`], { INTERNAL_JOB_SECRET: secret });
-	console.log(JSON.stringify({ deployed: 'scheduler', snapshot: snapshot.commit }));
+	// Without crons, the same Worker and binding stay deployed and no event starts a job.
+	const config = target === 'scheduler-without-crons'
+		? { ...scheduler, main: join(root, 'apps/scheduler', scheduler.main), triggers: { crons: [] } }
+		: null;
+	wrangler('scheduler', config, ['--message', `Cita Suite scheduler ${snapshot.commit}${config ? ' without crons' : ''}`], { INTERNAL_JOB_SECRET: secret });
+	console.log(JSON.stringify({ deployed: target, snapshot: snapshot.commit }));
 }

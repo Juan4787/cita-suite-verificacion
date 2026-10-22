@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
 	jobMeasurement, requestMeasurement, routeTemplate, splitJsonObjects, summarizeJobMeasurements, summarizeRequestMeasurements
-} from './staging-tail.mjs';
+} from './worker-tail.mjs';
 
 const jobEvent = (path, extra = {}) => ({
 	outcome: 'ok', scriptName: 'cita-suite-staging', eventTimestamp: 1_760_000_000_000, cpuTime: 7, wallTime: 1200,

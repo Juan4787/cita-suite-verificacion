@@ -64,7 +64,7 @@ Estados:
 | Colas: cinco pendientes por consultorio y escenario desigual | Etapa 6 en staging | Cumplido |
 | Planes, índices, bloqueos y crecimiento de consultas | [capacidad](capacidad.md); correcciones `20261020020000` a `20261020050000` | Cumplido |
 | Matriz de regresiones | [matriz de regresiones](matriz-regresiones.md): 12 puntos con sus capas | Cumplido |
-| Observabilidad: viajes HTTP, proveedores y SQL separados; registros sin datos clínicos | Contadores de los trabajos (`databaseRequests`, `providerRequests`); `staging-tail-metrics.mjs` | Cumplido |
+| Observabilidad: viajes HTTP, proveedores y SQL separados; registros sin datos clínicos | Contadores de los trabajos (`databaseRequests`, `providerRequests`); `tail-metrics.mjs` | Cumplido |
 
 ## 5. Auditoría, publicación y documentación
 

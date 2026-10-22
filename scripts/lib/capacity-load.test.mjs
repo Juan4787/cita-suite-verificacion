@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
 import {
-	ACCEPTANCE, CookieJar, OPERATIONS, classifyResponse, createRandom, evaluateAcceptance, exchange, failureReason, localDate, localDateTime, login,
-	pickOperation, planOperation, practiceData, runVirtualUser, summarize
+	ACCEPTANCE, CookieJar, OPERATIONS, capacityOwnersPassword, classifyResponse, createRandom, evaluateAcceptance, exchange, failureReason, localDate,
+	localDateTime, login, pickOperation, planOperation, practiceData, runVirtualUser, summarize
 } from './capacity-load.mjs';
 
 const response = (status, body, cookies = []) => {
@@ -352,4 +353,12 @@ test('a public booking echoes the hidden fields the page sent, like the confirma
 	const plain = publicBookingForm({}, query, { starts_at: 'x' }, 'Reserva Pública Abcd', '+5491177000123');
 	assert.equal('integration_revision' in plain || 'modality' in plain, false);
 	assert.match(plain.idempotency_key, /^[0-9a-f-]{36}$/);
+});
+
+test('the owners of a seeded run keep the password its measurement derives, in each environment', () => {
+	// Seeding and measuring run separately: the derivation must stay the one both used on 21 October.
+	for (const environment of ['staging', 'production'])
+		assert.equal(capacityOwnersPassword('secret-of-the-run', environment),
+			createHmac('sha256', 'secret-of-the-run').update(`cita-suite-${environment}-capacity-owners`).digest('base64url'));
+	assert.notEqual(capacityOwnersPassword('secret-of-the-run', 'staging'), capacityOwnersPassword('secret-of-the-run', 'production'));
 });

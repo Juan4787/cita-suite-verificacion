@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 
 // Virtual users of the capacity scenarios: one per practice, logged in once through
 // the app's own login, 80 % reads and 20 % internal writes with pauses of three to
@@ -64,6 +64,13 @@ export class CookieJar {
 	has(name) { return this.#cookies.has(name); }
 	header() { return [...this.#cookies].map(([name, value]) => `${name}=${value}`).join('; '); }
 }
+
+/**
+ * The synthetic owners' password of a hosted capacity run, derived from that environment's own secret
+ * (staging: its service key; production: the measurement secret). It is never stored.
+ */
+export const capacityOwnersPassword = (secret, environment) =>
+	createHmac('sha256', secret).update(`cita-suite-${environment}-capacity-owners`).digest('base64url');
 
 /** The deterministic ids of the seed: an MD5 shaped as a valid version-4 UUID (pg_temp.capacity_uuid). */
 export const uuidFrom = text => {
@@ -443,7 +450,8 @@ function bookingAnswer(result, parse) {
 		reason: body?.type === 'redirect' ? null : failureReason(result) };
 }
 
-const submitPublicBooking = (origin, data, found, name, phone, fetchFn) => signal => fetchFn(`${origin}/reservar/${data.business}?/create_booking`, {
+/** The confirmation of a found slot, as the public page submits it; `exchange` performs it. */
+export const submitPublicBooking = (origin, data, found, name, phone, fetchFn = fetch) => signal => fetchFn(`${origin}/reservar/${data.business}?/create_booking`, {
 	method: 'POST', redirect: 'manual', headers: actionHeaders(origin, new CookieJar()),
 	body: new URLSearchParams(publicBookingForm(found.page, found.query, found.slot, name, phone)), signal
 });
