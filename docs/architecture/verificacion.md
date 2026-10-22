@@ -60,11 +60,12 @@ La comparación de Natalia (`measure-natalia-baseline.mjs`) construye la versió
 
 Los despliegues de staging y producción y la verificación usan esos archivos exactos, nunca una compilación nueva. `loadBuildArtifact` rechaza un paquete que no coincide con su manifiesto o que contiene enlaces simbólicos, y `nataliaSite`, un sitio de Natalia que reserva en otro entorno.
 
-**`verify:release`** corre en el workflow de verificación con `level=release` y `artifact_run`, la corrida que empaquetó esa revisión:
+**`verify:release`** corre en el workflow de verificación con `level=release`, `artifact_run` (la corrida que empaquetó esa revisión) y `rollback_run` (un empaquetado anterior aprobado, distinto, de la base de reversión):
 1. **Preflight.** Rechaza, antes de cualquier trabajo, un release de otra revisión, claves de otro proyecto o rol, los dominios de producción conocidos y el proyecto configurado en `.env`. No imprime las claves.
 2. **Nivel completo** sobre la revisión.
 3. **Recorridos sobre el artefacto** (`run-campaign-integration.mjs --artifact=<release>`). La suite de navegador completa y la reserva nativa desde Natalia corren contra el paquete de producción del release, servido por workerd (`wrangler dev --local`) con los servicios reales descartables. Antes de abrir el navegador se comprueba que workerd sirve la revisión del release. Las suites SQL ya corrieron en el paso anterior.
-4. **Staging desplegado** (`verify-campaign-staging.mjs`):
+4. **Compatibilidad de reversión** (`run-campaign-integration.mjs --rollback-artifact=<baseline>`). Descarga el paquete de `rollback_run` por su SHA comprobado en la API de Actions; exige empaquetado terminado con éxito. Ejecuta toda la suite actual de navegador contra ese binario anterior y la base descartable con todas las migraciones actuales, incluida la contracción. `integration-artifact.mjs` rechaza una revisión no identificada, la propia candidata usada como baseline y cualquier baseline usado para certificar la candidata. La evidencia queda en `integration-rollback`, con su revisión y propósito explícitos. Este paso no restaura permisos ni reconstruye el binario anterior. Si falla, la reversión no está demostrada.
+5. **Staging desplegado** (`verify-campaign-staging.mjs`):
    - la app sirve la revisión y cada archivo de `_app/immutable` del release;
    - el login responde y una ruta privada redirige al login;
    - la CSP de la página admite exactamente el proyecto Supabase de staging, su WebSocket y sus imágenes, sin el comodín `*.supabase.co` (`assertSupabaseOrigin`);
@@ -75,6 +76,8 @@ Los despliegues de staging y producción y la verificación usan esos archivos e
 **Consultorio de release.** Es fijo y sintético, y se asegura con la operación `release-fixture` (`scripts/staging-release-fixture.mjs`). Si su configuración se desvía, el release falla, no se repara en silencio. Las reservas canceladas quedan en staging, cada una con un teléfono sintético nuevo.
 
 **Diagnóstico sobre un paquete.** `level=browser` con `artifact_run` ejecuta la selección contra el paquete descargado, igual que el paso 3. Es diagnóstico y no reemplaza al release.
+
+**Advertencias del fixture Realtime.** `render-health.ts` reconoce sólo los mensajes exactos de handshake 404 o cierre durante conexión al WebSocket loopback propio, en `disposable`. Una cancelación exige observar además `WebSocket.close()` nativo en CONNECTING en esa misma corrida. No cambia el transporte ni certifica Realtime alojado. `render-health.spec.ts` reproduce el cierre nativo y rechaza un mensaje sin cierre observado; `realtime-diagnostics.test.mjs` rechaza entornos, destinos y errores ajenos. La aceptación sigue pendiente de la corrida registrada; un test unitario no demuestra el ciclo de vida del navegador.
 
 **Después de publicar.** Las comprobaciones de staging y producción comparten `scripts/lib/served-release.mjs` (revisión, login, redirección privada, archivos por SHA-256 y CSP). En producción las corre `verify-production-release.mjs`. La reserva pública y un documento clínico de ida y vuelta las prueba `release-smoke.mjs staging|production` sobre el consultorio sintético `capacity-01`; su limpieza espera a que venzan las URL de carga, porque Storage vuelve a reservar 5 MB mientras una URL siga vigente. El orden y los comandos están en [publicación y reversión](publicacion-y-reversion.md).
 

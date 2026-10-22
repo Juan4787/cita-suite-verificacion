@@ -21,6 +21,11 @@ on:
         type: string
         required: false
         default: ''
+      rollback_run:
+        description: Successful packaging run of the distinct compatible rollback baseline (required by release)
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -90,12 +95,26 @@ jobs:
         run: |
           test -n "$ARTIFACT_RUN"
           gh run download "$ARTIFACT_RUN" --repo "$GITHUB_REPOSITORY" --name "cloudflare-staging-$GITHUB_SHA" --dir "$RUNNER_TEMP/release"
+      - name: Download the explicitly identified rollback baseline
+        if: inputs.level == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ROLLBACK_RUN: ${{ inputs.rollback_run }}
+        run: |
+          [[ "$ROLLBACK_RUN" =~ ^[0-9]+$ ]]
+          gh run view "$ROLLBACK_RUN" --repo "$GITHUB_REPOSITORY" --json status,conclusion,headSha > "$RUNNER_TEMP/rollback-run.json"
+          jq -e '.status == "completed" and .conclusion == "success" and (.headSha | test("^[0-9a-f]{40}$"))' "$RUNNER_TEMP/rollback-run.json"
+          baseline_revision=$(jq -r .headSha "$RUNNER_TEMP/rollback-run.json")
+          test "$baseline_revision" != "$GITHUB_SHA"
+          gh run download "$ROLLBACK_RUN" --repo "$GITHUB_REPOSITORY" --name "cloudflare-staging-$baseline_revision" --dir "$RUNNER_TEMP/release-rollback"
+          echo "CITA_ROLLBACK_REVISION=$baseline_revision" >> "$GITHUB_ENV"
       - name: Verify sequentially
         env:
           VERIFICATION_LEVEL: ${{ inputs.level }}
           BROWSER_GREP: ${{ inputs.browser_grep }}
           ARTIFACT_RUN: ${{ inputs.artifact_run }}
           CITA_RELEASE_ARTIFACT: ${{ (inputs.level == 'release' || inputs.artifact_run != '') && format('{0}/release', runner.temp) || '' }}
+          CITA_ROLLBACK_ARTIFACT: ${{ inputs.level == 'release' && format('{0}/release-rollback', runner.temp) || '' }}
           CITA_STAGING_SERVICE_ROLE_KEY: ${{ inputs.level == 'release' && secrets.CITA_STAGING_SERVICE_ROLE_KEY || '' }}
           CITA_STAGING_ANON_KEY: ${{ inputs.level == 'release' && secrets.CITA_STAGING_ANON_KEY || '' }}
         run: |

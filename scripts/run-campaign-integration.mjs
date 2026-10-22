@@ -11,24 +11,30 @@ import { assertHostedIntegrationResources } from './lib/verification-resources.m
 import { checkFixtureConnections } from './lib/fixture-connection-check.mjs';
 import { assertPlatformDiagnostics, assertRuntimeDiagnostics } from './lib/platform-diagnostics.mjs';
 import { loadBuildArtifact } from './lib/staging-deploy.mjs';
+import { assertIntegrationArtifact } from './lib/integration-artifact.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 let diagnostic = null;
 let artifact = null;
+let rollback = false;
 for (let index = 2; index < process.argv.length; index++) {
 	const option = process.argv[index];
 	if (option === '--grep' && diagnostic === null && process.argv[index + 1]) diagnostic = process.argv[++index];
 	else if (option.startsWith('--artifact=') && artifact === null && option.length > '--artifact='.length) artifact = resolve(option.slice('--artifact='.length));
-	else throw new Error('Usage: run-campaign-integration.mjs [--grep diagnostic-pattern] [--artifact=<downloaded release>]. Filtered execution never counts as full verification.');
+	else if (option.startsWith('--rollback-artifact=') && artifact === null && option.length > '--rollback-artifact='.length) {
+		artifact = resolve(option.slice('--rollback-artifact='.length));
+		rollback = true;
+	}
+	else throw new Error('Usage: run-campaign-integration.mjs [--grep diagnostic-pattern] [--artifact=<candidate> | --rollback-artifact=<identified baseline>]. Filtered execution never counts as full verification.');
 }
 assertHostedIntegrationResources();
 // The release verification tests the downloaded release itself, served by workerd: it must be
-// exactly the build of the revision under test. Its SQL suites already ran on that revision.
+// exactly the build of the revision under test. The separate rollback mode tests an explicitly
+// identified previous binary against today's SQL and tests; it never certifies the candidate.
 const release = artifact ? loadBuildArtifact(artifact) : null;
 if (release) {
 	const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).stdout?.trim();
-	if (release.revision !== head || !release.files.has('.verification/cloudflare-bundle-production/_worker.js'))
-		throw new Error('The downloaded release is not the production build of the revision under test. No services were started.');
+	assertIntegrationArtifact(release, head, rollback ? 'rollback' : 'candidate', rollback ? process.env.CITA_ROLLBACK_REVISION : undefined);
 }
 const runtimeLogs = artifact ? ['workerd', 'workerd-errors'] : ['vite', 'vite-errors'];
 const lease = acquireVerificationLock(root);
@@ -41,10 +47,10 @@ const runId = randomUUID();
 process.env.CITA_FIXTURE_RUN_ID = runId;
 const campaignId = process.env.CITA_VERIFICATION_RUN_ID ?? runId;
 if (!/^[a-f0-9-]{36}$/.test(campaignId)) throw new Error('Invalid campaign evidence identifier.');
-const evidence = join(root, '.verification', 'runs', campaignId, diagnostic ? 'diagnostic-' + runId : artifact ? 'integration-artifact' : 'integration');
+const evidence = join(root, '.verification', 'runs', campaignId, diagnostic ? 'diagnostic-' + runId : rollback ? 'integration-rollback' : artifact ? 'integration-artifact' : 'integration');
 mkdirSync(evidence, { recursive: true });
 writeFileSync(join(root, '.verification', 'latest-integration.json'), JSON.stringify({ runId, campaignId, directory: evidence, diagnostic: Boolean(diagnostic),
-	artifact: release?.revision ?? null }, null, 2) + '\n');
+	artifact: release?.revision ?? null, purpose: rollback ? 'rollback-compatibility' : 'candidate' }, null, 2) + '\n');
 
 async function run(command, args, options = {}) {
 	if (interrupted) throw new Error('Verification interrupted.');

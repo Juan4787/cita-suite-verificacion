@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { acquireVerificationLock } from './lib/verification-lock.mjs';
 import { runVerificationProcess } from './lib/verification-process.mjs';
 import { loadStagingRelease } from './lib/staging-environment.mjs';
+import { loadRollbackArtifact } from './lib/integration-artifact.mjs';
 import { assertHostedIntegrationResources, assertLightVerificationResources } from './lib/verification-resources.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -39,6 +40,7 @@ if (level !== 'fast') steps.push(
 // production bundle runs the browser suite in workerd, and the deployed staging must serve it.
 if (level === 'release') steps.push(
 	['artifact-browser', 'node', ['scripts/run-campaign-integration.mjs', `--artifact=${process.env.CITA_RELEASE_ARTIFACT}`]],
+	['rollback-browser', 'node', ['scripts/run-campaign-integration.mjs', `--rollback-artifact=${process.env.CITA_ROLLBACK_ARTIFACT}`]],
 	['staging', 'node', ['scripts/verify-campaign-staging.mjs']]
 );
 
@@ -64,7 +66,11 @@ try {
 	// A killed invocation must never leave a previous successful receipt current.
 	saveEvidence();
 	// Reject an absent or unsafe release target before spending time on local verification.
-	if (level === 'release') loadStagingRelease(root, process.env, spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).stdout?.trim());
+	if (level === 'release') {
+		const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).stdout?.trim();
+		loadStagingRelease(root, process.env, head);
+		loadRollbackArtifact(process.env, head);
+	}
 	if (level !== 'fast') assertHostedIntegrationResources();
 	for (const [name, command, args] of steps) {
 		assertLightVerificationResources();

@@ -35,7 +35,7 @@ Esta tabla se actualiza con cada candidata. Sólo se publica una candidata con s
 | Programador | Worker `cita-suite-scheduler`, con los cinco cron del plan y un binding a `app` | `deploy-production-workers.mjs scheduler`, desde el código del snapshot verificado. |
 | Base | Supabase `yjzferwuzbtgpmdnzlcb`, sa-east-1 | `apply-production-migrations.mjs <respaldo>`. Exige un respaldo de producción de menos de seis horas, en el mismo estado de migraciones. |
 | Respaldo | Carpeta privada fuera del repositorio, `~/.local/share/cita-suite/backups/` | `backup-production.mjs` ([respaldo y recuperación](respaldo-y-recuperacion.md)). |
-| Natalia | `https://natalia-frutos.vercel.app` | No se despliega desde este repositorio; el usuario indica cómo se publica. El release trae su sitio ya compilado para producción, en `.verification/natalia-production` (35 archivos), y se publican esos archivos exactos. |
+| Natalia | `https://natalia-frutos.vercel.app`, Vercel `juanaltamiras-projects/natalia-frutos`, repositorio `juan-altamira/web-natalia` | Origen confirmado por el usuario y contrastado con GitHub el 22 de octubre. El release trae su sitio ya compilado para producción, en `.verification/natalia-production` (35 archivos): publicar esos bytes exactos, sin recompilación ni activar checkout/LMS simulados. La configuración exacta de publicación sigue por preparar y verificar. |
 
 **Staging, para verificar el release:**
 
@@ -76,13 +76,13 @@ Todas deben cumplirse antes del paso 1. Estado al 22 de octubre, 13:05 UTC:
 |---|---|---|---|
 | 1 | Workers Builds desconectado del Worker `app`. Hoy despliega cada push a `main` de `Juan4787/dashboard`, y pisaría la app publicada con el código de `main`. | **Pendiente del usuario** | Panel de Cloudflare: Workers & Pages → `app` → Settings → Builds → Disconnect. |
 | 2 | Proyecto `cita-suite` de Vercel desconectado o borrado. Es la copia vieja pausada; se construye con cada push a `main`. | **Pendiente del usuario** | Panel de Vercel. |
-| 3 | Forma de publicar Natalia definida, o autorización para usar la sesión de la CLI de Vercel sin leer sus archivos. | **Pendiente del usuario** | — |
+| 3 | Origen de publicación de Natalia definido y procedimiento exacto preparado. | Usuario confirmó `juan-altamira/web-natalia`; Vercel `juanaltamiras-projects/natalia-frutos`. Falta preparar y verificar la publicación del sitio compilado. | `.verification/natalia-publication-source-20261022.json`; registro |
 | 4 | Release empaquetado una sola vez, sobre la revisión exacta. | Hecho para `dfb487f` | Operación `artifact` 39782403651 |
 | 5 | Ensayo de respaldo y restauración aprobado. | Hecho | `staging-operations` 39682517594 |
 | 6 | Staging con el mismo release: migraciones, app, Natalia, consultorio de release y tareas observadas. | App y Natalia de `dfb487f` desplegadas (`04ef8a10…` y `b52e723b…`); tareas observadas el 22 de octubre de 12:55 a 13:00 UTC: push dos veces y calendario una, cada una en su horario | Registro; `staging-tail-6fa828d2f6af-summary.json` |
 | 7 | `verify:release` aprobado con ese release. | **Pendiente:** 39783349541 de `dfb487f` terminó fallido sobre el paquete, después de full aprobado. Se investiga antes de repetir release. | `.verification/remote-39783349541/`; registro de reanudación del 22 de octubre |
 | 8 | Ensayo de la base sobre producción, con `ROLLBACK`: cero fallas y catálogo igual al de staging, salvo la deriva aceptada. | Hecho el 22 de octubre a las 06:52 UTC; se repite en el paso 2 | `production-migration-rehearsal-2026-10-22T06-52-19-008Z.json` |
-| 9 | Compatibilidad de cada tanda con la versión servida, analizada. | Hecho | Registro y «Reversión» |
+| 9 | Reversión compatible preparada y verificada para cada tanda. | **Parcial:** `313355a` es compatible después de expansión; pierde operaciones después de contracción. No aplicar la tanda 2 sin alternativa compatible verificada. | Registro y «Reversión» |
 | 10 | Programador anterior detenido. | Hecho: cron-job.org 7795525 deshabilitado desde el 31 de agosto; Netlify 404 y Vercel 503 a las 12:43 UTC | `previous-scheduler-2026-10-22T12-43-14-864Z.json` |
 | 11 | Prueba de humo ensayada en staging. | Hecho: 14 comprobaciones aprobadas; su limpieza se habilita a las 15:08:57 UTC | `release-smoke-staging-run-2026-10-22T12-54-08-566Z.json` |
 | 12 | Programador sin cron y su restitución, ensayados en staging. | Hecho: versiones `6266c45a…` (sin cron) y `49636b6a…` (con los cinco) | Registro |
@@ -227,6 +227,8 @@ node scripts/production-device-push.mjs cleanup <corrida>
 
 ### 9. Tanda 2: contracción
 
+**Puerta pendiente:** antes de ejecutar este paso debe existir una reversión comprobada que conserve los privilegios cerrados. La versión `313355a` no cumple esta condición; conocer esa incompatibilidad no equivale a resolverla. No restaurar permisos inseguros ni improvisar una migración de emergencia para declarar este control aprobado.
+
 ```bash
 node scripts/backup-production.mjs
 node scripts/apply-production-migrations.mjs <carpeta del respaldo nuevo>
@@ -282,7 +284,7 @@ rm ~/.config/cita-suite/production/capacity-secret
 
 ### 13. Natalia
 
-1. El usuario publica, o autoriza publicar, los archivos exactos de `.verification/natalia-production` en `natalia-frutos.vercel.app`.
+1. Publicar los archivos exactos de `.verification/natalia-production` en `juan-altamira/web-natalia`, destino `natalia-frutos.vercel.app`, según el procedimiento concreto verificado. La autorización de producción del 17 de octubre ya cubre esta acción; no hace falta volver a solicitarla. Comprobar el HEAD antes de actualizar y conservar el commit anterior para revertir. No publicar mientras falten las puertas anteriores.
 2. `node scripts/verify-production-release.mjs "$D" --natalia` debe aprobar, archivo por archivo.
 
 ### 14. Repositorio e identidad
@@ -296,7 +298,7 @@ Con los disparadores desconectados, la revisión publicada llega a `main` y se a
 2. **Volver a la versión anterior de `app`:**
    `pnpm --filter web exec wrangler rollback 9b2df65c-f89c-4940-a625-4d7b3e5858f2 --name app --message "<motivo>" --yes`. Sintaxis comprobada con `wrangler rollback --help` de la versión fijada.
    - **Después de la tanda 1:** es compatible. La versión anterior no usa nada de lo que la reconciliación retira y ya funcionaba con las 27 migraciones.
-   - **Después de la tanda 2:** la versión anterior pierde las operaciones que escribían directamente: el alta de pacientes, las prestaciones, las asignaciones, los profesionales y las excepciones. Antes de volver a ella habría que devolver esas escrituras con una migración nueva, nunca deshaciendo la anterior.
+   - **Después de la tanda 2:** **no usar este comando**: la versión anterior pierde el alta de pacientes, las prestaciones, las asignaciones, los profesionales y las excepciones. Falta preparar y verificar una versión alternativa compatible antes de permitir la contracción; restaurar escrituras directas inseguras no es una alternativa aprobada.
 3. **Entradas viejas:** volver a encenderlas sólo si hace falta (`production-legacy-jobs.mjs on`). El programador anterior está deshabilitado y no se reactiva sin decisión del usuario.
 4. **Base:** las migraciones no se deshacen destructivamente. Restaurar el respaldo es para un desastre, no para una reversión, porque perdería las escrituras posteriores.
 5. **Datos sintéticos:** si la publicación se interrumpe con consultorios sintéticos en producción, se quitan en este orden:
@@ -306,7 +308,8 @@ Con los disparadores desconectados, la revisión publicada llega a `main` y se a
 
 ## Pendiente del usuario
 
-- **Antes de cualquier paso de producción:** las condiciones previas 1, 2 y 3.
+- **Acciones pendientes del usuario antes de producción:** desconectar Workers Builds de `app` y Git del Vercel viejo `juans-projects-76d0ede4/cita-suite` (condiciones 1 y 2). La lectura de Builds por la sesión de Wrangler dio 403; evidencia `cloudflare-builds-readonly-20261022.json`. No desconectar `natalia-frutos`.
+- **Trabajo técnico independiente pendiente:** procedimiento de Natalia, release exacto aprobado y reversión compatible después de la tanda 2. El origen de Natalia ya no es una pregunta pendiente al usuario.
 - **Antes de abrir a clientes reales:**
   - el plan de Supabase, con la medición del paso 11;
   - el correo transaccional, porque el restablecimiento de contraseña necesita SMTP propio;
