@@ -84,7 +84,15 @@ Leer la decisión literal al final del plan. En resumen: no hay usuarios reales 
      - **Full:** aprobado entero.
      - **`artifact-browser`:** falló porque el paquete de producción sólo acepta orígenes HTTPS en las integraciones, y el entorno descartable usaba `http://127.0.0.1`. Es la regla correcta de producción, no un defecto.
      - **Corrección:** el anfitrión embebido se sirve por HTTPS en loopback, con un certificado de cada corrida.
-   - **Segunda corrida, en curso:** snapshot `df3f59c`, empaquetado 39731019148. Después: desplegar app y Natalia en staging desde ese paquete y correr `level=release` con `artifact_run`.
+   - **Segunda corrida (`df3f59c`):** el full se aprobó; sobre el paquete falló la subida de documentos por la CSP del paquete de producción. Ahora la CSP admite sólo el proyecto Supabase configurado.
+   - **Deriva de producción encontrada y resuelta antes de publicar** (detalle en el registro y en `publicacion-y-reversion.md`):
+     - el ensayo con `ROLLBACK` mostró 8 sentencias que fallaban;
+     - la comparación del catálogo mostró políticas, funciones, columnas e índices cambiados a mano;
+     - quedan cubiertas por la reconciliación `supabase/production/reconcile-drift.sql`, dos migraciones nuevas con su prueba que falló primero (`20261022000000` y `20261022010000`) y la publicación en dos tandas, en una sola transacción cada una.
+   - **Tercera corrida (`e67fc46`):**
+     - staging tiene 126 migraciones, con app `1f70e33f…` y Natalia `c7ca94dc…`;
+     - el ensayo de producción contra staging da cero fallas y un catálogo idéntico, salvo la deriva aceptada;
+     - `verify:release` 39736494567 en curso.
    - **Producción, sonda anónima previa:**
      - 20 relaciones responden 200, con RLS y sin filas visibles;
      - lo cierra la migración pendiente `20261021020000`, y la sonda posterior debe dar cero;

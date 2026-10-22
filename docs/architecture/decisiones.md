@@ -72,6 +72,18 @@ Entregable de la sección 5 del [plan](../plans/refactorizacion-cita-suite.md). 
 - **Descartado:** restaurar sobre la imagen sola, que no tiene los roles y esquemas de un proyecto nuevo.
 - **Detalle:** [respaldo y recuperación](respaldo-y-recuperacion.md).
 
+**Producción vuelve al modelo probado antes de publicar.** Su catálogo tenía cambios hechos fuera de las migraciones: políticas, funciones, columnas, restricciones e índices. Una reconciliación versionada lo devuelve al estado que declaran sus migraciones aplicadas, dentro de la misma transacción de publicación, y un ensayo con `ROLLBACK` lo comprueba sobre el esquema real.
+- **Descartado:** publicar sobre la deriva. Tres migraciones fallaban, y la app nueva habría corrido sobre reglas que ninguna prueba cubre: por ejemplo, `owner_id` con `auth.uid()` por omisión rompía las inserciones del servidor.
+- **Descartado:** volver tolerantes a la deriva las migraciones pendientes. La deriva habría quedado viva, sin prueba que la cubra.
+- **Adoptado de la deriva:** dos protecciones que el modelo probado no tenía, ahora migraciones con su prueba que falla primero:
+  - el cierre de las escrituras directas, que dejaba a un administrador hacerse dueño (`20261022010000`);
+  - la historia clínica que sobrevive al borrado de un usuario (`20261022000000`).
+- **Postergado: las lecturas con alcance por rol** que producción tenía a mano. Por ejemplo, un profesional sólo veía los profesionales, prestaciones y horarios de su agenda.
+  - **Riesgo residual:** dentro de un mismo consultorio, cualquier miembro lee esos datos de sus colegas, incluido el motivo de una excepción de horario. No cruza consultorios.
+  - **Por qué no ahora:** adoptarlas cambia lo que ve cada rol y exige recorrer de nuevo la interfaz con esas reglas.
+  - **Cuándo retomarlo:** cuando un consultorio real pida esa reserva entre colegas, con una migración y sus pruebas por rol.
+- **Detalle:** [publicación y reversión](publicacion-y-reversion.md).
+
 **Natalia abre el turnero real por navegación nativa.**
 - **Descartado:** el iframe y el SDK como recorrido principal: las notificaciones y la gestión necesitan el mismo origen del turnero.
 

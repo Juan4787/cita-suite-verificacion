@@ -71,16 +71,26 @@ Estados:
 | Requisito | Evidencia | Estado |
 |---|---|---|
 | Rutas alternativas, tipos, duplicación, paginación, consultorio nuevo | Auditoría transversal cerrada: full 39667993859 | Cumplido |
-| Recorridos cruzados sensibles sobre los artefactos construidos | `verify:release`: la suite de navegador completa sobre el paquete de producción en workerd | Pendiente: la corrida del release |
-| Ampliación de cuota y cambio de recursos conservando datos, permisos y pendientes | Prueba de ampliación en `clinical-files.spec.ts`, sobre el paquete. El cambio de Workers a Paid no se ensaya alojado: se cubre con las pruebas del perfil de presupuesto. | Pendiente: la corrida del release |
+| Recorridos cruzados sensibles sobre los artefactos construidos | `verify:release`: la suite de navegador completa y la reserva nativa sobre el paquete de producción en workerd. La primera ejecución encontró la CSP que bloqueaba el proyecto configurado; se corrigió. | Pendiente: `verify:release` 39736494567 sobre `e67fc46` |
+| Ampliación de cuota y cambio de recursos conservando datos, permisos y pendientes | Prueba de ampliación en `clinical-files.spec.ts`: aprobada en el full 39731246349 y se repite sobre el paquete. El cambio de Workers a Paid no se ensaya alojado sin contratar: lo cubren las pruebas del perfil de presupuesto. | Pendiente: la corrida sobre el paquete en 39736494567 |
 | Respaldo y recuperación ensayados en un entorno aislado | 39682517594; [respaldo y recuperación](respaldo-y-recuperacion.md) | Cumplido |
 | Migraciones compatibles en staging | 39683852264: 124 migraciones | Cumplido |
-| App, Natalia y programador desplegados y comprobados en staging | App y programador en la etapa 6 y el release. Natalia desde el 22 de octubre (`natalia-frutos-staging`). | Pendiente: la corrida del release |
+| App, Natalia y programador desplegados y comprobados en staging | App `1f70e33f…` y Natalia `c7ca94dc…` desde el paquete de `e67fc46`; el programador, en la etapa 6. Se comprueban los archivos servidos y una reserva real desde Natalia. | Pendiente: 39736494567 |
 | Auditoría de release | 39685702630, más `verify:release` | Pendiente: la corrida del release |
 | Programador anterior detenido | cron-job.org 7795525, deshabilitado | Cumplido |
 | Publicar migraciones y aplicaciones; activar el programador nuevo; versión, permisos, reserva, almacenamiento y tareas | [Publicación y reversión](publicacion-y-reversion.md) | Pendiente: requiere las acciones del usuario en los paneles |
 | Reversión sin restauraciones destructivas | Procedimiento documentado y compatibilidad de las 27 migraciones con `313355a` | Cumplido como preparación |
 | Documentación entregable | Áreas, contratos, [permisos y capacidades](permisos-y-capacidades.md), documentos, tareas, verificación, capacidad, [decisiones](decisiones.md), publicación y [guía](guia-nuevas-funciones.md) | Cumplido |
+
+## Base de producción
+
+| Requisito | Evidencia | Estado |
+|---|---|---|
+| Migraciones exactas y compatibles antes de publicar | Ensayo con `ROLLBACK` sobre el esquema real: 8 sentencias fallaban por deriva manual. Con la reconciliación, cero fallas. | Cumplido como preparación |
+| La base publicada es la probada | Comparación del catálogo después del ensayo: idéntico al de staging en las nueve secciones, salvo la deriva aceptada | Cumplido como preparación; se repite después de publicar |
+| Rutas alternativas que evitan los contratos (sección 5) | Escritura directa de membresías, que dejaba a un admin hacerse dueño, y de pacientes, turnos y auditoría: `20261022010000`, con su prueba que falló primero | Cumplido en CI; producción en la tanda 2 |
+| Sin pérdida de información clínica | El borrado de un usuario borraba su historia clínica: `20261022000000`, con su prueba que falló primero | Cumplido en CI; producción en la tanda 1 |
+| Reversión compatible | Publicación en dos tandas: expandir, desplegar y contraer | Cumplido como preparación |
 
 ## Ampliación: identidad Cita Suite
 

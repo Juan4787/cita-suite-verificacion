@@ -10,7 +10,8 @@ Lecturas, escrituras, identificadores manipulados y funciones llamadas directame
 
 - **SQL:** `tenant_relation_identity.sql` (45 controles: cada relación entre tablas de un consultorio es compuesta y validada, y rechaza un consultorio ajeno aun sin triggers de usuario); `tenant_context_revocation.sql` (paciente ajeno oculto por RLS, RPC directo que no puede modificar otro consultorio, identificador manipulado); `availability_windows.sql` (un miembro no lee el catálogo de otro consultorio, profesional manipulado, profesional o prestación privados fuera de la ventana pública); `patient_archive_actor_scope.sql`, `patient_registration_transaction.sql`, `clinical_direct_write_guards.sql` y `team_editor_atomic_commands.sql` (paciente, consultorio o destino ajenos en cada operación); `clinical_business_storage_budget.sql` (una reserva de carga no puede apuntar a un archivo de otro consultorio, un dueño no lee la cuota ajena); `security_definer_resolution.sql` (una tabla temporal no puede falsificar vínculos ni exponer pacientes); `patient_read_set_based.sql` (un usuario ajeno no ve ningún paciente); `table_privilege_hardening.sql` y `service_role_backend_privileges.sql` (privilegios de tablas y del rol de servidor).
 - **SQL, auditoría transversal:**
-  - `api_exposure_explicit.sql`: una tabla nueva no recibe permisos automáticos, `anon` no alcanza ninguna relación y los roles de la API sólo leen y escriben filas.
+  - `api_exposure_explicit.sql`: una tabla nueva no recibe permisos automáticos, `anon` no alcanza ninguna relación ni ejecuta ninguna función privilegiada de `public`, y los roles de la API sólo leen y escriben filas.
+  - `direct_table_writes.sql` (release, 22 de octubre): ninguna escritura directa por la API reemplaza a las RPC transaccionales, ni en membresías, pacientes, vínculos, asignaciones, altas de turnos, excepciones, profesionales, prestaciones o auditoría. Un administrador no puede hacerse dueño ni quitar al dueño. Las escrituras que la app sí hace con el cliente del usuario siguen funcionando.
   - `write_expression_privileges.sql`: todo rol que puede usar una tabla puede ejecutar las funciones de sus restricciones, valores por defecto, políticas y vistas.
   - `follow_ups_database_rules.sql`: Seguimientos se lee bajo RLS y sólo cambia mediante sus funciones.
   - `user_business_contexts.sql`: los contextos del usuario salen de sus membresías y ayudas vigentes.
@@ -55,6 +56,7 @@ Lecturas, escrituras, identificadores manipulados y funciones llamadas directame
 
 - **SQL:** `clinical_direct_write_guards.sql` (34 controles por rol), `clinical_entry_date_edit.sql` (17), `clinical_provenance_triggers.sql`, `clinical_files_phase1.sql`, `appointment_patient_reassignment.sql`, `patient_change_history_atomic.sql` (la línea visible del cambio se escribe en la misma transacción que la ficha, y el autor profesional debe ser el del actor).
 - **Unidad:** `clinical-entries.test.ts`, `clinical-files.test.ts`, `patient-permissions.test.ts`, `patient-profile.test.ts`, `patient-detail.server.test.ts`, `PatientHistoryPanel.client.test.ts` (el costo histórico conserva sus centavos), `ClinicalEntryDialog.client.test.ts`.
+- **SQL, release:** `clinical_owner_user_deletion.sql`: borrar un usuario conserva su historia clínica, y el autor de una entrada no se puede borrar.
 - **Navegador:** `patient-structure-ux.spec.ts` (roles por anchos y preferencias de color), `clinical-files.spec.ts` (dueño, profesional vinculado y recepción, que no descubre documentos ni historia), `clinical-entry-date.spec.ts`.
 
 ## 8. Límites de archivos, cargas simultáneas, expiraciones y descarga correcta
@@ -62,7 +64,7 @@ Lecturas, escrituras, identificadores manipulados y funciones llamadas directame
 - **SQL:** `clinical_business_storage_budget.sql` (52 controles: 5 MB reservados por URL, cuota base de 100 MB, presupuesto global de 700 MB, expiración con margen, ampliación sin perder pendientes); `clinical_storage_reconciliation.sql` (14: estados pendiente, fallido, papelera, listo y derivados, repetible, nunca borra archivos).
 - **Carreras:** `run_clinical_upload_limit_concurrency.sh`, `run_clinical_budget_concurrency.sh`.
 - **Unidad:** `clinical-upload-availability.test.ts`, `clinical-storage-units.test.ts`.
-- **Navegador:** `clinical-files.spec.ts` (un PDF real se descarga con los mismos bytes y el nombre del paciente), `clinical-storage-policy.spec.ts`.
+- **Navegador:** `clinical-files.spec.ts` (un PDF real se descarga con los mismos bytes y el nombre del paciente; la ampliación de cuota y de capacidad global conserva documentos, permisos y cargas pendientes), `clinical-storage-policy.spec.ts`. Las dos corren también sobre el paquete de producción del release, en workerd.
 - **Staging:** la reconciliación de almacenamiento bajo el guardia `safeupdate` alojado (`hosted_request_guards.sql`, etapa 6).
 
 ## 9. Precios acumulados, excepciones, redondeo, mes 600 y cambios durante la confirmación

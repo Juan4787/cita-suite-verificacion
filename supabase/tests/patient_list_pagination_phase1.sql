@@ -256,16 +256,19 @@ end;
 $$;
 
 -- An activity newer than the current snapshot does not jump into an ongoing
--- traversal, but appears on a fresh visit.
+-- traversal, but appears on a fresh visit. The test owner records the activity;
+-- the same signed-in user then reads both visits.
+reset role;
+select set_config('patient_list_test.snapshot', clock_timestamp()::text, true);
+select pg_sleep(0.01);
+update public.patients set activity_at = clock_timestamp() where id = '64000000-0000-4000-8000-000000000001';
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '61000000-0000-4000-8000-000000000001', true);
 do $$
 declare
-	v_snapshot timestamptz := clock_timestamp();
-	v_target uuid := '64000000-0000-4000-8000-000000000001';
+	v_snapshot timestamptz := current_setting('patient_list_test.snapshot')::timestamptz;
 	v_count integer;
 begin
-	perform pg_sleep(0.01);
-	update public.patients set activity_at = clock_timestamp() where id = v_target;
-
 	select count(*)::integer into v_count
 	from public.list_accessible_patients_page(
 		'62000000-0000-4000-8000-000000000001', false, 'zeta', 30, v_snapshot,

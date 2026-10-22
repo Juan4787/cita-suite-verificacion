@@ -1289,3 +1289,70 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
   - los dos documentos conservan sus bytes, el dueño los lista y recepción recibe 403;
   - la reconciliación no encuentra diferencias.
   Corre en el full y sobre el paquete del release. El cambio de Workers a Paid no se ensaya alojado sin contratar; lo cubren las pruebas del perfil de presupuesto (`job-budget.test.ts`, `scheduled-jobs.test.ts`).
+- **Segunda corrida del release: snapshot `df3f59c`, empaquetado 39731019148, staging app `8a0d0b0c…` y Natalia `20986cf5…`, `verify:release` 39731246349.**
+  - **Nivel completo:** aprobado entero, con 41 de 41 en el navegador; incluye el ensayo de ampliación de cuota y capacidad.
+  - **Sobre el paquete en workerd** arrancaron la app y el anfitrión HTTPS, y pasaron 2 pruebas. Después falló la carga de un documento: «No se pudo enviar el archivo».
+  - **Causa: la CSP del paquete de producción.** Su `connect-src` admitía cualquier `https://*.supabase.co` y no la API configurada del entorno descartable (`http://127.0.0.1:<puerto>`). El navegador bloqueó la subida a Storage y el WebSocket de Realtime, y la ejecución sobre el paquete lo hizo visible.
+  - **Corrección en el producto** (`content-security.ts` y `hooks.server.ts`): la CSP admite sólo el proyecto Supabase configurado y su WebSocket, en vez de cualquier proyecto de Supabase. En producción queda más estricta que antes. Acepta HTTPS, o HTTP sólo en loopback.
+  - **Pruebas:** 3 de la función y 1 del hook, que falla si se quita el cableado. 20 de 20 locales.
+- **Producción, ensayo de la base con `ROLLBACK`** (`scripts/rehearse-production-migrations.mjs`, 22 de octubre). Las 27 migraciones pendientes se aplicaron sobre el esquema real dentro de una transacción que siempre se deshace, con `ON_ERROR_ROLLBACK` y mensajes `terse`. Nada quedó aplicado.
+  - **Resultado: 8 sentencias fallaban,** todas por cambios hechos en producción fuera de las migraciones:
+    - `20261016010000` no encontraba dos claves foráneas de `professional_patient_links`, ya compuestas con otros nombres;
+    - `20261016011000` alteraba tres políticas de `clinical_entries` que habían sido borradas;
+    - la guarda de `20261016012000` rechazaba `search_path=""` de las funciones ajenas `landing_*`.
+  - **Publicar como estaba habría fallado a mitad de camino.** Staging no podía mostrarlo, porque se construye sólo con migraciones.
+- **Deriva del catálogo de producción** (`scripts/compare-access-catalog.mjs` y `scripts/lib/access-catalog.mjs`). Compara, en sólo lectura, el catálogo de producción con el de staging: RLS, privilegios, políticas, columnas, restricciones, índices, triggers y cuerpos de funciones. Las expresiones se comparan por huella.
+  - **Políticas:** 12 que crean las migraciones aplicadas y fueron borradas; 22 que ninguna migración declara; 13 de lectura con otra definición, por ejemplo con alcance por rol para profesionales.
+  - **Funciones:**
+    - 3 con otro cuerpo, entre ellas `business_allows_operation`, que delegaba en una función heredada;
+    - 15 heredadas que ninguna migración crea. 9 las podía llamar cualquier usuario autenticado, por ejemplo `change_business_user_role_safely`: eran rutas alternativas a las RPC transaccionales, sin pruebas.
+  - **Columnas:**
+    - `owner_id` de pacientes y de entradas clínicas tenía `auth.uid()` por omisión y `NOT NULL`, lo que rompe toda inserción del servidor con su clave;
+    - `professional_patient_links.source` no tenía valor por omisión;
+    - hay 29 columnas extra de una función anterior de retención y riesgo de reservas públicas.
+  - **Restricciones e índices:**
+    - faltaban `UNIQUE (email)` en `allowed_emails`, `business_user_invites_check` y una clave foránea;
+    - sobraban un `CHECK` de `entry_type` con siete valores, `audit_logs_result_check` y un índice único de DNI por `owner_id`;
+    - el índice de invitación pendiente era global en vez de por consultorio, y la exclusión de turnos incluía `pending_confirmation`.
+  - **Conteos agregados en sólo lectura, sin filas:**
+    - no hay invitaciones `expired` ni turnos `pending_confirmation`;
+    - 10 de 66 entradas clínicas apuntan a usuarios borrados.
+  - **Objetos de otros productos:** `landing_*`, `business_limits`, contadores de límites y su política. Se reportan aparte y no se tocan.
+- **Dos defectos del modelo probado, revelados por la deriva** (producción los había tapado a mano). Cada uno se reprodujo primero en CI con una prueba que falló.
+  - **Escalada por escritura directa.** `business admins can update memberships` dejaba a dueño y admin escribir cualquier membresía, sin restricción de columna ni trigger. También quedaban abiertas, sin uso de la app, las escrituras directas de pacientes, vínculos y asignaciones de profesionales, altas de turnos, excepciones, profesionales y prestaciones, y del registro de auditoría.
+    - **Prueba:** `supabase/tests/direct_table_writes.sql`.
+    - **Reproducción:** sql 39734409457 sobre `421fd43`, sin la migración. Fallaron las 13 comprobaciones; en la primera, un admin se promovió a dueño sin ninguna excepción («caught: no exception»).
+    - **Corrección:** `20261022010000_close_direct_table_writes.sql`. Quita esas políticas y privilegios y conserva las escrituras que la app hace con el cliente del usuario, que tienen controles positivos en la prueba. Además cierra las escrituras de invitaciones y la ejecución por `anon` de las funciones auxiliares de autorización y de `replace_professional_availability_rules`.
+    - **Guarda nueva** en `api_exposure_explicit.sql`: `anon` no ejecuta ninguna función privilegiada de `public`.
+    - **Verificación previa:** ningún trigger `SECURITY INVOKER` de las tablas que la app escribe toca las tablas cerradas, y las RPC que las escriben son `SECURITY DEFINER`.
+  - **Historia clínica borrada al eliminar un usuario.** `clinical_entries_owner_id_fkey` era `ON DELETE CASCADE`, la única cascada clínica desde `auth.users`; pacientes y documentos usan `SET NULL`.
+    - **Prueba:** `supabase/tests/clinical_owner_user_deletion.sql`.
+    - **Reproducción:** sql 39735453106 sobre `5dad60a`. «La entrada clínica de un dueño eliminado se conserva» dio 0 contra 1 esperado.
+    - **Corrección:** `20261022000000_clinical_history_survives_user_deletion.sql` (`SET NULL`).
+- **Guarda de `search_path` corregida en `20261016012000`, que todavía no se aplicó en producción.**
+  - **El defecto:** rechazaba `search_path=""`, la configuración más estricta y la que recomienda Supabase. Ahora la conserva.
+  - **Desvío documentado:** staging aplicó el texto anterior, con efecto idéntico porque allí no hay funciones con ruta vacía. Su historia conserva ese texto, y los scripts de aplicación comparan versiones, no contenido.
+  - **Reproducción:** el ensayo de producción. La protege la prueba de actualización `supabase/tests/migrations/20261016012000_security_definer_resolution.sql.{before,after}.sql`, y la suite `security_definer_resolution.sql` acepta `""`. La primera versión de la prueba de actualización falló porque no instalaba pgTAP en ese punto (sql 39733999250); se corrigió como las demás.
+- **Reconciliación de producción** (`supabase/production/reconcile-drift.sql`). Corre una sola vez, dentro de la transacción de la tanda 1, y devuelve los objetos de Cita Suite al estado que declaran sus migraciones aplicadas:
+  - recrea las 12 políticas borradas, con las definiciones de `20260513000000` a `20260528052136`;
+  - borra las 22 manuales;
+  - renombra las dos claves compuestas;
+  - quita la ejecución para la API de 11 funciones heredadas, que no usan ni la app nueva ni `313355a`;
+  - restituye 3 cuerpos de funciones y 13 políticas a las definiciones de staging;
+  - restituye columnas, restricciones e índices;
+  - anula las 10 referencias de dueño colgadas antes de crear la clave con `SET NULL`, con los triggers activos, así que la actualización queda registrada. Un primer intento de hacerlo con los triggers desactivados fue rechazado por el control de permisos y se descartó.
+- **Publicación en una sola transacción, en dos tandas** (`scripts/lib/production-migration-plan.mjs`, `apply-production-migrations.mjs`).
+  - Cada tanda reúne la reconciliación, cuando corresponde, las migraciones sin sus líneas de transacción y la historia: todo o nada.
+  - `--until` separa la expansión (`20261022000000`) de la contracción (`20261022010000`). La contracción se aplica sólo con la app nueva comprobada, porque `313355a` escribía directamente: el alta de pacientes, las prestaciones, las asignaciones, los profesionales y las excepciones.
+  - **Una guarda nueva** rechaza una migración con control de transacción fuera de su primera y última línea: su prueba encontró que un `commit;` intermedio pasaba inadvertido.
+  - **Ensayos con `ROLLBACK`:** la tanda 1 sola y las dos juntas, con cero fallas. Sólo difieren los efectos de las dos migraciones nuevas, que staging todavía no tenía, y la deriva aceptada (`ACCEPTED_PRODUCTION_DRIFT`):
+    - las 15 funciones heredadas;
+    - 29 columnas con sus 7 restricciones;
+    - 9 índices.
+  - **Pruebas livianas:** `access-catalog.test.mjs` (3) y `production-migration-plan.test.mjs` (3). Guardas locales: 112 de 112.
+- **Decisiones** (`docs/architecture/decisiones.md`):
+  - producción vuelve al modelo probado;
+  - las lecturas con alcance por rol que tenía a mano quedan postergadas, con su riesgo residual dentro de un mismo consultorio.
+- **Tercera corrida, snapshot `e67fc46`** (CSP, migraciones `20261022000000` y `20261022010000`, reconciliación y herramientas).
+  - **Staging:** empaquetado 39736230199; migraciones de staging 39736239031 (124 → 126); app `1f70e33f-ac80-4a33-8ed7-f4dfbe433bf5` y Natalia `c7ca94dc-a13a-4f32-9aa9-66e5f71edc49`. `verify:release` 39736494567 en curso.
+  - **Ensayo de producción con `ROLLBACK` contra staging con 126:** las 29 migraciones pendientes aplican con cero fallas. El catálogo resultante es **idéntico** al de staging en RLS, privilegios, políticas, columnas, restricciones, índices, triggers y cuerpos de funciones. Sólo queda la deriva aceptada: 15 funciones, 29 columnas, 7 restricciones y 9 índices. Recibo en `.verification/production-migration-rehearsal-2026-10-22T06-52-19-008Z.json`.
