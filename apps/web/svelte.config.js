@@ -49,16 +49,15 @@ const config = {
 						'style-src-elem': ['self', 'https://fonts.googleapis.com'],
 						'style-src-attr': ['unsafe-inline'],
 						'font-src': ['self', 'https://fonts.gstatic.com'],
-						'img-src': ['self', 'data:', 'blob:', 'https://*.supabase.co'],
+						// The Supabase project of the deployment is added per request (hooks.server.ts).
+						'img-src': ['self', 'data:', 'blob:'],
 						'connect-src': [
 							'self',
 							'https://accounts.google.com',
 							'https://fonts.googleapis.com',
 							'https://fonts.gstatic.com',
 							'https://oauth2.googleapis.com',
-							'https://www.googleapis.com',
-							'https://*.supabase.co',
-							'wss://*.supabase.co'
+							'https://www.googleapis.com'
 						],
 						'frame-src': ['https://accounts.google.com', 'https://challenges.cloudflare.com'],
 						'base-uri': ['self'],

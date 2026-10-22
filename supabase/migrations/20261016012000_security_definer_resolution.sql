@@ -25,6 +25,9 @@ begin
   if current_path is null or btrim(current_path)='' then
    raise exception 'EXPLICIT_FUNCTION_SEARCH_PATH_REQUIRED: %',target;
   end if;
+  -- An empty path ("") is the strictest setting: the function must name every object with its
+  -- schema, so nothing it names can be shadowed. It keeps it.
+  continue when btrim(current_path)='""';
   trusted_path:=array[]::text[];
   foreach schema_name in array string_to_array(current_path,',') loop
    schema_name:=btrim(schema_name);

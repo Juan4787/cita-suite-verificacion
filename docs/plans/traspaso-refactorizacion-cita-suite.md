@@ -80,7 +80,15 @@ Leer la decisión literal al final del plan. En resumen: no hay usuarios reales 
      - Worker `natalia-frutos-staging`: sólo archivos, con `noindex`;
      - consultorio sintético `release-staging`, asegurado con `staging-release-fixture.mjs` y la operación `release-fixture`;
      - secreto `CITA_STAGING_ANON_KEY` en el repositorio de verificación.
-   - **Primera corrida:** snapshot `017b26f`, release 39708965987, staging desplegado (app `85aa471c…`, Natalia `1926a654…`) y `verify:release` 39709379322. Ver el registro para su resultado.
+   - **Primera corrida:** snapshot `017b26f`, release 39708965987, staging desplegado (app `85aa471c…`, Natalia `1926a654…`) y `verify:release` 39709379322.
+     - **Full:** aprobado entero.
+     - **`artifact-browser`:** falló porque el paquete de producción sólo acepta orígenes HTTPS en las integraciones, y el entorno descartable usaba `http://127.0.0.1`. Es la regla correcta de producción, no un defecto.
+     - **Corrección:** el anfitrión embebido se sirve por HTTPS en loopback, con un certificado de cada corrida.
+   - **Segunda corrida, en curso:** snapshot `df3f59c`, empaquetado 39731019148. Después: desplegar app y Natalia en staging desde ese paquete y correr `level=release` con `artifact_run`.
+   - **Producción, sonda anónima previa:**
+     - 20 relaciones responden 200, con RLS y sin filas visibles;
+     - lo cierra la migración pendiente `20261021020000`, y la sonda posterior debe dar cero;
+     - la política `master read allowed_emails`, sólo de producción, se decide con la comparación del catálogo después de publicar.
    - **Ensayo de cuota y capacidad:** prueba nueva en `clinical-files.spec.ts`. Corre en el full y sobre el paquete del release.
    - **Entregables nuevos:**
      - [permisos y capacidades](../architecture/permisos-y-capacidades.md);

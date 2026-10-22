@@ -12,6 +12,8 @@ import {
 import { ACTIVE_BUSINESS_COOKIE } from '$lib/server/access/public/business';
 import { redirect, type Handle } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { env as publicEnv } from '$env/dynamic/public';
+import { withSupabaseOrigin } from '$lib/server/platform/content-security';
 import { logServerFailure } from '$lib/server/platform/logging';
 import type { HandleServerError } from '@sveltejs/kit';
 
@@ -206,6 +208,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	const response = await resolve(event);
+	const renderedPolicy = response.headers.get('content-security-policy');
+	if (renderedPolicy) response.headers.set('content-security-policy', withSupabaseOrigin(renderedPolicy, publicEnv.PUBLIC_ODONTO_SUPABASE_URL));
 	// Only a validated public integration may opt into framing. Private routes
 	// and every rejected/unknown integration retain DENY.
 	if (event.locals.bookingFrameAncestors?.length) {

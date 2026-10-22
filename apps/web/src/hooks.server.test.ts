@@ -4,7 +4,8 @@ const envState = vi.hoisted(() => ({
 	privateEnv: {
 		ODONTO_SUPABASE_URL: 'https://odonto.supabase.co',
 		ADMIN_SUPABASE_URL: 'https://admin.supabase.co'
-	} as Record<string, string | undefined>
+	} as Record<string, string | undefined>,
+	publicEnv: { PUBLIC_ODONTO_SUPABASE_URL: 'https://odonto.supabase.co' } as Record<string, string | undefined>
 }));
 
 const mocks = vi.hoisted(() => ({
@@ -17,6 +18,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('$app/environment', () => ({ dev: false }));
 vi.mock('$env/dynamic/private', () => ({ env: envState.privateEnv }));
+vi.mock('$env/dynamic/public', () => ({ env: envState.publicEnv }));
 vi.mock('$lib/server/access/public/business', () => ({ ACTIVE_BUSINESS_COOKIE: 'active-business-id' }));
 vi.mock('$lib/server/platform/supabase', async (importOriginal) => ({
 	parseModule: (await importOriginal<typeof import('$lib/server/platform/supabase')>()).parseModule,
@@ -285,5 +287,20 @@ describe('hooks auth validation', () => {
 		await handle({ event, resolve } as never);
 
 		expect(response.headers.get('cache-control')).toBe('private, no-store');
+	});
+
+	it('agrega a la política renderizada sólo el proyecto Supabase configurado', async () => {
+		const event = makeEvent();
+		event.url = new URL('https://app.test/login');
+		(event.cookies.get as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		const response = new Response('<html></html>', {
+			headers: { 'content-type': 'text/html', 'content-security-policy': "default-src 'self'; connect-src 'self'; img-src 'self'" }
+		});
+
+		await handle({ event, resolve: vi.fn(async () => response) } as never);
+
+		expect(response.headers.get('content-security-policy')).toBe(
+			"default-src 'self'; connect-src 'self' https://odonto.supabase.co wss://odonto.supabase.co; img-src 'self' https://odonto.supabase.co"
+		);
 	});
 });
