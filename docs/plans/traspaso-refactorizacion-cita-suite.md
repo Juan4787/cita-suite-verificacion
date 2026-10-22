@@ -2,7 +2,7 @@
 
 ## Estado de este documento
 
-**Actualizado por Opus 5.5 — 21 de octubre de 2026, ~20:30 UTC.** La **etapa 5 está cerrada** sobre `674649108bc2caa87e82c8bca25d93f82d584d51` (full 39276578152, dictamen independiente `ship`, DESIGN.md documentado) y se avisó al usuario. La **etapa 6 está cerrada** (ver abajo). La campaña completa **no** está terminada.
+**Actualizado por Opus 5.5 — 22 de octubre de 2026, ~02:00 UTC.** La **etapa 5 está cerrada** sobre `674649108bc2caa87e82c8bca25d93f82d584d51` (full 39276578152, dictamen independiente `ship`, DESIGN.md documentado) y se avisó al usuario. La **etapa 6 está cerrada** (ver abajo). La campaña completa **no** está terminada.
 
 **Alcance vigente (instrucción del usuario del 19 de octubre al retomar con Opus 5.5):** completar y verificar íntegramente la fase 5, avisar al usuario cuando esté realmente cerrada y **continuar automáticamente con la fase 6 y todas las etapas restantes** hasta terminar la campaña, incluida la auditoría transversal, release, publicación y comprobaciones posteriores según las autorizaciones vigentes. Esta instrucción sustituye la restricción anterior de «detenerse antes de fase 6», que se conserva abajo sólo como antecedente de la intervención de GPT-6.1 Sol. Cambia únicamente el punto de detención: no reduce requisitos, garantías, controles ni procedimientos de seguridad.
 
@@ -28,32 +28,45 @@ Leer la decisión literal al final del plan. En resumen: no hay usuarios reales 
    - **Siguiente:** cerrar la matriz de regresiones (`docs/architecture/matriz-regresiones.md`). Después, la auditoría transversal, con estos pendientes: historiales sin depurar, el 503 público sin registro de causa, los tres `as unknown as`, la agenda diaria que muestra un día vacío ante un error de lectura, copias del cálculo de fecha local y del patrón UUID, `getAuthUserId` repetido en `patient-list.ts` y la deuda de interfaz del punto 5. Luego el release.
    - **Release: correo de Auth.** Producción tiene `mailer_autoconfirm` activo, pero el restablecimiento de contraseña necesita correo, y el SMTP integrado de Supabase sólo entrega a miembros del equipo (2 por hora). Comprobar si producción tiene SMTP propio. Si no, es un impedimento para clientes reales y una decisión del usuario, porque requiere una cuenta de correo transaccional.
    - **Realtime alojado, para el release:** la primera siembra de staging mostró que allí las difusiones de `realtime.send` desde triggers se pierden por falta de la partición diaria de `realtime.messages` (una advertencia por fila). Comprobar en producción, en modo lectura, las particiones y el transporte antes de dar por verificada la sincronización de revisiones de pacientes. Con la corrección del 21 de octubre, sin Realtime la lista se actualiza en unos 30 s.
-3e. **Punto exacto (21 de octubre, ~20:30 UTC).** Reemplaza a 3b, 3c y 3d; el detalle está en el registro.
-   - **Auditoría transversal: cerrada** sobre `7fea901`, full 39667993859, todo aprobado. Se avisó al usuario.
-   - **Ensayo de dos consultorios, en staging: cerrado.** Workers Free cumple. Supabase Free no cumple p95 ni p99, y la causa dentro de la instancia no está atribuida. La publicación para clientes reales está frenada hasta la decisión del usuario.
-     - Por el análisis externo que aportó, antes de decidir se mide la producción de São Paulo en Free, con datos ficticios.
-     - La medición registra los eventos de espera de PostgreSQL, fotografías de `pg_stat_statements`, las métricas del servidor si Free las expone, y tiempos separados de punta a punta, del Worker y de PostgreSQL.
-     - No se contrata nada.
-   - **Release, en preparación.**
-     - **Producción tiene 97 migraciones** y quedan 27 pendientes, compatibles con la versión servida. El análisis está en el registro.
-       - El Worker `app` sirve `9b2df65c…`, que casi seguro es `313355a` (`origin/main`).
-       - `origin/main` tiene builds automáticos de Cloudflare: desactivarlos antes de publicar y no empujar a `main`.
-     - **Credenciales de producción:** quedan en la configuración local, y `psql` corre liviano desde la máquina. Toda consulta va dentro de `begin transaction read only`, porque el pooler no reenvía `PGOPTIONS`.
-     - **Respaldos:** Free no tiene respaldos diarios administrados. Hacen falta una exportación propia, una restauración ensayada en un entorno aislado, y que el usuario decida el destino de las copias de datos reales.
-     - **Decisiones del usuario que siguen pendientes:**
-       - el destino de los respaldos;
-       - la cuenta de correo transaccional para restablecer contraseñas;
-       - el plan de Supabase después de medir producción.
-     - **Siguiente:**
-       1. Manifiesto exacto del release.
-       2. Ensayo de respaldo y restauración.
-       3. Staging: migraciones de `20261021010000` a `080000`, despliegue y comprobaciones.
-       4. `verify:release`.
-       5. Comprobar en producción, en lectura, el SMTP y las particiones de Realtime.
-       6. Transición de identidad.
-       7. Publicar en producción, con su secuencia y reversión, y medir dos consultorios en producción.
-     - **Teléfono Samsung:** pedírselo al usuario cuando haga falta para el push real.
-   - **Postergado con riesgo documentado:** los comparadores de parámetros de ruta (`guia-nuevas-funciones.md`).
+3f. **Punto exacto (22 de octubre, ~02:00 UTC).** Reemplaza a 3e; el detalle está en el registro.
+   - **Auditoría transversal: cerrada.** Después del cierre apareció `r19` (copias sueltas del patrón UUID), corregido y verificado.
+   - **Candidata al release: `cd8e9ad`.**
+     - **Full 39704821720 aprobado entero.**
+     - **Artefacto 39704832587:** trae los paquetes de staging y de producción, y su `_worker.js` es idéntico en los dos.
+     - **Staging:** sirve `cd8e9ad`, versión `f07641c1…`, con 124 migraciones.
+   - **Hecho del release:**
+     - ensayo de respaldo y restauración aprobado (39682517594);
+     - respaldo de producción del 21 de octubre a las 22:03 UTC, en `~/.local/share/cita-suite/backups/`;
+     - migraciones de staging y medición de auditoría: funcional aprobada, p99 de lecturas incumplido;
+     - atribución de las pausas: falta de memoria de Nano y swap;
+     - compatibilidad de las 27 migraciones con `313355a`;
+     - programador anterior: cron-job.org, deshabilitado.
+   - **Herramientas:**
+     - `backup-production.mjs`;
+     - `apply-production-migrations.mjs`;
+     - `deploy-production-workers.mjs` (`app` y `scheduler`);
+     - `deploy-staging-workers.mjs scheduler-without-crons`;
+     - `production-capacity.mjs` y el workflow `production-measurement.yml`;
+     - `instance-sampler.mjs` y `attribute-pauses.mjs`.
+     - El procedimiento está en `docs/architecture/publicacion-y-reversion.md`.
+   - **Esperando al usuario. Ningún paso de producción corre antes de estas acciones:**
+     1. desconectar Workers Builds del Worker `app` en Cloudflare;
+     2. desconectar o borrar el proyecto `cita-suite` de Vercel;
+     3. indicar cómo se publica Natalia, o autorizar el uso de la sesión de la CLI de Vercel sin leer sus archivos.
+   - **Después, la secuencia del procedimiento:**
+     1. respaldo nuevo;
+     2. las 27 migraciones;
+     3. `set_legacy_job_entrypoints(false)`;
+     4. la app;
+     5. liberar los cron de staging y desplegar el programador;
+     6. las comprobaciones posteriores; para el push real, pedirle al usuario el Samsung;
+     7. la medición de producción con muestreo de la instancia;
+     8. el repositorio y la identidad.
+   - **Decisiones pendientes del usuario:**
+     - el plan de Supabase, con los datos de la medición de producción;
+     - el correo transaccional para restablecer contraseñas;
+     - el destino de los respaldos de datos reales.
+   - **Postergado con riesgo documentado:** los comparadores de parámetros de ruta.
 4. **Copias antiguas retiradas por el usuario (resuelto el 19 de octubre):** `https://cita-suite.netlify.app` servía una copia completa de la aplicación con endpoint de tareas. El usuario desactivó ese proyecto y también pausó `https://cita-suite-app.vercel.app`, otra copia que no figuraba en el inventario. Comprobado por HTTP a las 21:12 UTC: Netlify responde 404 y Vercel 503. Ambas están en el inventario de `identidad-cita-suite.md`. El interruptor de base de la migración sigue siendo parte de la transición: neutraliza cualquier llamador antiguo (por ejemplo cron-job.org contra el Worker) sin depender de esas cuentas. Antes de activar el programador nuevo, volver a comprobar que las dos copias siguen fuera de servicio.
 5. **Pendiente para la auditoría transversal** (debe corregirse ahí): con el criterio de retención de la sección 4, revisar las tablas de historia que no se depuran (`audit_logs`, `mp_webhook_events`, `patient_profile_change_events`, `whatsapp_webhook_events`) y decidir cuáles son historia del producto y cuáles registros; `public_booking_attempts` ya se conserva 7 días (`20261020040000`). La carga pública (`defaultIntegration` en `/reservar` y `readBookingIntegrationRequest`) convierte cualquier excepción en 503 sin registrar la causa. Tres `as unknown as` en producción (transporte `ws` del cliente Supabase de servidor, `configuracion/negocio/+page.svelte` y `patient-export.worker.ts`); deuda de interfaz preexistente no canonizada por el documentador (kickers/eyebrows, glifos como íconos en `.ux-tab-marker`, 14 tamaños literales, `truncate` en superficies no cubiertas, pesos 650–900 con Inter cargada en 400–700, `ThemeToggle.svelte` sin uso, fechas «4 de / noviembre» partidas a 320 y costo «$ 125,5»). Detalle en el registro. Resueltos en etapa 6: los casts de errores de `push.ts` (ahora `PushServiceError` y el error tipado del SDK) y la auditoría de las tareas fuera del `fetch` presupuestado (`insertAuditLog` recibe el cliente de la tarea).
 

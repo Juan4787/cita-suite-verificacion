@@ -1,0 +1,46 @@
+name: Medición de producción de Cita Suite
+
+# Manual only. The HTTP load of the two-practice measurement against the production app,
+# from this external runner. It holds no production credential: only the secret from which
+# the synthetic owners' password is derived, set for one measurement and removed with its
+# cleanup. Seeding, integrity checks, statistics and cleanup run outside it
+# (scripts/production-capacity.mjs).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cita-refactoring-verification
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    # Three twelve-minute repetitions and the public phase.
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .node-version
+      - name: Install pinned package manager and dependencies
+        run: |
+          npm install --global pnpm@10.13.1
+          pnpm install --frozen-lockfile --network-concurrency=1
+      - name: Measure the production app with the plan's load
+        env:
+          CITA_PRODUCTION_CAPACITY_SECRET: ${{ secrets.CITA_PRODUCTION_CAPACITY_SECRET }}
+        run: node scripts/production-capacity.mjs measure
+      # Synthetic data and aggregated measurements only; kept also when the measurement fails.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: production-measure-${{ github.run_id }}
+          path: .verification/production-capacity-measure.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7

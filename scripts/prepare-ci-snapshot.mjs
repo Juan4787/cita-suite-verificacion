@@ -29,10 +29,10 @@ const rootFiles = new Set(['.env.example', '.gitignore', '.npmrc', 'AGENTS.md', 
 	'.dependency-cruiser.cjs', '.node-version', '.prettierignore']);
 const extras = [
 	'.github/workflows/refactoring-verification.yml', '.github/workflows/staging-connectivity.yml',
-	'.github/workflows/staging-operations.yml', 'apps/web/wrangler.staging.jsonc',
+	'.github/workflows/staging-operations.yml', '.github/workflows/production-measurement.yml', 'apps/web/wrangler.staging.jsonc',
 	'scripts/inspect-staging-database.mjs', 'scripts/apply-staging-migrations.mjs', 'scripts/staging-queue-scenario.mjs',
 	'scripts/deploy-staging-workers.mjs', 'scripts/staging-tail-metrics.mjs', 'scripts/staging-device-push.mjs',
-	'scripts/run-campaign-capacity.mjs', 'scripts/capacity/seed-practices.sql', 'scripts/capacity/cleanup-practices.sql', 'scripts/staging-capacity.mjs', 'scripts/backup-rehearsal.mjs', 'scripts/backup-production.mjs', 'scripts/instance-sampler.mjs', 'scripts/attribute-pauses.mjs', 'scripts/apply-production-migrations.mjs', 'scripts/deploy-production-workers.mjs',
+	'scripts/run-campaign-capacity.mjs', 'scripts/capacity/seed-practices.sql', 'scripts/capacity/cleanup-practices.sql', 'scripts/staging-capacity.mjs', 'scripts/backup-rehearsal.mjs', 'scripts/backup-production.mjs', 'scripts/instance-sampler.mjs', 'scripts/attribute-pauses.mjs', 'scripts/apply-production-migrations.mjs', 'scripts/deploy-production-workers.mjs', 'scripts/production-capacity.mjs',
 	'scripts/staging/push-sink/supabase/config.toml', 'scripts/staging/push-sink/supabase/functions/push-sink/index.ts',
 	'docs/plans/refactorizacion-cita-suite.md', 'docs/plans/refactorizacion-cita-suite.integridad.json',
 	'docs/plans/registro-refactorizacion-cita-suite.md',

@@ -1216,3 +1216,21 @@ Antes de finalizar, transformar cada condición del plan original en una fila co
   - **Una consulta vieja, no del código actual:** `pg_stat_statements` acumula desde el 2 de octubre y muestra una lectura pesada de `appointments`, de 425 ms de media. Es la agenda semanal anterior a `20261020050000`. En producción se miden diferencias entre fotografías.
 - **Full 39703516221 sobre `411f8fe`: aprobado entero.** `svelte-check` sin errores; 101 guardas, con las 4 nuevas de respaldo; 11 del programador; 1.384 de servidor, 171 de cliente y la exportación nativa; 124 migraciones con todas las suites y carreras; 40 de 40 en el navegador, 2 de 2 en la demo y Natalia. **Verifica `r19`** y las herramientas de respaldo e instrumentación.
 - **Programador anterior, en lectura con la API de cron-job.org:** el único trabajo, «Cita Suite push reminders» (7795525), está deshabilitado desde la auditoría del 31 de agosto y apunta a una URL de falla controlada. Producción no tiene hoy ningún programador activo. Después de las migraciones queda apagar las entradas viejas en la base con `public.set_legacy_job_entrypoints(false)`.
+- **Herramientas de publicación y medición de producción.** El procedimiento está en `docs/architecture/publicacion-y-reversion.md`.
+  - `scripts/apply-production-migrations.mjs <respaldo>`: aplica las migraciones a producción desde esta máquina, igual que en staging. No arranca sin un respaldo de producción de menos de seis horas, tomado en el mismo estado de migraciones, ni si la historia no es un prefijo.
+  - `scripts/deploy-production-workers.mjs`:
+    - `app` sube tal cual el paquete de producción que compila CI (`cloudflare-bundle-production`, agregado a la operación `artifact`, sin credenciales). Nunca escribe secretos, se niega a desplegar si falta uno requerido y comprueba la revisión servida;
+    - `scheduler` despliega desde el snapshot verificado.
+    - Validaciones en `scripts/lib/production-deploy.mjs`, con pruebas en `production-deploy.test.mjs` (2): rechazan staging, otra cuenta, otro origen u otra ubicación, crons en la app y un binding ajeno.
+  - `deploy-staging-workers.mjs scheduler-without-crons` libera los cinco cron de la cuenta Free, para que los tome el programador de producción.
+  - `scripts/production-capacity.mjs` y el workflow `production-measurement.yml`: la medición de dos consultorios en producción.
+    - CI hace sólo la carga HTTP contra la app pública y no recibe ninguna credencial de producción. La contraseña de los dueños sintéticos se deriva de un secreto propio de la medición, temporal.
+    - Siembra, integridad antes y después, estadísticas y limpieza corren desde esta máquina. La limpieza no hace `vacuum full`, que está reservado a staging.
+- **Candidata al release `cd8e9ad`.**
+  - **Full 39704821720: aprobado entero.** 103 guardas, con las validaciones de producción; 1.384 de servidor; 171 de cliente; 124 migraciones con todas las suites; 40 de 40 en el navegador; 2 de 2 en la demo; Natalia.
+  - **Artefacto 39704832587:** trae los paquetes de staging y de producción, y su `_worker.js` es idéntico en los dos (4.390.037 bytes, la misma SHA-256). Producción recibe exactamente el código verificado en staging; sólo cambia la configuración.
+  - **Staging:** sirve `cd8e9ad`, versión `f07641c1-990d-44ef-a99f-84fdbf968392`.
+- **Comprobaciones de producción en lectura (22 de octubre):**
+  - **Realtime:** tiene particiones diarias de `realtime.messages` del 18 al 24 de octubre. El servicio las mantiene, y los avisos que emiten los disparadores tienen dónde guardarse.
+  - **Identidad:** el nombre `Juan4787/cita-suite` sigue libre (404), y `Juan4787/dashboard` (1115936156) mantiene permisos de administración.
+  - **Correo de Auth:** la configuración de SMTP no se lee por la base ni por la configuración pública. Lo comprueba el usuario en el panel, junto con la decisión del correo transaccional.
