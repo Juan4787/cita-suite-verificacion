@@ -15,13 +15,13 @@ Instructivo de la sección 5 del [plan](../plans/refactorizacion-cita-suite.md) 
 
 | Dato | Valor |
 |---|---|
-| Revisión | Snapshot `dfb487faa74b8117c46c180c70f368f77f3dbcd2`: el código de la app de `f83bbc2` más las herramientas de publicación |
-| Release | Operación `artifact` 39782403651, artefacto `cloudflare-staging-dfb487faa74b8117c46c180c70f368f77f3dbcd2` (216 archivos en el manifiesto) |
-| Paquete del Worker | `_worker.js` idéntico en staging y producción, SHA-256 `607528d8d6ee78b315ad25f4c968002b60cdb1ae5f9ca8170e3c990677ef3cb8` |
+| Revisión | Snapshot `a354a26dfebe9cf2937668465045cb568b9aa2d2`: código de ejecución conservado, verificadores reforzados y evidencia separada por perfil |
+| Release | Operación `artifact` 39896557552, artefacto `cloudflare-staging-a354a26dfebe9cf2937668465045cb568b9aa2d2` (216 archivos en el manifiesto) |
+| Paquete del Worker | `_worker.js` idéntico en staging y producción, SHA-256 `bfab1def9d0ab6d843cfc4b758e0cc53d92cb85bc7de85a81ee621712295b617` |
 | Staging | Se despliega desde ese paquete antes de su `verify:release`; 126 migraciones |
-| `verify:release` | `39783349541` de `dfb487f`, intento 2: full aprobado, fallo posterior en `artifact-browser` por dos advertencias desconocidas. Diagnóstico 39850821824 sobre `3c11ed0` con artefacto 39850442948; no certifica release. |
+| `verify:release` | 39897226356 de a354 en curso: `artifact_run=39896557552`, `rollback_run=39782403651`. El anterior 39783349541 falló; diagnóstico 39859031404 aprobado 3/3 no sustituye release. |
 | Base de producción | 97 migraciones aplicadas; quedan 29, en dos tandas (28 y 1) |
-| Versión de reversión de `app` | `9b2df65c-f89c-4940-a625-4d7b3e5858f2`, del 15 de octubre: sirve `313355a` |
+| Reversión de `app` | Antes de contracción: versión `9b2df65c-f89c-4940-a625-4d7b3e5858f2`, sirve `313355a`. Después: paquete baseline `dfb487f` de 39782403651; su versión de producción debe instalarse y registrarse en el paso 5. |
 
 Esta tabla se actualiza con cada candidata. Sólo se publica una candidata con su `verify:release` aprobado.
 
@@ -35,7 +35,7 @@ Esta tabla se actualiza con cada candidata. Sólo se publica una candidata con s
 | Programador | Worker `cita-suite-scheduler`, con los cinco cron del plan y un binding a `app` | `deploy-production-workers.mjs scheduler`, desde el código del snapshot verificado. |
 | Base | Supabase `yjzferwuzbtgpmdnzlcb`, sa-east-1 | `apply-production-migrations.mjs <respaldo>`. Exige un respaldo de producción de menos de seis horas, en el mismo estado de migraciones. |
 | Respaldo | Carpeta privada fuera del repositorio, `~/.local/share/cita-suite/backups/` | `backup-production.mjs` ([respaldo y recuperación](respaldo-y-recuperacion.md)). |
-| Natalia | `https://natalia-frutos.vercel.app`, Vercel `juanaltamiras-projects/natalia-frutos`, repositorio `juan-altamira/web-natalia` | Origen confirmado por el usuario y contrastado con GitHub el 22 de octubre. El release trae su sitio ya compilado para producción, en `.verification/natalia-production` (35 archivos): publicar esos bytes exactos, sin recompilación ni activar checkout/LMS simulados. La configuración exacta de publicación sigue por preparar y verificar. |
+| Natalia | `https://natalia-frutos.vercel.app`, Vercel `juanaltamiras-projects/natalia-frutos`, repositorio `juan-altamira/web-natalia` | Origen confirmado por el usuario y contrastado con GitHub el 22 de octubre. El release trae su sitio ya compilado para producción, en `.verification/natalia-production` (35 archivos): publicar esos bytes exactos, sin recompilación ni activar checkout/LMS simulados. La preparación reproducible y reversión están detalladas abajo; falta ejecutarla con el paquete final aprobado y verificar el despliegue. |
 
 **Staging, para verificar el release:**
 
@@ -70,19 +70,19 @@ Todas corren desde esta máquina con la configuración privada (`.env` ignorado 
 
 ## Condiciones previas
 
-Todas deben cumplirse antes del paso 1. Estado al 22 de octubre, 13:05 UTC:
+Todas deben cumplirse antes del paso 1. Estado actualizado al 23 de octubre, 03:46 UTC:
 
 | # | Condición | Estado | Evidencia |
 |---|---|---|---|
 | 1 | Workers Builds desconectado del Worker `app`. Hoy despliega cada push a `main` de `Juan4787/dashboard`, y pisaría la app publicada con el código de `main`. | **Pendiente del usuario** | Panel de Cloudflare: Workers & Pages → `app` → Settings → Builds → Disconnect. |
 | 2 | Proyecto `cita-suite` de Vercel desconectado o borrado. Es la copia vieja pausada; se construye con cada push a `main`. | **Pendiente del usuario** | Panel de Vercel. |
-| 3 | Origen de publicación de Natalia definido y procedimiento exacto preparado. | Usuario confirmó `juan-altamira/web-natalia`; Vercel `juanaltamiras-projects/natalia-frutos`. Falta preparar y verificar la publicación del sitio compilado. | `.verification/natalia-publication-source-20261022.json`; registro |
-| 4 | Release empaquetado una sola vez, sobre la revisión exacta. | Hecho para `dfb487f` | Operación `artifact` 39782403651 |
-| 5 | Ensayo de respaldo y restauración del esquema actual aprobado. | 39682517594 cubre 117 migraciones. Repetir para las 126 actuales con el arnés de propiedad/limpieza corregido. | Registro; [respaldo y recuperación](respaldo-y-recuperacion.md) |
-| 6 | Staging con el mismo release: migraciones, app, Natalia, consultorio de release y tareas observadas. | App y Natalia de `dfb487f` desplegadas (`04ef8a10…` y `b52e723b…`); tareas observadas el 22 de octubre de 12:55 a 13:00 UTC: push dos veces y calendario una, cada una en su horario | Registro; `staging-tail-6fa828d2f6af-summary.json` |
-| 7 | `verify:release` aprobado con ese release. | **Pendiente:** 39783349541 de `dfb487f` terminó fallido sobre el paquete, después de full aprobado. Se investiga antes de repetir release. | `.verification/remote-39783349541/`; registro de reanudación del 22 de octubre |
+| 3 | Origen de publicación de Natalia definido y procedimiento exacto preparado. | Usuario confirmó `juan-altamira/web-natalia`; Vercel `juanaltamiras-projects/natalia-frutos`. Preparación reproducible y reversión documentadas; falta paquete final aprobado y comprobación publicada. | `.verification/natalia-publication-source-20261022.json`; registro |
+| 4 | Release empaquetado una sola vez, sobre la revisión exacta. | Hecho para `a354a26` | Operación `artifact` 39896557552 |
+| 5 | Ensayo de respaldo y restauración del esquema actual aprobado. | 39859035283 aprobó 126/126 migraciones, conteos de tablas/archivos iguales y bucket único retirado. Ensayo anterior de volumen conservado por separado. | Registro; [respaldo y recuperación](respaldo-y-recuperacion.md) |
+| 6 | Staging con el mismo release: migraciones, app, Natalia, consultorio de release y tareas observadas. | App a354 restituida (`54a7ea04…`), 130 archivos cliente/35 Natalia iguales al release; baseline dfb realmente restaurado y probado en 39896937395; tareas observadas el 22 de octubre de 12:55 a 13:00 UTC: push dos veces y calendario una, cada una en su horario | Registro; `staging-tail-6fa828d2f6af-summary.json` |
+| 7 | `verify:release` aprobado con ese release. | **39897226356 en curso**, candidata a354, baseline y staging. Diagnóstico específico aprobado 39859031404. | `.verification/remote-39783349541/`; registro de reanudación del 22 de octubre |
 | 8 | Ensayo de la base sobre producción, con `ROLLBACK`: cero fallas y catálogo igual al de staging, salvo la deriva aceptada. | Hecho el 22 de octubre a las 06:52 UTC; se repite en el paso 2 | `production-migration-rehearsal-2026-10-22T06-52-19-008Z.json` |
-| 9 | Reversión compatible preparada y verificada para cada tanda. | **Parcial:** `313355a` es compatible después de expansión; pierde operaciones después de contracción. No aplicar la tanda 2 sin alternativa compatible verificada. | Registro y «Reversión» |
+| 9 | Reversión compatible preparada y verificada para cada tanda. | Retorno alojado 39896937395 aprobado para dfb/126 migraciones; falta suite completa `rollback-browser` del release. La versión compatible de producción se instala/registra en el paso 5 antes de permitir la tanda 2. `313355a` sólo es compatible antes de contraer. | `.verification/remote-39896937395/`; registro y «Reversión» |
 | 10 | Programador anterior detenido. | Hecho: cron-job.org 7795525 deshabilitado desde el 31 de agosto; Netlify 404 y Vercel 503 a las 12:43 UTC | `previous-scheduler-2026-10-22T12-43-14-864Z.json` |
 | 11 | Prueba de humo ensayada en staging. | Hecho: 14 comprobaciones aprobadas; su limpieza se habilita a las 15:08:57 UTC | `release-smoke-staging-run-2026-10-22T12-54-08-566Z.json` |
 | 12 | Programador sin cron y su restitución, ensayados en staging. | Hecho: versiones `6266c45a…` (sin cron) y `49636b6a…` (con los cinco) | Registro |
@@ -167,17 +167,32 @@ node scripts/production-legacy-jobs.mjs off
 - **Efecto:** las reclamaciones antiguas devuelven vacío y las entradas antiguas responden 410, la llame quien la llame. El programador nuevo no lo consulta.
 - **Reversión:** `production-legacy-jobs.mjs on`.
 
-### 5. App
+### 5. Baseline compatible y app candidata
+
+Precondiciones: release completo aprobado **incluido `rollback-browser` contra dfb/126 migraciones**, retorno nativo de staging aprobado (39896937395), tanda 1 aplicada y entradas viejas apagadas. Antes de contraer debe quedar una versión compatible realmente disponible en este Worker de producción.
 
 ```bash
-node scripts/deploy-production-workers.mjs app "$D"
+B=.verification/releases/dfb487f
+NODE_OPTIONS=--max-old-space-size=192 node scripts/deploy-production-workers.mjs app "$B"
+node scripts/verify-production-release.mjs "$B"
+NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler deployments list --name app
+```
+
+- `B` es **el paquete descargado de 39782403651**, no una recompilación. Validar su manifiesto y SHA `dfb487faa74b8117c46c180c70f368f77f3dbcd2`. Si no está descargado, usar `gh run download 39782403651 --repo Juan4787/cita-suite-verificacion --name cloudflare-staging-dfb487faa74b8117c46c180c70f368f77f3dbcd2 --dir <carpeta-nueva>` y asignarla a `B`.
+- Guardar el **Current Version ID real** del despliegue y contrastarlo con la lista, su mensaje/SHA, la revisión servida y los archivos comprobados. Registrar ese ID como `BASELINE_PRODUCTION_VERSION` en el recibo y el instructivo. No usar el ID de staging en producción ni inventar uno.
+- Si falla el baseline, detenerse antes de la contracción. `313355a` todavía sirve para volver atrás en este punto. No pasar a candidata hasta explicar el fallo.
+
+Después publicar la candidata del paquete `D`:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=192 node scripts/deploy-production-workers.mjs app "$D"
 node scripts/verify-production-release.mjs "$D"
 ```
 
 - **Esperado:**
   - el despliegue termina con `{"deployed":"app","revision":"<revisión>"}`;
   - la comprobación aprueba: revisión, archivos, CSP con sólo `https://yjzferwuzbtgpmdnzlcb.supabase.co` y su WebSocket, y la sonda anónima en 0. La tanda 1 trae `20261021020000`, que le quita a `anon` sus privilegios.
-- **Reversión:** volver a la versión anterior (ver «Reversión», punto 2).
+- **Reversión:** volver al baseline compatible registrado en este paso (ver «Reversión», punto 2). Antes de contraer también está disponible la versión 313355a; después no.
 
 ### 6. Consultorios sintéticos y prueba de humo
 
@@ -227,7 +242,7 @@ node scripts/production-device-push.mjs cleanup <corrida>
 
 ### 9. Tanda 2: contracción
 
-**Puerta pendiente:** antes de ejecutar este paso debe existir una reversión comprobada que conserve los privilegios cerrados. La versión `313355a` no cumple esta condición; conocer esa incompatibilidad no equivale a resolverla. No restaurar permisos inseguros ni improvisar una migración de emergencia para declarar este control aprobado.
+**Puerta:** release con `rollback-browser` aprobado contra dfb/126 migraciones, retorno alojado ensayado y `BASELINE_PRODUCTION_VERSION` instalado/registrado en el paso 5, con su paquete exacto conservado. Si falta cualquiera, detenerse. La versión `313355a` no conserva las operaciones con los privilegios cerrados; no restaurar permisos inseguros ni improvisar una migración de emergencia.
 
 ```bash
 node scripts/backup-production.mjs
@@ -289,7 +304,7 @@ rm ~/.config/cita-suite/production/capacity-secret
 
 **Destino comprobado el 22 de octubre:** la CLI soportada `vercel project inspect` y `vercel api /v9/projects/natalia-frutos --scope juanaltamiras-projects` confirmaron proyecto `prj_ddhAhez9VNro373XWSykLkhU5vBS`, cuenta `team_CGSlkRXKKlw98jb3O2wSmcyt`, raíz del repositorio, framework Other, comandos y output sin personalizar, GitHub `juan-altamira/web-natalia` (ID 1416254094), producción desde main. Sólo se conservaron esos campos; no se leyeron archivos de credenciales ni se volcaron variables de entorno. Recibo `.verification/vercel-natalia-project-20261022.json`.
 
-**Preparación revisable, sin publicación:** `.verification/natalia-publication-b826d5c/` contiene los 35 archivos estáticos exactos en `site/`, `vercel.json` y `publication-plan.json` con las huellas y el estado previo. Es del paquete diagnóstico `b826d5c`, **no** una autorización técnica para publicarlo: rehacerla con el release final aprobado, conservando exactamente los mismos pasos. El plan JSON no se publica.
+**Preparación revisable, sin publicación:** `.verification/natalia-publication-a354a26/` contiene los 35 archivos estáticos exactos en `site/`, `vercel.json` y `publication-plan.json` con las huellas y el estado previo. Corresponde a la candidata `a354a26`, todavía sin release aprobado. Volver a comprobar HEAD/proyecto antes de publicar y regenerar la preparación si cambia el paquete o el destino. El plan JSON no se publica.
 
 ```bash
 node scripts/prepare-natalia-publication.mjs "$D" .verification/vercel-natalia-project-20261022.json <HEAD-main-actual> <arbol-actual>
@@ -310,6 +325,8 @@ Secuencia exacta por la API de GitHub conectada, después de cumplir las puertas
 
 Con los disparadores desconectados, la revisión publicada llega a `main` y se aplica la transición de [identidad-cita-suite.md](identidad-cita-suite.md). Sólo se reconectan los disparadores revisados.
 
+El snapshot auxiliar es selectivo: **no usar su árbol como reemplazo completo de main**. Inventario del 23-oct: main `313355a` tiene 147 archivos históricos/adjuntos fuera del snapshot a354 que se conservan, y 109 eliminaciones explícitas del checkout que sí pertenecen a la campaña. Preparar mediante un índice temporal sobre el main comprobado, superponer sólo los blobs seleccionados y quitar sólo las eliminaciones revisadas; preservar los blobs restantes. Comprobar igualdad de todos los archivos activos de app, paquetes, SQL y verificadores con el snapshot probado, y que las diferencias adicionales sean sólo documentación/evidencia inactiva. Conservar el commit padre y actualizar la referencia sin force ni sobrescribir un HEAD intermedio. Nunca `git add -A`, ni cambiar/restaurar el índice del usuario. Inventario: `.verification/principal-promotion-inventory-20261023.json`; la preparación concreta debe dejar su SHA y árbol antes del push.
+
 ## Reversión
 
 1. **Detener primero el programador nuevo:**
@@ -317,7 +334,9 @@ Con los disparadores desconectados, la revisión publicada llega a `main` y se a
 2. **Volver a la versión anterior de `app`:**
    `pnpm --filter web exec wrangler rollback 9b2df65c-f89c-4940-a625-4d7b3e5858f2 --name app --message "<motivo>" --yes`. Sintaxis comprobada con `wrangler rollback --help` de la versión fijada.
    - **Después de la tanda 1:** es compatible. La versión anterior no usa nada de lo que la reconciliación retira y ya funcionaba con las 27 migraciones.
-   - **Después de la tanda 2:** **no usar este comando**: la versión anterior pierde el alta de pacientes, las prestaciones, las asignaciones, los profesionales y las excepciones. Falta preparar y verificar una versión alternativa compatible antes de permitir la contracción; restaurar escrituras directas inseguras no es una alternativa aprobada.
+   - **Después de la tanda 2:** **no usar ese comando de 313355a**: pierde el alta de pacientes, las prestaciones, las asignaciones, los profesionales y las excepciones. Usar únicamente el `BASELINE_PRODUCTION_VERSION` real registrado en el paso 5:
+     `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback <BASELINE_PRODUCTION_VERSION> --name app --message "<motivo>" --yes`.
+     Comprobar después `node scripts/verify-production-release.mjs "$B"`, los permisos y la prueba de humo. El ID de staging 04ef8a10 no vale para este destino. Si la plataforma no permite volver a esa versión, redesplegar los bytes exactos de `B` mediante `deploy-production-workers.mjs app "$B"`, comprobar la nueva versión y los recorridos; nunca reconstruir el binario ni reabrir privilegios. Este procedimiento permanece pendiente hasta pasar la prueba completa y registrar el ID de producción.
 3. **Entradas viejas:** volver a encenderlas sólo si hace falta (`production-legacy-jobs.mjs on`). El programador anterior está deshabilitado y no se reactiva sin decisión del usuario.
 4. **Base:** las migraciones no se deshacen destructivamente. Restaurar el respaldo es para un desastre, no para una reversión, porque perdería las escrituras posteriores.
 5. **Datos sintéticos:** si la publicación se interrumpe con consultorios sintéticos en producción, se quitan en este orden:
@@ -328,8 +347,8 @@ Con los disparadores desconectados, la revisión publicada llega a `main` y se a
 ## Pendiente del usuario
 
 - **Acciones pendientes del usuario antes de producción:** desconectar Workers Builds de `app` y Git del Vercel viejo `juans-projects-76d0ede4/cita-suite` (condiciones 1 y 2). La lectura de Builds por la sesión de Wrangler dio 403; evidencia `cloudflare-builds-readonly-20261022.json`. No desconectar `natalia-frutos`.
-- **Trabajo técnico independiente pendiente:** procedimiento de Natalia, release exacto aprobado y reversión compatible después de la tanda 2. El origen de Natalia ya no es una pregunta pendiente al usuario.
+- **Trabajo técnico independiente pendiente:** release exacto aprobado y reversión compatible después de la tanda 2; el procedimiento y paquete de Natalia ya están preparados, sin publicar. El origen de Natalia ya no es una pregunta pendiente al usuario.
 - **Antes de abrir a clientes reales:**
   - el plan de Supabase, con la medición del paso 11;
-  - el correo transaccional, porque el restablecimiento de contraseña necesita SMTP propio;
+  - comprobar SMTP propio y entrega de recuperación de contraseña; si falta, decidir/configurar la cuenta de correo transaccional. La configuración pública no acredita su presencia ni su ausencia;
   - el destino privado de los respaldos de datos reales.

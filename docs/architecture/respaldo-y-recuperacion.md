@@ -59,7 +59,7 @@ Además, Storage se consulta con hasta tres intentos ante una respuesta transito
 
 **Ensayo `staging-operations` 39682517594, sobre `0618b35`**, con la siembra sintética de dos consultorios. La carga quedó en 83.335 filas en 96 tablas, con 35 MB de datos.
 
-Este resultado cubre las **117 migraciones de esa corrida**. Staging tiene ahora 126; la restauración del esquema actual se repite antes del próximo release. No presentar la evidencia anterior como prueba de las migraciones posteriores.
+Este resultado cubre las **117 migraciones de esa corrida** y conserva la evidencia de volumen. El ensayo actual, descrito debajo, cubre las 126 migraciones; no se atribuyen al anterior.
 
 | Comprobación | Resultado |
 |---|---|
@@ -72,6 +72,8 @@ Este resultado cubre las **117 migraciones de esa corrida**. Staging tiene ahora
 - **Limpieza:** `capacity-cleanup` 39683097818 dejó staging sin consultorios sintéticos.
 - **Pruebas livianas:** `scripts/lib/backup-verification.test.mjs`. Cubren el conteo de filas por los bloques `COPY`, las diferencias de filas y de archivos, y la regla de roles de la plataforma.
 - **Propiedad y limpieza del recurso de prueba:** `scripts/lib/backup-storage-probe.test.mjs`: colisión que no adopta recursos ajenos, buckets distintos, subida con respuesta perdida y objeto ajeno que impide borrar el bucket. Reproducción negativa y resultado corregido en el registro; no sustituyen el ensayo de restauración real.
+
+**Esquema actual: 39859035283, fuente `48b1c20`**, aprobado el 22-oct 21:52 UTC. Recibo `.verification/backup-rehearsal-39859035283.json`, logs `.verification/remote-39859035283-logs.zip` (SHA-256 `c21fb586afcccebb394d4c3d727a6e56e28a774be3f6d6436142c50948bb92ee`). **126/126 migraciones**, conteos idénticos de 96 tablas/76 filas, política y disparador propios conservados; objeto de 2.368 bytes restaurado con huella idéntica y bucket único retirado. Dump 93,8 s, restauración 1,1 s; Auth v2.197.0/Storage v1.80.2. No se volvió a sembrar la carga ya limpiada. El código de este ensayo, sus migraciones, dependencias y workflow no cambian en `a354a26`, comprobado mediante Git. Las advertencias de privilegios de extensiones permanecen en el recibo: estos conteos no certifican igualdad íntegra del catálogo de permisos.
 
 ## Límites y decisiones pendientes
 

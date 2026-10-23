@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { createClient } from '@supabase/supabase-js';
 import { expect, test, type Locator } from '@playwright/test';
-import type { CitaDatabase } from '../src/lib/types/database';
+import { createFixtureClient } from './helpers/fixture-db';
 import { loginWithSharedSession } from './helpers/shared-auth';
 
 test.use({ timezoneId: 'America/Argentina/Buenos_Aires' });
@@ -18,9 +17,7 @@ async function fixture() {
 		new URL(api).hostname !== '127.0.0.1'
 	)
 		throw new Error('Clinical date audit requires the owned disposable environment.');
-	const admin = createClient<CitaDatabase>(api, key, {
-		auth: { persistSession: false, autoRefreshToken: false }
-	});
+	const admin = createFixtureClient(api, key);
 	const { data: owner, error: ownerError } = await admin
 		.from('business_users')
 		.select('user_id')
@@ -86,10 +83,11 @@ test('clinical creation persists the Argentina wall clock and displays the same 
 			await route.continue();
 		};
 		await page.route('**/*', holdScripts);
-		const open = page.getByRole('button', { name: '+ Registrar consulta', exact: true });
+		const patient = page.getByRole('main');
+		const open = patient.getByRole('button', { name: '+ Registrar consulta', exact: true });
 		try {
 			await page.goto(`/odonto/pacientes/${f.patientId}`, { waitUntil: 'commit' });
-			await expect(page.getByRole('heading', { name: f.fullName, exact: true })).toBeVisible();
+			await expect(patient.getByRole('heading', { name: f.fullName, exact: true })).toBeVisible();
 			await expect(open).toBeDisabled();
 		} finally {
 			releaseScripts();
