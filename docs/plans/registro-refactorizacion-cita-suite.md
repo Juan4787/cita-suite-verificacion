@@ -1866,3 +1866,40 @@ El control final se amplió más allá de existencia en disco: **también exigi�
 -La preparación final con sufijo **archived** incluye esas41 entradas inactivas adicionales: **1322 archivos principal/1176 auxiliar**. Admite sólo nueve Markdown de la candidata, el documento operativo histórico adicional, las entradas exactas del manifiesto y la única instrucción JSON auditada. Todo el código activo, SQL, paquetes, configuración y pruebas conservan blobs/modos478. Los árboles anteriores sin archivo se conservan como ensayos; no son el paquete documental final.
 
 -El control se repite con la misma exigencia de presencia en Git y destino real, recibo `.verification/document-links-archived-20261023.json`; un fallo sigue impidiendo versionar el cierre documental. La referencia preparada y el push auxiliar se registran en el recibo de entrega indicado arriba. No se ejecutaron builds, bases, navegadores ni carga en esta reparación documental.
+
+
+## Desconexiones: accesos agotados y preparación real de producción —23-oct12:43 UTC
+
+El usuario indicó «entonces avancemos en eso» y pidió «Lo que necesites me lo pedis pero de forma ultra especifica». Se intentó resolver por los accesos existentes antes de delegar acciones. Continúa la autorización de producción del17-oct; falta evidencia operativa, no otro permiso.
+
+### Destinos y límites de acceso comprobados nuevamente
+
+- **Cloudflare12:40:13 UTC:** comando soportado `node --max-old-space-size=192 apps/web/node_modules/wrangler/bin/wrangler.js auth token --json`, capturado en memoria sin imprimir ni guardar el token. Workers200 confirma cuenta52b358653379c162b5a07b10ae5e84b3 y Workerapp con tag621733096ca44e35b51cbd1995bc530c. La ruta documentada `GET /accounts/52b358653379c162b5a07b10ae5e84b3/builds/workers/621733096ca44e35b51cbd1995bc530c/triggers` devuelve **403/10000**. Cero mutaciones. Evidencia `.verification/cloudflare-disconnection-access-20261023.json`.
+- La [API oficial de borrado de triggers](https://developers.cloudflare.com/api/resources/workers_builds/subresources/triggers/methods/delete/) exige Workers CI Write. Tener acceso al Worker no acredita acceso a Builds. El [procedimiento oficial de desconexión](https://developers.cloudflare.com/workers/ci-cd/builds/#disconnecting-builds) usa Settings→Builds→Disconnect. No se intentó borrar triggers sin poder identificar/listar los correctos, no se modificó OAuth ni se le pidió al usuario que exponga claves.
+- **Vercel12:39:32 UTC:** CLI50.13.2 soportada, consultas GET v2/user, v2/teams, v9/projects por equipo y v13/deployments para el alias antiguo. Sesiónjuan-altamira; equipo disponiblejuanaltamiras-projects, contieneNatalia pero **no** el scopejuans-projects-76d0ede4 ni su proyectocita-suite. Alias viejo no accesible por esa API. Eso **no** demuestra proyecto eliminado o Git desconectado. Evidencia filtrada `.verification/vercel-disconnection-access-20261023.json`, sin campos de entorno/credenciales. No se modificó ninguno de los proyectos listados.
+- **GitHub como vía alternativa:** `gh api repos/Juan4787/dashboard/hooks` devolvió[]; no demuestra ausencia de integraciones de GitHub Apps. `gh api user/installations` devolvió403 y exige token autorizado de una GitHub App. No se removieron instalaciones ni se revocó acceso global a otros repositorios. No hay herramienta de navegador del host ni conector Cloudflare/Vercel expuesto en esta sesión; no se operó un navegador por vías alternativas.
+
+### Solicitud ultra específica enviada al usuario, pendiente
+
+1. `https://dash.cloudflare.com/52b358653379c162b5a07b10ae5e84b3/workers-and-pages`→Worker**app**→Settings→Builds; comprobar vínculoJuan4787/dashboard, Disconnect y recargar. Resultado exigido: **Connect sin repositorio vinculado**. Si aparece otro repositorio, informar antes de tocarlo.
+2. `https://vercel.com/juans-projects-76d0ede4/cita-suite/settings/git`, con la cuenta administradora de ese equipo; comprobar proyecto viejo**cita-suite**/repoJuan4787/dashboard, Connected Git Repository→Disconnect y recargar. Resultado exigido: **sin repositorio conectado**. Si falta acceso o cambió el destino, informar el estado; no desconectarNatalia. Pasos contrastados con la [documentación oficial de Vercel](https://vercel.com/docs/project-configuration/git-settings#disconnect-your-git-repository).
+
+Se solicitaron ambas respuestas en tarjetas independientes, con estados inequívocos; no se pidió captura, token ni contraseña. No inferir acción realizada por silencio ni por autorización general. Al recibir confirmación, registrar literalmente su alcance y repetir las comprobaciones accesibles; una confirmación de panel y una verificación API son evidencias distintas.
+
+### Comprobaciones independientes aprobadas antes de tocar producción
+
+Recibo `.verification/production-preflight-disconnections-20261023.json`, **12:43:27–12:43:33 UTC**, todo lectura, Nodeheap192 y guarda local de recursos (4,58GB disponibles). Índice de huellas `.verification/disconnection-preflight-index-20261023.json`.
+
+| Comprobación | Resultado |
+|---|---|
+| Paquete candidato | 478c096,216 archivos y manifiesto íntegro; WorkerSHA-256da830be716d1163dea0539f532ed64d64a3f45fa9c2dd48ed5719356d0a1e65f |
+| Paquete compatible anterior | dfb487faa74b8117c46c180c70f368f77f3dbcd2,216 archivos íntegros; WorkerSHA-256607528d8d6ee78b315ad25f4c968002b60cdb1ae5f9ca8170e3c990677ef3cb8 |
+| Fuentes seleccionadas | Runtime478 sin cambio no documental, salvo el literal JSON exacto ya auditado de prepare-natalia-publication.mjs; no build ni navegador local |
+| Secretos requeridos deapp | Nombres consultados por API, **ninguno faltante**; ningún valor extraído/guardado |
+| App realmente desplegada | deploymentd1a28f88-e466-4a22-a4ce-d8f829e9f0ca;100% versión9b2df65c-f89c-4940-a625-4d7b3e5858f2; revisión servida313355a4403e850379ace72bb4f37cd1c7952142 |
+| Base de producción | Transacción READ ONLY por la conexión validada:97 migraciones, última20261014030000,30.289.043bytes,32 objetosStorage; **cero consultorioscapacity-** |
+| Destino del próximo respaldo | /home/usuario/.local/share/cita-suite/backups,modo700,251.692.732.416bytes disponibles. Sólo metadatos de carpeta/disco; no se creó respaldo nuevo todavía |
+
+`independentChecksPassed:true` y **`productionReady:false`**: siguen faltando las dos desconexiones. La lectura de32 objetos no acredita su respaldo; el respaldo fresco y su control de objectFailures siguen en paso1, después de cumplir condiciones1/2. No hubo migración, despliegue, siembra, limpieza, backup nuevo ni cambio de Git principal/Natalia. El resto del procedimiento no se saltea: baseline real compatible antes de contraer, medición externa y puertas de CPU/capacidad/Google/push/recuperación e identidad vigentes.
+
+Versionado de esta continuación: únicamente registro/traspaso sobre la rama auxiliar documental, padre d60cb42; recibo `.verification/disconnection-docs-publication-20261023.json`. La preparación principal local incorpora la misma diferencia Markdown como descendiente de e191591; no se publica al principal y se conservan sus147 rutas/109 eliminaciones y el archivo portable de evidencia. Comprobar ese recibo antes de asumir el push auxiliar; runtime478 y CI39901784288 permanecen vinculados por separado.
