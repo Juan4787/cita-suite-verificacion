@@ -1,6 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@cita-suite/shared';
+import { createFixtureClient } from './helpers/fixture-db';
 import { randomUUID } from 'node:crypto';
 import { signInWithPassword } from './helpers/shared-auth';
 import { syntheticMasterId } from './helpers/master-identity';
@@ -34,7 +33,7 @@ test('master storage policy preserves drafts, enforces clinic scope and renders 
 	const masterEmail = process.env.MASTER_EMAIL;
 	const masterPassword = process.env.E2E_MASTER_PASSWORD;
 	if (!url || !key || !masterEmail || !masterPassword) throw new Error('Explicit synthetic storage test identities are required.');
-	const admin = createClient<Database>(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+	const admin = createFixtureClient(url, key);
 	const original = await admin.from('clinical_storage_budget').select('default_business_max_bytes,uploads_enabled').eq('singleton', true).single();
 	if (original.error || !original.data) throw new Error('Cannot preserve the original storage policy.');
 	const masterId = await syntheticMasterId(admin.auth.admin, masterEmail, masterPassword);

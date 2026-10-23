@@ -2,9 +2,8 @@ import { observeRenderHealth } from './helpers/render-health';
 import { layoutIssues, type LayoutIssue } from './helpers/layout-usability';
 import { alignTaskForCapture } from './helpers/task-capture';
 import { randomUUID } from 'node:crypto';
-import { createClient } from '@supabase/supabase-js';
+import { createFixtureClient } from './helpers/fixture-db';
 import { expect, test } from '@playwright/test';
-import type { CitaDatabase } from '../src/lib/types/database';
 import { loginWithSharedSession } from './helpers/shared-auth';
 
 test.use({ timezoneId: 'America/Argentina/Buenos_Aires' });
@@ -30,9 +29,7 @@ test('patient structure preserves role scope, keyboard access and long content a
 		new URL(api).hostname !== '127.0.0.1'
 	)
 		throw new Error('Patient UX matrix requires the owned disposable environment.');
-	const admin = createClient<CitaDatabase>(api, key, {
-		auth: { persistSession: false, autoRefreshToken: false }
-	});
+	const admin = createFixtureClient(api, key);
 	const suffix = randomUUID(),
 		slug = `e2e-patient-ux-${suffix}`;
 	const ownerEmail = `patient-ux-owner-${suffix}@example.test`;

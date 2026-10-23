@@ -15,11 +15,11 @@ Instructivo de la sección 5 del [plan](../plans/refactorizacion-cita-suite.md) 
 
 | Dato | Valor |
 |---|---|
-| Revisión | Snapshot `a354a26dfebe9cf2937668465045cb568b9aa2d2`: código de ejecución conservado, verificadores reforzados y evidencia separada por perfil |
-| Release | Operación `artifact` 39896557552, artefacto `cloudflare-staging-a354a26dfebe9cf2937668465045cb568b9aa2d2` (216 archivos en el manifiesto) |
-| Paquete del Worker | `_worker.js` idéntico en staging y producción, SHA-256 `bfab1def9d0ab6d843cfc4b758e0cc53d92cb85bc7de85a81ee621712295b617` |
+| Revisión | Snapshot `557f6ab489f7ceb307a4f36a60556ed8b3f69886`: ejecución conservada; selector clínico acotado a main y documentación actualizada |
+| Release | Operación `artifact` 39898611547, artefacto `cloudflare-staging-557f6ab489f7ceb307a4f36a60556ed8b3f69886` (216 archivos en el manifiesto) |
+| Paquete del Worker | `_worker.js` idéntico en staging y producción, SHA-256 `d329c43308b87461b1ca0d648673efc554d2f5fb8f01780cc31c899edff010d0` |
 | Staging | Se despliega desde ese paquete antes de su `verify:release`; 126 migraciones |
-| `verify:release` | 39897226356 de a354 en curso: `artifact_run=39896557552`, `rollback_run=39782403651`. El anterior 39783349541 falló; diagnóstico 39859031404 aprobado 3/3 no sustituye release. |
+| `verify:release` | 39898867324 de 557f6ab en curso: `artifact_run=39898611547`, `rollback_run=39782403651`. 39897226356 aprobó full y falló sobre el artefacto por selector clínico ambiguo; no certifica los perfiles posteriores. |
 | Base de producción | 97 migraciones aplicadas; quedan 29, en dos tandas (28 y 1) |
 | Reversión de `app` | Antes de contracción: versión `9b2df65c-f89c-4940-a625-4d7b3e5858f2`, sirve `313355a`. Después: paquete baseline `dfb487f` de 39782403651; su versión de producción debe instalarse y registrarse en el paso 5. |
 
@@ -70,17 +70,17 @@ Todas corren desde esta máquina con la configuración privada (`.env` ignorado 
 
 ## Condiciones previas
 
-Todas deben cumplirse antes del paso 1. Estado actualizado al 23 de octubre, 03:46 UTC:
+Todas deben cumplirse antes del paso 1. Estado actualizado al 23 de octubre, ~04:12 UTC:
 
 | # | Condición | Estado | Evidencia |
 |---|---|---|---|
 | 1 | Workers Builds desconectado del Worker `app`. Hoy despliega cada push a `main` de `Juan4787/dashboard`, y pisaría la app publicada con el código de `main`. | **Pendiente del usuario** | Panel de Cloudflare: Workers & Pages → `app` → Settings → Builds → Disconnect. |
 | 2 | Proyecto `cita-suite` de Vercel desconectado o borrado. Es la copia vieja pausada; se construye con cada push a `main`. | **Pendiente del usuario** | Panel de Vercel. |
 | 3 | Origen de publicación de Natalia definido y procedimiento exacto preparado. | Usuario confirmó `juan-altamira/web-natalia`; Vercel `juanaltamiras-projects/natalia-frutos`. Preparación reproducible y reversión documentadas; falta paquete final aprobado y comprobación publicada. | `.verification/natalia-publication-source-20261022.json`; registro |
-| 4 | Release empaquetado una sola vez, sobre la revisión exacta. | Hecho para `a354a26` | Operación `artifact` 39896557552 |
+| 4 | Release empaquetado una sola vez, sobre la revisión exacta. | Hecho para `557f6ab` | Operación `artifact` 39898611547 |
 | 5 | Ensayo de respaldo y restauración del esquema actual aprobado. | 39859035283 aprobó 126/126 migraciones, conteos de tablas/archivos iguales y bucket único retirado. Ensayo anterior de volumen conservado por separado. | Registro; [respaldo y recuperación](respaldo-y-recuperacion.md) |
-| 6 | Staging con el mismo release: migraciones, app, Natalia, consultorio de release y tareas observadas. | App a354 restituida (`54a7ea04…`), 130 archivos cliente/35 Natalia iguales al release; baseline dfb realmente restaurado y probado en 39896937395; tareas observadas el 22 de octubre de 12:55 a 13:00 UTC: push dos veces y calendario una, cada una en su horario | Registro; `staging-tail-6fa828d2f6af-summary.json` |
-| 7 | `verify:release` aprobado con ese release. | **39897226356 en curso**, candidata a354, baseline y staging. Diagnóstico específico aprobado 39859031404. | `.verification/remote-39783349541/`; registro de reanudación del 22 de octubre |
+| 6 | Staging con el mismo release: migraciones, app, Natalia, consultorio de release y tareas observadas. | App 557f6ab desplegada (`e4b8fb00…`), 130 archivos cliente/35 Natalia iguales al release; baseline dfb realmente restaurado y probado en 39896937395; tareas observadas el 22 de octubre de 12:55 a 13:00 UTC: push dos veces y calendario una, cada una en su horario | Registro; `staging-tail-6fa828d2f6af-summary.json` |
+| 7 | `verify:release` aprobado con ese release. | **39898867324 en curso**, candidata 557f6ab, baseline y staging. Diagnóstico específico aprobado 39859031404. | `.verification/remote-39783349541/`; registro de reanudación del 22 de octubre |
 | 8 | Ensayo de la base sobre producción, con `ROLLBACK`: cero fallas y catálogo igual al de staging, salvo la deriva aceptada. | Hecho el 22 de octubre a las 06:52 UTC; se repite en el paso 2 | `production-migration-rehearsal-2026-10-22T06-52-19-008Z.json` |
 | 9 | Reversión compatible preparada y verificada para cada tanda. | Retorno alojado 39896937395 aprobado para dfb/126 migraciones; falta suite completa `rollback-browser` del release. La versión compatible de producción se instala/registra en el paso 5 antes de permitir la tanda 2. `313355a` sólo es compatible antes de contraer. | `.verification/remote-39896937395/`; registro y «Reversión» |
 | 10 | Programador anterior detenido. | Hecho: cron-job.org 7795525 deshabilitado desde el 31 de agosto; Netlify 404 y Vercel 503 a las 12:43 UTC | `previous-scheduler-2026-10-22T12-43-14-864Z.json` |
@@ -304,7 +304,7 @@ rm ~/.config/cita-suite/production/capacity-secret
 
 **Destino comprobado el 22 de octubre:** la CLI soportada `vercel project inspect` y `vercel api /v9/projects/natalia-frutos --scope juanaltamiras-projects` confirmaron proyecto `prj_ddhAhez9VNro373XWSykLkhU5vBS`, cuenta `team_CGSlkRXKKlw98jb3O2wSmcyt`, raíz del repositorio, framework Other, comandos y output sin personalizar, GitHub `juan-altamira/web-natalia` (ID 1416254094), producción desde main. Sólo se conservaron esos campos; no se leyeron archivos de credenciales ni se volcaron variables de entorno. Recibo `.verification/vercel-natalia-project-20261022.json`.
 
-**Preparación revisable, sin publicación:** `.verification/natalia-publication-a354a26/` contiene los 35 archivos estáticos exactos en `site/`, `vercel.json` y `publication-plan.json` con las huellas y el estado previo. Corresponde a la candidata `a354a26`, todavía sin release aprobado. Volver a comprobar HEAD/proyecto antes de publicar y regenerar la preparación si cambia el paquete o el destino. El plan JSON no se publica.
+**Preparación revisable, sin publicación:** `.verification/natalia-publication-557f6ab/` contiene los 35 archivos estáticos exactos en `site/`, `vercel.json` y `publication-plan.json` con las huellas y el estado previo. Corresponde a la candidata `557f6ab`, todavía sin release aprobado. Volver a comprobar HEAD/proyecto antes de publicar y regenerar la preparación si cambia el paquete o el destino. El plan JSON no se publica.
 
 ```bash
 node scripts/prepare-natalia-publication.mjs "$D" .verification/vercel-natalia-project-20261022.json <HEAD-main-actual> <arbol-actual>

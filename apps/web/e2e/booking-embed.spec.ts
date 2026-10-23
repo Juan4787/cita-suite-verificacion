@@ -4,6 +4,7 @@ import { alignTaskForCapture } from './helpers/task-capture';
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
+import { createFixtureClient } from './helpers/fixture-db';
 import type { CitaDatabase } from '../src/lib/types/database';
 import { randomUUID } from 'node:crypto';
 import { clinicalPdfFixture } from './helpers/clinical-pdf';
@@ -22,9 +23,7 @@ test.describe('isolated booking integration', () => {
 		test.setTimeout(120_000);
 		for (const origin of [fixture.appOrigin, fixture.apiOrigin, fixture.hostOrigin])
 			expect(new URL(origin).hostname).toBe('127.0.0.1');
-		const db = createClient<CitaDatabase>(fixture.apiOrigin, fixture.service, {
-			auth: { persistSession: false, autoRefreshToken: false }
-		});
+		const db = createFixtureClient(fixture.apiOrigin, fixture.service);
 		const desktop = await browser.newContext({ viewport: { width: 1280, height: 900 } });
 		const page = await desktop.newPage();
 		const exceptions: string[] = [];
@@ -494,9 +493,7 @@ test.describe('isolated booking integration', () => {
 		test.setTimeout(120_000);
 		for (const origin of [fixture.appOrigin, fixture.apiOrigin])
 			expect(new URL(origin).hostname).toBe('127.0.0.1');
-		const db = createClient<CitaDatabase>(fixture.apiOrigin, fixture.service, {
-			auth: { persistSession: false, autoRefreshToken: false }
-		});
+		const db = createFixtureClient(fixture.apiOrigin, fixture.service);
 		const business = await db
 			.from('businesses')
 			.select('timezone,max_booking_days_ahead')
@@ -837,9 +834,7 @@ test.describe('isolated booking integration', () => {
 	}, testInfo) => {
 		test.setTimeout(240_000);
 		expect(new URL(fixture.apiOrigin).hostname).toBe('127.0.0.1');
-		const db = createClient<CitaDatabase>(fixture.apiOrigin, fixture.service, {
-			auth: { persistSession: false, autoRefreshToken: false }
-		});
+		const db = createFixtureClient(fixture.apiOrigin, fixture.service);
 		const suffix = randomUUID(),
 			professionalId = randomUUID();
 		const professionalName = 'Profesional sintético ' + 'NombreExtenso'.repeat(8);
