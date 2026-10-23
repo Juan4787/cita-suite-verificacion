@@ -6,8 +6,9 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadBuildArtifact } from './lib/staging-deploy.mjs';
 import {
-	PRODUCTION_APP_ORIGIN, PRODUCTION_APP_WORKER, assertProductionAppConfig, assertProductionSchedulerConfig, missingSecrets
+	PRODUCTION_APP_ORIGIN, PRODUCTION_APP_WORKER, assertProductionAppConfig, assertProductionSchedulerConfig, assertProductionSchedulerAuthentication, missingSecrets
 } from './lib/production-deploy.mjs';
+import { productionEnvironment, productionPsql } from './lib/production-database.mjs';
 
 // Deploys the production Workers. The app is the bundle the staging workflow built with the
 // production configuration (.verification/cloudflare-bundle-production), uploaded as built:
@@ -76,6 +77,13 @@ if (target === 'app') {
 		.map(([, key, value]) => [key, value.replace(/^["']|["']$/g, '')]));
 	const secret = env.INTERNAL_JOB_SECRET ?? '';
 	if (secret.length < 32 || /\s/.test(secret)) throw new Error('The production job secret is missing or malformed. Nothing was deployed.');
+	if (target === 'scheduler') {
+		const { database } = productionEnvironment(root);
+		const legacy = productionPsql(database, 'begin transaction read only; select public.legacy_job_entrypoints_enabled(); commit;',
+			{ application: 'cita_suite_scheduler_authentication_preflight' }).trim();
+		const proof = await assertProductionSchedulerAuthentication({ secret, legacyEnabled: legacy === 'f' ? false : legacy === 't' ? true : null });
+		console.log(JSON.stringify({ schedulerAuthenticationPreflight: proof }));
+	}
 	// Without crons, the same Worker and binding stay deployed and no event starts a job.
 	const config = target === 'scheduler-without-crons'
 		? { ...scheduler, main: join(root, 'apps/scheduler', scheduler.main), triggers: { crons: [] } }

@@ -60,6 +60,21 @@ test('every app request is measured by route template, without identifiers, keys
 	assert.equal(requestMeasurement({ event: { cron: '*/5 * * * *' } }), null);
 });
 
+test('management tokens are redacted by their route even when they contain no digits', () => {
+	for (const token of ['a'.repeat(64), 'f'.repeat(64), 'AbCdEf'.repeat(8)]) {
+		for (const suffix of ['', '/push']) {
+			const event = jobEvent(`/turno/${token}${suffix}`);
+			const measurement = requestMeasurement(event);
+			assert.equal(measurement.route, `/turno/:token${suffix}`);
+			assert.equal(JSON.stringify(measurement).includes(token), false);
+			// The nested management page exists; its /push child does not. Unknown
+			// routes must discard the entire path rather than invent an endpoint.
+			assert.equal(routeTemplate(`/embed/v1/${'a'.repeat(32)}/turno/${token}${suffix}`), suffix ? '/:unmatched' : '/embed/v1/:key/turno/:token');
+		}
+	}
+	assert.equal(routeTemplate('/internal/jobs/reconcile-mercadopago'), '/internal/jobs/reconcile-mercadopago');
+});
+
 test('the request summary groups outcomes, statuses and CPU per method and route', () => {
 	const at = (path, outcome, status, cpu) => {
 		const event = jobEvent(path, { outcome, cpuTime: cpu });
@@ -73,4 +88,30 @@ test('the request summary groups outcomes, statuses and CPU per method and route
 	assert.deepEqual(summary.routes['GET /odonto/agenda/__data.json'], { requests: 3, outcomes: { ok: 2, exceededCpu: 1 }, statuses: { 200: 2, 503: 1 },
 		cpuMs: { p50: 4, p99: 14, max: 14 }, wallMs: { p50: 1200, p99: 1200, max: 1200 } });
 	assert.deepEqual(Object.keys(summary.routes), ['GET /odonto/agenda/__data.json', 'GET /reservar/:id/__data.json']);
+});
+
+test('unknown paths and every code-declared dynamic parameter stay private, including short names', () => {
+ for (const path of ['/PRIVATE_PATIENT_NAME/copy-secret', '/r/PRIVATE_PATIENT_NAME', '/confirmar/PRIVATE_PATIENT_NAME',
+  '/cancelar/PRIVATE_PATIENT_NAME', '/reprogramar/PRIVATE_PATIENT_NAME', '/reservar/PRIVATE_PATIENT_NAME',
+  '/odonto/pacientes/PRIVATE_PATIENT_NAME/historial', '/api/public/reservas/PRIVATE_PATIENT_NAME/catalogo']) {
+  const result=requestMeasurement(jobEvent(path));
+  assert.doesNotMatch(JSON.stringify(result), /PRIVATE|copy-secret/);
+ }
+ assert.equal(routeTemplate('/does-not-exist'), '/:unmatched');
+ assert.equal(routeTemplate('/odonto/pacientes/papelera'), '/odonto/pacientes/papelera');
+ assert.equal(routeTemplate('/odonto/pacientes/PRIVATE_PATIENT_NAME/__data.json'), '/odonto/pacientes/:id/__data.json');
+ assert.equal(routeTemplate('/internal/jobs/push'), '/internal/jobs/push');
+ assert.equal(routeTemplate('/internal/jobs/UNKNOWN_PRIVATE_KIND'), '/internal/jobs/:kind');
+ assert.equal(routeTemplate('/_app/immutable/chunks/PRIVATE_SECRET.js'), '/_app/immutable/:asset');
+});
+
+test('job records discard new primitive data fields and unrecognized exception names without changing the observed category', () => {
+ const event=jobEvent('/internal/jobs/push');
+ event.logs[1].message[1]={kind:'calendar',ok:false,profile:'free',scheduledFor:'2026-10-23T14:20:00.000Z',usedCalls:3,databaseRequests:2,providerRequests:0,elapsedMs:500,patient:'PRIVATE_PATIENT_NAME',patientId:123,token:'PRIVATE_TOKEN',configured:true};
+ event.exceptions=[{name:'PRIVATE_PATIENT_NAME'}];
+ const m=jobMeasurement(event);
+ assert.equal(m.path,'/internal/jobs/push');assert.equal(m.job.kind,'calendar');assert.equal(m.job.ok,false);
+ assert.equal(m.job.usedCalls,3);assert.equal(m.job.databaseRequests,2);assert.equal(m.job.providerRequests,0);assert.equal(m.job.configured,true);
+ assert.equal(m.job.scheduledFor,'2026-10-23T14:20:00.000Z');assert.deepEqual(m.exceptions,['OtherError']);
+ assert.equal(Object.hasOwn(m.job,'patientId'),false);assert.doesNotMatch(JSON.stringify(m),/PRIVATE/);
 });
