@@ -1,0 +1,234 @@
+{
+  "source_commit": "313355a4403e850379ace72bb4f37cd1c7952142",
+  "checked_at": "2026-10-15T06:44:47.674605+00:00",
+  "method": "Tracked source only. Line and regex counts are structural indicators, not runtime calls, complexity or test coverage. No tests or load tests were run in this audit.",
+  "areas": [
+    {
+      "path": "apps/web/src/",
+      "files": 456,
+      "lines": 84607,
+      "test_files": 149,
+      "test_lines": 24634
+    },
+    {
+      "path": "apps/natalia/src/",
+      "files": 33,
+      "lines": 3238,
+      "test_files": 0,
+      "test_lines": 0
+    },
+    {
+      "path": "packages/shared/src/",
+      "files": 7,
+      "lines": 5920,
+      "test_files": 0,
+      "test_lines": 0
+    },
+    {
+      "path": "supabase/migrations/",
+      "files": 97,
+      "lines": 23931,
+      "test_files": 0,
+      "test_lines": 0
+    }
+  ],
+  "web_production": {
+    "files": 307,
+    "lines": 59973,
+    "over_500_lines": 35,
+    "over_1000_lines": 14
+  },
+  "route_database_access": {
+    "files": 47,
+    "from_sites": 181,
+    "rpc_sites": 43
+  },
+  "explicit_any_sites": 206,
+  "largest_production_files": [
+    {
+      "path": "apps/natalia/src/styles/public.css",
+      "lines": 2070,
+      "test": false,
+      "generated": false,
+      "any_sites": 0,
+      "from_sites": 0,
+      "rpc_sites": 0
+    },
+    {
+      "path": "apps/web/src/routes/odonto/profesionales/[professionalId]/+page.svelte",
+      "lines": 1669,
+      "test": false,
+      "generated": false,
+      "any_sites": 4,
+      "from_sites": 0,
+      "rpc_sites": 0
+    },
+    {
+      "path": "apps/web/src/routes/turno/[token]/+page.svelte",
+      "lines": 1641,
+      "test": false,
+      "generated": false,
+      "any_sites": 1,
+      "from_sites": 1,
+      "rpc_sites": 0
+    },
+    {
+      "path": "apps/web/src/routes/odonto/pacientes/[id]/+page.svelte",
+      "lines": 1630,
+      "test": false,
+      "generated": false,
+      "any_sites": 13,
+      "from_sites": 0,
+      "rpc_sites": 0
+    },
+    {
+      "path": "supabase/migrations/20260827220000_patient_data_exports.sql",
+      "lines": 1506,
+      "test": false,
+      "generated": false,
+      "any_sites": 0,
+      "from_sites": 0,
+      "rpc_sites": 0
+    },
+    {
+      "path": "apps/web/src/lib/components/agenda/ManualAppointmentWizard.svelte",
+      "lines": 1383,
+      "test": false,
+      "generated": false,
+      "any_sites": 0,
+      "from_sites": 1,
+      "rpc_sites": 0
+    },
+    {
+      "path": "supabase/migrations/20260820020000_supabase_clinical_files_phase1.sql",
+      "lines": 1362,
+      "test": false,
+      "generated": false,
+      "any_sites": 0,
+      "from_sites": 0,
+      "rpc_sites": 0
+    },
+    {
+      "path": "apps/web/src/routes/odonto/pacientes/[id]/+page.server.ts",
+      "lines": 1321,
+      "test": false,
+      "generated": false,
+      "any_sites": 21,
+      "from_sites": 13,
+      "rpc_sites": 5
+    },
+    {
+      "path": "apps/web/src/routes/odonto/+layout.svelte",
+      "lines": 1275,
+      "test": false,
+      "generated": false,
+      "any_sites": 2,
+      "from_sites": 0,
+      "rpc_sites": 0
+    },
+    {
+      "path": "apps/web/src/lib/server/public-booking.ts",
+      "lines": 1273,
+      "test": false,
+      "generated": false,
+      "any_sites": 14,
+      "from_sites": 19,
+      "rpc_sites": 1
+    },
+    {
+      "path": "apps/web/src/routes/odonto/configuracion/usuarios/+page.svelte",
+      "lines": 1266,
+      "test": false,
+      "generated": false,
+      "any_sites": 2,
+      "from_sites": 0,
+      "rpc_sites": 0
+    },
+    {
+      "path": "apps/web/src/routes/odonto/maestro/+page.svelte",
+      "lines": 1256,
+      "test": false,
+      "generated": false,
+      "any_sites": 1,
+      "from_sites": 1,
+      "rpc_sites": 0
+    },
+    {
+      "path": "apps/web/src/lib/server/mercadopago.ts",
+      "lines": 1171,
+      "test": false,
+      "generated": false,
+      "any_sites": 0,
+      "from_sites": 10,
+      "rpc_sites": 1
+    },
+    {
+      "path": "apps/web/src/lib/server/messaging.ts",
+      "lines": 1140,
+      "test": false,
+      "generated": false,
+      "any_sites": 5,
+      "from_sites": 34,
+      "rpc_sites": 1
+    },
+    {
+      "path": "apps/web/src/routes/odonto/configuracion/usuarios/+page.server.ts",
+      "lines": 1067,
+      "test": false,
+      "generated": false,
+      "any_sites": 4,
+      "from_sites": 22,
+      "rpc_sites": 4
+    },
+    {
+      "path": "supabase/migrations/20260823010000_decouple_patient_phone_identity.sql",
+      "lines": 1067,
+      "test": false,
+      "generated": false,
+      "any_sites": 0,
+      "from_sites": 0,
+      "rpc_sites": 0
+    },
+    {
+      "path": "apps/web/src/lib/booking/PublicBookingFlow.svelte",
+      "lines": 1010,
+      "test": false,
+      "generated": false,
+      "any_sites": 3,
+      "from_sites": 0,
+      "rpc_sites": 0
+    },
+    {
+      "path": "apps/web/src/lib/server/google-calendar.ts",
+      "lines": 1003,
+      "test": false,
+      "generated": false,
+      "any_sites": 3,
+      "from_sites": 14,
+      "rpc_sites": 8
+    },
+    {
+      "path": "supabase/migrations/20260724120000_joint_appointments_and_flexible_breaks.sql",
+      "lines": 985,
+      "test": false,
+      "generated": false,
+      "any_sites": 0,
+      "from_sites": 0,
+      "rpc_sites": 0
+    },
+    {
+      "path": "apps/web/src/app.css",
+      "lines": 980,
+      "test": false,
+      "generated": false,
+      "any_sites": 0,
+      "from_sites": 0,
+      "rpc_sites": 0
+    }
+  ],
+  "limitations": [
+    "No production state, load, provider limits or external CI/scheduler configuration was verified.",
+    "No numeric tenant capacity or free-tier cost guarantee is inferred.",
+    "Availability truncation is a conditional static risk in the alternative table-read path, not a reproduced production incident."
+  ]
+}

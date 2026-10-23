@@ -1,0 +1,1319 @@
+{
+  "config": {
+    "configFile": "/home/runner/work/cita-suite-verificacion/cita-suite-verificacion/apps/web/playwright.config.ts",
+    "rootDir": "/home/runner/work/cita-suite-verificacion/cita-suite-verificacion/apps/web/e2e",
+    "forbidOnly": true,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 1,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/Juan4787/cita-suite-verificacion/commit/c0129e492051a38d5b8025158fb996a81da0e871",
+        "commitHash": "c0129e492051a38d5b8025158fb996a81da0e871",
+        "buildHref": "https://github.com/Juan4787/cita-suite-verificacion/actions/runs/39090572628"
+      },
+      "gitCommit": {
+        "shortHash": "c0129e4",
+        "hash": "c0129e492051a38d5b8025158fb996a81da0e871",
+        "subject": "Isolated verification snapshot from 80268e2a501198243996e1bdb0048ce066434727",
+        "body": "Isolated verification snapshot from 80268e2a501198243996e1bdb0048ce066434727\n",
+        "author": {
+          "name": "Juan Altamira",
+          "email": "juanpabloaltamira@protonmail.com",
+          "time": 1792290854000
+        },
+        "committer": {
+          "name": "Juan Altamira",
+          "email": "juanpabloaltamira@protonmail.com",
+          "time": 1792290854000
+        },
+        "branch": "refactor/maintainability-20261015"
+      },
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/runner/work/cita-suite-verificacion/cita-suite-verificacion/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser-artifacts",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/Juan4787/cita-suite-verificacion/commit/c0129e492051a38d5b8025158fb996a81da0e871",
+            "commitHash": "c0129e492051a38d5b8025158fb996a81da0e871",
+            "buildHref": "https://github.com/Juan4787/cita-suite-verificacion/actions/runs/39090572628"
+          },
+          "gitCommit": {
+            "shortHash": "c0129e4",
+            "hash": "c0129e492051a38d5b8025158fb996a81da0e871",
+            "subject": "Isolated verification snapshot from 80268e2a501198243996e1bdb0048ce066434727",
+            "body": "Isolated verification snapshot from 80268e2a501198243996e1bdb0048ce066434727\n",
+            "author": {
+              "name": "Juan Altamira",
+              "email": "juanpabloaltamira@protonmail.com",
+              "time": 1792290854000
+            },
+            "committer": {
+              "name": "Juan Altamira",
+              "email": "juanpabloaltamira@protonmail.com",
+              "time": 1792290854000
+            },
+            "branch": "refactor/maintainability-20261015"
+          },
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/home/runner/work/cita-suite-verificacion/cita-suite-verificacion/apps/web/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "line"
+      ],
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.60.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "account-assistance.spec.ts",
+      "file": "account-assistance.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Ayuda para configurar",
+          "file": "account-assistance.spec.ts",
+          "line": 243,
+          "column": 6,
+          "specs": [
+            {
+              "title": "el dueño activa ayuda, el equipo configura datos operativos y luego pierde acceso al revocar",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 9174,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:39:44.153Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8c447d8645537aead991-c47b2e130150ea516613",
+              "file": "account-assistance.spec.ts",
+              "line": 264,
+              "column": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "booking-embed.spec.ts",
+      "file": "booking-embed.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "isolated booking integration",
+          "file": "booking-embed.spec.ts",
+          "line": 12,
+          "column": 6,
+          "specs": [
+            {
+              "title": "recovers a committed booking after a lost response and shares policy with the native page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 11850,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:39:54.255Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "6bcb979650ca008d0295-d38daffb092185781ce9",
+              "file": "booking-embed.spec.ts",
+              "line": 15,
+              "column": 3
+            },
+            {
+              "title": "pages real dates after an empty window in shared and Natalia booking, with keyboard and mobile layout",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5319,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:40:06.120Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "6bcb979650ca008d0295-acd48d5a0086beb533f5",
+              "file": "booking-embed.spec.ts",
+              "line": 223,
+              "column": 3
+            },
+            {
+              "title": "internal calendar requests only the visible week and exposes malformed responses with a working recovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2562,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:40:11.449Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "6bcb979650ca008d0295-6323e3b006535519e142",
+              "file": "booking-embed.spec.ts",
+              "line": 303,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "clinical-files.spec.ts",
+      "file": "clinical-files.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Archivos clínicos privados",
+          "file": "clinical-files.spec.ts",
+          "line": 349,
+          "column": 6,
+          "specs": [
+            {
+              "title": "carga un PDF real, lo guarda en la ficha y descarga los mismos bytes con el nombre del paciente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2472,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:40:14.046Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "6866f723190ffbe6f6a1-a736bc2bccf8ec903c17",
+              "file": "clinical-files.spec.ts",
+              "line": 369,
+              "column": 2
+            },
+            {
+              "title": "el dueño carga una imagen privada y la consulta en escritorio y móvil",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4222,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:40:16.533Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "6866f723190ffbe6f6a1-32962466928b6552a239",
+              "file": "clinical-files.spec.ts",
+              "line": 394,
+              "column": 2
+            },
+            {
+              "title": "el profesional vinculado ve el estudio y su aporte aparece para el dueño",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4298,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:40:20.772Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "6866f723190ffbe6f6a1-6ea6e965c4b4c766295f",
+              "file": "clinical-files.spec.ts",
+              "line": 508,
+              "column": 2
+            },
+            {
+              "title": "la papelera conserva lectura restringida y restaura el archivo y su auditoría",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8667,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:40:25.085Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "6866f723190ffbe6f6a1-c988b864de3cd87fc5de",
+              "file": "clinical-files.spec.ts",
+              "line": 555,
+              "column": 2
+            },
+            {
+              "title": "la lista pagina y busca globalmente, conserva contexto y recepción no descubre documentos ni historia clínica",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5890,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:40:33.767Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "6866f723190ffbe6f6a1-09fa4dfbfcee7c2b46b7",
+              "file": "clinical-files.spec.ts",
+              "line": 697,
+              "column": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "clinical-storage-policy.spec.ts",
+      "file": "clinical-storage-policy.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "master storage policy preserves drafts, enforces clinic scope and renders desktop/mobile",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7324,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T02:40:39.688Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "8921a76ffddd15171035-a72d17709b3479736be8",
+          "file": "clinical-storage-policy.spec.ts",
+          "line": 30,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "commercial-lock.spec.ts",
+      "file": "commercial-lock.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Acceso comercial bloqueado",
+          "file": "commercial-lock.spec.ts",
+          "line": 134,
+          "column": 6,
+          "specs": [
+            {
+              "title": "muestra la pantalla universal y el CTA inicia Mercado Pago sin página intermedia",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 901,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:40:47.038Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d9922df649ec84ea2e60-31434542dc9f91ed470e",
+              "file": "commercial-lock.spec.ts",
+              "line": 161,
+              "column": 2
+            },
+            {
+              "title": "en mobile mantiene salida disponible desde la pantalla de activación",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1009,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:40:48.076Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d9922df649ec84ea2e60-e68a1e77da9f5686720b",
+              "file": "commercial-lock.spec.ts",
+              "line": 175,
+              "column": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "login-register-ux.spec.ts",
+      "file": "login-register-ux.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Login/registro - UX",
+          "file": "login-register-ux.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "mantiene crear cuenta y los campos al errar confirmación de contraseña",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1379,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:40:49.151Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cb570758fbf5dc3efa3a-174e1161c773d613f53d",
+              "file": "login-register-ux.spec.ts",
+              "line": 4,
+              "column": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "mobile-navigation-ux.spec.ts",
+      "file": "mobile-navigation-ux.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Odontología mobile - navegación",
+          "file": "mobile-navigation-ux.spec.ts",
+          "line": 7,
+          "column": 6,
+          "specs": [
+            {
+              "title": "menú vertical muestra opciones y cerrar sesión sin rotar el teléfono",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1785,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:40:50.550Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "50ee27d68d0489d8f215-01b5ab6d9b2751920d1d",
+              "file": "mobile-navigation-ux.spec.ts",
+              "line": 21,
+              "column": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "odonto.full.spec.ts",
+      "file": "odonto.full.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Dental Suite - flujo operativo completo",
+          "file": "odonto.full.spec.ts",
+          "line": 285,
+          "column": 6,
+          "specs": [
+            {
+              "title": "profesional, servicio, disponibilidad, reserva pública, agenda y protección contra solapamiento",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4652,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:40:52.365Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b9093b9c326e672640ed-76bfee3d5e8d1ecb6753",
+              "file": "odonto.full.spec.ts",
+              "line": 295,
+              "column": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "odonto.smoke.spec.ts",
+      "file": "odonto.smoke.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Odontologia - flujo base",
+          "file": "odonto.smoke.spec.ts",
+          "line": 7,
+          "column": 6,
+          "specs": [
+            {
+              "title": "login y navegación principal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2669,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:40:57.195Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "26a3165e27a6cb8e904e-bc47bd01b735d09740c1",
+              "file": "odonto.smoke.spec.ts",
+              "line": 13,
+              "column": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "patients-appointments-ux.spec.ts",
+      "file": "patients-appointments-ux.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Pacientes, próximos turnos y teléfono — UX integrada",
+          "file": "patients-appointments-ux.spec.ts",
+          "line": 326,
+          "column": 6,
+          "specs": [
+            {
+              "title": "la lista responde al primer carácter, mantiene simetría y abre toda la fila",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1910,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:40:59.896Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3699be802582eb8f29a9-4c01195a7527a1eb83ab",
+              "file": "patients-appointments-ux.spec.ts",
+              "line": 350,
+              "column": 2
+            },
+            {
+              "title": "corrige un número inválido sin salir del formulario y conserva el turno",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3297,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:41:02.067Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3699be802582eb8f29a9-6a10f7fd91de1e4042ab",
+              "file": "patients-appointments-ux.spec.ts",
+              "line": 421,
+              "column": 2
+            },
+            {
+              "title": "muestra las fichas que comparten teléfono y conserva el ID elegido",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3039,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:41:05.376Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3699be802582eb8f29a9-62ee01640d7578bff646",
+              "file": "patients-appointments-ux.spec.ts",
+              "line": 500,
+              "column": 2
+            },
+            {
+              "title": "confirmar sin teléfono registra la decisión y no vuelve a molestar",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3077,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:41:08.428Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3699be802582eb8f29a9-35f7b6098e0f56ffea31",
+              "file": "patients-appointments-ux.spec.ts",
+              "line": 544,
+              "column": 2
+            },
+            {
+              "title": "confirmar con un teléfono inválido lo conserva como no utilizable y cierra el aviso",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2934,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:41:11.517Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3699be802582eb8f29a9-e0b7f10b9c65221a60ec",
+              "file": "patients-appointments-ux.spec.ts",
+              "line": 589,
+              "column": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "patients-real-ux-audit.spec.ts",
+      "file": "patients-real-ux-audit.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Auditoría UX sobre la cuenta de prueba real",
+          "file": "patients-real-ux-audit.spec.ts",
+          "line": 30,
+          "column": 6,
+          "specs": [
+            {
+              "title": "búsqueda inmediata, layout desktop/mobile y navegación por toda la fila",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1889,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "real_patient_search_local_render_ms=70\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:41:14.516Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "patient-search-latency",
+                          "contentType": "application/json",
+                          "body": "eyJsb2NhbFJlbmRlck1zIjo3MH0="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "872f3d1e1a975d3c9492-3010986164633b3e6040",
+              "file": "patients-real-ux-audit.spec.ts",
+              "line": 36,
+              "column": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "roles-agenda-regression.spec.ts",
+      "file": "roles-agenda-regression.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "roles, profesionales y agenda - regresiones críticas",
+          "file": "roles-agenda-regression.spec.ts",
+          "line": 362,
+          "column": 6,
+          "specs": [
+            {
+              "title": "crea rol profesional pendiente sin duplicar perfiles y mantiene agenda coherente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8922,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:41:16.433Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3727aeadad41be4dd16d-882e9821381f9abd242d",
+              "file": "roles-agenda-regression.spec.ts",
+              "line": 377,
+              "column": 2
+            },
+            {
+              "title": "vincula un administrador pendiente a su perfil y conserva libertad para configurarlo",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5805,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:41:25.601Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3727aeadad41be4dd16d-f2b0ecf74cc4a413deb6",
+              "file": "roles-agenda-regression.spec.ts",
+              "line": 782,
+              "column": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "seguimientos.spec.ts",
+      "file": "seguimientos.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Seguimientos — cobertura E2E",
+          "file": "seguimientos.spec.ts",
+          "line": 107,
+          "column": 6,
+          "specs": [
+            {
+              "title": "la sección Seguimientos está en el menú y renderiza",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 263,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:41:31.485Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "573ef8842ab5302e2263-6ce848176468b015c326",
+              "file": "seguimientos.spec.ts",
+              "line": 128,
+              "column": 2
+            },
+            {
+              "title": "el formulario NO se cierra al clickear afuera y SÍ con la X",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 323,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:41:32.052Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "573ef8842ab5302e2263-96a18671bb39e64134a9",
+              "file": "seguimientos.spec.ts",
+              "line": 139,
+              "column": 2
+            },
+            {
+              "title": "validación: \"Continuar\" deshabilitado sin fecha; búsqueda de paciente responde",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 559,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:41:32.393Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "573ef8842ab5302e2263-3054470c3e50ac9a06c1",
+              "file": "seguimientos.spec.ts",
+              "line": 158,
+              "column": 2
+            },
+            {
+              "title": "crear seguimiento futuro → aparece en programados → editar → limpiar",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1184,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:41:32.966Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "573ef8842ab5302e2263-52a57448885e896acaf2",
+              "file": "seguimientos.spec.ts",
+              "line": 184,
+              "column": 2
+            },
+            {
+              "title": "la página de Recordatorios importantes renderiza",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 104,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:41:34.165Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "573ef8842ab5302e2263-2939e650498b67da35eb",
+              "file": "seguimientos.spec.ts",
+              "line": 242,
+              "column": 2
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-18T02:39:42.564Z",
+    "duration": 111950.21,
+    "expected": 29,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

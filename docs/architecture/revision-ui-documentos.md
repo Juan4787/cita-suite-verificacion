@@ -2,11 +2,11 @@
 
 Fecha: 17 de octubre de 2026. Extensión de la etapa 3 de la campaña de refactorización.
 
-La extensión mantiene el sistema establecido de Cita Suite y su modo **Operate**: administrar límites, comprender el espacio disponible y distinguir nuevas cargas de lectura histórica. El [dictamen del revisor](../../.impeccable/review/storage-quotas-20261017/verdict-round-1.md) es **ship para las tres correcciones enumeradas, 3/3 resolved**. No constituye una auditoría completa de la interfaz ni el cierre de la campaña.
+La extensión mantiene el sistema establecido de Cita Suite y su modo **Operate**: administrar límites, comprender el espacio disponible y distinguir nuevas cargas de lectura histórica. El [dictamen del revisor](../archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/verdict-round-1.md) es **ship para las tres correcciones enumeradas, 3/3 resolved**. No constituye una auditoría completa de la interfaz ni el cierre de la campaña.
 
 ## Autoridad y alcance
 
-Se contrastaron [PRODUCT.md](../../apps/web/PRODUCT.md), [DESIGN.md](../../apps/web/DESIGN.md), su [sidecar](../../apps/web/.impeccable/design.json), la [dirección de esta extensión](../../.verification/stage3-storage-ui-direction.md), código, seis capturas y los recibos recuperados de CI. Es una incorporación ordinaria al sistema existente, sin nueva identidad, paleta, familia tipográfica ni tokens.
+Se contrastaron [PRODUCT.md](../../apps/web/PRODUCT.md), [DESIGN.md](../../apps/web/DESIGN.md), su [sidecar](../../apps/web/.impeccable/design.json), la [dirección de esta extensión](../archive/campaign-evidence-20261023/.verification/stage3-storage-ui-direction.md), código, seis capturas y los recibos recuperados de CI. Es una incorporación ordinaria al sistema existente, sin nueva identidad, paleta, familia tipográfica ni tokens.
 
 El alcance comprende:
 
@@ -43,7 +43,7 @@ La interfaz conserva las distinciones del [contrato de documentos](contabilidad-
 
 ## Tres correcciones revisadas
 
-La [revisión inicial](../../.impeccable/review/storage-quotas-20261017/review-round-1.md) pidió un lote acotado. El mismo revisor puntuó su resolución tras las recapturas:
+La [revisión inicial](../archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/review-round-1.md) pidió un lote acotado. El mismo revisor puntuó su resolución tras las recapturas:
 
 | Hallazgo | Resultado implementado y evidencia |
 |---|---|
@@ -55,30 +55,30 @@ El dictamen no deja puntos parciales o sin resolver en **esa lista**. No amplía
 
 ## Evidencia comprobada
 
-Corrida [39048463987](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/39048463987), fuente `50f0b58d3583402b82bd09678e779c267689b293`, digest de fuente `efe2d810070d46e49ae8d07e9aa91946b73dc4a2f40bddaa57ea54e7cbeaa41b`. El [recibo full](../../.verification/remote-39048463987/.verification/full.json) identifica `f0f7c135-b39d-4907-9c87-a33339bb2c04`, desde 16:15:50 hasta 16:21:06 UTC, `ok: true` y todos sus pasos con salida cero.
+Corrida [39048463987](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/39048463987), fuente `50f0b58d3583402b82bd09678e779c267689b293`, digest de fuente `efe2d810070d46e49ae8d07e9aa91946b73dc4a2f40bddaa57ea54e7cbeaa41b`. El [recibo full](../archive/campaign-evidence-20261023/.verification/remote-39048463987/.verification/full.json) identifica `f0f7c135-b39d-4907-9c87-a33339bb2c04`, desde 16:15:50 hasta 16:21:06 UTC, `ok: true` y todos sus pasos con salida cero.
 
 Se leyeron los reportes recuperados de esa corrida:
 
 - 49 guardas de Node, 1.090 pruebas de servidor, 119 de cliente y una reapertura nativa de exportación: aprobadas, sin pendientes ni omisiones.
-- [Navegador](../../.verification/remote-39048463987/.verification/runs/f0f7c135-b39d-4907-9c87-a33339bb2c04/integration/browser.json): 27 casos esperados aprobados, cero omitidos, inesperados o inestables. El caso de política de almacenamiento terminó aprobado y sin reintento.
-- Dos casos de demo aprobados. [Natalia](../../.verification/remote-39048463987/.verification/native-booking/results.json) acredita navegación nativa y gestión en escritorio/móvil sobre la plataforma descartable, sin sustitución de transporte ni solicitudes a producción.
-- El full incluye reconstrucción SQL y Auth/Storage reales del entorno descartable. El [recibo de tipos](../../.verification/remote-39048463987/.verification/generated-database-types.json) informa generación oficial reproducible; no es una inspección del esquema alojado.
+- [Navegador](../archive/campaign-evidence-20261023/.verification/remote-39048463987/.verification/runs/f0f7c135-b39d-4907-9c87-a33339bb2c04/integration/browser.json): 27 casos esperados aprobados, cero omitidos, inesperados o inestables. El caso de política de almacenamiento terminó aprobado y sin reintento.
+- Dos casos de demo aprobados. [Natalia](../archive/campaign-evidence-20261023/.verification/remote-39048463987/.verification/native-booking/results.json) acredita navegación nativa y gestión en escritorio/móvil sobre la plataforma descartable, sin sustitución de transporte ni solicitudes a producción.
+- El full incluye reconstrucción SQL y Auth/Storage reales del entorno descartable. El [recibo de tipos](../archive/campaign-evidence-20261023/.verification/remote-39048463987/.verification/generated-database-types.json) informa generación oficial reproducible; no es una inspección del esquema alojado.
 
 El [E2E de política](../../apps/web/e2e/clinical-storage-policy.spec.ts) verifica edición de 110,5 MB antes de hidratar, cuerpo POST y persistencia de 110.500.000 bytes; borrador general independiente; cambio real de política por otra operación y rechazo de revisión antigua; importe inválido conservado y marcado; confirmación para seguir editando; cuota individual y pausa persistidas; rechazo de la carga por API; ausencia de fila creada; configuración y ficha pausadas; denegación del panel a un dueño ordinario; limpieza sintética. No se infiere persistencia únicamente del aviso de éxito.
 
-Se abrieron estas seis capturas. Sus bytes coinciden con el origen recuperado de CI y sus seis SHA-256 coinciden con el [manifiesto de capturas](../../.impeccable/review/storage-quotas-20261017/capture-source.json):
+Se abrieron estas seis capturas. Sus bytes coinciden con el origen recuperado de CI y sus seis SHA-256 coinciden con el [manifiesto de capturas](../archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/capture-source.json):
 
 | Superficie/estado | Escritorio 1280 | Móvil 320 |
 |---|---|---|
-| Maestro, límite individual guardado y nombre largo | [desktop](../../.impeccable/review/storage-quotas-20261017/master/desktop.png) | [mobile](../../.impeccable/review/storage-quotas-20261017/master/mobile.png) |
-| Configuración del consultorio pausado | [desktop](../../.impeccable/review/storage-quotas-20261017/clinic/desktop.png) | [mobile](../../.impeccable/review/storage-quotas-20261017/clinic/mobile.png) |
-| Ficha del paciente pausada y vacía | [desktop](../../.impeccable/review/storage-quotas-20261017/patient/desktop.png) | [mobile](../../.impeccable/review/storage-quotas-20261017/patient/mobile.png) |
+| Maestro, límite individual guardado y nombre largo | [desktop](../archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/master/desktop.png) | [mobile](../archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/master/mobile.png) |
+| Configuración del consultorio pausado | [desktop](../archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/clinic/desktop.png) | [mobile](../archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/clinic/mobile.png) |
+| Ficha del paciente pausada y vacía | [desktop](../archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/patient/desktop.png) | [mobile](../archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/patient/mobile.png) |
 
 Las imágenes corresponden a sus superficies, con contenido cargado y captura desde el inicio. La posición intermedia de la barra móvil fija en una imagen de página completa pertenece al viewport de captura; por sí sola no demuestra una regresión. El helper comprueba ausencia de desbordamiento horizontal antes de capturar.
 
 ## Desviaciones previas y límites
 
-El [detector ya conservado](../../.verification/stage3-storage-ui-detector.json) enumera siete recomendaciones en los estilos de la página maestra anterior: cuatro tamaños de texto fuera de la escala documentada y tres radios. El diff de `apps/web/src/routes/odonto/maestro/+page.svelte` incorpora únicamente el enlace a almacenamiento; esas declaraciones de estilo ya existían. Se registran como desviación previa, sin modificar estilos ni ampliar la autoridad de DESIGN. Ese detector no inspecciona el estado final de `RadiographsPanel` y no se volvió a ejecutar para esta documentación.
+El [detector ya conservado](../archive/campaign-evidence-20261023/.verification/stage3-storage-ui-detector.json) enumera siete recomendaciones en los estilos de la página maestra anterior: cuatro tamaños de texto fuera de la escala documentada y tres radios. El diff de `apps/web/src/routes/odonto/maestro/+page.svelte` incorpora únicamente el enlace a almacenamiento; esas declaraciones de estilo ya existían. Se registran como desviación previa, sin modificar estilos ni ampliar la autoridad de DESIGN. Ese detector no inspecciona el estado final de `RadiographsPanel` y no se volvió a ejecutar para esta documentación.
 
 El registro de campaña también conserva un aviso previo de metadata `buildPath` del tooling. No se refrescó esa metadata ni se presenta como comprobada nuevamente mediante una ejecución de contexto.
 

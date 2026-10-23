@@ -1,0 +1,331 @@
+{
+  "at": "2026-10-23T09:37:27.871743+00:00",
+  "scope": "Exact copies of synthetic CI visual-review evidence already cited by campaign documents. No new test run, app build, production data or change to historical results. Text sources checked for credential patterns and signed URLs; none found. Images are the previously reviewed synthetic CI captures.",
+  "cause": "40 local link targets existed on disk but were absent from the prepared Git tree; the stronger check failed before this correction.",
+  "sources": [
+    "https://github.com/Juan4787/cita-suite-verificacion/actions/runs/39090572628",
+    "https://github.com/Juan4787/cita-suite-verificacion/actions/runs/39048463987"
+  ],
+  "files": [
+    {
+      "source": ".impeccable/review/availability-20261017/review-round-1.md",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/review-round-1.md",
+      "bytes": 2244,
+      "sha256": "2e1d2b8e09e9841c4ea843d735dc41a4c3ccc8e30c1a800ace191f0df3271c07",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/direction.md",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/direction.md",
+      "bytes": 2630,
+      "sha256": "4e004b139de94ea6c647d46b09b29b53f655e97433a116142c29bb72749f732f",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/incumbent-hashes.json",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/incumbent-hashes.json",
+      "bytes": 294,
+      "sha256": "d6d00d3ec9a9f277d8a877694687da3e9081b6364cdf8e2f1c9b3f4971b45098",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/capture-source.json",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/capture-source.json",
+      "bytes": 5389,
+      "sha256": "608b4a789d4918efcfd834846a374160c31325747c385295a11769c0e48e5428",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/result.json",
+      "path": "docs/archive/campaign-evidence-20261023/.verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/result.json",
+      "bytes": 1654,
+      "sha256": "35197885a4c11de1bc2e7eb719d714d1638b01e9592e4d03dad28ef35199f512",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser.json",
+      "path": "docs/archive/campaign-evidence-20261023/.verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser.json",
+      "bytes": 43795,
+      "sha256": "deb7027d91e068fa376e9c14fbfaa73b87d12930f4e36e5221cd2010a02f68c0",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".verification/remote-39090572628/.verification/native-booking/results.json",
+      "path": "docs/archive/campaign-evidence-20261023/.verification/remote-39090572628/.verification/native-booking/results.json",
+      "bytes": 890,
+      "sha256": "3e304e7570d299b98dcd377750d2b019f9c067d6f1e624569f077d56ce4a829e",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/demo/browser-demo.json",
+      "path": "docs/archive/campaign-evidence-20261023/.verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/demo/browser-demo.json",
+      "bytes": 6468,
+      "sha256": "2db03199934a230dd898c9b126d4dfaf713e201681dde57d4a1ddeb0e87151cb",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/availability-empty-cita-suite-1280.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-empty-cita-suite-1280.png",
+      "bytes": 330720,
+      "sha256": "4f3472ae042953b2213e07cbfe38c14908ec1cfa0069c2914b991630fa9271ce",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/availability-empty-cita-suite-320.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-empty-cita-suite-320.png",
+      "bytes": 188947,
+      "sha256": "b67e552675edaf241380b248273c650eb64100e8315e5b58d4f20c54bfcba8bc",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/availability-dates-cita-suite-1280.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-dates-cita-suite-1280.png",
+      "bytes": 392818,
+      "sha256": "c70421822a504208f180a6c747a6f811deda61590da592ae997a4bee3f8d6be2",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/availability-dates-cita-suite-320.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-dates-cita-suite-320.png",
+      "bytes": 244380,
+      "sha256": "ff931d0fa240b476a472e2283aeb78a297f82ddd72e3285740e4b395f149184a",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/availability-empty-natalia-1280.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-empty-natalia-1280.png",
+      "bytes": 59168,
+      "sha256": "92e05faf2485e0fa65817c23620eb13f35362ffba5264df10dbe418ccf921918",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/availability-empty-natalia-320.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-empty-natalia-320.png",
+      "bytes": 52378,
+      "sha256": "c751a6434ba552d4da7a4913ce3e67afea9be13aad4610c4fb3ce1833c76a6e5",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/availability-dates-natalia-1280.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-dates-natalia-1280.png",
+      "bytes": 69955,
+      "sha256": "f848efce78e72defd2c15516573b508646e136eba980f6b17d9c39363783ab05",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/availability-dates-natalia-320.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-dates-natalia-320.png",
+      "bytes": 75900,
+      "sha256": "7011dda940db8b868a925623f0e6680422756e3eab5f9ddcafa8dbda7786c65b",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/availability-internal-error-desktop.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-internal-error-desktop.png",
+      "bytes": 590057,
+      "sha256": "e62faaba15f767ea85cb7376c4f46714d32f6e5845e6800d72fbeb20dae730be",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/availability-internal-error-mobile.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-internal-error-mobile.png",
+      "bytes": 341837,
+      "sha256": "fdd5353e53400de1ac81ad326019869393afd0492eaba26767ee0f00dcdf5145",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/price-preview-error-desktop.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/price-preview-error-desktop.png",
+      "bytes": 405083,
+      "sha256": "da5de4e834f71f2c19a40de70ffb79770427dfc99e8d4302b1fca53f04e85a44",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/price-preview-error-mobile.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/price-preview-error-mobile.png",
+      "bytes": 247008,
+      "sha256": "450618fdfb4fd5a473a3d2d61bf0e0d83d0b4a2193ef457dded9fb4c82e72229",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/detector.json",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/detector.json",
+      "bytes": 2372,
+      "sha256": "a6f1703671fc87bce2699fa3b27619595e19c27f8b4c3d83170f3bba9df2cfee",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/availability-20261017/detector-notes.md",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/detector-notes.md",
+      "bytes": 813,
+      "sha256": "4b219503eafe8447c8a1e813cbd8ffed7e2be381c1e4d9c93ae38acda98cba3d",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/storage-quotas-20261017/verdict-round-1.md",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/verdict-round-1.md",
+      "bytes": 3731,
+      "sha256": "5bb874a414d9961c3e5b9a3b56e3153f266409740659a361d890a41769643836",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".verification/stage3-storage-ui-direction.md",
+      "path": "docs/archive/campaign-evidence-20261023/.verification/stage3-storage-ui-direction.md",
+      "bytes": 2880,
+      "sha256": "f3b9745a6cb25c3952195c1a8a6ce5f011fd6fde3514ea4fa97dc5ee27b09a62",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/storage-quotas-20261017/review-round-1.md",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/review-round-1.md",
+      "bytes": 2240,
+      "sha256": "f7ffb10d86b91a742824efdb45f55311e7f50c8e8147195dc8fc57dd14786aa8",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".verification/remote-39048463987/.verification/full.json",
+      "path": "docs/archive/campaign-evidence-20261023/.verification/remote-39048463987/.verification/full.json",
+      "bytes": 1654,
+      "sha256": "303b5c824f07fbf4c7508f6109f691f136bf3ff169edebf19b2057324674c69f",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".verification/remote-39048463987/.verification/runs/f0f7c135-b39d-4907-9c87-a33339bb2c04/integration/browser.json",
+      "path": "docs/archive/campaign-evidence-20261023/.verification/remote-39048463987/.verification/runs/f0f7c135-b39d-4907-9c87-a33339bb2c04/integration/browser.json",
+      "bytes": 41343,
+      "sha256": "7c0c11ecb2158215f9d59233f4a1f74c01e80002e045def35ccf4044fb6c56da",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".verification/remote-39048463987/.verification/native-booking/results.json",
+      "path": "docs/archive/campaign-evidence-20261023/.verification/remote-39048463987/.verification/native-booking/results.json",
+      "bytes": 890,
+      "sha256": "3e304e7570d299b98dcd377750d2b019f9c067d6f1e624569f077d56ce4a829e",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".verification/remote-39048463987/.verification/generated-database-types.json",
+      "path": "docs/archive/campaign-evidence-20261023/.verification/remote-39048463987/.verification/generated-database-types.json",
+      "bytes": 168783,
+      "sha256": "6301654a6e3afb1d291dee20cc3a6936d530609d84da33ec663980ca66b262d1",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/storage-quotas-20261017/capture-source.json",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/capture-source.json",
+      "bytes": 2781,
+      "sha256": "81f7f22bf7e294b81f0b5797cfb735f17bb26b7bd0bfc8c681444d2c10bfe622",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/storage-quotas-20261017/master/desktop.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/master/desktop.png",
+      "bytes": 546899,
+      "sha256": "ff21322304e1108b2aec693f3087576d5b5fb3f86256eaae7a3543773b44ce67",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/storage-quotas-20261017/master/mobile.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/master/mobile.png",
+      "bytes": 327551,
+      "sha256": "2c9af4f36e6299cdbebb2d7fe9ffcfeb2ecda7d3f23dc47ef8820906711a99d6",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/storage-quotas-20261017/clinic/desktop.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/clinic/desktop.png",
+      "bytes": 395292,
+      "sha256": "192394282526acd014a2dfee0e98121a360d5a242e585f993ad94fa2e92ad706",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/storage-quotas-20261017/clinic/mobile.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/clinic/mobile.png",
+      "bytes": 220346,
+      "sha256": "dace2e98016b6e927fd49a80ff4bf3aba0bc6a06827c97a3f1a4316df16419e0",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/storage-quotas-20261017/patient/desktop.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/patient/desktop.png",
+      "bytes": 508647,
+      "sha256": "685ddd742f426bead3c6e60e4fadb140a73a1345683eee99fc021b2a492cee07",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".impeccable/review/storage-quotas-20261017/patient/mobile.png",
+      "path": "docs/archive/campaign-evidence-20261023/.impeccable/review/storage-quotas-20261017/patient/mobile.png",
+      "bytes": 286093,
+      "sha256": "9355bd93f8b1a62afdf94587aa78f85f57585c612332fad2d2a84efb8862d8d7",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": ".verification/stage3-storage-ui-detector.json",
+      "path": "docs/archive/campaign-evidence-20261023/.verification/stage3-storage-ui-detector.json",
+      "bytes": 4117,
+      "sha256": "2c7020f5189baf71f9ce7ad6cf0bdff97170cc36d4e2df7df9bbc91f34b1f452",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": "docs/audits/2026-10-15-maintainability-and-growth.md",
+      "path": "docs/audits/2026-10-15-maintainability-and-growth.md",
+      "bytes": 20980,
+      "sha256": "f3c56e9ab334264dffe6d0ed9dcd7ff82c5a402527e72b79a67f0d2c00f8633c",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": "docs/audits/2026-10-15-architecture-proposal-review.md",
+      "path": "docs/audits/2026-10-15-architecture-proposal-review.md",
+      "bytes": 18137,
+      "sha256": "03c64c7db4c916a8658865f0e61da16c10f57d5b19e5f6bc71ad1500b7655a09",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    },
+    {
+      "source": "docs/audits/evidence/2026-10-15-maintainability/inventory.json",
+      "path": "docs/audits/evidence/2026-10-15-maintainability/inventory.json",
+      "bytes": 5817,
+      "sha256": "3f3d71c14655c2efce1c0d46e096711f00975e5a20b30d9690fb2b22d99fefae",
+      "copyByteIdentical": true,
+      "mode": "100644"
+    }
+  ]
+}

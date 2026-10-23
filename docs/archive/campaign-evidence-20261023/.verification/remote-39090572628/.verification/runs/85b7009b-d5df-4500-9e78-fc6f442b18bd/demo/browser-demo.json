@@ -1,0 +1,196 @@
+{
+  "config": {
+    "configFile": "/home/runner/work/cita-suite-verificacion/cita-suite-verificacion/apps/web/playwright.config.ts",
+    "rootDir": "/home/runner/work/cita-suite-verificacion/cita-suite-verificacion/apps/web/e2e",
+    "forbidOnly": true,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 1,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/Juan4787/cita-suite-verificacion/commit/c0129e492051a38d5b8025158fb996a81da0e871",
+        "commitHash": "c0129e492051a38d5b8025158fb996a81da0e871",
+        "buildHref": "https://github.com/Juan4787/cita-suite-verificacion/actions/runs/39090572628"
+      },
+      "gitCommit": {
+        "shortHash": "c0129e4",
+        "hash": "c0129e492051a38d5b8025158fb996a81da0e871",
+        "subject": "Isolated verification snapshot from 80268e2a501198243996e1bdb0048ce066434727",
+        "body": "Isolated verification snapshot from 80268e2a501198243996e1bdb0048ce066434727\n",
+        "author": {
+          "name": "Juan Altamira",
+          "email": "juanpabloaltamira@protonmail.com",
+          "time": 1792290854000
+        },
+        "committer": {
+          "name": "Juan Altamira",
+          "email": "juanpabloaltamira@protonmail.com",
+          "time": 1792290854000
+        },
+        "branch": "refactor/maintainability-20261015"
+      },
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/runner/work/cita-suite-verificacion/cita-suite-verificacion/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/demo/browser-artifacts",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/Juan4787/cita-suite-verificacion/commit/c0129e492051a38d5b8025158fb996a81da0e871",
+            "commitHash": "c0129e492051a38d5b8025158fb996a81da0e871",
+            "buildHref": "https://github.com/Juan4787/cita-suite-verificacion/actions/runs/39090572628"
+          },
+          "gitCommit": {
+            "shortHash": "c0129e4",
+            "hash": "c0129e492051a38d5b8025158fb996a81da0e871",
+            "subject": "Isolated verification snapshot from 80268e2a501198243996e1bdb0048ce066434727",
+            "body": "Isolated verification snapshot from 80268e2a501198243996e1bdb0048ce066434727\n",
+            "author": {
+              "name": "Juan Altamira",
+              "email": "juanpabloaltamira@protonmail.com",
+              "time": 1792290854000
+            },
+            "committer": {
+              "name": "Juan Altamira",
+              "email": "juanpabloaltamira@protonmail.com",
+              "time": 1792290854000
+            },
+            "branch": "refactor/maintainability-20261015"
+          },
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/home/runner/work/cita-suite-verificacion/cita-suite-verificacion/apps/web/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "line"
+      ],
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.60.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "odonto.smoke.spec.ts",
+      "file": "odonto.smoke.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Reserva pública - modo demo",
+          "file": "odonto.smoke.spec.ts",
+          "line": 66,
+          "column": 6,
+          "specs": [
+            {
+              "title": "muestra reserva pública, turno por token y aliases de respuesta",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2586,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:41:59.934Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "26a3165e27a6cb8e904e-78db0e42ecebc4b2aaf7",
+              "file": "odonto.smoke.spec.ts",
+              "line": 69,
+              "column": 2
+            },
+            {
+              "title": "endpoints de calendario: ICS válido y redirects de tracking",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 65,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-18T02:42:02.635Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "26a3165e27a6cb8e904e-142abe886f195905d0a9",
+              "file": "odonto.smoke.spec.ts",
+              "line": 104,
+              "column": 2
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-18T02:41:59.217Z",
+    "duration": 3545.8019999999997,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

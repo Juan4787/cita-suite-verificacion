@@ -1,0 +1,50 @@
+[
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/home/usuario/CascadeProjects/Base de Datos Sabrina/apps/web/src/lib/booking/PublicBookingFlow.svelte",
+    "line": 379,
+    "snippet": "text-[…] class: 11px is off the DESIGN.md type ramp",
+    "advisory": true,
+    "ignoreValue": "11px"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/home/usuario/CascadeProjects/Base de Datos Sabrina/apps/web/src/lib/booking/PublicBookingFlow.svelte",
+    "line": 779,
+    "snippet": "text-[…] class: 11px is off the DESIGN.md type ramp",
+    "advisory": true,
+    "ignoreValue": "11px"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/home/usuario/CascadeProjects/Base de Datos Sabrina/apps/web/src/lib/booking/PublicBookingFlow.svelte",
+    "line": 793,
+    "snippet": "text-[…] class: 11px is off the DESIGN.md type ramp",
+    "advisory": true,
+    "ignoreValue": "11px"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/home/usuario/CascadeProjects/Base de Datos Sabrina/apps/web/src/routes/odonto/agenda/+page.svelte",
+    "line": 533,
+    "snippet": "text-[…] class: 11px is off the DESIGN.md type ramp",
+    "advisory": true,
+    "ignoreValue": "11px"
+  }
+]

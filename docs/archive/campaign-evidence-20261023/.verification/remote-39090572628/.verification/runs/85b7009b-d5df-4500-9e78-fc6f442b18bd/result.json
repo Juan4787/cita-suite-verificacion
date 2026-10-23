@@ -1,0 +1,87 @@
+{
+  "runId": "85b7009b-d5df-4500-9e78-fc6f442b18bd",
+  "level": "full",
+  "startedAt": "2026-10-18T02:36:36.607Z",
+  "steps": [
+    {
+      "name": "approved-plan",
+      "status": 0,
+      "signal": null,
+      "durationMs": 52
+    },
+    {
+      "name": "inventory",
+      "status": 0,
+      "signal": null,
+      "durationMs": 92
+    },
+    {
+      "name": "shared-types",
+      "status": 0,
+      "signal": null,
+      "durationMs": 1342
+    },
+    {
+      "name": "web-types",
+      "status": 0,
+      "signal": null,
+      "durationMs": 28431
+    },
+    {
+      "name": "natalia-types",
+      "status": 0,
+      "signal": null,
+      "durationMs": 6397
+    },
+    {
+      "name": "verification-runner-tests",
+      "status": 0,
+      "signal": null,
+      "durationMs": 7093
+    },
+    {
+      "name": "evidence-recovery-tests",
+      "status": 0,
+      "signal": null,
+      "durationMs": 710
+    },
+    {
+      "name": "architecture",
+      "status": 0,
+      "signal": null,
+      "durationMs": 5551
+    },
+    {
+      "name": "server-tests",
+      "status": 0,
+      "signal": null,
+      "durationMs": 38901
+    },
+    {
+      "name": "client-tests",
+      "status": 0,
+      "signal": null,
+      "durationMs": 27268
+    },
+    {
+      "name": "native-office-export",
+      "status": 0,
+      "signal": null,
+      "durationMs": 5131
+    },
+    {
+      "name": "database-auth-storage-browser",
+      "status": 0,
+      "signal": null,
+      "durationMs": 192158
+    },
+    {
+      "name": "demo-browser",
+      "status": 0,
+      "signal": null,
+      "durationMs": 13065
+    }
+  ],
+  "ok": true,
+  "finishedAt": "2026-10-18T02:42:02.821Z"
+}

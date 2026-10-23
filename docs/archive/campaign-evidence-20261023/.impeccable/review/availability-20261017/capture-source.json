@@ -1,0 +1,68 @@
+{
+  "run": 39090572628,
+  "revision": "c0129e492051a38d5b8025158fb996a81da0e871",
+  "sourceDigest": "09c5de9871c64cce502c1afcc1204f9a49d34de94360b7999934c5573209760a",
+  "evidenceSha256": "f9658aff60aefcece0ffa623553fa92b7e971ed4c5b3ad41364545ec8c41afaf",
+  "captures": [
+    {
+      "path": ".impeccable/review/availability-20261017/availability-dates-cita-suite-1280.png",
+      "source": ".verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser-artifacts/booking-embed-isolated-boo-50548--keyboard-and-mobile-layout/availability-dates-cita-suite-1280.png",
+      "sha256": "c70421822a504208f180a6c747a6f811deda61590da592ae997a4bee3f8d6be2"
+    },
+    {
+      "path": ".impeccable/review/availability-20261017/availability-dates-cita-suite-320.png",
+      "source": ".verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser-artifacts/booking-embed-isolated-boo-50548--keyboard-and-mobile-layout/availability-dates-cita-suite-320.png",
+      "sha256": "ff931d0fa240b476a472e2283aeb78a297f82ddd72e3285740e4b395f149184a"
+    },
+    {
+      "path": ".impeccable/review/availability-20261017/availability-dates-natalia-1280.png",
+      "source": ".verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser-artifacts/booking-embed-isolated-boo-50548--keyboard-and-mobile-layout/availability-dates-natalia-1280.png",
+      "sha256": "f848efce78e72defd2c15516573b508646e136eba980f6b17d9c39363783ab05"
+    },
+    {
+      "path": ".impeccable/review/availability-20261017/availability-dates-natalia-320.png",
+      "source": ".verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser-artifacts/booking-embed-isolated-boo-50548--keyboard-and-mobile-layout/availability-dates-natalia-320.png",
+      "sha256": "7011dda940db8b868a925623f0e6680422756e3eab5f9ddcafa8dbda7786c65b"
+    },
+    {
+      "path": ".impeccable/review/availability-20261017/availability-empty-cita-suite-1280.png",
+      "source": ".verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser-artifacts/booking-embed-isolated-boo-50548--keyboard-and-mobile-layout/availability-empty-cita-suite-1280.png",
+      "sha256": "4f3472ae042953b2213e07cbfe38c14908ec1cfa0069c2914b991630fa9271ce"
+    },
+    {
+      "path": ".impeccable/review/availability-20261017/availability-empty-cita-suite-320.png",
+      "source": ".verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser-artifacts/booking-embed-isolated-boo-50548--keyboard-and-mobile-layout/availability-empty-cita-suite-320.png",
+      "sha256": "b67e552675edaf241380b248273c650eb64100e8315e5b58d4f20c54bfcba8bc"
+    },
+    {
+      "path": ".impeccable/review/availability-20261017/availability-empty-natalia-1280.png",
+      "source": ".verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser-artifacts/booking-embed-isolated-boo-50548--keyboard-and-mobile-layout/availability-empty-natalia-1280.png",
+      "sha256": "92e05faf2485e0fa65817c23620eb13f35362ffba5264df10dbe418ccf921918"
+    },
+    {
+      "path": ".impeccable/review/availability-20261017/availability-empty-natalia-320.png",
+      "source": ".verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser-artifacts/booking-embed-isolated-boo-50548--keyboard-and-mobile-layout/availability-empty-natalia-320.png",
+      "sha256": "c751a6434ba552d4da7a4913ce3e67afea9be13aad4610c4fb3ce1833c76a6e5"
+    },
+    {
+      "path": ".impeccable/review/availability-20261017/availability-internal-error-desktop.png",
+      "source": ".verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser-artifacts/booking-embed-isolated-boo-96bc1-ses-with-a-working-recovery/availability-internal-error-desktop.png",
+      "sha256": "e62faaba15f767ea85cb7376c4f46714d32f6e5845e6800d72fbeb20dae730be"
+    },
+    {
+      "path": ".impeccable/review/availability-20261017/availability-internal-error-mobile.png",
+      "source": ".verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser-artifacts/booking-embed-isolated-boo-96bc1-ses-with-a-working-recovery/availability-internal-error-mobile.png",
+      "sha256": "fdd5353e53400de1ac81ad326019869393afd0492eaba26767ee0f00dcdf5145"
+    },
+    {
+      "path": ".impeccable/review/availability-20261017/price-preview-error-desktop.png",
+      "source": ".verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser-artifacts/booking-embed-isolated-boo-96bc1-ses-with-a-working-recovery/price-preview-error-desktop.png",
+      "sha256": "da5de4e834f71f2c19a40de70ffb79770427dfc99e8d4302b1fca53f04e85a44"
+    },
+    {
+      "path": ".impeccable/review/availability-20261017/price-preview-error-mobile.png",
+      "source": ".verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser-artifacts/booking-embed-isolated-boo-96bc1-ses-with-a-working-recovery/price-preview-error-mobile.png",
+      "sha256": "450618fdfb4fd5a473a3d2d61bf0e0d83d0b4a2193ef457dded9fb4c82e72229"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "run": 39048463987,
+  "revision": "50f0b58d3583402b82bd09678e779c267689b293",
+  "sourceDigest": "efe2d810070d46e49ae8d07e9aa91946b73dc4a2f40bddaa57ea54e7cbeaa41b",
+  "scope": "Hosted CI disposable platform, not staging or production. All six captures opened and validated before handoff.",
+  "viewports": [
+    1280,
+    320
+  ],
+  "captures": [
+    {
+      "target": ".impeccable/review/storage-quotas-20261017/master/desktop.png",
+      "source": ".verification/remote-39048463987/.verification/runs/f0f7c135-b39d-4907-9c87-a33339bb2c04/integration/browser-artifacts/clinical-storage-policy-ma-b7ce1--and-renders-desktop-mobile/storage-master-1280.png",
+      "sha256": "ff21322304e1108b2aec693f3087576d5b5fb3f86256eaae7a3543773b44ce67"
+    },
+    {
+      "target": ".impeccable/review/storage-quotas-20261017/master/mobile.png",
+      "source": ".verification/remote-39048463987/.verification/runs/f0f7c135-b39d-4907-9c87-a33339bb2c04/integration/browser-artifacts/clinical-storage-policy-ma-b7ce1--and-renders-desktop-mobile/storage-master-320.png",
+      "sha256": "2c9af4f36e6299cdbebb2d7fe9ffcfeb2ecda7d3f23dc47ef8820906711a99d6"
+    },
+    {
+      "target": ".impeccable/review/storage-quotas-20261017/clinic/desktop.png",
+      "source": ".verification/remote-39048463987/.verification/runs/f0f7c135-b39d-4907-9c87-a33339bb2c04/integration/browser-artifacts/clinical-storage-policy-ma-b7ce1--and-renders-desktop-mobile/storage-clinic-paused-1280.png",
+      "sha256": "192394282526acd014a2dfee0e98121a360d5a242e585f993ad94fa2e92ad706"
+    },
+    {
+      "target": ".impeccable/review/storage-quotas-20261017/clinic/mobile.png",
+      "source": ".verification/remote-39048463987/.verification/runs/f0f7c135-b39d-4907-9c87-a33339bb2c04/integration/browser-artifacts/clinical-storage-policy-ma-b7ce1--and-renders-desktop-mobile/storage-clinic-paused-320.png",
+      "sha256": "dace2e98016b6e927fd49a80ff4bf3aba0bc6a06827c97a3f1a4316df16419e0"
+    },
+    {
+      "target": ".impeccable/review/storage-quotas-20261017/patient/desktop.png",
+      "source": ".verification/remote-39048463987/.verification/runs/f0f7c135-b39d-4907-9c87-a33339bb2c04/integration/browser-artifacts/clinical-storage-policy-ma-b7ce1--and-renders-desktop-mobile/storage-patient-paused-1280.png",
+      "sha256": "685ddd742f426bead3c6e60e4fadb140a73a1345683eee99fc021b2a492cee07"
+    },
+    {
+      "target": ".impeccable/review/storage-quotas-20261017/patient/mobile.png",
+      "source": ".verification/remote-39048463987/.verification/runs/f0f7c135-b39d-4907-9c87-a33339bb2c04/integration/browser-artifacts/clinical-storage-policy-ma-b7ce1--and-renders-desktop-mobile/storage-patient-paused-320.png",
+      "sha256": "9355bd93f8b1a62afdf94587aa78f85f57585c612332fad2d2a84efb8862d8d7"
+    }
+  ]
+}

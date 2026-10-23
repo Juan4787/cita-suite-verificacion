@@ -1,0 +1,86 @@
+[
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/home/usuario/CascadeProjects/Base de Datos Sabrina/apps/web/src/routes/odonto/maestro/+page.svelte",
+    "line": 868,
+    "snippet": "font-size: 1.35rem is off the DESIGN.md type ramp",
+    "advisory": true,
+    "ignoreValue": "1.35rem"
+  },
+  {
+    "antipattern": "design-system-radius",
+    "name": "Radius outside DESIGN.md",
+    "description": "A border-radius value is outside the DESIGN.md rounded scale. Use a documented radius token or update the design system if the new shape is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/home/usuario/CascadeProjects/Base de Datos Sabrina/apps/web/src/routes/odonto/maestro/+page.svelte",
+    "line": 928,
+    "snippet": "border-radius: 0.9rem is outside the DESIGN.md rounded scale",
+    "advisory": true,
+    "ignoreValue": "0.9rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/home/usuario/CascadeProjects/Base de Datos Sabrina/apps/web/src/routes/odonto/maestro/+page.svelte",
+    "line": 1002,
+    "snippet": "font-size: 0.82rem is off the DESIGN.md type ramp",
+    "advisory": true,
+    "ignoreValue": "0.82rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/home/usuario/CascadeProjects/Base de Datos Sabrina/apps/web/src/routes/odonto/maestro/+page.svelte",
+    "line": 1009,
+    "snippet": "font-size: 0.72rem is off the DESIGN.md type ramp",
+    "advisory": true,
+    "ignoreValue": "0.72rem"
+  },
+  {
+    "antipattern": "design-system-radius",
+    "name": "Radius outside DESIGN.md",
+    "description": "A border-radius value is outside the DESIGN.md rounded scale. Use a documented radius token or update the design system if the new shape is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/home/usuario/CascadeProjects/Base de Datos Sabrina/apps/web/src/routes/odonto/maestro/+page.svelte",
+    "line": 1067,
+    "snippet": "border-radius: 0.9rem is outside the DESIGN.md rounded scale",
+    "advisory": true,
+    "ignoreValue": "0.9rem"
+  },
+  {
+    "antipattern": "design-system-radius",
+    "name": "Radius outside DESIGN.md",
+    "description": "A border-radius value is outside the DESIGN.md rounded scale. Use a documented radius token or update the design system if the new shape is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/home/usuario/CascadeProjects/Base de Datos Sabrina/apps/web/src/routes/odonto/maestro/+page.svelte",
+    "line": 1104,
+    "snippet": "border-radius: 0.8rem is outside the DESIGN.md rounded scale",
+    "advisory": true,
+    "ignoreValue": "0.8rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/home/usuario/CascadeProjects/Base de Datos Sabrina/apps/web/src/routes/odonto/maestro/+page.svelte",
+    "line": 1128,
+    "snippet": "font-size: 0.82rem is off the DESIGN.md type ramp",
+    "advisory": true,
+    "ignoreValue": "0.82rem"
+  }
+]

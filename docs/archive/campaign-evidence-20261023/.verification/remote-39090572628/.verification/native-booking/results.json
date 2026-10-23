@@ -1,0 +1,32 @@
+{
+  "scope": "Real local Natalia build and Cita Suite app, disposable PostgreSQL/PostgREST/Storage, real GoTrue Auth. Synthetic bookings only; no requests or writes to production Cita Suite/Natalia.",
+  "transportSubstitution": false,
+  "checks": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 960,
+      "nativeSameTab": true,
+      "fullManagement": true,
+      "themeSnapshot": "natalia",
+      "recoveryWithoutDuplicate": true,
+      "oldReceiptCompatible": true,
+      "sdkRequests": 0,
+      "syntheticBookings": 1
+    },
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844,
+      "nativeSameTab": true,
+      "fullManagement": true,
+      "themeSnapshot": "natalia",
+      "recoveryWithoutDuplicate": true,
+      "oldReceiptCompatible": true,
+      "sdkRequests": 0,
+      "syntheticBookings": 1
+    }
+  ],
+  "errors": [],
+  "passed": true
+}
