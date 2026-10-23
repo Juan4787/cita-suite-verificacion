@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { signInWithPassword } from './helpers/shared-auth';
 import { createFixtureClient, must, write, type FixtureClient } from './helpers/fixture-db';
+import { browserRequest } from './helpers/browser-request';
 import { spawnSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -770,20 +771,20 @@ test.describe('Archivos clínicos privados', () => {
 		await expect(receptionPage.getByText('Tu rol no permite ver documentos clínicos.')).toBeVisible();
 		await expect(receptionPage.getByText('Panorámica compartida del equipo')).toHaveCount(0);
 		await expect(receptionPage.getByRole('button', { name: 'Añadir documento' })).toHaveCount(0);
-		const receptionHtml = await receptionPage.request.get(`/odonto/pacientes/${fixture.patientId}?tab=historial`);
-		expect(receptionHtml.status()).toBe(200);
-		expect(receptionHtml.headers()['cache-control']).toContain('no-store');
+		const receptionHtml = await browserRequest(receptionPage, `/odonto/pacientes/${fixture.patientId}?tab=historial`);
+		expect(receptionHtml.status).toBe(200);
+		expect(receptionHtml.headers.get('cache-control')).toContain('no-store');
 		const receptionBody = await receptionHtml.text();
-		expect(receptionBody).not.toContain(privateClinicalDescription);
-		expect(receptionBody).toContain('Datos del paciente');
+		expect(receptionBody.includes(privateClinicalDescription), 'Reception SSR must omit private clinical history.').toBe(false);
+		expect(receptionBody.includes('Datos del paciente'), 'Reception must receive its authorized patient data, not a login page.').toBe(true);
 		await receptionPage.goto(`/odonto/pacientes/${fixture.patientId}?tab=historial`);
 		await expect(receptionPage.getByRole('main').getByRole('heading', { name: fixture.patientName })).toBeVisible();
 		await expect(receptionPage.getByRole('button', { name: 'Historial', exact: true })).toHaveCount(0);
 		await expect(receptionPage.getByText(privateClinicalDescription)).toHaveCount(0);
 		await expect(receptionPage.getByRole('heading', { name: 'Datos del paciente', exact: true })).toBeVisible();
-		const deniedHistory = await receptionPage.request.get(`/odonto/pacientes/${fixture.patientId}/historial`);
-		expect(deniedHistory.status()).toBe(403);
-		expect(await deniedHistory.text()).not.toContain(privateClinicalDescription);
+		const deniedHistory = await browserRequest(receptionPage, `/odonto/pacientes/${fixture.patientId}/historial`);
+		expect(deniedHistory.status).toBe(403);
+		expect((await deniedHistory.text()).includes(privateClinicalDescription), 'Denied history must omit private clinical data.').toBe(false);
 		await receptionPage.setViewportSize({ width: 1280, height: 900 });
 		await expect(receptionPage.getByRole('button', { name: 'Historial', exact: true })).toHaveCount(0);
 		await expect(receptionPage.getByText(privateClinicalDescription)).toHaveCount(0);
@@ -820,10 +821,10 @@ test.describe('Archivos clínicos privados', () => {
 		await page.goto(`/odonto/pacientes/${target.patientId}?tab=radiografias`);
 		await uploadFixtureImage(page, 'antes-del-cambio.png', 'Documento anterior al cambio');
 		// A pending upload: its signed URL is issued and its reservation stays while the resources change.
-		const started = await page.request.post(`${endpoint}/uploads`, { data: {
+		const started = await browserRequest(page, `${endpoint}/uploads`, { method: 'POST', data: {
 			clientRequestId: randomUUID(), originalFilename: 'pendiente.png', mimeType: 'image/png', bytes: onePixelPng.length,
 			sha256: createHash('sha256').update(onePixelPng).digest('hex'), takenAt: null, note: 'Carga pendiente durante el cambio' } });
-		expect(started.status()).toBe(200);
+		expect(started.status).toBe(200);
 		const pending = (await started.json()) as { id: string; upload_url: string };
 		const before = await accounting();
 		expect(before.files.map((file) => file.status)).toEqual(['ready', 'uploading']);
@@ -853,8 +854,8 @@ test.describe('Archivos clínicos privados', () => {
 			// Its thumbnail URL was not used and stays backed until it expires.
 			const uploaded = await page.request.put(pending.upload_url, { headers: { 'x-upsert': 'false', 'content-type': 'image/png' }, data: onePixelPng });
 			expect(uploaded.ok()).toBe(true);
-			const completed = await page.request.post(`${endpoint}/${pending.id}/complete`, { data: { thumbnailUploaded: false } });
-			expect(completed.status()).toBe(200);
+			const completed = await browserRequest(page, `${endpoint}/${pending.id}/complete`, { method: 'POST', data: { thumbnailUploaded: false } });
+			expect(completed.status).toBe(200);
 			const after = await accounting();
 			expect(after.files.map((file) => [file.id, file.status])).toEqual([[before.files[0].id, 'ready'], [pending.id, 'ready']]);
 			expect(after.business).toEqual({ ...changed.business, used_bytes: before.business.used_bytes + onePixelPng.length,
@@ -869,15 +870,15 @@ test.describe('Archivos clínicos privados', () => {
 			}
 
 			// Permissions are unchanged: the owner reads both documents, reception reads none.
-			const listed = await page.request.get(endpoint);
-			expect(listed.status()).toBe(200);
+			const listed = await browserRequest(page, endpoint);
+			expect(listed.status).toBe(200);
 			const { items } = (await listed.json()) as { items: { id: string }[] };
 			expect(items.map((item) => item.id).sort()).toEqual(after.files.map((file) => file.id).sort());
 			const receptionContext = await browser.newContext();
 			try {
 				const receptionPage = await receptionContext.newPage();
 				await login(receptionPage, target.receptionEmail);
-				expect((await receptionPage.request.get(endpoint)).status()).toBe(403);
+				expect((await browserRequest(receptionPage, endpoint)).status).toBe(403);
 			} finally { await receptionContext.close(); }
 			// Reconciliation of the stored objects finds this practice's counters already exact.
 			await write(admin.rpc('reconcile_clinical_storage_budget', { p_max_businesses: 1000 }));

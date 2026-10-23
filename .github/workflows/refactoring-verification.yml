@@ -66,6 +66,9 @@ jobs:
             throw new Error('Insufficient disposable runner resources. No database load started.');
           console.log(JSON.stringify({cpu: os.cpus().length, memoryBytes: os.totalmem(), availableDiskBytes: disk.bavail * disk.bsize}));
           JS
+      - name: Type-check diagnostic browser specs before service preparation
+        if: inputs.level == 'browser'
+        run: pnpm --filter web check:e2e
       # Preparation only downloads and installs: a stalled mirror fails here, not at the job's limit.
       - name: Prepare disposable service images
         if: inputs.level != 'fast' && inputs.level != 'rollback'

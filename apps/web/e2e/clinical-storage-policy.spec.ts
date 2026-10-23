@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { createFixtureClient } from './helpers/fixture-db';
+import { browserRequest } from './helpers/browser-request';
 import { randomUUID } from 'node:crypto';
 import { signInWithPassword } from './helpers/shared-auth';
 import { syntheticMasterId } from './helpers/master-identity';
@@ -133,10 +134,10 @@ test('master storage policy preserves drafts, enforces clinic scope and renders 
 		await expect(ownerPage.getByRole('button', { name: 'Guardar permisos', exact: true })).toBeDisabled();
 		await assertReadableDesktopNavigation(ownerPage);
 		await captureStorageSurface(ownerPage, 'storage-clinic-paused');
-		const denied = await ownerPage.request.post(`/odonto/pacientes/${patientId}/radiografias/uploads`, { data: {
+		const denied = await browserRequest(ownerPage, `/odonto/pacientes/${patientId}/radiografias/uploads`, { method: 'POST', data: {
 			clientRequestId: randomUUID(), originalFilename: 'synthetic.pdf', mimeType: 'application/pdf', bytes: 100, sha256: 'a'.repeat(64)
 		} });
-		expect(denied.status()).toBe(409);
+		expect(denied.status).toBe(409);
 		expect((await denied.json()).message).toContain('desactivada');
 		const files = await admin.from('patient_radiographs').select('id').eq('business_id', businessId);
 		expect(files.error).toBeNull();
