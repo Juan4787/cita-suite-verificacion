@@ -221,6 +221,35 @@ describe('activación de notificaciones en el teléfono', () => {
 		vi.unstubAllGlobals();
 	});
 
+	it.each([
+		{ label: 'vencido reservado', status: 'reserved' as const, past: true },
+		{ label: 'vencido confirmado', status: 'confirmed' as const, past: true },
+		{ label: 'cancelado futuro', status: 'cancelled' as const, past: false }
+	])('no activa avisos de un turno $label aunque el permiso ya exista', async ({ status, past }) => {
+		const environment = installNotificationEnvironment({ initialPermission: 'granted', verified: true });
+		render(Page, { data: { ...pageData, appointment: { ...appointment, status, is_past: past } } });
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		window.dispatchEvent(new Event('focus'));
+		environment.setVisibility('visible');
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		expect(navigator.serviceWorker.register).not.toHaveBeenCalled();
+		expect(environment.postRequests()).toBe(0);
+		expect(environment.requestPermission).not.toHaveBeenCalled();
+	});
+
+	it('no vuelve a sincronizar avisos después de recibir una cancelación', async () => {
+		const environment = installNotificationEnvironment({ initialPermission: 'granted', verified: true });
+		const view = render(Page, { data: pageData });
+		await waitFor(() => expect(environment.postRequests()).toBe(1));
+		await view.rerender({ data: { ...pageData, appointment: { ...appointment, status: 'cancelled' } } });
+		const registrations = vi.mocked(navigator.serviceWorker.register).mock.calls.length;
+		window.dispatchEvent(new Event('focus'));
+		environment.setVisibility('visible');
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		expect(environment.postRequests()).toBe(1);
+		expect(navigator.serviceWorker.register).toHaveBeenCalledTimes(registrations);
+	});
+
 	it('pide permiso antes de suscribir y enviar la única prueba inicial', async () => {
 		const environment = installNotificationEnvironment();
 		render(Page, { data: { ...pageData, created: true } });
