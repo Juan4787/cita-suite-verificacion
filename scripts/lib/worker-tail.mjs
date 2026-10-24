@@ -1,6 +1,9 @@
 // Parsing of `wrangler tail --format json` for the job and request measurements of an app
 // Worker, staging or production. Only the fields below survive; request headers, other logs
 // and other paths never do.
+import { readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+
 const JOB_LOG = 'Tarea programada';
 
 /** Wrangler prints each event as one JSON object, which may span lines and chunks. */
@@ -36,6 +39,23 @@ export function splitJsonObjects(onObject) {
 }
 
 const finite = value => (typeof value === 'number' && Number.isFinite(value) ? value : null);
+const jobKinds = ['push', 'calendar', 'reviews', 'uploads', 'commercial', 'storage'];
+const exceptionNames = event => (Array.isArray(event.exceptions) ? event.exceptions : []).map(exception =>
+	['Error', 'TypeError', 'RangeError', 'AbortError', 'TimeoutError', 'JobBudgetExhaustedError'].includes(exception?.name) ? exception.name : 'OtherError');
+const numericJobFields = new Set([
+	'calls', 'maxCalls', 'usedCalls', 'databaseRequests', 'providerRequests', 'elapsedMs',
+	'claimed', 'processed', 'completed', 'released', 'sent', 'failed', 'retried', 'pending',
+	'invalidated', 'prepared', 'skipped', 'gone', 'active', 'deleted', 'retrying', 'attention',
+	'stale', 'deadEndpoints', 'scanned', 'credited', 'errors', 'files', 'objects',
+	'unattributedBytes', 'unknownSizeObjects', 'overBusinessLimit'
+]);
+const jobCounts = counts => counts && Object.fromEntries(Object.entries(counts).filter(([key, value]) =>
+	(numericJobFields.has(key) && finite(value) !== null) ||
+	(['ok', 'configured', 'overGlobalLimit'].includes(key) && typeof value === 'boolean') ||
+	(key === 'kind' && jobKinds.includes(value)) ||
+	(key === 'profile' && ['free', 'paid'].includes(value)) ||
+	(key === 'scheduledFor' && (value === null || (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value))))
+));
 
 /** The measurement of one scheduled job request, or null for any other event. */
 export function jobMeasurement(event) {
@@ -47,14 +67,13 @@ export function jobMeasurement(event) {
 	const counts = log && typeof log.message[1] === 'object' && log.message[1] !== null ? log.message[1] : null;
 	return {
 		at: finite(event.eventTimestamp),
-		path,
+		path: routeTemplate(path),
 		outcome: typeof event.outcome === 'string' ? event.outcome : null,
 		status: finite(event.event?.response?.status),
 		cpuTimeMs: finite(event.cpuTime),
 		wallTimeMs: finite(event.wallTime),
-		exceptions: (Array.isArray(event.exceptions) ? event.exceptions : []).map(exception => String(exception?.name ?? 'Error')),
-		job: counts && Object.fromEntries(Object.entries(counts)
-			.filter(([, value]) => value === null || typeof value === 'boolean' || finite(value) !== null || typeof value === 'string'))
+		exceptions: exceptionNames(event),
+		job: jobCounts(counts)
 	};
 }
 
@@ -66,13 +85,32 @@ const quantile = (values, q) => {
 const distribution = values => ({ p50: quantile(values, 0.5), p99: quantile(values, 0.99), max: values.length ? Math.max(...values) : null });
 
 /**
- * A path without its data, for the capacity rehearsal: identifiers, integration keys
- * and tokens become placeholders, so patients, practices and links never survive.
+ * Classify paths from code-owned route names. Never guess confidentiality from the
+ * contents or length of a value: even short names and unknown paths stay private.
+ * This module is a Node-only operations tool; it reads route filenames, never data.
  */
-export const routeTemplate = path => path
-	.replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\/|$)/gi, '/:id')
-	.replace(/\/[0-9a-f]{32}(?=\/|$)/gi, '/:key')
-	.replace(/\/(?=[A-Za-z0-9_-]*\d)[A-Za-z0-9_-]{24,}(?=\/|$)/g, '/:token');
+const routeFiles = readdirSync(new URL('../../apps/web/src/routes/', import.meta.url), { recursive: true })
+	.filter(path => /(?:^|\/)\+(?:page|server)\.(?:server\.)?(?:ts|js|svelte)$/.test(path));
+const routeTemplates = [...new Set(routeFiles.map(path => '/' + path.split('/').slice(0, -1)
+	.filter(segment => !/^\(.*\)$/.test(segment)).join('/')))];
+// Prefer literal paths such as /pacientes/papelera over /pacientes/[id].
+routeTemplates.sort((a, b) => b.split('/').filter(segment => !segment.startsWith('[')).length - a.split('/').filter(segment => !segment.startsWith('[')).length);
+const escape = segment => segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const routes = routeTemplates.map(template => ({
+	pattern: new RegExp('^' + template.split('/').map(segment => segment.startsWith('[') ? '[^/]+' : escape(segment)).join('/') + '/?$'),
+	template: template.replace(/\[([^\]=]+)(?:=[^\]]+)?\]/g, (_, name) => name === 'kind' ? ':kind' : name === 'token' ? ':token' : name === 'integrationKey' ? ':key' : ':id')
+}));
+export const routeCatalogSha256 = createHash('sha256').update(JSON.stringify(routeTemplates)).digest('hex');
+export function routeTemplate(path) {
+	if (typeof path !== 'string') return '/:unmatched';
+	if (/^\/internal\/jobs\/(?:push|calendar|reviews|uploads|commercial|storage)$/.test(path)) return path;
+	if (/^\/_app\/immutable\//.test(path)) return '/_app/immutable/:asset';
+	if (path === '/_app/version.json') return path;
+	const data = path.endsWith('/__data.json');
+	const target = data ? path.slice(0, -'/__data.json'.length) || '/' : path;
+	const match = routes.find(route => route.pattern.test(target));
+	return match ? match.template + (data ? '/__data.json' : '') : '/:unmatched';
+}
 
 /** The measurement of any request to the app: route template and the platform's view of it. */
 export function requestMeasurement(event) {
@@ -80,13 +118,13 @@ export function requestMeasurement(event) {
 	try { url = new URL(event?.event?.request?.url); } catch { return null; }
 	return {
 		at: finite(event.eventTimestamp),
-		method: typeof event.event.request.method === 'string' ? event.event.request.method.toUpperCase() : null,
+		method: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'].includes(event.event.request.method?.toUpperCase?.()) ? event.event.request.method.toUpperCase() : 'OTHER',
 		route: routeTemplate(url.pathname),
 		outcome: typeof event.outcome === 'string' ? event.outcome : null,
 		status: finite(event.event?.response?.status),
 		cpuTimeMs: finite(event.cpuTime),
 		wallTimeMs: finite(event.wallTime),
-		exceptions: (Array.isArray(event.exceptions) ? event.exceptions : []).map(exception => String(exception?.name ?? 'Error'))
+		exceptions: exceptionNames(event)
 	};
 }
 

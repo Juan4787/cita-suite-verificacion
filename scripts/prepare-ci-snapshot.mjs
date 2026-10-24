@@ -43,6 +43,7 @@ const extras = [
 	'docs/plans/refactorizacion-cita-suite.md', 'docs/plans/refactorizacion-cita-suite.integridad.json',
 	'docs/plans/registro-refactorizacion-cita-suite.md',
 	'docs/architecture/base-de-campana.md', 'docs/architecture/verificacion.md',
+	'docs/architecture/accesos-google.md', 'docs/architecture/acceso-google-calendar.md',
 	'docs/architecture/identidad-cita-suite.md', 'docs/architecture/identidad-ensayo-github.json', 'docs/architecture/relaciones-entre-consultorios.md',
 	'docs/architecture/tipado-contexto-aislamiento.md', 'docs/architecture/contabilidad-documentos.md',
 	'docs/architecture/evidencia-etapa3-documentos.md',

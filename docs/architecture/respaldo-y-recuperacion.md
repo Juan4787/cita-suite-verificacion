@@ -55,6 +55,10 @@ El ensayo encontró cuatro diferencias entre la guía y una restauración comple
 
 Además, Storage se consulta con hasta tres intentos ante una respuesta transitoria. Cada falla queda registrada en el manifiesto.
 
+## Respaldo productivo previo a expansión (23-oct)
+
+Corridaab3c7cc0-8431-43e5-959b-b04f0a543187: respaldo privado creado13:40:23UTC,101tablas/4.410filas/97migraciones y32objetos/15.675.483B, sin fallas. Se releyeron las huellas/tamaños de los cinco dumps ylos32objetos; manifiesto SHA-2560c967a045ab477ca9fd1d8f0761929bec5a2733addfc837b53090255f2298e67. Carpeta privada700 fuera deGit; ruta exacta yrecibo production-backup-expansion-verification-20261023.json enel registro. No se publican SQL,datoAuth ni archivos clínicos. Esto acredita respaldo de ese estado, separado del ensayo de restauración deCI. La expansión ya dejó125migraciones, porlo que **ese respaldo97 no sirve para autorizar la contracción125→126**; se hará otro inmediatamente antes de esa tanda.
+
 ## Evidencia
 
 **Ensayo `staging-operations` 39682517594, sobre `0618b35`**, con la siembra sintética de dos consultorios. La carga quedó en 83.335 filas en 96 tablas, con 35 MB de datos.

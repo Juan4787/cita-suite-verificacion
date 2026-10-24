@@ -382,6 +382,65 @@ describe('sincronización programada por lotes', () => {
 		return { fetchFn, requests };
 	};
 
+	it.each([
+		['manual sin contexto', null],
+		['reserva virtual con contexto', {
+			theme_snapshot: 'natalia',
+			modality: 'video',
+			video_instructions_snapshot: 'El consultorio coordina el acceso virtual.'
+		}]
+	])('procesa la relación uno a uno real de PostgREST: %s', async (_label, context) => {
+		envState.privateEnv.BOOKING_CONTEXTS_AVAILABLE = 'true';
+		const database = calendarDatabase({
+			claimed: [claimedEvent(1, { sync_status: 'pending_update', event_id: 'evt-existing' })],
+			appointments: [appointmentRow('apt-1', { appointment_booking_contexts: context })]
+		});
+		const service = google(database.timeline);
+		const summary = await processGoogleCalendarSyncBatch({
+			supabase: database.supabase,
+			budget: createJobBudget('free'),
+			providerFetch: service.fetchFn,
+			now
+		});
+		expect(summary).toMatchObject({ claimed: 1, active: 1, attention: 0, retrying: 0 });
+		const changed = service.requests.filter(request => request.method === 'PATCH');
+		expect(changed).toHaveLength(1);
+		const event = await changed[0].json();
+		expect(event.extendedProperties.private.citaSuiteSequence).toBe('3');
+		expect(event.location).toBe(context === null ? 'Av. Siempre Viva 123' : 'Consulta virtual');
+		expect(event.description).not.toContain('Tratamiento que no debe exponerse');
+		expect(event.description).not.toContain('Paciente que no debe exponerse');
+		if (context !== null) expect(event.description).not.toContain('Av. Siempre Viva 123');
+		expect(database.completions()).toHaveLength(1);
+		expect(database.completions()[0].args.p_results).toEqual([
+			{ event_row_id: 'event-1', outcome: 'synced', google_event_id: 'evt-existing', synced_sequence: 3 }
+		]);
+	});
+
+	it.each([
+		undefined,
+		[],
+		[{ theme_snapshot: 'natalia', modality: 'video', video_instructions_snapshot: null }],
+		{ theme_snapshot: 'natalia', modality: 'video', video_instructions_snapshot: 123 },
+		{ theme_snapshot: 'natalia', modality: 'invalid', video_instructions_snapshot: null }
+	])(
+		'rechaza contexto uno a uno ausente o con forma de lista sin operar en Google',
+		async context => {
+			envState.privateEnv.BOOKING_CONTEXTS_AVAILABLE = 'true';
+			const database = calendarDatabase({
+				claimed: [claimedEvent(1)],
+				appointments: [appointmentRow('apt-1', { appointment_booking_contexts: context })]
+			});
+			const service = google(database.timeline);
+			await expect(processGoogleCalendarSyncBatch({
+				supabase: database.supabase, budget: createJobBudget('free'), providerFetch: service.fetchFn, now
+			})).rejects.toThrow();
+			expect(service.requests).toHaveLength(0);
+			expect(database.completions()).toHaveLength(1);
+			expect(database.completions()[0].args).toMatchObject({ p_results: [], p_finish: true });
+		}
+	);
+
 	it('reparte el trabajo, refresca el token una vez por conexión y registra cada tramo', async () => {
 		const database = calendarDatabase({
 			claimed: [1, 2, 3, 4, 5].map((index) => claimedEvent(index)),
@@ -565,4 +624,3 @@ describe('sincronización programada por lotes', () => {
 		expect(database.rpcCalls).toHaveLength(0);
 	});
 });
-

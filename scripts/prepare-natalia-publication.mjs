@@ -40,6 +40,6 @@ writeFileSync(join(directory, 'publication-plan.json'), JSON.stringify({
 	repository: 'juan-altamira/web-natalia', repositoryId: 1416254094, branch: 'main', expectedHead, expectedTree,
 	projectId: metadata.id, accountId: metadata.accountId, previousProductionDeployment: metadata.productionDeployment,
 	configuration, files: manifest,
-	rollback: 'Create a forward commit with the saved previous tree only if main still matches the publication commit. Update with expected-SHA lease. Inspect any intervening changes first; never rewrite history.'
+	rollback: 'The saved Git tree reverses repository changes only. Restore the verified previous production deployment or publish an archived copy of its verified served files through a forward commit. Do not assume a linked Git HEAD matches that deployment. Keep main aligned with the restored files, use an expected-SHA lease, inspect intervening changes and never rewrite history.'
 }, null, 2) + '\n', { flag: 'wx' });
 console.log(JSON.stringify({ directory, revision, siteFiles: site.size, gitChanges: manifest.length, status: 'prepared-only' }));

@@ -2,11 +2,11 @@
 
 Fecha: 17 de octubre de 2026, hora argentina. Extensión de la etapa 4 de la campaña de refactorización.
 
-El [dictamen independiente](../../.impeccable/review/availability-20261017/review-round-1.md) es **ship para esta extensión**, sin correcciones materiales exigidas. Comprende navegación pública por fechas, recuperación de disponibilidad interna y previsualización de aranceles. No certifica toda la aplicación, un despliegue alojado ni el cierre de la campaña.
+El [dictamen independiente](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/review-round-1.md) es **ship para esta extensión**, sin correcciones materiales exigidas. Comprende navegación pública por fechas, recuperación de disponibilidad interna y previsualización de aranceles. No certifica toda la aplicación, un despliegue alojado ni el cierre de la campaña.
 
 ## Autoridad, alcance y preservación
 
-Se contrastaron el [plan original íntegro](../plans/refactorizacion-cita-suite.md), el [registro de ejecución](../plans/registro-refactorizacion-cita-suite.md), la [dirección de la extensión](../../.impeccable/review/availability-20261017/direction.md), [PRODUCT.md](../../apps/web/PRODUCT.md), [DESIGN.md](../../apps/web/DESIGN.md) y su [sidecar](../../apps/web/.impeccable/design.json). El modo es **Operate**: completar una reserva, recuperar una búsqueda y revisar una configuración antes de guardarla. Es una extensión ordinaria del sistema existente; no hay identidad nueva ni comp aprobado.
+Se contrastaron el [plan original íntegro](../plans/refactorizacion-cita-suite.md), el [registro de ejecución](../plans/registro-refactorizacion-cita-suite.md), la [dirección de la extensión](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/direction.md), [PRODUCT.md](../../apps/web/PRODUCT.md), [DESIGN.md](../../apps/web/DESIGN.md) y su [sidecar](../../apps/web/.impeccable/design.json). El modo es **Operate**: completar una reserva, recuperar una búsqueda y revisar una configuración antes de guardarla. Es una extensión ordinaria del sistema existente; no hay identidad nueva ni comp aprobado.
 
 | Artefacto contrastado | Responsabilidad en esta revisión |
 |---|---|
@@ -18,7 +18,7 @@ Se contrastaron el [plan original íntegro](../plans/refactorizacion-cita-suite.
 
 Los seis archivos coinciden byte a byte con su contenido en la revisión de CI `c0129e492051a38d5b8025158fb996a81da0e871`. También coinciden las fuentes E2E y de componente citadas abajo. La documentación crea únicamente este archivo; no modifica código, plan, registro, evidencias ni autoridades de diseño. El formulario final conserva su orden obligatorio/opcional; cursos y noticias permanecen fuera del alcance.
 
-Las huellas de las tres autoridades coinciden con el [manifiesto incumbente](../../.impeccable/review/availability-20261017/incumbent-hashes.json) antes y después de esta documentación:
+Las huellas de las tres autoridades coinciden con el [manifiesto incumbente](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/incumbent-hashes.json) antes y después de esta documentación:
 
 | Archivo | Bytes | SHA-256 preservado |
 |---|---:|---|
@@ -63,14 +63,14 @@ Las decisiones de esta superficie permanecen locales. La revisión no convierte 
 
 ## Evidencia contrastada
 
-Corrida [39090572628](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/39090572628), fuente `c0129e492051a38d5b8025158fb996a81da0e871`. El [manifiesto de capturas](../../.impeccable/review/availability-20261017/capture-source.json) conserva digest de fuente `09c5de9871c64cce502c1afcc1204f9a49d34de94360b7999934c5573209760a` y huella del paquete de evidencia `f9658aff60aefcece0ffa623553fa92b7e971ed4c5b3ad41364545ec8c41afaf`. Estas dos huellas se identifican según ese manifiesto y el registro; no se regeneró el paquete durante esta documentación.
+Corrida [39090572628](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/39090572628), fuente `c0129e492051a38d5b8025158fb996a81da0e871`. El [manifiesto de capturas](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/capture-source.json) conserva digest de fuente `09c5de9871c64cce502c1afcc1204f9a49d34de94360b7999934c5573209760a` y huella del paquete de evidencia `f9658aff60aefcece0ffa623553fa92b7e971ed4c5b3ad41364545ec8c41afaf`. Estas dos huellas se identifican según ese manifiesto y el registro; no se regeneró el paquete durante esta documentación.
 
-Se leyeron el [recibo full](../../.verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/result.json), los reportes unitarios y de navegador recuperados. El recibo identifica `85b7009b-d5df-4500-9e78-fc6f442b18bd`, 02:36:36–02:42:02 UTC del 18 de octubre, `ok: true` y todos sus pasos con salida cero:
+Se leyeron el [recibo full](../archive/campaign-evidence-20261023/.verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/result.json), los reportes unitarios y de navegador recuperados. El recibo identifica `85b7009b-d5df-4500-9e78-fc6f442b18bd`, 02:36:36–02:42:02 UTC del 18 de octubre, `ok: true` y todos sus pasos con salida cero:
 
 - 1.148 pruebas de servidor, 123 de cliente y una reapertura nativa de exportación aprobadas, con cero fallidas, pendientes o todo. Los tres casos de componente del editor aprueban mes 600, fecha fuera del límite y configuración completa inválida.
-- [Navegador de integración](../../.verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser.json): 29 casos esperados aprobados, cero omitidos, inesperados o inestables. Los dos casos específicos de ventanas/recuperación aprobaron sin reintentos.
+- [Navegador de integración](../archive/campaign-evidence-20261023/.verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/integration/browser.json): 29 casos esperados aprobados, cero omitidos, inesperados o inestables. Los dos casos específicos de ventanas/recuperación aprobaron sin reintentos.
 - El full incluye SQL, Auth/Storage reales y tipos. El registro y la matriz conservan el detalle de 30 controles de disponibilidad, 18 vectores de paridad, 14 de ciclo de precios, diez carreras y generación oficial reproducible. No se abrió el archivo voluminoso de tipos para esta revisión documental.
-- [Natalia nativa](../../.verification/remote-39090572628/.verification/native-booking/results.json) acredita navegación en la misma pestaña y gestión completa a 1440/390, sin sustitución de transporte; [demo](../../.verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/demo/browser-demo.json) conserva dos casos aprobados. Estos recorridos no amplían los anchos de la matriz visual siguiente.
+- [Natalia nativa](../archive/campaign-evidence-20261023/.verification/remote-39090572628/.verification/native-booking/results.json) acredita navegación en la misma pestaña y gestión completa a 1440/390, sin sustitución de transporte; [demo](../archive/campaign-evidence-20261023/.verification/remote-39090572628/.verification/runs/85b7009b-d5df-4500-9e78-fc6f442b18bd/demo/browser-demo.json) conserva dos casos aprobados. Estos recorridos no amplían los anchos de la matriz visual siguiente.
 
 El [E2E de las superficies](../../apps/web/e2e/booking-embed.spec.ts) delimita el origen de cada prueba: crea un bloqueo sintético real de quince días en PostgreSQL descartable; activa “Fechas siguientes” con Enter en las cuatro combinaciones de marca/ancho; comprueba rango, expansión local, selección de día y horarios, y retorno a la ventana vacía. En el recorrido interno intercepta deliberadamente una respuesta con HTTP 200 y `{}` para reproducir datos incompletos; luego retira esa sustitución y comprueba respuesta real, slots y mismo rango al reintentar. En el editor cambia 1001 % a 0 %, comprueba estados y mantiene el contador de POST en cero. La respuesta defectuosa es simulada; la recuperación y los datos sintéticos válidos pertenecen a la plataforma descartable.
 
@@ -78,18 +78,18 @@ Se abrieron las doce imágenes enumeradas, con contenido cargado desde el inicio
 
 | Superficie y estado | 1280 | 320 |
 |---|---|---|
-| Cita Suite, ventana vacía | [captura](../../.impeccable/review/availability-20261017/availability-empty-cita-suite-1280.png) | [captura](../../.impeccable/review/availability-20261017/availability-empty-cita-suite-320.png) |
-| Cita Suite, fechas disponibles | [captura](../../.impeccable/review/availability-20261017/availability-dates-cita-suite-1280.png) | [captura](../../.impeccable/review/availability-20261017/availability-dates-cita-suite-320.png) |
-| Natalia, ventana vacía | [captura](../../.impeccable/review/availability-20261017/availability-empty-natalia-1280.png) | [captura](../../.impeccable/review/availability-20261017/availability-empty-natalia-320.png) |
-| Natalia, fechas disponibles | [captura](../../.impeccable/review/availability-20261017/availability-dates-natalia-1280.png) | [captura](../../.impeccable/review/availability-20261017/availability-dates-natalia-320.png) |
-| Agenda interna, respuesta incompleta | [captura](../../.impeccable/review/availability-20261017/availability-internal-error-desktop.png) | [captura](../../.impeccable/review/availability-20261017/availability-internal-error-mobile.png) |
-| Aranceles, porcentaje inválido | [captura](../../.impeccable/review/availability-20261017/price-preview-error-desktop.png) | [captura](../../.impeccable/review/availability-20261017/price-preview-error-mobile.png) |
+| Cita Suite, ventana vacía | [captura](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-empty-cita-suite-1280.png) | [captura](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-empty-cita-suite-320.png) |
+| Cita Suite, fechas disponibles | [captura](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-dates-cita-suite-1280.png) | [captura](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-dates-cita-suite-320.png) |
+| Natalia, ventana vacía | [captura](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-empty-natalia-1280.png) | [captura](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-empty-natalia-320.png) |
+| Natalia, fechas disponibles | [captura](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-dates-natalia-1280.png) | [captura](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-dates-natalia-320.png) |
+| Agenda interna, respuesta incompleta | [captura](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-internal-error-desktop.png) | [captura](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/availability-internal-error-mobile.png) |
+| Aranceles, porcentaje inválido | [captura](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/price-preview-error-desktop.png) | [captura](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/price-preview-error-mobile.png) |
 
 El dictamen fresco conserva sus cinco secciones: `persistence`, `fidelity`, `ceiling`, `material_fixes` y `keep`. Resuelve **ship** sin correcciones materiales en este alcance. Las dos inspecciones propias previas y el dictamen ya están terminados; esta documentación no abre otro ciclo de pulido.
 
 ## Desviaciones previas y límites
 
-El [detector conservado](../../.impeccable/review/availability-20261017/detector.json) y sus [notas](../../.impeccable/review/availability-20261017/detector-notes.md) registran una única ejecución, cero hallazgos primarios y cuatro recomendaciones por texto de 11 px fuera de la escala documentada. Se contrastó con `57c1470`: tres usos en PublicBookingFlow y uno en agenda, con el mismo recuento actual. Son desviaciones preexistentes; no se amplió DESIGN ni se cambiaron estilos para ocultarlas.
+El [detector conservado](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/detector.json) y sus [notas](../archive/campaign-evidence-20261023/.impeccable/review/availability-20261017/detector-notes.md) registran una única ejecución, cero hallazgos primarios y cuatro recomendaciones por texto de 11 px fuera de la escala documentada. Se contrastó con `57c1470`: tres usos en PublicBookingFlow y uno en agenda, con el mismo recuento actual. Son desviaciones preexistentes; no se amplió DESIGN ni se cambiaron estilos para ocultarlas.
 
 El log recuperado de Vite conserva tres avisos genéricos de fetch durante SSR. El registro mantiene su diagnóstico separado pendiente para etapa 5; un full aprobado no los da por resueltos. Esta revisión no los atribuye a un defecto visual ni presume su causa.
 

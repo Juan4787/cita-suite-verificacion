@@ -38,3 +38,28 @@ export function assertProductionSchedulerConfig(config) {
 
 /** Required secrets missing from the names `wrangler secret list` reports. */
 export const missingSecrets = (names) => PRODUCTION_APP_SECRETS.filter((name) => !names.includes(name));
+
+/**
+ * Prove the scheduler's credential before installing triggers. The disabled legacy
+ * route authenticates, then returns410 without touching any queue. A fresh database
+ * read must prove the legacy switch is off first. Never follow a redirect with a
+ * secret or expose a response body/provider error.
+ */
+export async function assertProductionSchedulerAuthentication({ secret, legacyEnabled, fetch: fetcher = fetch }) {
+	if (legacyEnabled !== false) throw new Error('The legacy job entry points must be disabled before the authentication probe. Nothing was deployed.');
+	if (typeof secret !== 'string' || secret.length < 32 || /\s/.test(secret))
+		throw new Error('The production job secret is missing or malformed. Nothing was deployed.');
+	const probe = async candidate => {
+		try {
+			const response = await fetcher(`${PRODUCTION_APP_ORIGIN}/internal/jobs/send-push-reminders`, {
+				method: 'POST', redirect: 'manual', headers: { authorization: `Bearer ${candidate}` }, signal: AbortSignal.timeout(10_000)
+			});
+			return response.status;
+		} catch { throw new Error('The production job authentication probe failed. Nothing was deployed.'); }
+	};
+	const unauthorizedStatus = await probe('!');
+	if (unauthorizedStatus !== 401) throw new Error('The production job authentication negative control failed. Nothing was deployed.');
+	const authorizedStatus = await probe(secret);
+	if (authorizedStatus !== 410) throw new Error('The production job authentication does not match the app or its disabled legacy entry. Nothing was deployed.');
+	return { legacyEntrypointsDisabled: true, unauthorizedStatus, authorizedStatus };
+}

@@ -2,6 +2,12 @@
 
 **Estado al 22 de octubre:** implementación y recuperación verificadas en CI y staging, con entrega real a un Samsung y cierre funcional de etapa 6 registrado el 20 de octubre. La transición a producción y la garantía de CPU de Workers Free siguen pendientes: la tolerancia observada por encima de 10 ms no demuestra cumplimiento. La fuente normativa es la etapa 6 y la decisión del 20 de octubre del [plan íntegro](../plans/refactorizacion-cita-suite.md). Los apartados de partida son históricos; el [registro](../plans/registro-refactorizacion-cita-suite.md) y el [procedimiento de publicación](publicacion-y-reversion.md) fijan el estado operativo.
 
+## Transición productiva23-oct: observación todavía abierta
+
+Se aplicó expansión97→125 y se deshabilitaron entradas antiguas; cron-job.org sigueoff. Producción tiene5cron conAPP→app y staging0. El primer401 reveló credencial incoherente; se retiraron cron, se alineó el secreto interno y se incorporó preflight401/410 al desplegador. Tras habilitar Calendar sin reemplazar sus cuatro secretos, se reinstalaron/verificaron en orden baseline **658d3ae3** y candidata478/**a5b21dfd**. Programador actual9b77dcf3; observador únicoab3c7cc08435. Recibos exactos en el [registro](../plans/registro-refactorizacion-cita-suite.md).
+
+Ventana rutinaria de20min aprobada para HTTP/recibos/categorías/presupuestos/cadencia; Storage real15:17 también aprobado (CPU8ms,2llamadas,contadores coherentes). Commercial18:17 aún no observado. Otras ejecuciones superan10msCPUFree, incluso Calendar configurado (20ms); no se certifica el perfil. El flag de Calendar faltaba antes y después de publicar; restaurarlo cambió configuredfalse→true en cron15:31. Su clienteOAuth existente rechaza el callback actual en Google; corrección específica solicitada al usuario. Colas vacías no prueban entrega. Samsung y SMTP configurado siguen pendientes. Evidencia de staging inferior histórica; sus cron actuales son0. Ninguna contratación ni cambio de origen.
+
 ## Límites de plataforma verificados (19 de octubre de 2026)
 
 Fuente: documentación oficial consultada el 19 de octubre de 2026. Son condiciones a contrastar con mediciones; no son capacidad demostrada.

@@ -39,3 +39,9 @@ vite.config.ts.timestamp-*
 # Natalia static artifacts
 apps/natalia/dist/
 apps/natalia/.astro/
+
+# Private Google OAuth credentials and access records
+/ACCESOS-GOOGLE-CITA-SUITE/
+/ACCESOS-GOOGLE-CALENDAR/
+/secreto-cliente-auth.json
+**/client_secret_*.json

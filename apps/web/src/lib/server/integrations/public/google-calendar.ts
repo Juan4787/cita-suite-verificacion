@@ -1079,9 +1079,11 @@ const loadCalendarAppointments = async (
 			.retry(false);
 		if (error) throw error;
 		for (const row of data) {
-			const [context, ...extra] = row.appointment_booking_contexts;
-			if (extra.length) throw new InvalidDataContractError('calendarBatch.appointment.context');
-			add(row, context ? readAppointmentBookingContext(context) : null);
+			// PostgREST embeds this optional one-to-one relation as object|null,
+			// including null for manual appointments. Generated FK metadata alone
+			// does not describe that JSON shape; validate it at the shared boundary.
+			const context = row.appointment_booking_contexts;
+			add(row, context === null ? null : readAppointmentBookingContext(context));
 		}
 	} else {
 		const { data, error } = await supabase

@@ -2,6 +2,10 @@
 
 Este documento describe cómo se mide la capacidad de Cita Suite según la sección 4 del [plan](../plans/refactorizacion-cita-suite.md), qué herramientas lo hacen y qué se encontró. El detalle de cada corrida está en el [registro](../plans/registro-refactorizacion-cita-suite.md).
 
+## Preparación productiva23-oct (sin medición de capacidad todavía)
+
+La corridaab3c7cc0-8431-43e5-959b-b04f0a543187 sembró2consultorios sintéticos/12.000pacientes/24.000turnos/3.136entradasclínicas, DB30.084.243→157.707.411B; humo real14/14 aprobado conapp478. La medición externa de tresrepeticiones y fasepública aún no se ejecutó. Las CPU42/48/34ms observadas en algunas tareas vacías son evidencia operativa adversa paraFree; **no son el ensayo de capacidad ni un resultado de latencia de usuarios**. No se sustituye la medición por ese humo, la siembra, el CI o las cifras de staging. Limpieza de documentos inicial no antes de16:13:02.750133UTC; un segundo humo puede extender ese plazo. Recibos yestado enel [registro](../plans/registro-refactorizacion-cita-suite.md).
+
 ## Qué se mide y dónde
 
 | Entorno | Qué demuestra | Qué no demuestra |
