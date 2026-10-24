@@ -28,19 +28,33 @@ const RATES = {
 	diskBusy: (d, s) => d('node_disk_io_time_seconds_total') / s,
 	checkpoints: (d) => d('pg_stat_bgwriter_checkpoints_timed_total') + d('pg_stat_bgwriter_checkpoints_req_total')
 };
+// Missing exporter counters are unknown, not measured zeros. A reset likewise
+// cannot establish a utilization rate for that window.
+const REQUIRED_COUNTERS = {
+	busy: ['cpu_user', 'cpu_system'], steal: ['cpu_steal'], iowait: ['cpu_iowait'],
+	cpuPressure: ['node_pressure_cpu_waiting_seconds_total'],
+	ioStalled: ['node_pressure_io_stalled_seconds_total'],
+	memoryStalled: ['node_pressure_memory_stalled_seconds_total'],
+	swapInPerSecond: ['node_vmstat_pswpin'], swapOutPerSecond: ['node_vmstat_pswpout'],
+	majorFaultsPerSecond: ['node_vmstat_pgmajfault'], diskBusy: ['node_disk_io_time_seconds_total'],
+	checkpoints: ['pg_stat_bgwriter_checkpoints_timed_total', 'pg_stat_bgwriter_checkpoints_req_total']
+};
 const windows = [];
 for (let index = 1; index < refreshes.length; index++) {
 	const [before, after] = [refreshes[index - 1], refreshes[index]];
 	const from = Date.parse(before.at);
 	const to = Date.parse(after.at);
 	const seconds = (to - from) / 1000;
-	const delta = (key) => (after.values[key] ?? 0) - (before.values[key] ?? 0);
-	const rates = Object.fromEntries(Object.entries(RATES).map(([name, rate]) => [name, rate(delta, seconds)]));
-	rates.memoryAvailableMb = (after.values.node_memory_MemAvailable_bytes ?? 0) / 1e6;
+	const delta = (key) => after.values[key] - before.values[key];
+	const available = (key) => Number.isFinite(before.values[key]) && Number.isFinite(after.values[key]) && delta(key) >= 0;
+	const rates = Object.fromEntries(Object.entries(RATES).map(([name, rate]) => [name,
+		seconds > 0 && REQUIRED_COUNTERS[name].every(available) ? rate(delta, seconds) : null]));
+	rates.memoryAvailableMb = Number.isFinite(after.values.node_memory_MemAvailable_bytes)
+		? after.values.node_memory_MemAvailable_bytes / 1e6 : null;
 	windows.push({ from: before.at, slowRequests: slow.filter((request) => request.at < to && request.at + request.wallTimeMs > from).length, ...rates });
 }
 const median = (values) => {
-	const sorted = [...values].sort((a, b) => a - b);
+	const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
 	return sorted.length ? sorted[Math.floor(sorted.length / 2)] : null;
 };
 const paused = windows.filter((window) => window.slowRequests > 0);

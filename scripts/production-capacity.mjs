@@ -133,7 +133,7 @@ if (operation === 'seed') {
 } else if (operation === 'report') {
 	// Read only. The counters run since the project's last reset: two reports bracket a measurement.
 	const report = JSON.parse(sql(`select jsonb_build_object('at', clock_timestamp(),
- 'statements',(select coalesce(jsonb_agg(s),'[]'::jsonb) from (select queryid, left(regexp_replace(query,'\\s+',' ','g'),300) as query,calls,
+ 'statements',(select coalesce(jsonb_agg(s),'[]'::jsonb) from (select queryid::text as queryid, left(regexp_replace(query,'\\s+',' ','g'),300) as query,calls,
    round(total_exec_time::numeric,1) as total_ms,round(max_exec_time::numeric,1) as max_ms,rows,shared_blks_hit,shared_blks_read,temp_blks_written
    from extensions.pg_stat_statements where dbid=(select oid from pg_database where datname=current_database()) and calls>=5
    order by total_exec_time desc limit 60) s),
