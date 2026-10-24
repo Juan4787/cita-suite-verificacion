@@ -1,5 +1,5 @@
 import { isUuid } from '@cita-suite/shared/uuid';
-import { readArray, readRecord } from '$lib/contracts/json';
+import { readArray, readNullableText, readRecord } from '$lib/contracts/json';
 import { bookingInformationEnabled } from '$lib/server/patients/public/booking-information';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import {
@@ -133,15 +133,16 @@ export function intakeAnswersFromForm(integration: Pick<BookingIntegration, 'int
 }
 
 /** Context saved with an appointment, read from its row by every loader. */
-export function readAppointmentBookingContext(row: {
-	theme_snapshot: string;
-	modality: string;
-	video_instructions_snapshot: string | null;
-}): AppointmentBookingContext {
+export function readAppointmentBookingContext(value: unknown): AppointmentBookingContext {
+	const row = readRecord(value, 'appointmentBookingContext');
 	const theme = BOOKING_THEMES.find(theme => theme === row.theme_snapshot);
 	const modality = BOOKING_MODALITIES.find(modality => modality === row.modality);
 	if (!theme || !modality) throw new Error('BOOKING_INTEGRATION_CONFIGURATION_INVALID');
-	return { theme, modality, videoInstructions: row.video_instructions_snapshot };
+	return {
+		theme,
+		modality,
+		videoInstructions: readNullableText(row.video_instructions_snapshot, 'appointmentBookingContext.videoInstructions')
+	};
 }
 
 export async function loadAppointmentBookingContext(supabase: CitaSupabaseClient, appointmentId: string): Promise<AppointmentBookingContext | null> {
