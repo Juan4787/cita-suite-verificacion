@@ -57,3 +57,15 @@ Cuando el usuario compre el dominio, preparar el remitente de ese dominio y sus 
 ## Evidencia de esta continuación
 
 Corrida `recovery-20261026`, HEAD local preservado `80268e2a501198243996e1bdb0048ce066434727`. Preestado, diferencias, pruebas y recibos en `.verification/recovery-20261026/`. El [registro](../plans/registro-refactorizacion-cita-suite.md) y el [traspaso](../plans/traspaso-refactorizacion-cita-suite.md) indican el último punto realmente comprobado. No declarar activado SMTP por la existencia de esta guía o de la plantilla.
+
+### Corrección verificada antes de la activación
+
+Fuente `ad5ac57435b41eef452be3c7449bb2fe3aacf682`, navegador alojado [40368550984](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/40368550984): Auth real descartable, rechazo de contraseña repetida, cambio válido, ingreso con contraseña nueva, rechazo de la anterior y del token consumido. Se verificaron controles y desbordamiento a 320,390,768,1280 y1600 píxeles. Las unidades reproducen las causas, incluido el orden real de inicialización de SvelteKit; los errores y primeros verificadores incompletos se conservan en el registro.
+
+El formulario valida el correo y traduce fallos de configuración/red y límites; el callback retira el fragmento de credenciales, impide el doble envío y no informa éxito ante `same_password`. Lee `PUBLIC_SITE_URL` desde el espacio público correcto. El error de cierre de sesión posterior se distingue de una contraseña ya actualizada.
+
+Esto **no acredita envío SMTP, recepción Gmail ni el recorrido desde el enlace real del correo**. Auditoría completa [40373057375](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/40373057375) en curso; publicación productiva pendiente. Artefactos candidato40369186753 y compatible40369909691; reversión desplegada de staging40371503253 aprobada. Consultar el traspaso antes de cualquier dispatch o despliegue.
+
+### Entrega a otro modelo
+
+El usuario pidió el traspaso a17:59UTC: [punto exacto y continuación](../plans/traspaso-recuperacion-sin-dominio-20261026.md). Release40373057375 sigue en curso en la última lectura. El preflight productivo falló en su primera lectura de base, después de metadata Cloudflare; causa no establecida. No se publicó la corrección ni se activó SMTP. Resolver la auditoría y ese control antes de desplegar; la entrega real de correo sigue sin comprobar.

@@ -1,5 +1,13 @@
 # Publicación y reversión
 
+## Continuación vigente — recuperación, 26 de octubre, 17:59 UTC
+
+Leer el [traspaso exacto](../plans/traspaso-recuperacion-sin-dominio-20261026.md) antes de ejecutar comandos: candidataad5ac57/artefacto40369186753 y compatible375e16a/artefacto40369909691. Reversión de staging aprobada; auditoría completa40373057375 todavía en curso. **No hubo publicación productiva de esta corrección.** El preflight falló en la primera lectura de base; causa no establecida y control pendiente. Metadata productiva revalidada:0851,versión70f0cdc0,33 bindings y cinco cron activos. No se detuvo el programador.
+
+Los procedimientos y versiones inferiores describen entregas anteriores: no ejecutar scripts con SHA fijos ni usar la candidata de staging como versión de producción. La futura entrega requiere release aprobado, lectura de base/Auth/agenda, respaldo actual comprobado, drenaje/reversión y verificación de esta revisión. SMTP sigue sin configurar. El alcance del25-oct es un consultorio, con desviación de latencia aceptada sólo por el usuario; quedan prohibidos más ensayos de dos consultorios en Free. No se contrató nada ni cambió el plan.
+
+## Antecedentes de publicación
+
 Procedimiento del [plan íntegro](../plans/refactorizacion-cita-suite.md). Actualizado el 24 de octubre de 2026 después del ensayo de las13:15 UTC. La [auditoría](auditoria-final.md), el [registro](../plans/registro-refactorizacion-cita-suite.md) y el [traspaso](../plans/traspaso-refactorizacion-cita-suite.md) distinguen preparación, ejecución y resultado.
 
 La autorización del 17 de octubre permite publicación y ensayos sintéticos en producción. La decisión del 20 exige demostrar el lanzamiento de dos consultorios en infraestructura gratuita; no autoriza contratar. **Publicar para verificar no habilita abrir a clientes reales.** La instrucción del 24 permite controlar el Samsung y continuar sin preguntas intermedias; las dependencias externas se informan al final.
