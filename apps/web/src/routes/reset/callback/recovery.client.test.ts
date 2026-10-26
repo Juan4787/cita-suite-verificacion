@@ -4,14 +4,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
 	auth: { setSession: vi.fn(), updateUser: vi.fn(), signOut: vi.fn() },
-	createClient: vi.fn()
+	createClient: vi.fn(),
+	routerReady: false
 }));
 vi.mock('$app/environment', () => ({ browser: true }));
 vi.mock('$app/navigation', async () => {
 	const { onMount } = await import('svelte');
 	return {
-		afterNavigate: (callback: () => void) => onMount(callback),
-		replaceState: (url: string, state: object) => window.history.replaceState(state, '', url)
+		afterNavigate: (callback: () => void) => onMount(() => {
+			mocks.routerReady = false;
+			callback();
+			mocks.routerReady = true;
+		}),
+		replaceState: (url: string, state: object) => {
+			if (!mocks.routerReady) throw new Error('Synthetic router initialization is still running.');
+			window.history.replaceState(state, '', url);
+		}
 	};
 });
 vi.mock('$env/dynamic/public', () => ({ env: {
@@ -23,6 +31,7 @@ import Recovery from './+page.svelte';
 
 beforeEach(() => {
 	vi.resetAllMocks();
+	mocks.routerReady = false;
 	mocks.createClient.mockReturnValue({ auth: mocks.auth });
 	mocks.auth.setSession.mockResolvedValue({ error: null });
 	mocks.auth.updateUser.mockResolvedValue({ error: null });

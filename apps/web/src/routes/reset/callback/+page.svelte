@@ -124,8 +124,9 @@
 	afterNavigate(() => {
 		if (!browser || initialized) return;
 		initialized = true;
-		// Shallow navigation is available only after the router is initialized.
-		void initSessionFromHash().catch(() => {
+		// On initial hydration this callback runs just before SvelteKit marks its
+		// router ready. Let that synchronous initialization finish first.
+		void Promise.resolve().then(initSessionFromHash).catch(() => {
 			status = 'error';
 			message = 'No pudimos validar el enlace. Pedí uno nuevo.';
 		});
