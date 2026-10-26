@@ -10,6 +10,25 @@ import { signInWithPassword } from './helpers/shared-auth';
 // claims SMTP delivery. No trace or video may retain the temporary credentials.
 test.use({ trace: 'off', video: 'off', screenshot: 'off' });
 
+test('password recovery fixture preflight allows the real Auth SDK only from its owned app origin', async ({ request }) => {
+	if (process.env.CITA_E2E_ENVIRONMENT !== 'disposable') throw new Error('Recovery preflight requires an owned disposable origin.');
+	const api = process.env.ODONTO_SUPABASE_URL;
+	const site = process.env.PUBLIC_SITE_URL;
+	if (!api || !site || new URL(api).hostname !== '127.0.0.1' || new URL(site).hostname !== '127.0.0.1') throw new Error('Owned preflight origins are absent.');
+	for (const origin of [site, 'https://unrelated.example.test']) {
+		const response = await request.fetch(api + '/auth/v1/user', { method: 'OPTIONS', headers: {
+			Origin: origin, 'Access-Control-Request-Method': 'GET', 'Access-Control-Request-Headers': 'apikey,authorization,x-client-info,x-supabase-api-version'
+		} });
+		expect(response.status()).toBe(204);
+		if (origin === site) {
+			expect(response.headers()['access-control-allow-origin']).toBe(site);
+			expect(response.headers()['access-control-allow-headers'].split(',')).toContain('x-supabase-api-version');
+		} else {
+			expect(response.headers()['access-control-allow-origin']).toBeUndefined();
+		}
+	}
+});
+
 test('password recovery with real disposable Auth rejects an unchanged password, saves a new one and rejects recovery token reuse', async ({ page }, info) => {
 	if (process.env.CITA_E2E_ENVIRONMENT !== 'disposable') throw new Error('Recovery proof requires owned disposable Auth.');
 	const origin = process.env.ODONTO_SUPABASE_URL;
@@ -41,8 +60,9 @@ test('password recovery with real disposable Auth rejects an unchanged password,
 		const verified = await auth.auth.verifyOtp({ type: 'recovery', token_hash: generated.properties.hashed_token });
 		if (verified.error || !verified.data.session) throw new Error('Disposable Auth did not issue a recovery session.');
 		const session = verified.data.session;
-		const fragment = '#' + new URLSearchParams({ access_token: session.access_token, refresh_token: session.refresh_token, type: 'recovery' });
+		const fragment = '#' + new URLSearchParams({ access_token: session.access_token, refresh_token: session.refresh_token, type: 'recovery', expires_in: String(session.expires_in), token_type: session.token_type });
 		await page.goto('/reset/callback');
+		await expect(page.getByText('El enlace es inválido o expiró. Volvé a solicitarlo.')).toBeVisible();
 		await page.evaluate((fragment) => { window.history.replaceState({}, '', '/reset/callback' + fragment); }, fragment);
 		try { await page.reload(); } catch { throw new Error('Could not load the owned recovery callback.'); }
 		await expect(page.getByLabel('Nueva contraseña')).toBeVisible();
@@ -71,10 +91,10 @@ test('password recovery with real disposable Auth rejects an unchanged password,
 		const used = await auth.auth.verifyOtp({ type: 'recovery', token_hash: generated.properties.hashed_token });
 		expect(used.error?.code).toBe('otp_expired');
 		expect(used.data.session).toBeNull();
-		await health.assertAndAttach(info, 'password-recovery-render-health');
 		await info.attach('password-recovery-proof', { body: JSON.stringify({ realDisposableAuth: true, unchangedPasswordRejected: true, newPasswordLogin: true, oldPasswordRejected: true, recoveryTokenReuseRejected: true, layoutWidths: [320, 390, 768, 1280, 1600], realEmailDelivered: false, emailUrlFollowed: false }), contentType: 'application/json' });
 	} finally {
 		await write(admin.from('business_users').delete().eq('business_id', businessId).eq('user_id', user.id));
 		await write(admin.auth.admin.deleteUser(user.id));
+		await health.assertAndAttach(info, 'password-recovery-render-health');
 	}
 });

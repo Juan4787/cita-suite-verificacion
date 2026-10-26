@@ -16,6 +16,7 @@ La fuente de verdad de esta campaña es el [plan aprobado íntegro](plans/refact
 | Pruebas y límites del equipo local | [Verificación](architecture/verificacion.md), [matriz de regresiones](architecture/matriz-regresiones.md) |
 | Carga, límites y consumo | [Capacidad](architecture/capacidad.md), [control de consumo](architecture/control-de-consumo.md) |
 | Respaldo, publicación y reversión | [Respaldo y recuperación](architecture/respaldo-y-recuperacion.md), [publicación y reversión](architecture/publicacion-y-reversion.md) |
+| Correo para recuperar contraseñas | [Configuración temporal con Gmail y prueba real](architecture/correo-de-recuperacion.md) |
 | Estado punto por punto | [Auditoría final](architecture/auditoria-final.md) |
 | Nombres y destinos | [Identidad Cita Suite](architecture/identidad-cita-suite.md) |
 | Decisiones y trabajo nuevo | [Decisiones](architecture/decisiones.md), [guía para nuevas funciones](architecture/guia-nuevas-funciones.md) |

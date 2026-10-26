@@ -217,7 +217,7 @@ try {
       );
       res.setHeader(
         "Access-Control-Allow-Headers",
-        "authorization,apikey,content-type,x-upsert,x-client-info",
+        "authorization,apikey,content-type,x-upsert,x-client-info,x-supabase-api-version",
       );
     }
     if (req.method === "OPTIONS") {

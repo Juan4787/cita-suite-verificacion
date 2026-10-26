@@ -24,7 +24,7 @@
 				</div>
 				<div class="space-y-3 rounded-xl bg-green-500/15 px-4 py-3 text-sm font-semibold text-green-100">
 					<p class="text-sm font-semibold text-green-100">
-						Revisá tu correo: te enviamos las instrucciones para recuperar la contraseña.
+						Si existe una cuenta con ese correo, recibirás las instrucciones para recuperar la contraseña. Revisá también la carpeta de spam.
 					</p>
 				</div>
 				<a

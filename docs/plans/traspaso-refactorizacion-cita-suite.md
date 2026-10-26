@@ -1,6 +1,15 @@
 # Traspaso de la campaña de refactorización de Cita Suite
 
-## Estado vigente — respaldo diario configurado y recuperación comprobada, 26 de octubre
+## Estado vigente — recuperación sin dominio, 26 de octubre
+
+El usuario informó que NIC.ar no está disponible y pidió continuar. AlternativaSMTPGmail preparada en [correo de recuperación](../architecture/correo-de-recuperacion.md), sin contratar ni cambiar producción. Falta contraseña de aplicación dedicada y entrega real; no se reutilizan secretosGoogleAuth/Calendar/Drive. Defectos del circuito reproducidos por unidades antes de corregir; código local en preparación, todavía sin pruebas verdes ni publicación. Evidencia `.verification/recovery-20261026/`; HEAD/índice/plan originales preservados. Navegador sólo enCI secuencial. Primer ensayo40361642149 no llegó al defecto: guarda del arnés deURL. Segunda fuente2c2a1b0 ya despachada como diagnóstico de tokenAuth/callback/ingreso; recuperar su única corrida antes de otro dispatch. SMTP yURL de correo no están incluidos en ese ensayo.
+
+La primera copia **natural** deGitHub sí se comprobó:40303961884, fuente742e5de,10:00:17–10:04:41UTC, casi6h después del cron04:07. Descarga externa verificada enDrive; instantánea10:04:16.270Z,105tablas/3930filas/126migraciones/24objetos reutilizados/0bytesStorage. No repetirrestauraciónSQL; el ensayo completo previo se conserva. Monitor natural y aviso recibido no comprobados; no garantizar puntualidad. El auxiliar `check-first-cron.py` ahora filtra backup.yml y admite logs del job porAPI ante log agregado vacío. El temporizador local de reanudación terminó rechazado porconversacióncon escritoractivo; no quedó otra tarea pendiente.
+
+Siguiente: observar el diagnóstico pendiente, completar/verificar la corrección de recuperación y documentar su alcance; continuar trabajos independientes. No afirmar SMTP activo ni pedir comprar dominio. Al final, dejar la única acción humana precisa para la credencialSMTP/recepción real. El resto de la campaña sigue abierto.
+
+
+## Antecedente — respaldo configurado y recuperación comprobada, 26 de octubre
 
 Cuenta elegida **juanmarquez56783@gmail.com**, carpeta privada [Copias automáticas cifradas](https://drive.google.com/drive/folders/122AAiXE1qX2FED6IFUkF33ZCswLQoVYK). Ejecutor independiente y privado [Juan4787/cita-suite-respaldos](https://github.com/Juan4787/cita-suite-respaldos), revisión **742e5ded813a57ec769a4d846d43c984fcde2a46**. Copia diaria **04:07UTC / 01:07Argentina** y monitor **10:43UTC / 07:43Argentina**. **Primera ejecución natural comprobada:** [40303961884](https://github.com/Juan4787/cita-suite-respaldos/actions/runs/40303961884), evento `schedule` sobre esta revisión, iniciada a10:00:17UTC y terminada a10:04:41UTC. Estaba prevista a04:07UTC: demora de5h53min17s, sin garantía de puntualidad. Instantánea10:04:16.270UTC,105tablas/3930filas/126migraciones/24objetos, todos reutilizados y0bytes de Storage. Descarga independiente desdeDrive y huella comprobadas; no se repitió restauraciónSQL. Las pruebas anteriores siguientes fueron manuales. No hace falta tener esta computadora encendida.
 

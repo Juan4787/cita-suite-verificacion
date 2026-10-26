@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
 	env: {} as Record<string, string | undefined>,
+	publicEnv: {} as Record<string, string | undefined>,
 	createSupabaseServerClient: vi.fn(),
 	resetPasswordForEmail: vi.fn()
 }));
 vi.mock('$env/dynamic/private', () => ({ env: mocks.env }));
+vi.mock('$env/dynamic/public', () => ({ env: mocks.publicEnv }));
 vi.mock('$lib/server/platform/supabase', () => ({ createSupabaseServerClient: mocks.createSupabaseServerClient }));
 vi.mock('$lib/server/platform/logging', () => ({ logServerFailure: vi.fn() }));
 const { actions } = await import('./+page.server');
@@ -14,6 +16,7 @@ function event(email: string) {
 beforeEach(() => {
 	vi.resetAllMocks();
 	for (const key of Object.keys(mocks.env)) delete mocks.env[key];
+	for (const key of Object.keys(mocks.publicEnv)) delete mocks.publicEnv[key];
 	mocks.createSupabaseServerClient.mockResolvedValue({ auth: { resetPasswordForEmail: mocks.resetPasswordForEmail } });
 	mocks.resetPasswordForEmail.mockResolvedValue({ error: null });
 });
@@ -23,7 +26,8 @@ describe('password recovery request', () => {
 		expect(mocks.resetPasswordForEmail).toHaveBeenCalledWith('persona@example.test', { redirectTo: 'https://app.cita-suite.workers.dev/reset/callback' });
 	});
 	it('uses the configured site without duplicate slashes', async () => {
-		mocks.env.PUBLIC_SITE_URL = 'https://app.example.test///';
+		mocks.publicEnv.PUBLIC_SITE_URL = 'https://app.example.test///';
+		mocks.env.PUBLIC_SITE_URL = 'https://wrong-private-environment.example.test';
 		await actions.default(event('persona@example.test') as never);
 		expect(mocks.resetPasswordForEmail).toHaveBeenCalledWith('persona@example.test', { redirectTo: 'https://app.example.test/reset/callback' });
 	});
