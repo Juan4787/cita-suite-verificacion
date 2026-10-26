@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test } from '@playwright/test';
-import { createFixtureClient, must, write } from './helpers/fixture-db';
+import { createFixtureClient, write } from './helpers/fixture-db';
 import { layoutIssues, type LayoutIssue } from './helpers/layout-usability';
 import { alignTaskForCapture } from './helpers/task-capture';
 import { observeRenderHealth } from './helpers/render-health';
@@ -22,8 +22,9 @@ test('password recovery with real disposable Auth rejects an unchanged password,
 	const email = `recovery-${randomUUID()}@example.test`;
 	const oldPassword = `OldSynthetic!${randomUUID()}`;
 	const newPassword = `NewSynthetic!${randomUUID()}`;
-	const { user } = await must(admin.auth.admin.createUser({ email, password: oldPassword, email_confirm: true }));
-	if (!user) throw new Error('Owned recovery user was not created.');
+	const created = await admin.auth.admin.createUser({ email, password: oldPassword, email_confirm: true });
+	if (created.error || !created.data.user) throw new Error('Owned recovery user was not created.');
+	const user = created.data.user;
 	const health = await observeRenderHealth(page, (failure) => failure.method === 'PUT' && failure.path === '/auth/v1/user' && [400, 422].includes(failure.status), 1);
 	const issues: LayoutIssue[] = [];
 	try {
