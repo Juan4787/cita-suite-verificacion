@@ -188,6 +188,12 @@ El ingreso con contraseña conserva sus límites reales también en el entorno d
 
 Los controles que requieren JavaScript quedan deshabilitados hasta hidratar (`createClientReadiness`). Las pruebas hacen un único clic, porque Playwright espera a que el control esté habilitado, y después verifican su efecto. No se usan reintentos `toPass` alrededor de un clic: con conmutadores pueden cerrar lo que acaban de abrir y además ocultarían un primer clic perdido. Las respuestas lentas se simulan con compuertas deterministas (una promesa liberada después de verificar el estado de carga), nunca con esperas fijas.
 
+### Paneles animados con controles
+
+Playwright 1.60 comprueba el destino de un clic sólo con el primer evento de la secuencia (`pointerdown`) y asume que `mouseup` y `click` caen en el mismo lugar. Si el contenido se mueve entre la presión y la liberación, el `click` va al ancestro común, ningún manejador corre y la acción informa éxito. La auditoría 40373057375 falló así: el panel de nuevo turno se abría con el `slide` de Svelte, que recorta con `overflow: hidden`. Ese recorte sigue siendo un contenedor desplazable: `scrollIntoView` (de Playwright, o el foco del teclado) corría el contenido recortado, y Svelte descartaba ese desplazamiento al terminar la apertura. La prueba roja 40399519234 midió **405,67 px** de salto bajo una presión en curso.
+
+Un panel con controles que se abre o cierra con recorte usa `clippedSlide` (`$lib/ui/clipped-slide.ts`): el mismo movimiento, con `overflow: clip`, que recorta igual y no se puede desplazar. No se usa el `slide` de Svelte directamente sobre controles. La regresión «una elección presionada mientras se abre el panel sigue bajo el puntero al terminar la apertura» (`patients-appointments-ux.spec.ts`) vuelve determinista esa ventana ralentizando sólo la línea de tiempo de animaciones del navegador por CDP (`Animation.setPlaybackRate`). Presiona durante la apertura, la termina con el botón presionado y exige que no se mueva y que el asistente avance. Esa ventana no se reproduce con esperas fijas ni reintentos.
+
 
 ### Peticiones autenticadas del navegador sobre el artefacto
 

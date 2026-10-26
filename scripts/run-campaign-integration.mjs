@@ -51,6 +51,10 @@ const evidence = join(root, '.verification', 'runs', campaignId, diagnostic ? 'd
 mkdirSync(evidence, { recursive: true });
 writeFileSync(join(root, '.verification', 'latest-integration.json'), JSON.stringify({ runId, campaignId, directory: evidence, diagnostic: Boolean(diagnostic),
 	artifact: release?.revision ?? null, purpose: rollback ? 'rollback-compatibility' : 'candidate' }, null, 2) + '\n');
+// The dev server's platform proxy must keep ephemeral per-instance state: overlapping first
+// requests start one proxy each, and proxies sharing .wrangler/state abort workerd on SQLITE_BUSY.
+const sharedPlatformState = join(root, 'apps/web/.wrangler/state');
+const sharedPlatformStateExisted = existsSync(sharedPlatformState);
 
 async function run(command, args, options = {}) {
 	if (interrupted) throw new Error('Verification interrupted.');
@@ -155,6 +159,8 @@ try {
 		{ cwd: join(root, 'apps/web'), env });
 	const report = JSON.parse(readFileSync(env.PLAYWRIGHT_JSON_OUTPUT_NAME, 'utf8'));
 	assertBrowserReport(report);
+	if (!artifact && !sharedPlatformStateExisted && existsSync(sharedPlatformState))
+		throw new Error('The dev platform proxy persisted shared local state; overlapping proxies would abort workerd on SQLITE_BUSY.');
 	if (diagnostic) console.log('Diagnostic selection passed; this is not full integration verification.');
 	else {
 		// These are independent functional profiles, not a load test. Reset only
