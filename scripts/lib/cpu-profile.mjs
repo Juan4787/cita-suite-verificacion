@@ -48,7 +48,11 @@ export function summarizeCpuProfile(profile, { top = 40 } = {}) {
 
 /** A minimal DevTools protocol client over the inspector's WebSocket. */
 export async function connectInspector(url, WebSocketImpl = WebSocket) {
-	const socket = new WebSocketImpl(url);
+	// Node sends User-Agent but omits Origin by default; Wrangler's inspector
+	// requires an allowed Origin for that handshake. Keep its origin guard intact.
+	const endpoint = new URL(url);
+	endpoint.protocol = endpoint.protocol === 'wss:' ? 'https:' : 'http:';
+	const socket = new WebSocketImpl(url, { headers: { Origin: endpoint.origin } });
 	await new Promise((resolve, reject) => {
 		socket.addEventListener('open', resolve, { once: true });
 		socket.addEventListener('error', () => reject(new Error('The inspector did not accept the connection.')), { once: true });

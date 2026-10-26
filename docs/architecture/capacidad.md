@@ -2,9 +2,138 @@
 
 Este documento describe cómo se mide la capacidad de Cita Suite según la sección 4 del [plan](../plans/refactorizacion-cita-suite.md), qué herramientas lo hacen y qué se encontró. El detalle de cada corrida está en el [registro](../plans/registro-refactorizacion-cita-suite.md).
 
-## Preparación productiva23-oct (sin medición de capacidad todavía)
+## Lanzamiento con un consultorio — decisión y protocolo del 25 de octubre
 
-La corridaab3c7cc0-8431-43e5-959b-b04f0a543187 sembró2consultorios sintéticos/12.000pacientes/24.000turnos/3.136entradasclínicas, DB30.084.243→157.707.411B; humo real14/14 aprobado conapp478. La medición externa de tresrepeticiones y fasepública aún no se ejecutó. Las CPU42/48/34ms observadas en algunas tareas vacías son evidencia operativa adversa paraFree; **no son el ensayo de capacidad ni un resultado de latencia de usuarios**. No se sustituye la medición por ese humo, la siembra, el CI o las cifras de staging. Limpieza de documentos inicial no antes de16:13:02.750133UTC; un segundo humo puede extender ese plazo. Recibos yestado enel [registro](../plans/registro-refactorizacion-cita-suite.md).
+**Decisión del usuario** (literal al final del [plan](../plans/refactorizacion-cita-suite.md)): no se ensayan más dos consultorios sobre los planes gratuitos, se optimiza para uno y, desde el segundo, el usuario pagará Supabase Pro. Las dos cargas fallidas de dos consultorios siguen abajo como evidencia. Los umbrales del plan no cambian.
+
+### Estado de producción antes de optimizar
+
+Lectura de sólo consulta del 25 de octubre a las 05:33 UTC, sobre la app `0851de5` y 126 migraciones:
+
+| Medida | Valor |
+|---|---|
+| Base | 223.505.555 bytes, con 19 negocios, 121 pacientes y 107 turnos |
+| Espacio que dejaron los ensayos | Turnos: 40,3 MB (30,1 MB de índices) para 107 filas. Pacientes: 33,9 MB (33,8 MB de índices) para 121. Profesionales de cada turno: 32,9 MB para 109. Vínculos entre profesional y paciente: 7,3 MB para 89. |
+| Mensajes de Realtime | 77,5 MB en las particiones diarias del 23 al 25 de octubre. Los generaron las siembras, a unos dos mensajes por fila, y Realtime retira esas particiones solo. |
+| Memoria de la instancia | 431 MB en total, 213 MB disponibles y 505 MB en swap. Sin carga, trae 77 páginas por segundo desde swap y tiene 66 fallos de página mayores por segundo. |
+| `shared_buffers` | 280 MB: el valor predeterminado de Supabase, sin configuración propia (`supabase postgres-config get`). |
+| Conexiones | 21: nueve de PostgREST y las demás de servicios de Supabase. |
+
+Evidencia: `.verification/un-consultorio-20261025/production-state-before.json` e `instance-memory-at-rest.json`.
+
+### Optimizaciones para un consultorio
+
+1. **Compactación** (`production-capacity.mjs compact`). Reescribe con `VACUUM (FULL, ANALYZE)` las tablas propias de 1 MB o más, después de una limpieza y nunca durante una medición. Compara antes y después el recuento de filas y una huella del contenido de cada tabla. Si no consigue un bloqueo en 5 s, se detiene en vez de dejar a la aplicación esperando detrás de él. Devuelve a la cuota de 500 MB el espacio que dejan los ensayos, y el consultorio real empieza en tablas del tamaño de sus datos.
+2. **Siembra en estado de uso normal** (`production-capacity.mjs vacuum`). Después de sembrar, hace `VACUUM (ANALYZE)` de las tablas que cambiaron. Hasta ahora, la carga empezaba dos minutos después de insertar 18.000 filas y unos 33.000 mensajes de Realtime, con el mantenimiento automático de esa siembra todavía pendiente. Era un confusor ya registrado, que la operación real no tiene.
+3. **Observación liviana** (`instance-sampler.mjs production <minutos> <etiqueta> light`). Toma las métricas de la instancia una vez por minuto y no abre ninguna sesión de base, así que permite atribuir una falla a memoria, swap o disco sin agregar carga propia. Para poder cruzarlas, la medición guarda además la fase, la operación, el resultado, la duración y la hora de inicio de cada pedido de 1 s o más (`slow` en `production-capacity-measure.json`, sin datos).
+4. **Hipótesis para un cambio posterior, no aplicada.** Con 280 MB de `shared_buffers` en 431 MB, parte del caché de PostgreSQL vive en swap, y entonces un acierto del caché puede costar una lectura de disco. Bajarlo es gratis (`supabase postgres-config update --config shared_buffers=… --project-ref yjzferwuzbtgpmdnzlcb --experimental`), reinicia la base y se revierte con `postgres-config delete --config shared_buffers`. Sólo se aplica si la medición de un consultorio falla por pausas de memoria o disco, y después se mide una vez con el mismo protocolo. Supabase mantiene esa configuración por encima de sus valores predeterminados aunque cambie el cómputo: al pasar a Pro hay que revisarla.
+
+### Protocolo de aceptación, fijado antes de sembrar
+
+Una sola corrida, con los criterios del plan sin cambios. Si falla, no se repite sin un cambio concreto que explique la falla.
+
+1. `node scripts/production-capacity.mjs compact`. Precondición: ningún consultorio `capacity-`.
+2. `node scripts/production-capacity.mjs secret`, y el mismo secreto en Actions con `gh secret set CITA_PRODUCTION_CAPACITY_SECRET --repo Juan4787/cita-suite < ~/.config/cita-suite/production/capacity-secret`.
+3. Un solo proceso del muestreador liviano durante todo el ensayo: `node scripts/instance-sampler.mjs production 180 <etiqueta> light`.
+4. `seed`, `vacuum`, `integrity` y `report` de `production-capacity.mjs`, en ese orden.
+5. Treinta minutos de asentamiento sin carga.
+6. `gh workflow run production-measurement.yml --repo Juan4787/cita-suite --ref <rama>`: tres repeticiones de 2 minutos de preparación y 10 de medición con un usuario, la fase pública de 2 + 10 minutos y las pruebas de abuso.
+7. `integrity` y `report`, después `cleanup` y `compact`. Al final se borran el secreto de Actions (`gh secret delete CITA_PRODUCTION_CAPACITY_SECRET --repo Juan4787/cita-suite`) y el archivo local.
+
+**Límites conocidos.** El generador corre en GitHub Actions, en EE. UU., y el Worker está ubicado en `aws:sa-east-1`, junto a la base. Antes de la corrida, el usuario volvió a iniciar sesión en Wrangler en la cuenta de Cita Suite, y la CPU por pedido se observó con `tail-metrics.mjs`.
+
+### Primera corrida: 40169634680, con la configuración predeterminada
+
+**No aprobada, por una sola pausa.** Compactación a las 05:54, siembra a las 05:57, `vacuum`, 37 minutos de asentamiento, y generador de 06:36:13 a 07:25:12 UTC sobre `356cfbc`.
+
+| Fase | Lecturas p95 / p99 (ms) | Escrituras p95 / p99 (ms) | Resultado |
+|---|---:|---:|---|
+| Repetición 1 | 751 / 1.513 | 1.097 / 1.097 | Cumple |
+| Repetición 2 | 738 / 1.404 | 3.427 / 3.427 | Falla escrituras |
+| Repetición 3 | 782 / 1.176 | 1.213 / 1.213 | Cumple |
+| Pública | 453 / 944 | 1.339 / 1.339 | Cumple; 2 reservas, 0 fallas |
+
+Cero errores técnicos, abuso aprobado, 0 cruces y 0 superposiciones, y ningún interbloqueo nuevo. Con unas 16 escrituras por repetición, el p95 coincide con el máximo: un solo episodio de 06:53:57 a 06:54:21 hizo fallar la repetición 2. Cloudflare no cortó ningún pedido por CPU: 898 pedidos «ok», con p99 de 22 ms y máximo de 46 ms. Los pedidos lentos esperaron a Supabase (de 1,1 a 3,3 s de pared con 6 a 12 ms de CPU), y durante la pausa la instancia no respondió sus propias métricas. Los minutos con pedidos lentos traen de swap 256 páginas por segundo frente a 95, y tienen el doble de espera de disco, con la CPU ociosa. Hubo tormentas de swap cada 8 a 11 minutos.
+
+### Segunda corrida: 40175346833, con `shared_buffers` en 128 MB
+
+El usuario aplicó el cambio a las 07:34 UTC. La corrida usó el mismo protocolo y los mismos criterios, de 08:07:23 a 08:56:11 UTC. **Tampoco aprobó, por la misma razón.**
+
+| Fase | Lecturas p95 / p99 (ms) | Escrituras p95 / p99 (ms) | Resultado |
+|---|---:|---:|---|
+| Repetición 1 | 722 / 1.528 | 861 / 861 | Cumple |
+| Repetición 2 | 1.141 / 3.408 | 1.315 / 1.315 | Falla lecturas |
+| Repetición 3 | 893 / 1.977 | 1.319 / 1.319 | Cumple |
+| Pública | 437 / 898 | 1.306 / 1.306 | Cumple; 2 reservas, 0 fallas |
+
+### Qué muestran las dos corridas
+
+- **Las pausas vienen de la instancia, y sólo con carga.** Cada pausa coincide con una tormenta de swap: 450 a 750 páginas por segundo entrando y 400 a 840 saliendo en el mismo minuto, con 12 a 19 % de espera de disco. Hubo cinco tormentas en cada corrida y ninguna en los 65 minutos sin carga, con el consultorio sembrado.
+- **No es el SQL ni el caché de PostgreSQL.** Las sentencias de la carga son livianas, ninguna consulta periódica es pesada, y bajar `shared_buffers` mejoró el reposo pero no cambió las tormentas ni las pausas (máximos de 3.427 y 3.408 ms).
+- **Lo más probable** es un servicio de la instancia cuya memoria crece con el tráfico y se reorganiza cada 9 a 10 minutos sobre memoria en swap. El candidato principal es la recolección de basura de PostgREST, que mantiene en memoria 407 funciones, 70 relaciones y 151 claves foráneas. Supabase no publica métricas por proceso, así que la hipótesis no está demostrada.
+- **La app funciona correctamente:** 0 errores, 0 cortes por CPU de Cloudflare y ninguna violación de integridad. Lo que no se cumple son los percentiles: hay pausas de 1 a 3,5 s cada unos 10 minutos de uso continuo.
+
+**Estado:** impedimento del proveedor para el criterio de latencia de un consultorio en la infraestructura gratuita. **El usuario aceptó lanzar el primer consultorio con esa desviación** (decisión literal al final del plan): «Lanzar en el plan gratuito aceptando esperas ocasionales de 2 a 3 segundos. no puedo pagar para el 1er consultorio». Las corridas siguen registradas como fallidas y los umbrales no cambian. La aceptación no se extiende al segundo consultorio: con Supabase Pro se vuelven a medir dos consultorios con los criterios completos. Producción quedó limpia, sin consultorios sintéticos, con las tablas compactadas y los secretos borrados. El ajuste de 128 MB sigue aplicado; se recomienda revertirlo porque no mostró beneficio bajo carga, y en todo caso hay que quitarlo al pasar a Pro.
+
+**Cuándo volver a medir antes de lo previsto:** si el consultorio percibe las esperas como un problema, si aparecen errores o cortes, o si las pausas crecen con los datos o el uso.
+
+## Diagnóstico dirigido del 25 de octubre
+
+La [investigación de disponibilidad, ficha y creación](diagnostico-rendimiento-20261025.md) terminó con 43 planes SQL, 22 pedidos productivos, 24 componentes REST y un perfil aislado de workerd. El fixture productivo se limpió con los conteos anteriores preservados. Se corrigió un defecto del cliente del inspector con rojo/verde; fast 40160945501 y diagnóstico 40161186500 aprobaron sobre la revisión operativa 5930f73. No cambió la aplicación 0851 ni se contrató nada.
+
+Las consultas de la muestra con caché no reprodujeron las pausas históricas; el perfil tampoco justificó un cambio concreto de la app. No demuestra capacidad de dos consultorios ni CPU Free. Los dos fallos alojados siguientes conservan toda su vigencia; no se hizo una tercera carga idéntica. El informe y la fase 7 distinguen resultado, incertidumbre, corrección del arnés y condiciones de un próximo ensayo.
+
+## Comparación controlada sin muestreo de instancia — resultado24-oct, cierre25-octUTC
+
+**Falló nuevamente la aceptación.** [Run40099997857](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/40099997857), fuente `0851de59ed7971debe2514e6d6851d142bbc5766`, generador13:52:46.999→14:41:11.544UTC del24 de octubre. Protocolo previo de una única comparación: mismos volumen2/12000/24000, generador, semilla, límites y umbrales; sin consultas del muestreadorSQL cada2s ni métricas de instancia cada5s. Sólo tail saneadoCloudflare y cron normales. No se repitió hasta obtener verde.
+
+| Fase | Lecturas p95 / p99 (ms) | Escrituras p95 / p99 (ms) | Resultado |
+|---|---:|---:|---|
+| Repetición1 |577 /900 |1225 /1471 | Cumple |
+| Repetición2 |884 /1999 |1689 /2135 | Falla escrituras p95 |
+| Repetición3 |664 /4476 |1169 /5400 | Falla lecturas y escrituras p99 |
+| Pública |419 /950 |1441 /1441 | Cumple;2reservas/0fallas |
+
+Cero errores técnicos reportados. Abuso:120aceptadas/10rechazadas, primera121 y límite porIP correcto. El fallo se reproduce sin el muestreador; **no es necesario para reproducirlo**, aunque no se mide cuánto aportó a la primera carga ni se identifica una causa exclusiva. Persisten confusores de horario/infraestructura compartida, reutilización física y autovacuum, y la guarda de interfaz posterior. El fallo40078561771 se conserva.
+
+ZIP cotejado con digestGitHub `459c752c34e0edafb61f1c3eebab0fbb033a7854add89cccacd053f480228754`; JSON `43ab9eb8e485cfc27c83bcd5d935ce10acc59e19e36ba4baa5a45157bab66386`. Resultado y operadores congelados en [fase5](../archive/production-verification-20261024/phase5/README.md), manifiesto `ad9ef556eac0c21af2dbd69e41c52ea35f724c73434f62004dd07db59dab3296`.
+
+**Límite de integridad y estadísticas:** cruces/superposiciones0 en las lecturas antes/después; contador de deadlocks2 en ambas. La lectura posterior ocurrió25-oct01:32UTC, más de10horas después; no se presenta como lectura inmediata ni como costo SQL exclusivo de la carga. `stats_reset` viene `null`: no demuestra continuidad. La interpretaciónV1 que convertía dosnull en «mismo reinicio» se conserva como superada; una prueba local la refutó yV2 dejó los60deltas SQL y el delta de deadlocks desconocidos. Tampoco se observó el reinicio independiente de `pg_stat_statements`. No certificar ausencia de interbloqueos a partir de este delta. La primera carga también tenía marcador vacío: sus números acumulados se conservan como observaciones bajo continuidad supuesta, sin certificación de incrementos del intervalo. Esto no cambia sus percentiles ni su fallo.
+
+El observador cerró por duración14:56:42, exit0/0parse. En la ventana ordinaria incluida preparación y sin ráfaga final hubo1171peticiones,617conCPU>10ms; no hubo `exceededCpu` observado. HTTP200 no descarta errores internos deSvelteKit y no certifica el presupuestoCPUFree; el generador los clasifica por separado. No se midióI/O/swap en esta comparación.
+
+Limpieza25-oct01:33:2consultorios/12004pacientes/24045turnos/2dueños propios,0restos. Se restablecieron19negocios/121pacientes/107turnos, Calendar1/1,24objetos/11.599.541B yDB126/legacyoff. Secreto temporalActions/local retirado. Los datos sintéticos permanecieron hasta esa limpieza; no fingir limpieza inmediata al acabarCI. La aplicación no se volvió a desplegar para este cierre.
+
+**Decisión:** el despliegue no demuestra el lanzamiento gratuito para dos consultorios. No cambiar umbrales, añadir cachés de permisos, omitir recorridos ni contratar para fabricar aprobación. Una investigación posterior debe tener hipótesis y criterio previo, comparar costos propios de consultas con planes sobre el mismo volumen y separar red/instancia; conservar marcadores de reinicio válidos de cada familia de estadísticas. No hacer un tercer ensayo idéntico. Una alternativa de infraestructura requiere autorización y un tope de gasto compatible; pagar no demuestra cumplimiento por sí solo. Los10msFree y la memoria/CPUcompartida deNano son límites independientes según [Cloudflare](https://developers.cloudflare.com/workers/platform/limits/) y [Supabase](https://supabase.com/docs/guides/platform/compute-and-disk).
+
+## Medición productiva de dos consultorios — 24 de octubre (primera carga)
+
+**No aprobada por latencia.** Corrida40078561771 sobre `cb8a9bafdf9a07a6b8977e841fa3f401061fda4f`, appF35, DB126, WorkersFree y SupabaseFree SãoPaulo. Generador externo desde08:35:00.498UTC: tres repeticiones secuenciales de2min de preparación y10min de medición, luego fase pública2+10min y abuso; fin09:24:15UTC. No se modificaron umbrales, IP, runtime ni infraestructura durante la carga.
+
+| Fase | Lecturas p95 / p99 (ms) | Escrituras p95 / p99 (ms) | Resultado |
+|---|---:|---:|---|
+| Repetición1 |637 /1349 |962 /1132 | Cumple |
+| Repetición2 |1024 /3809 |1113 /1767 | Falla lecturas |
+| Repetición3 |723 /1606 |2763 /3810 | Falla escrituras |
+| Pública |529 /1129 |1158 /1158 | Cumple;2reservas/0fallas |
+
+Cero errores técnicos en todas las fases; integridad antes/después:0cruces y0superposiciones; contador deadlocks2 en ambas lecturas. El marcador de reinicio vacío impide certificar un delta; ver corrección del cierre25-oct anterior. Abuso:120lecturas aceptadas/10rechazadas, primera121; reserva rechazada por límiteIP exacto. La limpieza retiró12006pacientes/24046turnos/2consultorios/2dueños, restos0/0; humo7/7 y2documentosretirados. Credencial temporal local yActions eliminada. El tamaño físico de DB no se presenta como espacio recuperado: el borrado deja espacio reutilizable por PostgreSQL.
+
+Evidencia original `.verification/production-measure-40078561771/production-capacity-measure.json`, SHA25605d12107eb9ac9d7e379cdb1a82fabb4b72f23306ab86656d3dcbc01bbf9f6ba; ZIP original coincide con digest deGitHub a2a573e2d66a5a101d0599774b133526e4f39cd917ee666ddd313b126e66cc06. No repetir la corrida para buscar un verde: repetir tras una corrección o cambio de infraestructura comprobable, conservando esta falla.
+
+### Atribución y límites
+
+El observador registró1294pedidos y31trabajos, sin errores de parseo, y cerró ordenadamente09:33; sampler propio detenido después de la carga. Ventana ordinaria separada del abuso:1183pedidos,7de2s o más,3ventanas lentas frente a43sinpedidos lentos. Medianas lentas/normales: esperaI/O23,1%/3,9%; swapentrada871/195páginas/s, swapsalida923/174, faltasmayores577/124, discoocupado35,2%/6,8%. CPUlógicos2confirmados, no dedicados. Las métricasPSI no disponibles son **null**, no cero.
+
+Esto es correlación compatible con presión de memoria/disco de Nano; no demuestra causalidad exclusiva ni descarta red, efecto del muestreo o toda ineficiencia de la app. No hubo `exceededCpu` en esta carga2: los cortesCPU medidos antes en staging5 no explican automáticamente esta falla. Se mantienen como riesgo independiente las invocaciones productivas por encima de10msFree. La medición exacta usa el reloj del generador; las ventanas del análisis incluyen preparación y no se ofrecen como reconstrucción exacta de cada percentil.
+
+Se encontraron y corrigieron defectos reales en los informes: contadores ausentes/reset pasan a desconocidos; queryidint64 viaja como texto y conserva identidaduserid/toplevel. PruebaCLI rojo2fallas/verde4/4 y proyecciones SQLreadonly verificadas. De19deltas retrospectivos,3identidades ambiguas se excluyen; además, al faltar un marcador válido de continuidad, ninguno se certifica como incremento exclusivo de la ventana. Se conservan para diagnóstico, con esta corrección posterior. Eltop60 de sentencias no es cobertura de todas las consultas; los contadoresglobales incluyen tareas y observadores. Sourceoperativo `a5b95809cfbb11ef05bf17f9e5660e45b3f1bd55`, fast40094512375 aprobado, paquete0d3dfc316f5005282c3eed816bc505d96b31259c9f568ab94d69b551023c645b. Runtime sin cambios, releaseCB40075434652 sigue válido para su alcance; fast no sustituye fullrelease.
+
+La corrección posterior de avisos inactivos (`0851de5`, release40096001763) y la publicación de Natalia tienen sus propias pruebas funcionales. No corrigen ni vuelven a medir por sí solas los percentiles de esta carga sobreCB; su resultado permanece fallido.
+
+### Decisión de lanzamiento
+
+El perfil gratuito actual no demostró todos los umbrales de los dos consultorios. No se habilita lanzamiento con clientes reales ni se contrata nada. La comparación40099997857 ya demostró fallo sin el muestreadorSQL; queda separar costo propio de consultas, red y contención de instancia mediante una hipótesis nueva y evidencia dirigida. Una infraestructura diferente requiere decisión del usuario, límites de costo compatibles y repetir la misma carga; no se promete que pagar resuelva por sí solo todos los percentiles. La arquitectura y los generadores se conservan para esa comparación.
 
 ## Qué se mide y dónde
 
@@ -93,6 +222,6 @@ Valores medianos, con evidencia en `.verification/staging-pause-attribution-2026
 | Disco ocupado | 42 % | 6 % |
 | Checkpoints | 0 | 0 |
 
-**Conclusión.** La instancia Nano, de 0,5 GB, tiene unos 125 MB disponibles y medio GB en swap incluso en reposo. Con la carga intercambia memoria con un disco limitado a 250 IOPS, y PostgreSQL queda esperando sus páginas: así pasa una consulta de 20 ms a varios segundos. Las pausas no vienen de la CPU compartida, de los checkpoints ni del trabajo de la app, porque la CPU de trabajo es baja. Es un límite del tamaño del cómputo.
+**Interpretación del ensayo histórico, no prueba causal exclusiva.** La instancia Nano, de 0,5 GB, tiene unos 125 MB disponibles y medio GB en swap incluso en reposo. Con la carga intercambia memoria con un disco cuya base documentada es250IOPS, con capacidad de ráfaga; no es un techo absoluto de250, y PostgreSQL queda esperando sus páginas: así pasa una consulta de 20 ms a varios segundos. La correlación con espera de disco y swap respalda presión del cómputo; una CPU baja no descarta por sí sola bloqueos, red, costo SQL ni efecto del observador. No se afirma causalidad exclusiva sin una comparación controlada.
 
-Micro duplica la memoria, a 1 GB, y el rendimiento de disco base, a 500 IOPS ([cómputo](https://supabase.com/docs/guides/platform/compute-and-disk)). Por lo medido, es razonable esperar que elimine la mayor parte del intercambio, pero se comprueba midiendo, como cualquier criterio.
+Micro duplica la memoria, a 1 GB, y el rendimiento de disco base, a 500 IOPS ([cómputo](https://supabase.com/docs/guides/platform/compute-and-disk)). Es una alternativa para comparar, sin garantía de eliminar el intercambio ni la latencia. No se contrató; cualquier cambio requiere autorización y medición con los mismos criterios.

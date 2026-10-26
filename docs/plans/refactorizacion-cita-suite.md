@@ -658,3 +658,40 @@ Esta decisión cambia el alcance de lanzamiento y la condición de cierre de cap
 4. **Control de consumo.** Cada protección se evalúa por probabilidad, gravedad, costo y riesgo de prevenir ahora o después, dependencia de un proveedor no elegido y existencia de una solución más simple. Las justificadas se implementan y verifican ahora; las postergadas quedan documentadas con su riesgo residual y la circunstancia en que conviene retomarlas.
 5. **Rendimiento.** Se corrigen los defectos reales de eficiencia de la aplicación, que persistirían en cualquier plataforma. No se microoptimiza sólo para que 5 o 25 consultorios entren en los límites gratuitos. Se distinguen siempre los defectos propios de las limitaciones demostradas del proveedor.
 6. **Cierre.** El resto del plan sigue vigente: matriz de regresiones, auditoría transversal, publicación con respaldo y reversión ensayados, y auditoría final punto por punto. Para este lanzamiento, la condición «demuestre los escenarios de cinco y veinticinco consultorios» se reemplaza por la demostración de los dos consultorios en el despliegue gratuito, la evidencia de CI ya obtenida y una arquitectura que permita ampliar recursos sin cambiar el modelo multiempresa.
+
+---
+
+# Decisión del usuario: lanzamiento con un consultorio y Supabase Pro desde el segundo
+
+## Pedido original íntegro — 25 de octubre de 2026
+
+no probes mas 2 consultorios. optimicemos para 1, a partir del 2 pago supabase pro. avanza en eso
+
+## Aplicación a la campaña
+
+Esta decisión reemplaza la cantidad de consultorios del lanzamiento fijada el 20 de octubre. No elimina etapas, garantías ni criterios de calidad, seguridad o integridad. Se aplica así:
+
+1. **Lanzamiento con un consultorio.** El lanzamiento inicial es para un consultorio sobre la infraestructura gratuita vigente (Workers Free y Supabase Free). Antes de publicarlo para un cliente real, el despliegue gratuito debe demostrar con un consultorio los criterios de la sección 4, sin rebajarlos: lecturas p95 menor a 1 s y p99 menor a 2 s, escrituras p95 menor a 1,5 s y p99 menor a 3 s, errores técnicos menores al 1 %, ninguna violación de aislamiento, doble reserva o cuotas, disponibilidad completa o error explícito, y push y calendario dentro de diez minutos. La carga es la de la sección 4 con un usuario concurrente y el volumen de un consultorio (6.000 pacientes y 12.000 turnos en doce meses), más la reserva pública y las pruebas de abuso. Si un límite del proveedor lo impide, es un impedimento para publicar, que se informa con alternativas compatibles con la restricción económica.
+2. **Sin más ensayos de dos consultorios sobre la infraestructura gratuita.** Las dos cargas productivas fallidas (40078561771 y 40099997857) y sus análisis se conservan como evidencia: no se reinterpretan como aprobadas ni se repiten. La condición de demostrar dos consultorios en el despliegue gratuito (puntos 1 y 6 de la decisión del 20 de octubre) queda reemplazada por la del punto 1.
+3. **Optimización para un consultorio.** Se optimiza la operación de un consultorio en la infraestructura gratuita. Se corrigen con evidencia propia los defectos y desperdicios reales de la aplicación, la base y la operación que afecten su confiabilidad, su rendimiento o su cuota, sin microoptimizar sólo para escalas mayores. Un ajuste de configuración del proveedor sin costo se evalúa por su mérito, se mide con los mismos criterios y queda documentado con su reversión.
+4. **Segundo consultorio con Supabase Pro.** El usuario decidió pagar Supabase Pro a partir del segundo consultorio. La contratación la hace el usuario: esta decisión no autoriza al agente a contratar, migrar ni cambiar planes. Se usa con el tope de gasto activado, porque no se aceptan servicios con cobro variable sin tope. Antes de incorporar el segundo consultorio, con Supabase Pro activo, corresponde demostrar los criterios de la sección 4 con dos consultorios en ese destino. Workers Paid u otros servicios no forman parte de esta decisión.
+5. **Restricción económica.** Sigue vigente la del 25 de octubre: ningún servicio pago recurrente para un consultorio, y el dominio lo compra el usuario.
+6. **Escala y cierre.** Se conserva la arquitectura multiempresa para crecer a 2, 5, 10, 25 o más consultorios sin rehacer componentes centrales. El resto del plan sigue vigente. Para este lanzamiento, la condición de capacidad se cumple con la demostración de un consultorio en el despliegue gratuito, la evidencia de CI ya obtenida y una arquitectura que permita ampliar recursos sin cambiar el modelo multiempresa.
+
+---
+
+# Decisión del usuario: aceptación del lanzamiento del primer consultorio en los planes gratuitos
+
+## Pedido original íntegro — 25 de octubre de 2026
+
+Lanzar en el plan gratuito aceptando esperas ocasionales de 2 a 3 segundos. no puedo pagar para el 1er consultorio
+
+## Contexto y aplicación a la campaña
+
+El usuario eligió esta opción entre tres alternativas presentadas después de dos corridas productivas de un consultorio: 40169634680 con la configuración predeterminada y 40175346833 con `shared_buffers` en 128 MB, cambio que aplicó el usuario. En ambas se cumplieron dos de tres repeticiones y la fase pública, con 0 errores técnicos, 0 cruces entre consultorios, 0 superposiciones de turnos, reserva pública y pruebas de abuso correctas, y ningún corte de CPU de Cloudflare. En cada corrida, una repetición incumplió los percentiles de latencia. La causa fueron pausas de 1 a 3,5 s que la instancia Nano de Supabase Free produce cada 9 a 10 minutos de uso continuo: tormentas de swap que sólo ocurren con carga. Se aplica así:
+
+1. **Desviación aceptada, sólo para el primer consultorio.** Se acepta lanzar el primer consultorio en Workers Free y Supabase Free con esa desviación de latencia medida. Es una decisión del usuario, no un criterio cumplido: las dos corridas se conservan como fallidas y los umbrales de la sección 4 no cambian.
+2. **Los demás criterios y garantías siguen vigentes:** errores técnicos menores al 1 %, ninguna violación de aislamiento, doble reserva o cuotas, disponibilidad completa o error explícito, push y calendario dentro de diez minutos, seguridad, integridad y preservación de datos. Esta aceptación no cubre una regresión en ninguno de ellos.
+3. **Sin pagos para el primer consultorio.** No se contrata nada. Supabase Pro llega con el segundo consultorio, contratado por el usuario con tope de gasto, y antes de incorporar ese consultorio se demuestran los criterios completos con dos consultorios en ese destino. La aceptación no se extiende al segundo consultorio ni a escalas mayores.
+4. **Riesgo residual documentado.** Habrá esperas ocasionales de 1 a 3,5 s, que pueden crecer con más datos, con más usuarios simultáneos o por cambios del proveedor. Corresponde volver a evaluar con los mismos criterios, antes de lo previsto, si el consultorio las percibe como un problema, si aparecen errores o cortes, o si las esperas crecen.
+5. **Pendientes que no se eximen.** Siguen abiertos los requisitos de lanzamiento que dependen de acciones externas: correo para recuperar contraseñas, custodia de respaldos antes de cargar datos clínicos reales, dominio y verificación de Google, y nombres de los proyectos de Supabase.

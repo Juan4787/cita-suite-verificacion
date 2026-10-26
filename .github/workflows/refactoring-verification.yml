@@ -10,7 +10,7 @@ on:
         type: choice
         required: true
         default: full
-        options: [fast, full, release, rollback, types, sql, browser, capacity, capacity-seed, capacity-quick, capacity-profile]
+        options: [fast, full, release, rollback, types, sql, browser, capacity, capacity-seed, capacity-quick, capacity-profile, capacity-targeted]
       browser_grep:
         description: Diagnostic selection only; never certifies full verification
         type: string
@@ -158,6 +158,10 @@ jobs:
             capacity-profile)
               echo 'CPU profile of the short capacity diagnostic; this is not a capacity result.'
               node scripts/run-campaign-capacity.mjs --profile
+              ;;
+            capacity-targeted)
+              echo 'Three-flow workerd CPU diagnostic, one synthetic practice; this is not hosted capacity acceptance.'
+              node scripts/run-campaign-capacity.mjs --targeted
               ;;
             browser)
               test -n "$BROWSER_GREP"

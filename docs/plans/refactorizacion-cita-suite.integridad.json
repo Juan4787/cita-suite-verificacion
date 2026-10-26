@@ -4,7 +4,7 @@
   "originalPlanCharacters": 28290,
   "originalPlanSha256": "67ab8f5726aaeaaae7025e3538d4ded7e24c7f9ea043ec7032dc377645faf5bd",
   "executionInstructionSha256": "b5cdc724c1958546811caee41c80ab219d985c64c35a3d5f32b113edc02ff97f",
-  "documentSha256": "796853d3fca1d82dfe3a8c0129d80f937180948cb0a75a24518c1721d20e60b9",
+  "documentSha256": "5fef6e285db4984b226da976317ae9478991f55e922c8c786b6276c0464eaccc",
   "originalCopiedDocumentSha256": "e2d1642b0c44fe920bdbd895f7199c7be4894dd460dad426b3304e1122a9df07",
   "continuityAddendumSha256": "408ea142d4867f2a46de54c57119a7e4710cb48e547382b6db023daeb4702245",
   "continuityRevisionNote": "Preserved the additional continuity directive already present in the workspace. Original approved plan and execution instruction hashes remain unchanged; only formatting in these two sections was restored.",
@@ -25,6 +25,18 @@
       "source": "Instrucción explícita del usuario del 2026-10-20 (alcance de lanzamiento, infraestructura gratuita y control de consumo); transcripción íntegra y aplicación a la campaña.",
       "sha256": "a747d2907e407e87d11d0be214e80c5757978918fc17a739213d6ce1610545f6",
       "documentBeforeSha256": "12e4d1455d3b60f74998e2a256be6c18aa6cb30b9e68ffbb1277ba6c67f3c054"
+    },
+    {
+      "heading": "# Decisión del usuario: lanzamiento con un consultorio y Supabase Pro desde el segundo",
+      "source": "Instrucción explícita del usuario del 2026-10-25 (lanzamiento con un consultorio, sin más ensayos de dos consultorios sobre la infraestructura gratuita y Supabase Pro desde el segundo); transcripción íntegra y aplicación a la campaña.",
+      "sha256": "de2d7a1c22591049d42f8cdcb10ec81bbdd3530bb62b263ecc1840bdcdd69ac9",
+      "documentBeforeSha256": "796853d3fca1d82dfe3a8c0129d80f937180948cb0a75a24518c1721d20e60b9"
+    },
+    {
+      "heading": "# Decisión del usuario: aceptación del lanzamiento del primer consultorio en los planes gratuitos",
+      "source": "Decisión explícita del usuario del 2026-10-25 (aceptación de esperas ocasionales para lanzar el primer consultorio en los planes gratuitos, sin pagos para ese consultorio); transcripción íntegra y aplicación a la campaña.",
+      "sha256": "5130edf2e5e89a0b6bebde864e0532979505bc1ae83703b675d9ef465870d012",
+      "documentBeforeSha256": "80acfef5050d368adafa7f60b0af776169ff51123418dbd9e25809543baf1b86"
     }
   ],
   "documentBeforeProductionAuthorizationSha256": "8b7db1745438b552a09be8e2e75c7bb55f3201f73bedfaa8ef1d32714ef5ca81"

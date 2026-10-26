@@ -442,7 +442,8 @@
 		phase: TestPhase,
 		refreshed = false
 	) => {
-		if (!base) return null;
+		// Una cancelación recibida mientras se preparaba el dispositivo invalida el alta.
+		if (!isActive || !base) return null;
 		const response = await fetch(`${base}/push`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
@@ -640,7 +641,7 @@
 		phase: TestPhase = 'initial'
 	) => {
 		const vapidPublicKey = data.vapidPublicKey;
-		if (!vapidPublicKey || syncing) return;
+		if (!isActive || !vapidPublicKey || syncing) return;
 		// Defensa en profundidad: ningún caller puede registrar, suscribir ni pedir una
 		// prueba hasta que el navegador refleje el permiso como efectivamente concedido.
 		// No alcanza con confiar en el valor devuelto por requestPermission(): algunos
@@ -660,6 +661,7 @@
 		pushMessage = '';
 		try {
 			await runWithPhonePushLock(async () => {
+				if (!isActive) return;
 				// El permiso pudo cambiar mientras esta pestaña esperaba a otra. Se
 				// comprueba de nuevo antes de tocar la suscripción compartida.
 				if (readNotificationPermission() !== 'granted') {

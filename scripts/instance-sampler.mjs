@@ -10,12 +10,17 @@ import { STAGING_PROJECT_REF, stagingConnection } from './lib/staging-database.m
 // instance's own metrics every 5 s (CPU time by mode, including steal and iowait; CPU, I/O and
 // memory pressure; swap; disk; checkpoints) from the project's metrics endpoint, and every 2 s
 // what each active session is waiting on (pg_stat_activity), through one read-only session.
-// Only counters and wait event names are kept: no query text, row or credential.
+// Only counters and wait event names are kept: no query text, row or credential. `light` keeps
+// only the metrics, once a minute, and opens no database session: it observes a whole measurement,
+// including the time after a seed, without adding a load of its own to the instance it measures.
 const root = fileURLToPath(new URL('../', import.meta.url));
-const [target, minutesArgument, label] = process.argv.slice(2);
+const [target, minutesArgument, label, mode] = process.argv.slice(2);
 const minutes = Number(minutesArgument);
-if (!['staging', 'production'].includes(target) || !Number.isInteger(minutes) || minutes < 1 || minutes > 120 || !/^[a-z0-9-]{3,40}$/.test(label ?? ''))
-	throw new Error('Usage: instance-sampler.mjs staging|production <minutes 1-120> <label>');
+const light = mode === 'light';
+if (!['staging', 'production'].includes(target) || !Number.isInteger(minutes) || minutes < 1 || minutes > (light ? 240 : 120) ||
+	!/^[a-z0-9-]{3,40}$/.test(label ?? '') || (mode !== undefined && !light) || process.argv.length > 6)
+	throw new Error('Usage: instance-sampler.mjs staging|production <minutes 1-120, or 1-240 with light> <label> [light]');
+const metricsIntervalMs = light ? 60_000 : 5_000;
 
 const ref = target === 'staging' ? STAGING_PROJECT_REF : PRODUCTION_REF;
 let database;
@@ -61,7 +66,7 @@ async function sampleMetrics() {
 		} catch (error) {
 			appendFileSync(output, JSON.stringify({ at, kind: 'metrics', error: error.name }) + '\n');
 		}
-		await new Promise((resolve) => setTimeout(resolve, 5_000));
+		await new Promise((resolve) => setTimeout(resolve, metricsIntervalMs));
 	}
 }
 
@@ -91,5 +96,5 @@ function sampleWaits() {
 	});
 }
 
-await Promise.all([sampleMetrics(), sampleWaits()]);
+await Promise.all(light ? [sampleMetrics()] : [sampleMetrics(), sampleWaits()]);
 console.log(JSON.stringify({ target, label, samples: readFileSync(output, 'utf8').split('\n').filter(Boolean).length, output }));

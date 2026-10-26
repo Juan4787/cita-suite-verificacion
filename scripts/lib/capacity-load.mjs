@@ -336,6 +336,20 @@ const sample = (operation, durationMs, result) => {
 		...(outcome === 'error' ? { reason: failureReason(result) } : {}) };
 };
 
+/** Requests at least this long are kept one by one, so a pause can be placed in time. */
+export const SLOW_SAMPLE_MS = 1_000;
+
+/**
+ * A slow sample with the moment its request started, recorded as it finishes; null for a faster
+ * one. Only the phase, operation, outcome and times: what placing a pause against the instance's
+ * metrics needs, and no data.
+ */
+export function slowSample(measured, phase, finishedAt = Date.now()) {
+	if (!(measured.durationMs >= SLOW_SAMPLE_MS)) return null;
+	return { phase, startedAt: new Date(finishedAt - measured.durationMs).toISOString(), operation: measured.operation,
+		category: measured.category, durationMs: measured.durationMs, outcome: measured.outcome };
+}
+
 /**
  * Runs one virtual user until `until`, recording every request made after
  * `measureFrom`. Pauses are three to eight seconds between operations, and no

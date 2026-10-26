@@ -1,6 +1,21 @@
 # Control de consumo
 
-Decisión del usuario del 20 de octubre, preservada al final del plan: el lanzamiento es para dos consultorios sobre Workers Free y Supabase Free, sin contratar nada. Tampoco se acepta ningún servicio con cobro variable sin tope. Cada protección se evalúa por su mérito: las justificadas se implementan y verifican ahora, y las postergadas quedan aquí con su riesgo residual y la circunstancia en que conviene retomarlas.
+**Restricción económica vigente — 25 de octubre:** el usuario vendió la app con pago único y no asumirá servicios pagos recurrentes para un consultorio. Comprará el dominio; recién desde el segundo consultorio podrá evaluarse pagar infraestructura. No se autorizan contrataciones, migraciones ni cambios de plan por alcanzar esa cantidad.
+
+**Decisión posterior del 25 de octubre:** el lanzamiento es para un consultorio sobre los planes gratuitos, y desde el segundo consultorio el usuario pagará Supabase Pro. El pedido literal y su aplicación están al final del [plan](../plans/refactorizacion-cita-suite.md). La contratación la hace el usuario, con el tope de gasto activado; el agente no contrata, no migra y no cambia planes. Workers sigue en Free: Workers Paid no forma parte de esta decisión.
+
+## Decisión económica del usuario y aplicación
+
+Contexto aportado por el usuario: «me compraron la app con pago unico, no puedo pagar 25 usd al mes sin ingreso recurrente, es gasto».
+
+Decisión posterior literal: «la conclusion es clara, si voy a comprar el dominio pero no voy a meterme en gastos recurrentes ahora para 1 consultorio. lo minimo que puedo extenderme es pagar recien en el segundo».
+
+- **Primer consultorio:** priorizar soluciones sin nuevos cargos recurrentes. No proponer Supabase Pro, Workers Paid ni otro alojamiento pago como gasto inmediato o requisito que el usuario deba aceptar. Si la infraestructura gratuita no demuestra los requisitos, documentar el impedimento y las alternativas compatibles; no ocultarlo ni contratar para superarlo.
+- **Dominio:** compra pendiente a cargo del usuario. Su intención de comprarlo no autoriza al agente a contratarlo ni demuestra su conexión, la configuración de correo o la verificación de Google.
+- **Segundo consultorio:** primer momento admisible para evaluar un servicio pago, con decisión explícita, financiación definida y control de gasto compatible. No se presupone que una segunda venta de pago único financie facturas indefinidamente.
+- **Evidencia y calidad:** los ensayos fallidos de dos consultorios se conservan. El diagnóstico de un consultorio del 25 de octubre fue breve y secuencial; no constituye aceptación de la operación inicial. Esta decisión económica no cambia por sí sola los umbrales, la matriz de regresiones ni el cierre técnico aprobado. La campaña y el lanzamiento siguen abiertos.
+
+La decisión del 20 de octubre permanece íntegra al final del plan como antecedente: lanzamiento de dos consultorios sobre Workers Free y Supabase Free, sin contratar nada, con previsión económica de pagar desde el tercero. La decisión del 25 sustituye esa previsión económica por el segundo como umbral mínimo para evaluar un gasto; no reescribe ni elimina evidencia o requisitos técnicos. Tampoco se acepta ningún servicio con cobro variable sin tope. Cada protección se evalúa por su mérito: las justificadas se implementan y verifican ahora, y las postergadas quedan aquí con su riesgo residual y la circunstancia en que conviene retomarlas.
 
 ## Qué pasa al exceder los planes gratuitos
 
@@ -36,8 +51,10 @@ Las protecciones del código siguen valiendo con cualquier proveedor. Con infrae
 
 ## Al contratar infraestructura paga
 
-La previsión del usuario de pagar Supabase Pro y un alojamiento desde el tercer consultorio activo **no autoriza contratar nada**. Cuando se decida:
+Para un consultorio no se asumen servicios pagos recurrentes. **Desde el segundo consultorio el usuario pagará Supabase Pro** (decisión del 25 de octubre); esa decisión **no autoriza al agente a contratar nada**. Cuando el usuario contrate:
 
-- Sólo servicios de precio fijo o con tope duro de gasto. Por ejemplo, Supabase Pro con el tope de gasto activado: al llegar a la cuota restringe en vez de cobrar el excedente. Antes de contratar hay que verificar qué partidas cubre ese tope.
+- Sólo servicios de precio fijo o con tope duro de gasto. Supabase Pro se usa con el tope de gasto activado: al llegar a la cuota restringe en vez de cobrar el excedente. Antes de contratar hay que verificar qué partidas cubre ese tope; por ejemplo, un cómputo mayor que el incluido se cobra aparte.
+- Antes de incorporar el segundo consultorio, con Pro activo, se demuestran los criterios del plan con dos consultorios en ese destino.
+- Si en Free se aplicó una configuración propia de Postgres (`supabase postgres-config`), se revisa al cambiar de cómputo: Supabase la mantiene por encima de sus valores predeterminados.
 - Para el alojamiento, uno de precio fijo que limite y no cobre el excedente. El análisis del 20 de octubre está en el registro, y el proveedor no está decidido.
 - Las protecciones de esta página se conservan. Los perfiles de presupuesto de las tareas (`JOB_BUDGET_PROFILE`) se recalibran con mediciones del nuevo destino, no por suposición.

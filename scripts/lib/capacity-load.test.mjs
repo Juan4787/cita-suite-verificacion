@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import {
 	ACCEPTANCE, CookieJar, OPERATIONS, capacityOwnersPassword, classifyResponse, createRandom, evaluateAcceptance, exchange, failureReason, localDate,
-	localDateTime, login, pickOperation, planOperation, practiceData, runVirtualUser, summarize
+	localDateTime, login, pickOperation, planOperation, practiceData, runVirtualUser, SLOW_SAMPLE_MS, slowSample, summarize
 } from './capacity-load.mjs';
 
 const response = (status, body, cookies = []) => {
@@ -361,4 +361,14 @@ test('the owners of a seeded run keep the password its measurement derives, in e
 		assert.equal(capacityOwnersPassword('secret-of-the-run', environment),
 			createHmac('sha256', 'secret-of-the-run').update(`cita-suite-${environment}-capacity-owners`).digest('base64url'));
 	assert.notEqual(capacityOwnersPassword('secret-of-the-run', 'staging'), capacityOwnersPassword('secret-of-the-run', 'production'));
+});
+
+test('a request of a second or more is kept with its start and no data; a faster one is not', () => {
+	const finishedAt = Date.parse('2026-10-25T06:00:10.000Z');
+	const read = { operation: 'agenda_week', category: 'read', durationMs: SLOW_SAMPLE_MS, outcome: 'ok', reason: 'never kept' };
+	assert.deepEqual(slowSample(read, 'repetition-2', finishedAt), { phase: 'repetition-2', startedAt: '2026-10-25T06:00:09.000Z',
+		operation: 'agenda_week', category: 'read', durationMs: 1000, outcome: 'ok' });
+	assert.equal(slowSample({ ...read, durationMs: SLOW_SAMPLE_MS - 1 }, 'repetition-2', finishedAt), null);
+	assert.equal(slowSample({ ...read, durationMs: undefined }, 'public', finishedAt), null);
+	assert.equal(slowSample({ ...read, durationMs: 4200, outcome: 'error' }, 'public', finishedAt).startedAt, '2026-10-25T06:00:05.800Z');
 });

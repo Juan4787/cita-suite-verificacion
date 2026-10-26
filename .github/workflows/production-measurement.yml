@@ -1,9 +1,9 @@
 name: Medición de producción de Cita Suite
 
-# Manual only. The HTTP load of the two-practice measurement against the production app,
+# Manual only. The HTTP load of the one-practice measurement against the production app,
 # from this external runner. It holds no production credential: only the secret from which
 # the synthetic owners' password is derived, set for one measurement and removed with its
-# cleanup. Seeding, integrity checks, statistics and cleanup run outside it
+# cleanup. Seeding, vacuum, integrity checks, statistics, cleanup and compaction run outside it
 # (scripts/production-capacity.mjs).
 on:
   workflow_dispatch:

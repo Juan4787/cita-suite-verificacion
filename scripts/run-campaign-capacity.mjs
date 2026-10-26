@@ -11,6 +11,7 @@ import { cleanupFixtureResources } from './lib/fixture-cleanup.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
 import { assertPlatformDiagnostics } from './lib/platform-diagnostics.mjs';
 import { connectInspector, summarizeCpuProfile } from './lib/cpu-profile.mjs';
+import { runTargetedPerformance } from './lib/targeted-performance.mjs';
 import {
 	INTEGRITY_SQL, createRandom, describePublicPage, evaluateAcceptance, evaluateCleanup, localDate, login, practiceData, removeCapacityOwners,
 	runPublicAbuse, runPublicGenerator, runVirtualUser, summarize, uuidFrom
@@ -25,12 +26,13 @@ import {
 // Results describe this container, never the capacity of a hosted project.
 const root = fileURLToPath(new URL('../', import.meta.url));
 const mode = process.argv[2] ?? 'full';
-if (process.argv.length > 3 || !['full', '--seed-only', '--quick', '--profile'].includes(mode))
-	throw new Error('Usage: run-campaign-capacity.mjs [--seed-only|--quick|--profile]. No diagnostic counts as a capacity result.');
+if (process.argv.length > 3 || !['full', '--seed-only', '--quick', '--profile', '--targeted'].includes(mode))
+	throw new Error('Usage: run-campaign-capacity.mjs [--seed-only|--quick|--profile|--targeted]. No diagnostic counts as a capacity result.');
 const seedOnly = mode === '--seed-only';
+const targeted = mode === '--targeted';
 // The short pass also profiles the app's CPU in workerd: Workers Free allows 10 ms
 // per request, and the profile shows where each phase spends it.
-const profiling = mode === '--profile';
+const profiling = mode === '--profile' || targeted;
 // A short pass over the whole pipeline, with the five-practice scenario only.
 const quick = mode === '--quick' || profiling;
 assertHostedIntegrationResources();
@@ -362,6 +364,19 @@ async function scenario(practices) {
 		const result = { practices, seed };
 		if (!seedOnly) {
 			app = await application(started.runtime, practices);
+			if (targeted) {
+				const diagnostic = await runTargetedPerformance({
+					origin: appOrigin, password, profiler: app.profiler, unflatten: devalue.unflatten,
+					saveProfile: (name, profile) => writeFileSync(join(evidence, `targeted-cpu-${name}.json`), JSON.stringify(profile, null, 2) + '\n')
+				});
+				const created = JSON.parse(psql(database, `select jsonb_build_object('owned',count(*)) from public.appointments
+				 where business_id='${practiceData(1).business}'::uuid and id in (${diagnostic.createdIds.map(id => `'${id}'::uuid`).join(',')})`));
+				if (created.owned !== 3) throw new Error('Targeted creations were not persisted in their owned practice.');
+				const { createdIds, ...safeDiagnostic } = diagnostic;
+				result.targeted = { ...safeDiagnostic, ownedCreationsPersisted: created.owned };
+				result.integrity = JSON.parse(psql(database, INTEGRITY_SQL));
+				result.passed = result.integrity.crossPractice === 0 && result.integrity.overlaps === 0;
+			} else {
 			Object.assign(result, await measure(database, practices, password, app.profiler));
 			// Public booking is measured once, on the largest scenario of the run.
 			if (practices === 25 || quick) result.publicBooking = await measurePublic(practices, app.profiler);
@@ -369,6 +384,7 @@ async function scenario(practices) {
 			result.passed = result.repetitions.every(item => item.acceptance.passed) &&
 				result.integrity.crossPractice === 0 && result.integrity.overlaps === 0 &&
 				result.repetitions.every(item => item.database.database.deadlocks === 0) && (result.publicBooking?.passed ?? true);
+			}
 		}
 		result.cleanup = await cleanup(database, started.runtime, practices);
 		if (!seedOnly) result.passed &&= result.cleanup.passed;
@@ -403,8 +419,8 @@ async function scenario(practices) {
 try {
 	if (!seedOnly) await run('pnpm', ['--filter', 'web', 'build:cloudflare'], { env: { ...environment, CITA_BUILD_VERSION: process.env.GITHUB_SHA ?? 'capacity-local' } });
 	const results = [];
-	for (const practices of quick ? [5] : [5, 25]) results.push(await scenario(practices));
-	const summary = { mode, scenarios: results.map(({ practices, seed, passed, integrity, repetitions, publicBooking, cleanup }) => ({ practices, seed, passed, integrity,
+	for (const practices of targeted ? [1] : quick ? [5] : [5, 25]) results.push(await scenario(practices));
+	const summary = { mode, scenarios: results.map(({ practices, seed, passed, integrity, repetitions, publicBooking, targeted, cleanup }) => ({ practices, seed, passed, integrity, targeted,
 		repetitions: repetitions?.map(({ repetition, summary, acceptance, lockWaits }) => ({ repetition, read: summary.read, write: summary.write, acceptance, lockWaits })),
 		publicBooking: publicBooking && { passed: publicBooking.passed, abuse: publicBooking.abuse,
 			repetitions: publicBooking.repetitions.map(({ repetition, summary, acceptance, bookingFailures }) =>
@@ -419,7 +435,7 @@ try {
 		meanMs5: Number(small.get(query).mean_ms), meanMs25: Number(statement.mean_ms), calls25: Number(statement.calls),
 		ratio: Number(statement.mean_ms) / Math.max(Number(small.get(query).mean_ms), 0.001) })).sort((a, b) => b.ratio - a.ratio);
 	writeFileSync(join(evidence, 'summary.json'), JSON.stringify(summary, null, 2) + '\n');
-	if (seedOnly || quick) console.log('Capacity diagnostic completed; this is not a capacity result.');
+	if (seedOnly || quick || targeted) console.log('Capacity diagnostic completed; this is not a capacity result.');
 	if (!seedOnly && !results.every(result => result.passed)) throw new Error('A capacity scenario did not meet the acceptance criteria of the plan; read summary.json.');
 } catch (error) {
 	console.error(error);

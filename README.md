@@ -4,6 +4,8 @@ Monorepo con la aplicación SvelteKit, la web Astro de Natalia y Supabase: agend
 
 La campaña actual se rige por el [plan aprobado íntegro](docs/plans/refactorizacion-cita-suite.md). Su [registro de ejecución](docs/plans/registro-refactorizacion-cita-suite.md) distingue avances, pruebas, resultados y pendientes. Las notificaciones por WhatsApp están descartadas; cursos y noticias siguen pospuestos.
 
+Repositorio principal: [Juan4787/cita-suite](https://github.com/Juan4787/cita-suite). El directorio físico es `Cita Suite`; la ruta anterior conserva un enlace de compatibilidad. La fuente compilada0851 y la revisión de promoción37f625b tienen funciones distintas: el marcador servido identifica el artefacto, mientras la promoción conserva historia y documentación. El [dictamen actual](docs/architecture/auditoria-final.md) mantiene el lanzamiento sin aprobar por dos mediciones fallidas de latencia y las dependencias externas descritas. La comparación sin muestreadorSQL no aprobó; sus datos y credenciales temporales ya se retiraron. El cierre está documentado con evidencia y límites, sin un tercer ensayo idéntico.
+
 ## Estructura
 
 ```text
@@ -92,7 +94,8 @@ Los secretos locales no se incluyen en Git. El Worker usa la compatibilidad de
 Node de Cloudflare para mantener los módulos de servidor existentes. El
 `compatibility_date` queda fijado a la última fecha compatible con la versión
 de Wrangler elegida para los despliegues existentes. La versión Node de compilación
-es independiente de esa fecha de compatibilidad; la campaña no cambia el runtime remoto.
+es independiente de esa fecha de compatibilidad. La revisión servida se comprueba contra
+el artefacto publicado; no se deduce de la versión local de Node.
 
 ## Estado actual
 
