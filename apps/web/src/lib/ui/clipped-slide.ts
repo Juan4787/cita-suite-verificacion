@@ -5,8 +5,7 @@ import { slide, type SlideParams, type TransitionConfig } from "svelte/transitio
 // the panel's content, and that offset is dropped when the transition ends, moving the
 // controls away from a press that is still down. `overflow: clip` clips the same pixels
 // and cannot be scrolled.
-const clipping = () =>
-  typeof CSS !== "undefined" && CSS.supports("overflow", "clip") ? "clip" : "hidden";
+const clipping = () => (globalThis.CSS?.supports?.("overflow", "clip") ? "clip" : "hidden");
 
 /** `slide` for panels with controls: the same motion and clipping, never scrollable. */
 export function clippedSlide(node: HTMLElement, params?: SlideParams): TransitionConfig {

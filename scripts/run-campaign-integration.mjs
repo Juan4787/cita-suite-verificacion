@@ -47,6 +47,10 @@ const runId = randomUUID();
 process.env.CITA_FIXTURE_RUN_ID = runId;
 const campaignId = process.env.CITA_VERIFICATION_RUN_ID ?? runId;
 if (!/^[a-f0-9-]{36}$/.test(campaignId)) throw new Error('Invalid campaign evidence identifier.');
+// A filtered diagnostic starts the dev server exactly as the integration profile does: with the
+// verification identity, svelte.config.js gives its platform proxy ephemeral state and the SSR
+// fetch diagnostics are loaded.
+process.env.CITA_VERIFICATION_RUN_ID = campaignId;
 const evidence = join(root, '.verification', 'runs', campaignId, diagnostic ? 'diagnostic-' + runId : rollback ? 'integration-rollback' : artifact ? 'integration-artifact' : 'integration');
 mkdirSync(evidence, { recursive: true });
 writeFileSync(join(root, '.verification', 'latest-integration.json'), JSON.stringify({ runId, campaignId, directory: evidence, diagnostic: Boolean(diagnostic),

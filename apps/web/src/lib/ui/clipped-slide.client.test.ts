@@ -37,3 +37,13 @@ it("keeps hidden where the browser does not support clip", () => {
   clippedSlide(node);
   expect(node.style.overflow).toBe("hidden");
 });
+
+// jsdom exposes `CSS` without `supports`; the panel must still open there.
+it("keeps hidden where CSS.supports is unavailable", () => {
+  for (const css of [{}, undefined]) {
+    vi.stubGlobal("CSS", css);
+    const node = panel();
+    expect(() => clippedSlide(node)).not.toThrow();
+    expect(node.style.overflow).toBe("hidden");
+  }
+});
