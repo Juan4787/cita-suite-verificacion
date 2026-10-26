@@ -11,7 +11,7 @@
 	} from '$lib/availability/snapshot';
 	import { filterAgendaAppointmentsByQuery } from '$lib/utils/agenda-search';
 	import { onDestroy, tick } from 'svelte';
-	import { slide } from 'svelte/transition';
+	import { clippedSlide } from '$lib/ui/clipped-slide';
 	import {
 		ACTIVE_APPOINTMENT_STATUSES,
 		isExpiredActiveAppointment,
@@ -647,7 +647,7 @@
 	{/if}
 
 	{#if showSearch}
-		<div transition:slide={{ duration: 180 }} class="ux-card scroll-mt-5" bind:this={searchSection}>
+		<div transition:clippedSlide={{ duration: 180 }} class="ux-card scroll-mt-5" bind:this={searchSection}>
 			<label>
 				<span class="ux-label">Paciente o teléfono</span>
 				<input
@@ -716,7 +716,7 @@
 	{/if}
 
 	{#if showCreate}
-		<div transition:slide={{ duration: 180 }} class="scroll-mt-5" bind:this={createSection}>
+		<div transition:clippedSlide={{ duration: 180 }} class="scroll-mt-5" bind:this={createSection}>
 			{#if referencesLoading && !referencesLoaded}
 				<div class="ux-card text-sm font-semibold text-white/60" aria-live="polite">
 					Cargando profesionales y servicios…
