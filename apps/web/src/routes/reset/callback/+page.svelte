@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import { replaceState } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 	import type { Database } from '@cita-suite/shared';
@@ -18,7 +19,7 @@
 		const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
 		// The tokens are needed only in memory. Clear them even if configuration,
 		// validation or the provider fails later.
-		window.history.replaceState({}, '', window.location.pathname);
+		replaceState(window.location.pathname, {});
 		const supabaseUrl = env.PUBLIC_ODONTO_SUPABASE_URL?.trim();
 		const supabaseKey = env.PUBLIC_ODONTO_SUPABASE_ANON_KEY?.trim();
 

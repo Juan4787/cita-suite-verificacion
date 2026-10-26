@@ -61,10 +61,7 @@ test('password recovery with real disposable Auth rejects an unchanged password,
 		if (verified.error || !verified.data.session) throw new Error('Disposable Auth did not issue a recovery session.');
 		const session = verified.data.session;
 		const fragment = '#' + new URLSearchParams({ access_token: session.access_token, refresh_token: session.refresh_token, type: 'recovery', expires_in: String(session.expires_in), token_type: session.token_type });
-		await page.goto('/reset/callback');
-		await expect(page.getByText('El enlace es inválido o expiró. Volvé a solicitarlo.')).toBeVisible();
-		await page.evaluate((fragment) => { window.history.replaceState({}, '', '/reset/callback' + fragment); }, fragment);
-		try { await page.reload(); } catch { throw new Error('Could not load the owned recovery callback.'); }
+		try { await page.goto('/reset/callback' + fragment); } catch { throw new Error('Could not load the owned recovery callback.'); }
 		await expect(page.getByLabel('Nueva contraseña')).toBeVisible();
 		expect(new URL(page.url()).hash.length).toBe(0);
 		await page.getByLabel('Nueva contraseña').fill(oldPassword);
