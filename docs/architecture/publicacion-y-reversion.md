@@ -1,6 +1,10 @@
 # Publicación y reversión
 
-## Continuación vigente — recuperación, 26 de octubre, 17:59 UTC
+## Continuación vigente — 26 de octubre, 21:50 UTC
+
+La entrega pasó a la candidata `1fa2f2fcc71f53e0c840accea4d3c4018fd8850d` (artefacto `40405813074`) y a la base compatible `dbd69d201c88a0d1fe71650c94615d4ae0838a2b` (artefacto `40406135670`), por la corrección del panel de nuevo turno. Detalle exacto en [el traspaso del panel](../plans/traspaso-apertura-panel-20261026.md). `ad5ac57` y `375e16a` quedan superadas para publicar. El preflight productivo sigue bloqueado: la ruta de red de esta máquina no alcanza el pooler de sesión y la lectura por la API de gestión requiere decisión del usuario. Producción sin cambios.
+
+## Antecedente — recuperación, 26 de octubre, 17:59 UTC
 
 Leer el [traspaso exacto](../plans/traspaso-recuperacion-sin-dominio-20261026.md) antes de ejecutar comandos: candidataad5ac57/artefacto40369186753 y compatible375e16a/artefacto40369909691. Reversión de staging aprobada; auditoría completa40373057375 todavía en curso. **No hubo publicación productiva de esta corrección.** El preflight falló en la primera lectura de base; causa no establecida y control pendiente. Metadata productiva revalidada:0851,versión70f0cdc0,33 bindings y cinco cron activos. No se detuvo el programador.
 

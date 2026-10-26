@@ -456,10 +456,6 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 	}) => {
 		if (!fixture) throw new Error('Fixture no inicializado.');
 		await login(page, fixture);
-		// The panel opens with a 180 ms transition. Slowing the browser's animation timeline gives
-		// that window a deterministic length; the page's own code and requests are unchanged.
-		const animations = await page.context().newCDPSession(page);
-		await animations.send('Animation.enable');
 		let releaseReferences!: () => void;
 		const referencesHeld = new Promise<void>((resolve) => {
 			releaseReferences = resolve;
@@ -474,11 +470,31 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 		);
 		try {
 			await page.goto(`/odonto/agenda?date=${bookingDate}`);
-			// 180 ms become 9 s: wide enough for the references to arrive while the panel opens.
-			await animations.send('Animation.setPlaybackRate', { playbackRate: 0.02 });
 			await page.getByRole('button', { name: '+ Nuevo turno', exact: true }).click();
 			// The panel measures its opening height on this loading state, then receives the wizard.
-			await expect(page.getByText('Cargando profesionales y servicios…', { exact: true })).toBeVisible();
+			const loading = page.getByText('Cargando profesionales y servicios…', { exact: true });
+			await expect(loading).toBeVisible();
+			// Only the panel's 180 ms opening is slowed (to 9 s), as soon as it starts, so the
+			// references arrive while it opens. The controls' own transitions keep their speed.
+			const slowed = await loading.locator('xpath=..').evaluate(
+				(element) =>
+					new Promise<number>((resolve) => {
+						const deadline = performance.now() + 2_000;
+						const slowOpening = () => {
+							const opening = element
+								.getAnimations()
+								.filter((animation) => Number(animation.effect?.getTiming().duration ?? 0) > 0);
+							if (opening.length === 0 && performance.now() < deadline) {
+								requestAnimationFrame(slowOpening);
+								return;
+							}
+							for (const animation of opening) animation.playbackRate = 0.02;
+							resolve(opening.length);
+						};
+						slowOpening();
+					})
+			);
+			expect(slowed, 'La apertura del panel debe estar en curso.').toBeGreaterThan(0);
 		} finally {
 			releaseReferences();
 		}
@@ -504,7 +520,6 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 		await page.mouse.move(point.x, point.y);
 		await page.mouse.down();
 		// The opening ends while the choice is pressed, as it can between a press and its release.
-		await animations.send('Animation.setPlaybackRate', { playbackRate: 1 });
 		await panel.evaluate(async (element) => {
 			for (const animation of element.getAnimations()) animation.finish();
 			await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));

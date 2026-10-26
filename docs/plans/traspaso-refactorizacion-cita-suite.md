@@ -1,6 +1,12 @@
 # Traspaso de la campaña de refactorización de Cita Suite
 
-## Punto exacto de entrega a otro modelo — 26 de octubre, 17:59 UTC
+## Punto exacto vigente — 26 de octubre, 21:50 UTC
+
+**Continuar desde [el traspaso del panel y la recuperación](traspaso-apertura-panel-20261026.md).** La auditoría `40373057375` falló por un clic perdido al abrir el panel de nuevo turno, un defecto preexistente que ahora quedó demostrado y corregido con rojo/verde. También se corrigió el `SQLITE_BUSY` de los diagnósticos. Candidata `1fa2f2fcc71f53e0c840accea4d3c4018fd8850d`, base compatible `dbd69d201c88a0d1fe71650c94615d4ae0838a2b`, staging en la candidata y reversión alojada `40406661610` aprobada. **Auditoría completa `40407154415` en curso**: recuperarla antes de cualquier otro despacho.
+
+Producción sigue en `0851de5`, con cinco cron, sin despliegue. **Publicación bloqueada:** desde esta máquina, con ProtonVPN, el pooler de sesión 5432 no responde (causa establecida), y la lectura alternativa por la API de gestión fue denegada por el clasificador de permisos. Falta una decisión del usuario. SMTP, dominio, verificación de Google y nombre de Supabase siguen pendientes. La campaña permanece abierta.
+
+## Antecedente — punto de entrega del 26 de octubre, 17:59 UTC
 
 **Continuar desde [el traspaso específico](traspaso-recuperacion-sin-dominio-20261026.md)**: incluye fuentes, artefactos, pruebas, fallos, rutas privadas sin valores secretos, estado de producción y comandos exactos. El usuario pidió este traspaso; se detiene la implementación/publicación en este punto. La única tarea remota activa es la auditoría completa ya solicitada.
 
