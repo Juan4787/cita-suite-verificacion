@@ -163,6 +163,10 @@ gh workflow run 386107045 --repo Juan4787/cita-suite-verificacion --ref refactor
 
 El diagnóstico ejecuta **todos** los casos seleccionados aunque uno falle (sin `--max-failures=1`), para reunir fallos independientes en una sola corrida; cualquier fallo sigue rechazándolo. Full, demo y staging conservan la detención en el primer fallo.
 
+El diagnóstico arranca el servidor de desarrollo igual que el perfil de integración. `run-campaign-integration.mjs` exporta la identidad de verificación a sus procesos, de modo que el proxy de plataforma de `svelte.config.js` usa estado efímero por instancia (`persist: false`) y se cargan los diagnósticos de fetch en SSR. Hasta el 26 de octubre no la exportaba: el proxy compartía `apps/web/.wrangler/state`. `@sveltejs/adapter-cloudflare` 7.2.9 memoiza el proxy recién después del `await`, así que las primeras peticiones solapadas crean un proxy cada una, y workerd abortaba con `SQLITE_BUSY` en 10 de 20 diagnósticos (0 de 42 perfiles completos). La corrida falla si, en el perfil de desarrollo, aparece `apps/web/.wrangler/state`; rojo comprobado en 40403062733. Un `pnpm dev` local fuera del arnés conserva la persistencia por defecto y esa carrera del adaptador: revisar al actualizarlo.
+
+Las corridas de este workflow comparten un grupo de concurrencia y GitHub mantiene **una sola pendiente**: si se encola otra detrás de una en curso, la pendiente anterior se cancela sin jobs (40403821001). Despachar de a una y esperar a que la anterior empiece.
+
 Usarlo para diagnosticar un fallo ya localizado cuando tipos/unidades/SQL pertinentes tienen evidencia propia; después ejecutar full de la revisión final. El caso que depende de preparación de otra prueba requiere esa preparación explícita o seleccionar su grupo completo; no atribuir un fallo de fixture al producto ni convertir una suite vacía en éxito. Mismas restricciones de RAM/destinos/limpieza: exclusivamente CI externo, servicios propios, un trabajador, un proceso pesado por vez. La entrada no despliega, no recibe credenciales de producción ni introduce omisiones en fast/full/release.
 
 ## Tipos de las pruebas de navegador

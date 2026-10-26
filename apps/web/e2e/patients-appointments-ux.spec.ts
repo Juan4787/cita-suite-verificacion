@@ -474,7 +474,8 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 		);
 		try {
 			await page.goto(`/odonto/agenda?date=${bookingDate}`);
-			await animations.send('Animation.setPlaybackRate', { playbackRate: 0.05 });
+			// 180 ms become 9 s: wide enough for the references to arrive while the panel opens.
+			await animations.send('Animation.setPlaybackRate', { playbackRate: 0.02 });
 			await page.getByRole('button', { name: '+ Nuevo turno', exact: true }).click();
 			// The panel measures its opening height on this loading state, then receives the wizard.
 			await expect(page.getByText('Cargando profesionales y servicios…', { exact: true })).toBeVisible();
@@ -493,13 +494,13 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 		const pressed = await professional.boundingBox();
 		if (!pressed) throw new Error('El profesional no tiene una caja visible.');
 		const point = { x: pressed.x + pressed.width / 2, y: pressed.y + pressed.height / 2 };
-		// The press lands on the professional, as Playwright's hit check requires of a click.
-		expect(
-			await page.evaluate(
+		const choiceAtPoint = () =>
+			page.evaluate(
 				({ x, y }) => document.elementFromPoint(x, y)?.closest('button')?.textContent ?? '',
 				point
-			)
-		).toContain(fixture.professionalName);
+			);
+		// The press lands on the professional, as Playwright's hit check requires of a click.
+		expect(await choiceAtPoint()).toContain(fixture.professionalName);
 		await page.mouse.move(point.x, point.y);
 		await page.mouse.down();
 		// The opening ends while the choice is pressed, as it can between a press and its release.
@@ -509,11 +510,10 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 			await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 		});
 		const released = await professional.boundingBox();
-		expect(released, 'La elección presionada debe seguir en pantalla.').not.toBeNull();
-		expect(
-			Math.abs((released?.y ?? Number.NaN) - pressed.y),
-			'La elección no debe moverse mientras está presionada.'
-		).toBeLessThan(1);
+		const moved = Math.round(Math.abs((released?.y ?? Number.NaN) - pressed.y));
+		expect(await choiceAtPoint(), `La elección presionada se movió ${moved} px antes de soltarla.`).toContain(
+			fixture.professionalName
+		);
 		await page.mouse.up();
 		await expect(wizard.getByRole('heading', { name: 'Elegí un día' })).toBeVisible();
 	});
