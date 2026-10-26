@@ -7,7 +7,13 @@ const mocks = vi.hoisted(() => ({
 	createClient: vi.fn()
 }));
 vi.mock('$app/environment', () => ({ browser: true }));
-vi.mock('$app/navigation', () => ({ replaceState: (url: string, state: object) => window.history.replaceState(state, '', url) }));
+vi.mock('$app/navigation', async () => {
+	const { onMount } = await import('svelte');
+	return {
+		afterNavigate: (callback: () => void) => onMount(callback),
+		replaceState: (url: string, state: object) => window.history.replaceState(state, '', url)
+	};
+});
 vi.mock('$env/dynamic/public', () => ({ env: {
 	PUBLIC_ODONTO_SUPABASE_URL: 'https://recovery.example.test',
 	PUBLIC_ODONTO_SUPABASE_ANON_KEY: 'synthetic-public-key'

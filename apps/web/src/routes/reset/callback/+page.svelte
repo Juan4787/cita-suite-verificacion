@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { replaceState } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { afterNavigate, replaceState } from '$app/navigation';
 	import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 	import type { Database } from '@cita-suite/shared';
 	import { env } from '$env/dynamic/public';
@@ -13,6 +12,7 @@
 	let confirmPassword = $state('');
 	let showPassword = $state(false);
 	let saving = $state(false);
+	let initialized = false;
 	let supabase: SupabaseClient<Database> | null = null;
 
 	const initSessionFromHash = async () => {
@@ -121,9 +121,14 @@
 		}
 	};
 
-	onMount(async () => {
-		if (!browser) return;
-		await initSessionFromHash();
+	afterNavigate(() => {
+		if (!browser || initialized) return;
+		initialized = true;
+		// Shallow navigation is available only after the router is initialized.
+		void initSessionFromHash().catch(() => {
+			status = 'error';
+			message = 'No pudimos validar el enlace. Pedí uno nuevo.';
+		});
 	});
 </script>
 
