@@ -69,9 +69,10 @@ test('password recovery with real disposable Auth rejects an unchanged password,
 		await page.getByRole('button', { name: 'Guardar nueva contraseña' }).click();
 		await expect(page.getByText('Elegí una contraseña diferente a la anterior.')).toBeVisible();
 		await expect(page.getByText('Contraseña actualizada correctamente.')).toHaveCount(0);
+		await expect(page.locator('form input, form button')).toHaveCount(4);
 		for (const width of [320, 390, 768, 1280, 1600]) {
 			await page.setViewportSize({ width, height: 900 });
-			issues.push(...await layoutIssues(page, 'main input, main button, main a', 'main'));
+			issues.push(...await layoutIssues(page, 'form input, form button, a', 'body'));
 			await alignTaskForCapture(page.getByRole('heading', { name: 'Restablecer contraseña' }));
 			await page.screenshot({ path: info.outputPath(`password-recovery-${width}.jpg`), type: 'jpeg', quality: 65, fullPage: true });
 		}
@@ -88,10 +89,10 @@ test('password recovery with real disposable Auth rejects an unchanged password,
 		const used = await auth.auth.verifyOtp({ type: 'recovery', token_hash: generated.properties.hashed_token });
 		expect(used.error?.code).toBe('otp_expired');
 		expect(used.data.session).toBeNull();
+		await health.assertAndAttach(info, 'password-recovery-render-health');
 		await info.attach('password-recovery-proof', { body: JSON.stringify({ realDisposableAuth: true, unchangedPasswordRejected: true, newPasswordLogin: true, oldPasswordRejected: true, recoveryTokenReuseRejected: true, layoutWidths: [320, 390, 768, 1280, 1600], realEmailDelivered: false, emailUrlFollowed: false }), contentType: 'application/json' });
 	} finally {
 		await write(admin.from('business_users').delete().eq('business_id', businessId).eq('user_id', user.id));
 		await write(admin.auth.admin.deleteUser(user.id));
-		await health.assertAndAttach(info, 'password-recovery-render-health');
 	}
 });
