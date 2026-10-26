@@ -451,6 +451,88 @@ test.describe('Pacientes, próximos turnos y teléfono — UX integrada', () => 
 		await expect(wizard.getByRole('heading', { name: 'Elegí un día' })).toBeVisible();
 	});
 
+	test('una elección presionada mientras se abre el panel sigue bajo el puntero al terminar la apertura', async ({
+		page
+	}) => {
+		if (!fixture) throw new Error('Fixture no inicializado.');
+		await login(page, fixture);
+		let releaseReferences!: () => void;
+		const referencesHeld = new Promise<void>((resolve) => {
+			releaseReferences = resolve;
+		});
+		const { bookingDate } = fixture;
+		await page.route(
+			(url) => url.pathname === '/odonto/agenda/referencias' && url.searchParams.get('from') === bookingDate,
+			async (route) => {
+				await referencesHeld;
+				await route.continue();
+			}
+		);
+		try {
+			await page.goto(`/odonto/agenda?date=${bookingDate}`);
+			await page.getByRole('button', { name: '+ Nuevo turno', exact: true }).click();
+			// The panel measures its opening height on this loading state, then receives the wizard.
+			const loading = page.getByText('Cargando profesionales y servicios…', { exact: true });
+			await expect(loading).toBeVisible();
+			// Only the panel's 180 ms opening is slowed (to 9 s), as soon as it starts, so the
+			// references arrive while it opens. The controls' own transitions keep their speed.
+			const slowed = await loading.locator('xpath=..').evaluate(
+				(element) =>
+					new Promise<number>((resolve) => {
+						const deadline = performance.now() + 2_000;
+						const slowOpening = () => {
+							const opening = element
+								.getAnimations()
+								.filter((animation) => Number(animation.effect?.getTiming().duration ?? 0) > 0);
+							if (opening.length === 0 && performance.now() < deadline) {
+								requestAnimationFrame(slowOpening);
+								return;
+							}
+							for (const animation of opening) animation.playbackRate = 0.02;
+							resolve(opening.length);
+						};
+						slowOpening();
+					})
+			);
+			expect(slowed, 'La apertura del panel debe estar en curso.').toBeGreaterThan(0);
+		} finally {
+			releaseReferences();
+		}
+		const wizard = page.locator('form').filter({ has: page.locator('input[name="booking_mode"]') });
+		await expect(wizard).toBeVisible({ timeout: 15_000 });
+		const panel = wizard.locator('xpath=..');
+		// Precondition: the wizard arrived while its panel was still opening.
+		expect(await panel.evaluate((element) => element.getAnimations().length)).toBeGreaterThan(0);
+		await wizard.getByRole('button').filter({ hasText: fixture.serviceName }).click();
+
+		const professional = wizard.getByRole('button').filter({ hasText: fixture.professionalName });
+		await professional.scrollIntoViewIfNeeded();
+		const pressed = await professional.boundingBox();
+		if (!pressed) throw new Error('El profesional no tiene una caja visible.');
+		const point = { x: pressed.x + pressed.width / 2, y: pressed.y + pressed.height / 2 };
+		const choiceAtPoint = () =>
+			page.evaluate(
+				({ x, y }) => document.elementFromPoint(x, y)?.closest('button')?.textContent ?? '',
+				point
+			);
+		// The press lands on the professional, as Playwright's hit check requires of a click.
+		expect(await choiceAtPoint()).toContain(fixture.professionalName);
+		await page.mouse.move(point.x, point.y);
+		await page.mouse.down();
+		// The opening ends while the choice is pressed, as it can between a press and its release.
+		await panel.evaluate(async (element) => {
+			for (const animation of element.getAnimations()) animation.finish();
+			await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+		});
+		const released = await professional.boundingBox();
+		const moved = Math.round(Math.abs((released?.y ?? Number.NaN) - pressed.y));
+		expect(await choiceAtPoint(), `La elección presionada se movió ${moved} px antes de soltarla.`).toContain(
+			fixture.professionalName
+		);
+		await page.mouse.up();
+		await expect(wizard.getByRole('heading', { name: 'Elegí un día' })).toBeVisible();
+	});
+
 	test('corrige un número inválido sin salir del formulario y conserva el turno', async ({ page }) => {
 		if (!fixture) throw new Error('Fixture no inicializado.');
 		await login(page, fixture);
