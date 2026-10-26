@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { onMount } from 'svelte';
+	import { afterNavigate, replaceState } from '$app/navigation';
 	import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 	import type { Database } from '@cita-suite/shared';
 	import { env } from '$env/dynamic/public';
@@ -11,9 +11,15 @@
 	let password = $state('');
 	let confirmPassword = $state('');
 	let showPassword = $state(false);
+	let saving = $state(false);
+	let initialized = false;
 	let supabase: SupabaseClient<Database> | null = null;
 
 	const initSessionFromHash = async () => {
+		const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+		// The tokens are needed only in memory. Clear them even if configuration,
+		// validation or the provider fails later.
+		replaceState(window.location.pathname, {});
 		const supabaseUrl = env.PUBLIC_ODONTO_SUPABASE_URL?.trim();
 		const supabaseKey = env.PUBLIC_ODONTO_SUPABASE_ANON_KEY?.trim();
 
@@ -30,8 +36,6 @@
 			return;
 		}
 
-		const hash = window.location.hash.replace(/^#/, '');
-		const params = new URLSearchParams(hash);
 		const accessToken = params.get('access_token');
 		const refreshToken = params.get('refresh_token');
 		const type = params.get('type');
@@ -47,30 +51,30 @@
 			return;
 		}
 
-		supabase = createClient<Database>(supabaseUrl, supabaseKey, {
-			auth: {
-				persistSession: false,
-				autoRefreshToken: false
-			}
-		});
-
-		const { error } = await supabase.auth.setSession({
-			access_token: accessToken,
-			refresh_token: refreshToken
-		});
-
-		if (error) {
+		try {
+			supabase = createClient<Database>(supabaseUrl, supabaseKey, {
+				auth: {
+					persistSession: false,
+					autoRefreshToken: false,
+					detectSessionInUrl: false
+				}
+			});
+			const { error } = await supabase.auth.setSession({
+				access_token: accessToken,
+				refresh_token: refreshToken
+			});
+			if (error) throw error;
+			status = 'ready';
+		} catch {
 			status = 'error';
 			message = 'No pudimos validar el enlace. Pedí uno nuevo.';
-			return;
 		}
-
-		window.history.replaceState({}, '', window.location.pathname);
-		status = 'ready';
 	};
 
 	const handleSubmit = async (event: SubmitEvent) => {
 		event.preventDefault();
+		if (saving || status !== 'ready') return;
+		message = '';
 		if (!supabase) {
 			status = 'error';
 			message = 'No pudimos iniciar la sesión de recuperación.';
@@ -85,30 +89,47 @@
 			return;
 		}
 
-		const { error } = await supabase.auth.updateUser({ password });
-		if (error) {
-			const msg = error.message?.toLowerCase() ?? '';
-			if (
-				msg.includes('same password') ||
-				msg.includes('same as the old password') ||
-				msg.includes('new password should be different') ||
-				msg.includes('password should be different')
-			) {
-				await supabase.auth.signOut();
-				status = 'success';
+		saving = true;
+		try {
+			const { error } = await supabase.auth.updateUser({ password });
+			if (error) {
+				const msg = error.message?.toLowerCase() ?? '';
+				if (error.code === 'same_password' || msg.includes('same password') || msg.includes('same as the old password') || msg.includes('password should be different')) {
+					message = 'Elegí una contraseña diferente a la anterior.';
+				} else {
+					message = 'No pudimos actualizar la contraseña. Intentá de nuevo.';
+				}
 				return;
 			}
+			let closeFailed = false;
+			try {
+				const { error } = await supabase.auth.signOut();
+				closeFailed = Boolean(error);
+			} catch {
+				closeFailed = true;
+			}
+			password = '';
+			confirmPassword = '';
+			message = closeFailed
+				? 'La contraseña se actualizó, pero no pudimos confirmar el cierre de la sesión de recuperación. Cerrá esta pestaña e ingresá con tu nueva contraseña.'
+				: '';
+			status = 'success';
+		} catch {
 			message = 'No pudimos actualizar la contraseña. Intentá de nuevo.';
-			return;
+		} finally {
+			saving = false;
 		}
-
-		await supabase.auth.signOut();
-		status = 'success';
 	};
 
-	onMount(async () => {
-		if (!browser) return;
-		await initSessionFromHash();
+	afterNavigate(() => {
+		if (!browser || initialized) return;
+		initialized = true;
+		// On initial hydration this callback runs just before SvelteKit marks its
+		// router ready. Let that synchronous initialization finish first.
+		void Promise.resolve().then(initSessionFromHash).catch(() => {
+			status = 'error';
+			message = 'No pudimos validar el enlace. Pedí uno nuevo.';
+		});
 	});
 </script>
 
@@ -129,7 +150,7 @@
 		{:else if status === 'success'}
 			<div class="space-y-4">
 				<p class="rounded-xl bg-green-500/15 px-4 py-3 text-sm font-semibold text-green-100">
-					Contraseña actualizada correctamente.
+					{message || 'Contraseña actualizada correctamente.'}
 				</p>
 				<a
 					href="/login"
@@ -181,9 +202,11 @@
 
 				<button
 					type="submit"
+					disabled={saving}
+					aria-busy={saving}
 					class="flex w-full items-center justify-center rounded-2xl bg-[#7c3aed] px-4 py-3 text-base font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed]"
 				>
-					Guardar nueva contraseña
+					{saving ? 'Guardando…' : 'Guardar nueva contraseña'}
 				</button>
 			</form>
 		{/if}
