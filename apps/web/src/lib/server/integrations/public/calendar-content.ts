@@ -6,8 +6,13 @@
 import { formatInTimeZone } from '$lib/utils/format';
 import { alarmsForProximity, buildIcs } from '$lib/server/integrations/public/ics';
 import { buildGoogleCalendarUrl, buildOutlookUrl, type CalendarLinkInput } from '$lib/server/integrations/public/calendar-links';
-import { getPublicSiteUrl, publicAppointmentUrl } from '$lib/server/integrations/public/messaging';
+import { publicAppointmentUrl } from '$lib/server/integrations/public/messaging';
 import type { PublicAppointmentView } from '$lib/server/scheduling/public/public-appointments';
+
+// Dominio de los UID de los .ics: un identificador, no un enlace. No sigue al origen público,
+// porque un cambio de dominio dejaría sin actualizar ni cancelar los eventos ya importados.
+// Es el host con el que se emitieron todos los UID desde Cloudflare.
+const CALENDAR_UID_DOMAIN = 'app.cita-suite.workers.dev';
 
 /** What a calendar event shows of its appointment: schedule, professional and place. */
 export type CalendarEventAppointment = Pick<
@@ -58,13 +63,12 @@ export const icsForAppointment = (
 	const now = options.now ?? new Date();
 	const startsAt = new Date(appointment.starts_at);
 	const endsAt = new Date(appointment.ends_at);
-	const host = new URL(getPublicSiteUrl()).hostname;
 	const cancelled = appointment.status === 'cancelled';
 
 	return buildIcs({
 		// UID estable por turno: reimportar el mismo turno actualiza en vez de duplicar
 		// (en los calendarios que respetan UID+SEQUENCE).
-		uid: `appointment-${appointment.id}@${host}`,
+		uid: `appointment-${appointment.id}@${CALENDAR_UID_DOMAIN}`,
 		startsAt,
 		endsAt,
 		summary: calendarSummaryFor(appointment),
