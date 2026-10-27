@@ -1,10 +1,14 @@
 # Traspaso de la campaña de refactorización de Cita Suite
 
-## Punto exacto vigente — 26 de octubre, 21:50 UTC
+## Punto exacto vigente — 27 de octubre, 04:20 UTC
 
-**Continuar desde [el traspaso del panel y la recuperación](traspaso-apertura-panel-20261026.md).** La auditoría `40373057375` falló por un clic perdido al abrir el panel de nuevo turno, un defecto preexistente que ahora quedó demostrado y corregido con rojo/verde. También se corrigió el `SQLITE_BUSY` de los diagnósticos. Candidata `1fa2f2fcc71f53e0c840accea4d3c4018fd8850d`, base compatible `dbd69d201c88a0d1fe71650c94615d4ae0838a2b`, staging en la candidata y reversión alojada `40406661610` aprobada. **Auditoría completa `40407154415` en curso**: recuperarla antes de cualquier otro despacho.
+**Continuar desde [el traspaso del panel y la recuperación](traspaso-apertura-panel-20261026.md)** y [dominio](../architecture/dominio.md). **Producción publicada y verificada en `b108c1912e2c3bc57403b006bcf33b71cdb91c23`** (recuperación de contraseña + corrección del clic perdido al abrir el panel), versión `d0ac2bcf…`. Auditoría `40434124045` aprobada, copia actual verificada, ensayo compatible y retorno nativo en producción, y cinco cron restituidos con eventos reales de las cinco categorías. Por decisión del usuario, `cita-suite.com.ar` sirve la landing (Worker `cita-suite-landing`) y `app.cita-suite.com.ar` la aplicación, verificados; workers.dev se conserva.
 
-Producción sigue en `0851de5`, con cinco cron, sin despliegue. **Publicación bloqueada:** desde esta máquina, con ProtonVPN, el pooler de sesión 5432 no responde (causa establecida), y la lectura alternativa por la API de gestión fue denegada por el clasificador de permisos. Falta una decisión del usuario. SMTP, dominio, verificación de Google y nombre de Supabase siguen pendientes. La campaña permanece abierta.
+Pendiente del usuario, en este orden: activar «Always Use HTTPS» en Cloudflare (HTTP hoy responde sin redirección), agregar `https://app.cita-suite.com.ar/**` a los retornos de Supabase, agregar `https://app.cita-suite.com.ar/oauth/google-calendar/callback` en Google Cloud, renombrar los proyectos de Supabase, crear la contraseña de aplicación de Gmail (el archivo entregado no lo era) y reabrir el editor en la ruta `Cita Suite`. Después, la campaña publica la entrega de origen (`PUBLIC_SITE_URL`, `PRODUCTION_APP_ORIGIN`, `GOOGLE_CALENDAR_REDIRECT_URI` y redirección HTTPS en la app). La campaña permanece abierta.
+
+## Antecedente — 27 de octubre, 02:05 UTC
+
+Auditoría completa `40434124045` aprobada para `b108c19` y no publicada, hasta que el usuario apagó la VPN.
 
 ## Antecedente — punto de entrega del 26 de octubre, 17:59 UTC
 

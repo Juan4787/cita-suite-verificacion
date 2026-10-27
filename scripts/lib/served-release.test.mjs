@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { assertAppEntry, assertSupabaseOrigin, clientEntries, compareServed, servedFile, siteEntries } from './served-release.mjs';
+import { assertAppEntry, assertSupabaseOrigin, clientEntries, compareServed, httpsRedirect, servedFile, siteEntries } from './served-release.mjs';
 
 const origin = 'https://app.example.test';
 const answer = (status, body = '', headers = {}) => new Response(body, { status, headers });
@@ -65,6 +65,19 @@ test('a private redirect to another origin does not certify the login flow', asy
 		'/login': () => answer(200),
 		'/odonto': () => answer(303, '', { location: 'https://other.example.test/login' })
 	})), /private redirect/);
+});
+
+test('plain HTTP must answer a permanent redirect to the same login page over HTTPS', async () => {
+	const insecure = (status, location) => async (url, options) => {
+		assert.equal(url, 'http://app.example.test/login');
+		assert.equal(options.redirect, 'manual');
+		return answer(status, '', location ? { location } : {});
+	};
+	for (const status of [301, 308])
+		assert.deepEqual(await httpsRedirect(origin, insecure(status, origin + '/login')), { status, location: origin + '/login', redirects: true });
+	for (const [status, location] of [[200], [302, origin + '/login'], [307, origin + '/login'], [308, 'https://other.example.test/login'], [308, 'http://app.example.test/login'], [308, '/login']])
+		assert.equal((await httpsRedirect(origin, insecure(status, location))).redirects, false, `${status} ${location}`);
+	await assert.rejects(httpsRedirect('http://app.example.test', insecure(308, origin + '/login')), /not an HTTPS origin/);
 });
 
 test('the policy admits exactly the configured Supabase project', () => {

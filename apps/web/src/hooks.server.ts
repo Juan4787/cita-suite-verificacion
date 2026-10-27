@@ -13,7 +13,7 @@ import { ACTIVE_BUSINESS_COOKIE } from '$lib/server/access/public/business';
 import { redirect, type Handle } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
-import { withSupabaseOrigin } from '$lib/server/platform/content-security';
+import { LOOPBACK_HOSTS, withSupabaseOrigin } from '$lib/server/platform/content-security';
 import { logServerFailure } from '$lib/server/platform/logging';
 import type { HandleServerError } from '@sveltejs/kit';
 
@@ -55,6 +55,15 @@ const isTransientAuthError = (error: unknown): boolean => {
 
 
 export const handle: Handle = async ({ event, resolve }) => {
+	// A page served over HTTP lets a password travel in clear text, and HSTS only protects after
+	// a first HTTPS visit: redirect before reading cookies or resolving the route. Only local
+	// development and verification run without TLS.
+	if (!dev && event.url.protocol === 'http:' && !LOOPBACK_HOSTS.has(event.url.hostname)) {
+		const secure = new URL(event.url);
+		secure.protocol = 'https:';
+		secure.port = '';
+		return new Response(null, { status: 308, headers: { location: secure.href, 'cache-control': 'no-store' } });
+	}
 	// Assigned only after this request's Auth response is verified. A decoded
 	// cookie payload is not the identity exposed to private request contexts.
 	event.locals.verifiedUser = null;

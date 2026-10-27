@@ -13,7 +13,7 @@
 		"region": "aws:sa-east-1"
 	},
 	"vars": {
-		"PUBLIC_SITE_URL": "https://app.cita-suite.workers.dev",
+		"PUBLIC_SITE_URL": "https://app.cita-suite.com.ar",
 		"BOOKING_CONTEXTS_AVAILABLE": "true",
 		"BOOKING_INTEGRATIONS_ENABLED": "true",
 		"BOOKING_INFORMATION_ENABLED": "true"

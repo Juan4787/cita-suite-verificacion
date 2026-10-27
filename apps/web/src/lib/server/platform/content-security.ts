@@ -1,4 +1,4 @@
-const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
+export const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
 
 /**
  * Adds the Supabase project this deployment uses to the policy SvelteKit rendered: its origin for

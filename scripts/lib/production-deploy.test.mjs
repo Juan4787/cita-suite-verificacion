@@ -48,7 +48,7 @@ test('scheduler activation proves the private credential without running a job a
  assert.equal(calls.length,0);
  await assert.rejects(()=>check({secret:'short',legacyEnabled:false,fetch:fetcher([])}),/secret/i);assert.equal(calls.length,0);
  await assert.rejects(()=>check({secret,legacyEnabled:false,fetch:fetcher([401,401])}),/authentication/i);assert.equal(calls.length,2);
- for(const call of calls){assert.equal(call.url,'https://app.cita-suite.workers.dev/internal/jobs/send-push-reminders');assert.equal(call.options.method,'POST');assert.equal(call.options.redirect,'manual');assert.ok(call.options.signal instanceof AbortSignal);}
+ for(const call of calls){assert.equal(call.url,'https://app.cita-suite.com.ar/internal/jobs/send-push-reminders');assert.equal(call.options.method,'POST');assert.equal(call.options.redirect,'manual');assert.ok(call.options.signal instanceof AbortSignal);}
  assert.notEqual(calls[0].options.headers.authorization,calls[1].options.headers.authorization);assert.equal(calls[1].options.headers.authorization,`Bearer ${secret}`);
  calls.length=0;
  await assert.rejects(()=>check({secret,legacyEnabled:false,fetch:fetcher([410])}),/authentication/i);assert.equal(calls.length,1);

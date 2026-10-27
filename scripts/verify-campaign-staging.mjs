@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadStagingRelease } from './lib/staging-environment.mjs';
 import { probeAnonymousExposure } from './lib/api-exposure.mjs';
-import { assertAppEntry, assertSupabaseOrigin, clientEntries, compareServed, siteEntries } from './lib/served-release.mjs';
+import { assertAppEntry, assertSupabaseOrigin, clientEntries, compareServed, httpsRedirect, siteEntries } from './lib/served-release.mjs';
 import { nataliaSite } from './lib/staging-deploy.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
 import { loadRollbackArtifact } from './lib/integration-artifact.mjs';
@@ -24,6 +24,10 @@ const { release, app, natalia, api, practice, serviceKey, anonKey } = loadStagin
 
 const policy = await assertAppEntry(app.origin, release.revision);
 const contentSecurity = assertSupabaseOrigin(policy, api.origin);
+// workers.dev has no edge redirect, so this is the app's own answer. The candidate must not serve
+// its login page over plain HTTP; a rollback revision is recorded as it is served.
+const transport = await httpsRedirect(app.origin);
+if (!rollback && !transport.redirects) throw new Error(`${app.origin} serves the login page over plain HTTP.`);
 const clientFiles = await compareServed(app.origin, clientEntries(release.files));
 const site = nataliaSite(release.files, 'natalia-staging', { base: app.origin, key: practice.integrationKey });
 const nataliaFiles = await compareServed(natalia.origin, siteEntries(site));
@@ -40,8 +44,8 @@ mkdirSync(join(root, '.verification'), { recursive: true });
 writeFileSync(join(root, rollback ? '.verification/staging-rollback.json' : '.verification/staging.json'), JSON.stringify({
 	scope: 'Deployed staging: Cloudflare Workers Free and Supabase Free. External Google-account login is not certified by this profile.',
 	purpose: rollback ? 'rollback-compatibility' : 'candidate', sourceRevision: head,
-	revision: release.revision, appOrigin: app.origin, nataliaOrigin: natalia.origin, clientFiles, nataliaFiles, contentSecurity,
+	revision: release.revision, appOrigin: app.origin, nataliaOrigin: natalia.origin, clientFiles, nataliaFiles, contentSecurity, transport,
 	anonymousRelations: exposure.relations, bookings: booked.checks.map(({ name, nativeSameTab, recoveryWithoutDuplicate, cancelled }) =>
 		({ name, nativeSameTab, recoveryWithoutDuplicate, cancelled })), finishedAt: new Date().toISOString()
 }, null, 2) + '\n');
-console.log(JSON.stringify({ staging: 'passed', purpose: rollback ? 'rollback-compatibility' : 'candidate', revision: release.revision, clientFiles, nataliaFiles, anonymousRelations: exposure.relations }));
+console.log(JSON.stringify({ staging: 'passed', purpose: rollback ? 'rollback-compatibility' : 'candidate', revision: release.revision, clientFiles, nataliaFiles, transport, anonymousRelations: exposure.relations }));

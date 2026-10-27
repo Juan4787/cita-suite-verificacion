@@ -5,7 +5,7 @@ import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
 import { STAGING_APP_ORIGIN, STAGING_RELEASE_PRACTICE, assertBuildArtifact, nataliaSite } from './lib/staging-deploy.mjs';
-import { PRODUCTION_APP_ORIGIN, PRODUCTION_NATALIA_INTEGRATION_KEY } from './lib/production-deploy.mjs';
+import { PRODUCTION_NATALIA_APP_BASE, PRODUCTION_NATALIA_INTEGRATION_KEY } from './lib/production-deploy.mjs';
 
 // Builds the release once, in the hosted runner and never on this machine: the app for Cloudflare,
 // bundled with the staging and the production configuration (the same code, only the configuration
@@ -28,7 +28,7 @@ run('pnpm', ['--filter', 'web', 'build:cloudflare']);
 run('pnpm', ['exec', 'wrangler', 'deploy', '--dry-run', '--config', 'wrangler.staging.jsonc', '--outdir', join(verification, 'cloudflare-bundle')], { cwd: join(root, 'apps/web') });
 run('pnpm', ['exec', 'wrangler', 'deploy', '--dry-run', '--config', 'wrangler.jsonc', '--outdir', join(verification, 'cloudflare-bundle-production')], { cwd: join(root, 'apps/web') });
 const natalia = { 'natalia-staging': { base: STAGING_APP_ORIGIN, key: STAGING_RELEASE_PRACTICE.integrationKey },
-	'natalia-production': { base: PRODUCTION_APP_ORIGIN, key: PRODUCTION_NATALIA_INTEGRATION_KEY } };
+	'natalia-production': { base: PRODUCTION_NATALIA_APP_BASE, key: PRODUCTION_NATALIA_INTEGRATION_KEY } };
 for (const [name, { base, key }] of Object.entries(natalia)) {
 	run('pnpm', ['--filter', 'natalia', 'build'], { env: { ASTRO_TELEMETRY_DISABLED: '1', NATALIA_LOCAL_FIXTURE: 'false', PUBLIC_CITA_BASE_URL: base, PUBLIC_NATALIA_INTEGRATION_KEY: key } });
 	cpSync(join(root, 'apps/natalia/dist'), join(verification, name), { recursive: true });

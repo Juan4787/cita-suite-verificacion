@@ -3,8 +3,10 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { probeAnonymousExposure } from './lib/api-exposure.mjs';
 import { PRODUCTION_API_ORIGIN, productionKeys, readEnvFile } from './lib/production-database.mjs';
-import { PRODUCTION_APP_ORIGIN, PRODUCTION_NATALIA_INTEGRATION_KEY, PRODUCTION_NATALIA_ORIGIN } from './lib/production-deploy.mjs';
-import { assertAppEntry, assertSupabaseOrigin, clientEntries, compareServed, siteEntries } from './lib/served-release.mjs';
+import {
+	PRODUCTION_APP_ORIGIN, PRODUCTION_NATALIA_APP_BASE, PRODUCTION_NATALIA_INTEGRATION_KEY, PRODUCTION_NATALIA_ORIGIN, PRODUCTION_WORKERS_DEV_ORIGIN
+} from './lib/production-deploy.mjs';
+import { assertAppEntry, assertSupabaseOrigin, clientEntries, compareServed, httpsRedirect, siteEntries } from './lib/served-release.mjs';
 import { loadBuildArtifact, nataliaSite } from './lib/staging-deploy.mjs';
 
 // Production against the downloaded release, after its publication (publicacion-y-reversion.md):
@@ -23,10 +25,14 @@ const { serviceKey, anonKey } = productionKeys(readEnvFile(join(root, '.env')));
 const policy = await assertAppEntry(PRODUCTION_APP_ORIGIN, revision);
 const contentSecurity = assertSupabaseOrigin(policy, PRODUCTION_API_ORIGIN);
 const clientFiles = await compareServed(PRODUCTION_APP_ORIGIN, clientEntries(files));
+// What plain HTTP gets: on the domain the edge may answer first; workers.dev shows the app's own
+// answer. Recorded for every revision; dominio.md says which revision must redirect.
+const transport = {};
+for (const origin of [PRODUCTION_APP_ORIGIN, PRODUCTION_WORKERS_DEV_ORIGIN]) transport[origin] = await httpsRedirect(origin);
 const nataliaFiles = option === '--natalia' ? await compareServed(PRODUCTION_NATALIA_ORIGIN, siteEntries(nataliaSite(files, 'natalia-production',
-	{ base: PRODUCTION_APP_ORIGIN, key: PRODUCTION_NATALIA_INTEGRATION_KEY }))) : null;
+	{ base: PRODUCTION_NATALIA_APP_BASE, key: PRODUCTION_NATALIA_INTEGRATION_KEY }))) : null;
 const exposure = await probeAnonymousExposure({ api: PRODUCTION_API_ORIGIN, serviceKey, anonKey });
-const receipt = { at: new Date().toISOString(), revision, appOrigin: PRODUCTION_APP_ORIGIN, clientFiles, contentSecurity,
+const receipt = { at: new Date().toISOString(), revision, appOrigin: PRODUCTION_APP_ORIGIN, clientFiles, contentSecurity, transport,
 	natalia: nataliaFiles === null ? 'not checked' : { origin: PRODUCTION_NATALIA_ORIGIN, files: nataliaFiles },
 	anonymousRelations: exposure.relations, exposed: exposure.exposed };
 mkdirSync(join(root, '.verification'), { recursive: true });

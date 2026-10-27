@@ -1,8 +1,10 @@
 # Publicación y reversión
 
-## Continuación vigente — 26 de octubre, 21:50 UTC
+## Continuación vigente — 27 de octubre, 04:20 UTC
 
-La entrega pasó a la candidata `1fa2f2fcc71f53e0c840accea4d3c4018fd8850d` (artefacto `40405813074`) y a la base compatible `dbd69d201c88a0d1fe71650c94615d4ae0838a2b` (artefacto `40406135670`), por la corrección del panel de nuevo turno. Detalle exacto en [el traspaso del panel](../plans/traspaso-apertura-panel-20261026.md). `ad5ac57` y `375e16a` quedan superadas para publicar. El preflight productivo sigue bloqueado: la ruta de red de esta máquina no alcanza el pooler de sesión y la lectura por la API de gestión requiere decisión del usuario. Producción sin cambios.
+**Hosts (27 de octubre, 04:20 UTC):** la aplicación se sirve en `app.cita-suite.com.ar` y `app.cita-suite.workers.dev`; `cita-suite.com.ar` sirve la landing desde el Worker `cita-suite-landing`. `PUBLIC_SITE_URL`, `PRODUCTION_APP_ORIGIN` y las verificaciones siguen en workers.dev hasta la entrega de origen. Topología, procedimientos y reversión de dominios: [dominio](dominio.md). Las publicaciones de la app no tocan dominios (`wrangler.jsonc` no declara `routes`). No agregarlas: `wrangler deploy` reemplaza el conjunto de dominios del Worker y, sin terminal interactiva, reasigna dominios de otros Workers y pisa registros DNS en conflicto (comprobado en el código de wrangler 4.86.0).
+
+**Publicada y verificada:** producción sirve `b108c1912e2c3bc57403b006bcf33b71cdb91c23`, versión `d0ac2bcf-7e6a-4786-b2fb-5ff14687d643`. Programador `f105c4ff-160b-4e00-8b5d-14deb9f33b84` con cinco cron y eventos reales observados. La secuencia ejecutada y sus recibos están en el registro y en [el traspaso del panel](../plans/traspaso-apertura-panel-20261026.md). Recuperación: `wrangler rollback e3af637d-a115-4f06-a89a-ba64583f5e9c --name app` (compatible `dbd69d2`, con la corrección de recuperación), con las verificaciones de este documento. El acceso local a la base exige que esta máquina no salga por ProtonVPN (el pooler de sesión no responde por esa ruta). El dominio `cita-suite.com.ar` sirve el mismo Worker; el cambio de `PUBLIC_SITE_URL` será una entrega propia, después de que el usuario agregue los retornos de Supabase y Google.
 
 ## Antecedente — recuperación, 26 de octubre, 17:59 UTC
 

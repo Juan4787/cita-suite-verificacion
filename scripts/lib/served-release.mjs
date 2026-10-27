@@ -65,6 +65,21 @@ export async function assertAppEntry(origin, revision, fetchFn = fetch) {
 }
 
 /**
+ * What plain HTTP gets for the login page: it must be a permanent redirect to the same page over
+ * HTTPS, from the edge (Always Use HTTPS) or from the app. A relative location would stay on HTTP.
+ * The caller decides whether the redirect is required; the body is never read.
+ */
+export async function httpsRedirect(origin, fetchFn = fetch) {
+	const secure = new URL('/login', origin);
+	if (secure.protocol !== 'https:') throw new Error(`${origin} is not an HTTPS origin.`);
+	const insecure = new URL(secure);
+	insecure.protocol = 'http:';
+	const response = await fetchFn(insecure.href, { redirect: 'manual', signal: AbortSignal.timeout(15_000) });
+	const location = response.headers.get('location');
+	return { status: response.status, location, redirects: [301, 308].includes(response.status) && location === secure.href };
+}
+
+/**
  * The page's policy admits its own Supabase project, and only it: the API and its WebSocket for
  * uploads and Realtime, and its images. A wildcard over every Supabase project is refused.
  */

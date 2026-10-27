@@ -1,9 +1,16 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { STAGING_PROJECT_REF } from './staging-database.mjs';
+import { PRODUCTION_API_ORIGIN } from './production-database.mjs';
+import { PRODUCTION_APP_ORIGIN, PRODUCTION_NATALIA_ORIGIN, PRODUCTION_WORKERS_DEV_ORIGIN } from './production-deploy.mjs';
 import {
 	STAGING_APP_ORIGIN, STAGING_NATALIA_ORIGIN, STAGING_RELEASE_PRACTICE, loadBuildArtifact, nataliaSite, stagingSupabaseKey
 } from './staging-deploy.mjs';
+
+// Production hosts a staging release may never target, from the production constants
+// themselves so a new production origin cannot be left out.
+export const PRODUCTION_HOSTS = Object.freeze([PRODUCTION_APP_ORIGIN, PRODUCTION_WORKERS_DEV_ORIGIN, PRODUCTION_NATALIA_ORIGIN, PRODUCTION_API_ORIGIN]
+	.map(origin => new URL(origin).hostname));
 
 // The release target: the repository's staging constants, the staging keys and the downloaded
 // release of the revision under test. Never a descriptor file or the production .env. Local
@@ -14,7 +21,7 @@ export function loadStagingRelease(root, env, revision) {
 	const app = new URL(STAGING_APP_ORIGIN);
 	const natalia = new URL(STAGING_NATALIA_ORIGIN);
 	const api = new URL(`https://${STAGING_PROJECT_REF}.supabase.co`);
-	const deniedHosts = new Set(['app.cita-suite.workers.dev', 'natalia-frutos.vercel.app', 'yjzferwuzbtgpmdnzlcb.supabase.co']);
+	const deniedHosts = new Set(PRODUCTION_HOSTS);
 	const envFile = join(root, '.env');
 	if (existsSync(envFile)) for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
 		const match = line.match(/^\s*(?:PUBLIC_)?ODONTO_SUPABASE_URL\s*=\s*["']?([^"'\s]+)/);
