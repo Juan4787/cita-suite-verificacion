@@ -10,6 +10,7 @@
 		type AvailabilitySnapshot
 	} from '$lib/availability/snapshot';
 	import { filterAgendaAppointmentsByQuery } from '$lib/utils/agenda-search';
+	import { agendaDateOf, agendaShortDayLabel, agendaTime, agendaToday } from '$lib/utils/agenda-dates';
 	import { onDestroy, tick } from 'svelte';
 	import { clippedSlide } from '$lib/ui/clipped-slide';
 	import {
@@ -51,7 +52,7 @@
 
 	let { data, form }: {
 		data: {
-			context: { canOperate: boolean; business?: { id?: string } };
+			context: { canOperate: boolean; business?: { id?: string; timezone?: string } };
 			date: string;
 			anyDay: boolean;
 			anyDayLimited: boolean;
@@ -122,8 +123,10 @@
 		reschedule_requested: 'ux-badge ux-badge-warning'
 	};
 
-	const timeOnly = (value: string) =>
-		new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(value));
+	// Horas y días en la zona del consultorio, no en la del navegador.
+	// La carga siempre entrega la zona; Córdoba es la de todo consultorio nuevo.
+	const timeZone = $derived(data.context.business?.timezone ?? 'America/Argentina/Cordoba');
+	const timeOnly = (value: string) => agendaTime(value, timeZone);
 
 	const dayLabel = (value: string) => {
 		const label = new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }).format(
@@ -159,8 +162,7 @@
 		d.setDate(d.getDate() + days);
 		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 	};
-	const today = new Date();
-	const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+	const todayStr = $derived(agendaToday(timeZone));
 	const prevDate = $derived(shiftDate(data.date, -1));
 	const nextDate = $derived(shiftDate(data.date, 1));
 	const isToday = $derived(!data.anyDay && data.date === todayStr);
@@ -176,15 +178,8 @@
 		`/odonto/agenda/semana?date=${data.date}${data.selectedProfessionalId ? `&professional_id=${data.selectedProfessionalId}` : ''}`
 	);
 
-	const localDateOf = (value: string) => {
-		const d = new Date(value);
-		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-	};
-	const shortDayLabel = (value: string) => {
-		const d = new Date(value);
-		const label = new Intl.DateTimeFormat('es-AR', { weekday: 'short', day: 'numeric', month: 'short' }).format(d);
-		return d.getFullYear() === today.getFullYear() ? label : `${label} ${d.getFullYear()}`;
-	};
+	const localDateOf = (value: string) => agendaDateOf(value, timeZone);
+	const shortDayLabel = (value: string) => agendaShortDayLabel(value, timeZone);
 
 	// Buscador en vivo: independiente de los filtros, busca turnos activos
 	// por nombre o teléfono a medida que se escribe. Al entrar en Agenda
