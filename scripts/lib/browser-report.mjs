@@ -1,5 +1,14 @@
 // Playwright can exit successfully when selected tests are skipped. A successful
 // process is necessary, but actual, non-retried passes are also required.
+// A browser test of behavior introduced by the revision under test carries this tag.
+// The previous binary cannot pass it, so only the rollback-compatibility profile leaves it
+// out, and records which tests it left out; every candidate profile still requires it.
+export const CANDIDATE_BEHAVIOR_TAG = '@candidate-behavior';
+
+/** Titles excluded from a full browser run: demo and real Google need their own profiles. */
+export const browserGrepInvert = (rollback) =>
+	['Reserva pública - modo demo', 'Google Auth', ...(rollback ? [CANDIDATE_BEHAVIOR_TAG] : [])].join('|');
+
 export function assertBrowserReport(report) {
 	const stats = report?.stats;
 	if (!stats || !Number.isSafeInteger(stats.expected) || stats.expected < 1 ||

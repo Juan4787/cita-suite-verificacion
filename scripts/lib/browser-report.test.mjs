@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { assertBrowserReport } from './browser-report.mjs';
+import { CANDIDATE_BEHAVIOR_TAG, assertBrowserReport, browserGrepInvert } from './browser-report.mjs';
 
 const valid = () => ({
 	stats: { expected: 1, unexpected: 0, skipped: 0, flaky: 0 }, errors: [],
@@ -26,4 +26,9 @@ test('failure, interruption, skipped execution and retry cannot be reported as s
 	assert.throws(() => assertBrowserReport(report), /retried/);
 	const globalFailure = valid(); globalFailure.errors = [{ message: 'Setup interrupted' }];
 	assert.throws(() => assertBrowserReport(globalFailure));
+});
+
+test('only the rollback-compatibility profile leaves out tests of new behavior', () => {
+	assert.equal(browserGrepInvert(false), 'Reserva pública - modo demo|Google Auth');
+	assert.equal(browserGrepInvert(true), `Reserva pública - modo demo|Google Auth|${CANDIDATE_BEHAVIOR_TAG}`);
 });
