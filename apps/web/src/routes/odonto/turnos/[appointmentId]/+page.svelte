@@ -7,6 +7,7 @@
 	import { onMount } from 'svelte';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import { isUpcomingActiveAppointment } from '$lib/utils/appointment-visibility';
+	import { agendaLongDate, agendaTime } from '$lib/utils/agenda-dates';
 	import type { PageData } from './$types';
 import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/shared/booking-integration';
 
@@ -21,7 +22,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 
 	let { data, form }: {
 		data: {
-			context: { canOperate: boolean; role: string };canEditInstructions?:boolean;
+			context: { canOperate: boolean; role: string; business?: { timezone?: string } };canEditInstructions?:boolean;
 			appointment: PageData['appointment'];
 			auditLogs: AuditLog[] | null;
 			userLabels: Record<string, string>;
@@ -89,13 +90,10 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 		reschedule_requested: 'bg-amber-400/15 text-amber-100'
 	};
 
-	const timeOnly = (value: string) =>
-		new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(value));
-
-	const dateOnly = (value: string) =>
-		new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }).format(
-			new Date(value)
-		);
+	// Hora y fecha en la zona del consultorio, no en la del navegador.
+	const timeZone = $derived(data.context.business?.timezone ?? 'America/Argentina/Cordoba');
+	const timeOnly = (value: string) => agendaTime(value, timeZone);
+	const dateOnly = (value: string) => agendaLongDate(value, timeZone);
 
 	const durationText = (appointment: NonNullable<PageData['appointment']>) => {
 		const minutes =
