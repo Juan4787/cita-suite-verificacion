@@ -48,7 +48,8 @@ const appointment = {
 		maps_link: null,
 		logo_url: null,
 		is_active: true,
-		cancellation_policy: null
+		cancellation_policy: null,
+		whatsapp_contact_phone: null
 	}
 };
 
@@ -69,7 +70,8 @@ const pageData = {
 		current: false,
 		reminderLabel: '24 horas y 2 horas antes'
 	},
-	calendarMessage: null
+	calendarMessage: null,
+	practiceWhatsApp: null as null | { message: string; whatsappUrl: string; whatsappWebUrl: string }
 };
 
 type DeliveryState = 'accepted' | 'displayed' | 'clicked' | 'missing' | 'confirmed' | 'failed';
@@ -1006,5 +1008,49 @@ describe('enlace sin turno', () => {
 		render(Page, { data: { ...pageData, appointment: null, message: 'El enlace no es válido o no está disponible.' } });
 		expect(screen.getByText('No encontramos un turno asociado a este enlace.')).toBeInTheDocument();
 		expect(screen.getByText('El enlace no es válido o no está disponible.')).toBeInTheDocument();
+	});
+});
+
+describe('aviso al consultorio por WhatsApp', () => {
+	const practiceWhatsApp = {
+		message: 'Hola, soy Paciente. Reservé un turno para el lunes, 10 de agosto a las 12:00.',
+		whatsappUrl: 'https://wa.me/5493421234567?text=Hola',
+		whatsappWebUrl: 'https://web.whatsapp.com/send?phone=5493421234567&text=Hola'
+	};
+	const follows = (first: Element, second: Element) =>
+		Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
+	afterEach(() => cleanup());
+
+	it('al reservar ofrece avisar al consultorio, antes del resumen de la reserva', () => {
+		installNotificationEnvironment();
+		render(Page, { data: { ...pageData, created: true, practiceWhatsApp } });
+		const link = screen.getByRole('link', { name: 'Avisar al consultorio por WhatsApp' });
+		expect(link).toHaveAttribute('href', practiceWhatsApp.whatsappUrl);
+		expect(link).toHaveAttribute('target', '_blank');
+		expect(follows(link, screen.getByRole('heading', { name: 'Resumen de la reserva' }))).toBe(true);
+	});
+
+	it('en una computadora abre WhatsApp Web', () => {
+		installNotificationEnvironment();
+		render(Page, { data: { ...pageData, device: 'desktop' as never, created: true, practiceWhatsApp } });
+		expect(screen.getByRole('link', { name: 'Avisar al consultorio por WhatsApp' })).toHaveAttribute(
+			'href',
+			practiceWhatsApp.whatsappWebUrl
+		);
+	});
+
+	it('al volver más tarde queda como contacto, después de los datos del turno', () => {
+		installNotificationEnvironment();
+		render(Page, { data: { ...pageData, created: false, practiceWhatsApp } });
+		expect(screen.queryByRole('link', { name: 'Avisar al consultorio por WhatsApp' })).toBeNull();
+		const link = screen.getByRole('link', { name: 'Escribir al consultorio por WhatsApp' });
+		expect(link).toHaveAttribute('href', practiceWhatsApp.whatsappUrl);
+		expect(follows(screen.getByRole('heading', { name: appointment.business.name, level: 2 }), link)).toBe(true);
+	});
+
+	it('si el consultorio no habilitó su WhatsApp no muestra ningún botón', () => {
+		installNotificationEnvironment();
+		render(Page, { data: { ...pageData, created: true, practiceWhatsApp: null } });
+		expect(screen.queryByRole('link', { name: /al consultorio por WhatsApp/ })).toBeNull();
 	});
 });

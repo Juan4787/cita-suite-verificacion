@@ -45,6 +45,15 @@ Antecedente ya completado mediante capturas posteriores: abrir [Centro de verifi
 
 ## Problemas de marca identificados24-oct y prerrequisito de dominio
 
+**Estado de los cuatro rechazos al 27 de octubre:**
+
+- **Propiedad del sitio:** el sitio ya no es Netlify sino `cita-suite.com.ar`, que todavía falta acreditar en Search Console por DNS.
+- **Privacidad:** ahora está en `https://app.cita-suite.com.ar/privacidad`; falta revisar su contenido sobre los datos de Google.
+- **Inicio detrás del acceso:** resuelto. El inicio es la landing pública.
+- **Propósito sin explicar:** la landing explica el producto, pero la justificación de permisos del formulario de verificación sigue pendiente.
+
+Lo que sigue es el antecedente del 24 de octubre.
+
 La captura posterior del usuario muestra los cuatro rechazos del intento anterior: propiedad del sitio Netlify sin acreditar, privacidad Netlify insuficiente, inicio detrás de acceso y propósito sin explicar. Los campos actuales muestran Cloudflare, pero no acreditan publicación del borrador ni una revisión nueva. HTTP de producción confirma que `/`302redirige a `/login`; la política actual sí responde200 y declaraCalendar. No trasladar el rechazo de privacidad antigua a la nueva sin revisarla, ni declarar cumplimiento completo por encontrar el nombre delscope.
 
 Google exige verificar **Domain Property mediante DNS**, no una propiedad URL-prefix o una metaetiquetaHTML: [procedimiento específico de verificación de dominios OAuth](https://support.google.com/cloud/answer/13804266?hl=en). Workers.dev es un subdominio facilitado por Cloudflare; no una zonaDNS propia. La API de la cuenta correcta52, con versióned468 confirmada, muestra0dominiospropiosdeapp/0zonas. No demuestra que el usuario no posea un dominio en otro proveedor. Ese dato fue consultado y el usuario confirmó después que todavía no tiene dominio y lo comprará en breve; ver el pendiente vigente y la continuación al comprarlo. No contratar ni solicitar una nueva revisión de marca Google antes de resolver sus requisitos. Esto no impide validar y publicar correcciones independientes de la app. No pedir archivo o metaetiquetaHTML como solución al controlDNS.
@@ -52,6 +61,17 @@ Google exige verificar **Domain Property mediante DNS**, no una propiedad URL-pr
 Recibos `.verification/google-branding-issues-user-20261024.json`, `.verification/google-branding-public-preflight-20261024.json` y `.verification/google-branding-domain-inventory-20261024.json`. Los anteriores pasos «capturaCentro/capturamarca» ya se completaron y no deben repetirse. No se cambió código, DNS, cliente, secreto, hosting ni facturación en este diagnóstico.
 
 ## Retomar cuando el usuario comunique la compra del dominio
+
+**Retomado el 27 de octubre de 2026.** El dominio es `cita-suite.com.ar`, con DNS en Cloudflare: la landing está en el dominio principal (Vercel) y la aplicación en `app.cita-suite.com.ar`. Estado vigente en [dominio](dominio.md). Estado de los seis pasos de abajo:
+
+1. **Propiedad, DNS y destino:** hecho. Los enlaces de `workers.dev`, los turnos, los vínculos de Calendar y la clave de cifrado se conservaron.
+2. **Presentación pública:** la landing explica Cita Suite sin iniciar sesión y enlaza privacidad y términos. **Falta** revisar si la política describe el acceso, uso, guardado y uso compartido de los datos de Google, como pide Google.
+3. **Propiedad en Search Console:** **falta**. Hace falta un registro TXT del usuario en Cloudflare. Bloqueo probable: el dominio autorizado `yjzferwuzbtgpmdnzlcb.supabase.co`, que el usuario no puede verificar.
+4. **Marca, retornos y orígenes:** hecho el 27-oct y comprobado con la sonda `calendar-redirects-7.json`. Auth y Calendar mantienen clientes y retornos distintos. Natalia sigue en workers.dev. Las suscripciones push dependen del origen y se tratan en la entrega de origen.
+5. **Permisos declarados contra los pedidos de verdad:** **falta**. La discrepancia con `calendar.events.owned` sigue sin explicar.
+6. **Volver a pedir la verificación:** **no se pidió.** Primero hay que resolver los puntos 2, 3 y 5 y el dominio de Supabase.
+
+Antecedente del 24 de octubre:
 
 La respuesta literal fue: «no tengo aun, lo comprare en breve, deja registrado actualizar eso pendiente cuando lo compre». La compra la realizará el usuario; no hay una contratación ni renovación automática autorizada al agente. No hay una pregunta pendiente ahora. El nombre del dominio y su proveedor todavía se desconocen.
 

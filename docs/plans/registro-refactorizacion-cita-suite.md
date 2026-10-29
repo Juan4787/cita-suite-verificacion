@@ -2963,3 +2963,335 @@ Pedido literal: «la web publica de presentacion es https://cita-suite.vercel.ap
 **Estado final** (`domains-after.json`, 04:20:08 UTC): `cita-suite.com.ar` → `cita-suite-landing` y `app.cita-suite.com.ar` → `app`; `app.cita-suite.workers.dev` habilitado. Producción de la app sin cambios: `b108c19`, versión `d0ac2bcf…`; no se tocaron secretos, base, programador, Supabase ni Google.
 
 **Pendientes del usuario, en orden:** «Always Use HTTPS»; Supabase Redirect URLs `https://app.cita-suite.com.ar/**` (no el apex); callback de Calendar `https://app.cita-suite.com.ar/oauth/google-calendar/callback`; renombres de Supabase; contraseña de aplicación de Gmail; verificación de marca de Google con el dominio. Opcionales: `www`, Cloudflare Builds para la landing, borrar `presentacion-cita-suite` y desactivar el robots.txt administrado. Siguiente de la campaña: entrega de origen (`PUBLIC_SITE_URL`, `PRODUCTION_APP_ORIGIN`, `GOOGLE_CALENDAR_REDIRECT_URI` y redirección HTTPS en la app), que se publica después de las acciones 2 y 3.
+
+### Entrega de origen: candidata preparada — 27 de octubre, 04:25–04:50 UTC
+
+Objetivo: que la aplicación emita enlaces y retornos de `https://app.cita-suite.com.ar` y no sirva páginas por HTTP. Se publica después de que el usuario agregue los retornos en Supabase y en Google Cloud. Detalle y procedimiento: [dominio](../architecture/dominio.md), sección «Entrega de origen».
+
+- **HTTP→HTTPS (hallazgo de seguridad):** prueba roja en `hooks.server.test.ts`. Por HTTP, GET y POST leían cookies e intentaban autenticar (303 a `/login`) en lugar de redirigir; los casos de *loopback* ya pasaban. Corrección en `hooks.server.ts`: 308 al mismo camino por HTTPS, sin puerto y con `no-store`, antes de leer cookies o resolver la ruta; se exceptúan `LOOPBACK_HOSTS` (exportado desde `content-security.ts`, sin duplicar) y `dev`. Verde 25/25 junto con CSP. El programador usa *service binding* a `https://scheduler.cita-suite.internal`, los arneses usan `http://127.0.0.1:{5173,5177,5179,8787}` y el Samsung se manejó por `adb` contra HTTPS. No hay rutas prerenderizadas.
+- **Origen:**
+  - `PUBLIC_SITE_URL` y `PRODUCTION_APP_ORIGIN` pasan a `https://app.cita-suite.com.ar`. Se agrega `PRODUCTION_WORKERS_DEV_ORIGIN`, y `PRODUCTION_NATALIA_APP_BASE` es igual a él en el empaquetado, la preparación y la verificación de Natalia. Así Natalia sigue comparando con su sitio publicado, que reserva por workers.dev.
+  - `getPublicSiteUrl` acepta el dominio nuevo; sólo rechaza Netlify, Vercel y HTTP no local.
+  - `allowed_origins` contiene los sitios que insertan la reserva (Natalia), no la app: no hace falta cambiar datos.
+  - El aviso de notificaciones de `/turno` toma el origen real al hidratar, y los acuses push son relativos.
+- **Guardia de staging:** la lista de hosts productivos prohibidos estaba escrita a mano. Prueba roja: `https://app.cita-suite.com.ar is not refused`. Ahora `PRODUCTION_HOSTS` se deriva de las constantes productivas. La prueba del preflight del programador tenía escrita la URL de workers.dev y se actualizó al dominio.
+- **UID de `.ics`:** el UID tomaba el host de `PUBLIC_SITE_URL`; con el origen nuevo, un evento ya importado no se habría actualizado ni cancelado. Prueba roja en `calendar-content.test.ts` (UID con el host nuevo). Ahora usa el dominio fijo `app.cita-suite.workers.dev`, y los enlaces del evento siguen al origen público. Verde 29/29 en calendario.
+- **Comprobación desplegada:** `httpsRedirect(origin)` en `served-release.mjs`, con prueba roja por falta de la exportación y verde 9/9. Contra producción actual devuelve 200 y `redirects: false` en el dominio y en workers.dev; contra `cita-suite.vercel.app` y `natalia-frutos.vercel.app`, 308 y `true`. `verify-campaign-staging.mjs` lo exige a la candidata y lo registra (también en la línea de resumen del log alojado) para la reversión. `verify-production-release.mjs` lo registra para el dominio y para workers.dev.
+- **`GOOGLE_CALENDAR_REDIRECT_URI`:** el secreto productivo existe, así que cambiar sólo la variable no movería Calendar. La documentación no confirma qué hace `wrangler rollback` con un secreto cambiado: se ensaya en staging antes de elegir entre borrarlo o reemplazarlo.
+- **Verificación local:** 161/161 guardias de Node (49 archivos) y 89/89 de las pruebas web ligadas al origen.
+
+**Corridas:**
+- Candidata v1 `e064ccf0f56cfa698a2084933356035aab1c58f5` (14 archivos, árbol `3f7a29ff…` igual al de la instantánea en seco): `fast` **40450852020 aprobado**, job `122012970446`, 17/17 pasos. Quedó superada al aparecer el hallazgo del UID.
+- Candidata v2 `95b2596a9b4f24d8ae50d78a94e3f1c9f95b811a` (16 archivos, rama `verify/origen-candidate-v2-20261027`): `fast` **40451313177** en curso y empaquetado **40451368816** en cola detrás (mismo grupo de concurrencia, sin cancelación).
+- El auxiliar de despacho comprobó en cada envío la diferencia exacta, el índice del usuario `55cd8f79…` y HEAD `80268e2`.
+
+Pendiente después de estas corridas, sin tocar producción: staging con la candidata (y medición real de la redirección), cambio a la compatible `b108c19` (`4ac26115`), reversión alojada, retorno, auditoría completa con `rollback_run=40410601000` y ensayo del secreto en staging.
+
+### Configuración de Google del usuario, redirecciones de la landing y consulta por la carpeta — 27 de octubre, 07:05–07:15 UTC
+
+Hora corregida: la primera versión de este encabezado decía «05:00–05:20 UTC», que era la hora de Argentina confundida con la universal. Las sondas y los recibos guardan la hora real (`calendar-redirects-2.json`, 07:08:16 UTC; `deploy-redirects.log`, 07:11:48 UTC).
+
+Mensaje literal: «asi quedo. Respecto al cambio de nombre vi que duplicaste la carpeta bajo el nombre cita suite, es asi? abro desde ahi y borro esta?», con tres capturas de Google Cloud:
+- **Información de marca:** inicio `https://cita-suite.com.ar/`, privacidad `https://cita-suite.com.ar/privacidad`, términos `https://cita-suite.com.ar/terminos`; dominios autorizados `yjzferwuzbtgpmdnzlcb.supabase.co` y `cita-suite.com.ar`.
+- **Cliente «Cita Suite - Google Calendar - Producción»:** un único URI, `https://app.cita-suite.com.ar//oauth/google-calendar/callback`, con doble barra.
+- **Cliente «Cita Suite - Auth - Produccion»:** orígenes JavaScript `http://localhost:5173`, `https://cita-suite.com.ar` y `https://app.cita-suite.com.ar`, y retorno `https://yjzferwuzbtgpmdnzlcb.supabase.co/auth/v1/callback`. Correcto; los orígenes no los necesita el flujo de servidor, pero no dañan.
+
+1. **Sonda del cliente de Calendar** (`probe-calendar-redirects.mjs`; GET anónimos al endpoint de autorización, sin cuenta ni consentimiento):
+   - La primera, `calendar-redirects-1.json`, es **inválida**: tomó el ID del recibo archivado del 23-oct, que es el cliente reemplazado ese día, y todas las URI dieron `redirect_uri_mismatch`.
+   - Corregida con el cliente vigente `372761266416-54ln2gg48n8imdnfesljm57ojk0mvian` (registro del 23-oct, 18:39) y con un control positivo: el cliente de ingreso con el retorno de Supabase llega a `/v3/signin/identifier`.
+   - Resultado, `calendar-redirects-2.json`: controles positivo y negativo detectados. Workers.dev (el que usa producción) **rechazado**; `app.cita-suite.com.ar/oauth/…` rechazado; `app.cita-suite.com.ar//oauth/…` aceptado.
+   - **Calendar queda roto en producción** hasta que el usuario vuelva a agregar el de workers.dev. Además, el del dominio debe ir sin doble barra. Acción del usuario, no del agente: la consola de Google es suya.
+2. **Privacidad y términos en el dominio:** `cita-suite.com.ar/privacidad`, `/terminos` y `/login` respondían 404 desde que el dominio sirve la landing. Google exige que la política esté en el dominio de la página de inicio y que coincida con la enlazada desde ella ([requisitos](https://support.google.com/cloud/answer/13464321)).
+   - Landing `fc177a8`: `public/_redirects` (301 en Cloudflare) y `vercel.json` (308) llevan esas tres rutas a la app. El primer `vercel.json` reescrito con `json.dumps` cambiaba el formato de los encabezados; se rehízo con 5 líneas insertadas.
+   - Compilación con salida idéntica salvo `_redirects`. Vistas previas de Vercel `success`.
+   - Cloudflare con `versions upload` y `versions deploy`, que no tocan dominios ni DNS: versión **`91369f9a-050a-4e9a-ad84-f8ecfb9912d9`** al 100 %; la anterior es `36d23a93`. `main` avanzó `4afd19d..fc177a8`. Vercel producción da 308 en las tres rutas y 200 en `/`.
+   - `verify-apex-3.json` falló por **un defecto de mi verificador**: partía los encabezados en cada `:` y convertía `https://…` en `https: //…`. Corregido para partir en el primer `:`. `verify-apex-4.json` aprobado: 25/25 archivos, rutas, redirecciones exactas, `/_headers` y `/_redirects` no expuestos, encabezados.
+   - Recomendación al usuario: cargar en Google las URL directas de la app, iguales a las que enlaza la landing.
+3. **Bloqueo probable de la verificación de marca:** el dominio autorizado `yjzferwuzbtgpmdnzlcb.supabase.co` no se puede verificar en Search Console. Supabase documenta que sin dominio propio se muestra `<ref>.supabase.co`, y hay rechazos reportados ([Supabase](https://supabase.com/docs/guides/auth/social-login/auth-google), [foro de Google](https://discuss.google.dev/t/oauth-branding-verification-stuck-name-mismatch-due-to-supabase-callback-domain-no-trust-safety-email-received/389007)). El dominio propio de Supabase es pago. Alternativa gratuita a evaluar: separar el cliente de Calendar en otro proyecto. No se envía verificación.
+4. **Carpeta:** no hay duplicado. `Base de Datos Sabrina` es un enlace simbólico de 10 bytes a `Cita Suite`, el mismo inodo `27803574`, creado el 24-oct para no romper el editor. `Base-de-Datos-Sabrina-{patient-identity,session-pending,storage-phase1}` son *worktrees* viejos de Codex (agosto), otra cosa, dos con cambios sin confirmar.
+5. **Corridas de la candidata v2 `95b2596`:** `fast` **40451313177 aprobado** y empaquetado **40451368816 aprobado**. Siguiente: staging con la candidata, medición real de HTTP→HTTPS, compatible, reversión alojada y auditoría.
+
+`AGENTS.md`: el recordatorio del sistema mostró una copia vieja, pero el archivo en disco conserva la actualización del 27-oct (comprobado).
+
+### Cambios del usuario en Google, Supabase, Cloudflare y Vercel; landing en Vercel y revisión de documentación contradictoria — 27 de octubre, 07:45–08:35 UTC
+
+Pedidos literales del usuario en este tramo:
+- Sobre la landing: «la dejamos en vercel si no molesta. Segui con todo lo que quedo pendiente y deja bien documentado el estado actual de todo».
+- Sobre la documentación: «acordate de revisar documentacion contradictoria».
+- Sobre el idioma: «NO EMPECES A HABLAR EN INGLES».
+
+Antes se quejó, con razón, de que un mensaje de estado salió en inglés y de que los siguientes omitían información. La preferencia quedó en la memoria del agente: todo en español, completo, sin abreviaturas, también en las descripciones de los comandos.
+
+1. **Google Cloud, corregido por el usuario y comprobado con la misma sonda y controles:**
+   - Sondas 3 y 4 (07:45–07:46 UTC): los dos retornos de Calendar aceptados y el de doble barra rechazado. Pero el retorno de Supabase en el cliente de ingreso pasó a rechazarse. La captura sugería letras cambiadas, y Supabase envía exactamente `https://yjzferwuzbtgpmdnzlcb.supabase.co/auth/v1/callback` (leído de su redirección de autorización).
+   - Sonda 5 (07:59): el ingreso seguía rechazado.
+   - Sonda 6 (08:01): el usuario había cargado el retorno de Supabase en el cliente de Calendar, en lugar del de workers.dev, y Calendar volvió a romperse.
+   - **Sonda 7 (08:03:10 UTC): ingreso aceptado, Calendar de workers.dev y del subdominio aceptados, control negativo rechazado.** Es el estado vigente.
+   - Información de la marca: inicio `https://cita-suite.com.ar/`; privacidad y términos directos en `app.cita-suite.com.ar`. Hubo un estado intermedio con `//terminos`.
+2. **Supabase**, según la captura del usuario: Site URL `https://app.cita-suite.com.ar` y 13 retornos, entre ellos `/auth/callback` y `/reset/callback` del subdominio y de workers.dev. Los tres del dominio principal ya no se usan. La lectura de la herramienta de Supabase, después de las 08:14 UTC, mostró los nombres todavía sin cambiar: «Odontologia» y «Staging 455».
+3. **Cloudflare**, según las capturas: «Always Use HTTPS» activado; HSTS de zona apagado; TLS mínimo 1.0; certificados universal y avanzado activos.
+   - DNS: dos registros. `cita-suite.com.ar` es un CNAME sin proxy a `9984297ff6dc7901.vercel-dns-017.com`, y `app` es el registro del Worker.
+   - **El usuario quitó el dominio principal del Worker `cita-suite-landing` y lo apuntó a Vercel** entre las 07:12 y las 08:14 UTC. `cf-domains.mjs list` sólo muestra `app.cita-suite.com.ar` → `app`.
+4. **Medición del estado** (`estado-20261027T0814Z.txt`, 08:14:48 UTC; el archivo se llamaba `…T0545…` por la confusión de horas y se renombró):
+   - El dominio principal lo sirve Vercel, con certificado de Let's Encrypt hasta el 25-ene-2027, HSTS `max-age=63072000` y el mismo HTML que `cita-suite.vercel.app`.
+   - HTTP redirige a HTTPS: 308 en el dominio principal y 301 en el subdominio.
+   - `http://app.cita-suite.workers.dev/login` sigue respondiendo 200; lo corrige la entrega de origen.
+   - La aplicación sirve `b108c19` en las dos direcciones.
+   - Vercel mostraba públicamente `/_headers` y `/_redirects`.
+5. **Landing `ab3a2e0`** («chore: dejar la landing sólo en Vercel»): se quitaron `wrangler.jsonc`, `public/_headers` y `public/_redirects`, y se reescribió el README.
+   - Motivo de seguridad: `wrangler.jsonc` declaraba el dominio principal, y publicarlo habría vuelto a enganchar el dominio y pisado el CNAME hacia Vercel.
+   - Empujado a `main` (`fc177a8..ab3a2e0`) con el ayudante de una sola orden: `~/.git-credentials` con el mismo hash y `gh` activo `Juan4787`.
+   - Comprobado: los dos archivos dan 404, las redirecciones dan 308, el HTML de inicio es idéntico (`1bdb849a…`), `robots.txt` es el propio (44 B) y los dos proyectos de Vercel terminaron `success`.
+   - El Worker `cita-suite-landing` queda sin dominio, como alternativa gratuita; no se borra sin pedido del usuario.
+6. **Revisión de documentación contradictoria.** Búsqueda en `AGENTS.md`, `README.md` y `docs/`, sin el registro, que es histórico, ni `archive/`. Corregidos:
+   - `docs/architecture/dominio.md`: reescrito con el estado vigente, la configuración de Google, Supabase y Cloudflare, el riesgo de Vercel Hobby, procedimientos, pendientes e historia en hora universal.
+   - `AGENTS.md`: la landing es Vercel y no se la vuelve a enganchar a un Worker; agregado el estado al 27-oct del bullet de aceptación del lanzamiento.
+   - `publicacion-y-reversion.md`: direcciones vigentes; «Estado y revisiones vigentes» renombrado como antecedente del 24 y 25 de octubre (nombraba la aplicación `0851` y el programador `94bed118`); tabla de destinos; dependencias. Decía «dominio pendiente de compra» y que el destino de los respaldos requería decisión, que ya se había tomado el 26-oct.
+   - `identidad-cita-suite.md`: filas de Dominio y Landing.
+   - `acceso-google-calendar.md`: estado de los seis pasos de «Retomar cuando…» (título conservado por sus enlaces) y de los cuatro rechazos de marca.
+   - `correo-de-recuperacion.md`: el paso de URL Configuration ahora comprueba los dos retornos sin cambiar nada; decía `@cita-suite.ar` en lugar de `@cita-suite.com.ar`; agregado lo que falta para un remitente del dominio.
+   - `auditoria-final.md`: actualización del 27-oct y puntos 4 y 5.
+   - `control-de-consumo.md`: dominio comprado y riesgo de Vercel Hobby.
+   - `docs/README.md`: fila de dominio en el índice.
+   - Traspasos: nuevo [traspaso del dominio y la entrega de origen](traspaso-dominio-origen-20261027.md); el del panel, marcado como superado; en el principal, cinco títulos viejos de «Punto vigente» renombrados como antecedentes, y aclarado que lo de «pendiente de compra» ya no rige.
+7. **Horas corregidas:** la entrada «Configuración de Google del usuario…» decía 05:00–05:20 UTC y eran las 07:05–07:15; también el traspaso, en «la sonda de las 05:05» (eran las 07:08). Se confundió la hora de Argentina con la universal. Las horas de los recibos son las reales.
+8. **Decisión:** la corrección de las horas de la agenda no entra en la entrega de origen. Abarca `timeOnly`, `shortDayLabel`, `localDateOf` y `todayStr`/`isToday`, y requiere una prueba de navegador roja con otra `timezoneId`. Sumarla obligaría a repetir la candidata ya aprobada en pruebas rápidas y empaquetado. Es la entrega siguiente.
+
+Siguiente: la entrega de origen desde el paso 1 del traspaso nuevo (descarga del artefacto `40451368816` y staging).
+
+### Entrega de origen: staging, medición real de HTTP→HTTPS y ensayo de vuelta atrás — 27 de octubre, 08:30–08:40 UTC
+
+**Plan releído completo antes de esta etapa:** `docs/plans/refactorizacion-cita-suite.md`, 697 líneas, `5fef6e28…`, sin cambios. Garantías que aplican a esta entrega:
+
+- Secuencia de publicación de la sección 5.
+- Ampliación de identidad, «Hosting y dominios»: compatibilidad de enlaces existentes, gestión de turnos, push y su programa en segundo plano, retornos de inicio de sesión, orígenes y retornos validados. Criterio: «Se ensayan enlaces anteriores cuando cambien direcciones».
+
+Aplicación:
+
+- Las notificaciones push abren direcciones relativas (`/turno/{token}`, `push.ts`), y el programa de notificaciones rechaza direcciones ajenas (`push-sw.test.ts`). Las suscripciones hechas en workers.dev siguen funcionando en su origen.
+- Las lecturas posteriores de producción comprueban la revisión servida y la agenda autenticada en las dos direcciones.
+
+1. **Artefacto:** `fetch-artifact.mjs 40451368816 95b2596…`. 217 archivos validados con `loadBuildArtifact`, huella del contenido `1aa57a19…`, Worker de staging y de producción `53db163e…` (el mismo código) (`artifact-95b2596.json`).
+2. **Staging con la candidata:** `deploy-staging-workers.mjs app .verification/releases/95b2596`, versión **`f6879ca5-ebe7-4a30-9903-036bbdfa40ba`**, servida `95b2596` (`staging-candidate-v2-deploy.log`).
+3. **Medición real de la redirección:**
+   - Primera medición (`staging-candidate-v2-transport.json`, 08:31:53 UTC, unos 30 s después de instalar): `/login` 308, pero una ruta interna recibió 303 a `/login`, la respuesta de la versión anterior mientras Cloudflare repartía la nueva. Un envío de formulario sin encabezado `Origin` recibió 403: es la protección contra envíos de otro sitio de SvelteKit, que actúa antes de los *hooks*.
+   - Repetida con `curl` y con Node: todo 308.
+   - **Segunda medición** (`staging-candidate-v2-transport-2.json`, 08:33:05): siete rutas por HTTP (`/`, `/login`, `/odonto`, `/odonto/agenda?…`, `/privacidad`, `/reservar/…`, `/turno/…`) responden 308 a la misma dirección por HTTPS, con `no-store`. Un POST con `Origin` de navegador responde 308. HTTPS sirve `/login` 200 con HSTS.
+   - Comparación en producción, sin el cambio: workers.dev 200 por HTTP; el subdominio, 301 del borde.
+   - **Regla para la publicación:** esperar el reparto de la versión y exigir dos mediciones limpias seguidas.
+4. **Secreto de Calendar:**
+   - Las páginas oficiales de [vuelta atrás](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/) y de [secretos](https://developers.cloudflare.com/workers/configuration/secrets/) no dicen si una vuelta atrás restaura los secretos de la versión.
+   - Staging no tiene secretos de Calendar (7 secretos; producción tiene 28, cinco de Calendar, incluido `GOOGLE_CALENDAR_REDIRECT_URI`), así que no se puede ensayar ahí.
+   - **Decisión: borrar `GOOGLE_CALENDAR_REDIRECT_URI` en producción** después de instalar la candidata. Desde entonces el retorno sale del `PUBLIC_SITE_URL` de cada versión, que viaja dentro de la versión. La candidata pide el del subdominio y la anterior el de workers.dev, sea cual sea el comportamiento con los secretos; los dos están registrados en Google (sonda 7).
+   - Se comprueba con `probe-calendar-start.mjs` (inicio de OAuth sobre un turno sintético futuro de `capacity-01`) antes y después del borrado y en la vuelta atrás.
+5. **Paso a la compatible:** `staging-native-switch.py` hacia `4ac26115-f9d4-420a-8501-61671a79d312` (`b108c19`), confirmado a las 08:35:06.
+6. **Reversión alojada `40474553664` aprobada** (job `122089460645`, nivel `rollback`, `rollback_run=40410601000`, verificador `95b2596`):
+   - Servida `b108c19`: 130 archivos de cliente, 35 de Natalia, 61 relaciones anónimas sin exposición, reserva nativa completa.
+   - `transport` registrado: 200, `redirects: false`, lo esperable en la versión anterior; no se exige.
+   - Los cuatro pasos omitidos son preparaciones de otros niveles.
+   - Registro de la corrida en `staging-origen-rollback-job.log`.
+7. **Retorno a la candidata:** `f6879ca5` a las 08:37:58, servida `95b2596`. Dos mediciones limpias con 20 s de espera: 308 y `redirects: true`.
+8. **Auditoría completa `40474924663` despachada una sola vez** a las 08:38:33 UTC: `level=release`, `artifact_run=40451368816`, `rollback_run=40410601000`, rama `verify/origen-candidate-v2-20261027` (`release-origen-dispatch.json`). En curso.
+
+**Herramientas de producción para esta entrega** (`.verification/dominio-landing-20261027/`):
+
+- `production-state-v3.mjs`, `production-readback.mjs`, `production-crons-read.mjs` y `check-manual-backup.py`, adaptadas a la candidata `95b2596` y a la compatible `b108c19`, con recibos propios que no se sobrescriben.
+- La lectura posterior exige la revisión en las dos direcciones e ingresa por ambas.
+- `prestate.json` (08:37 UTC): HEAD `80268e2`, índice `55cd8f79…`, lock `98ce4b17…`, plan `5fef6e28…`.
+- La ruta de red hacia la base sale por `enp3s0`, sin VPN.
+
+### Entrega de origen: auditoría completa aprobada, lectura previa y copia — 27 de octubre, 08:55–09:05 UTC
+
+**Auditoría completa `40474924663` aprobada** (job `122090695963`, terminó a las 08:54:59 UTC; fuente `95b2596a9b4f24d8ae50d78a94e3f1c9f95b811a`; `artifact_run=40451368816`, `rollback_run=40410601000`):
+
+- La evidencia se recuperó con `collect-verification-evidence.py` desde los registros de la corrida (`release-origen-logs.zip`): 701 archivos, SHA-256 `04fb6f3eb280d8ad4f5ee3e60d16b0de4e680abfe79500f8645d9b7875bef3d5`, en `release-origen-evidence/`.
+- `release.json`: `ok=true`, nivel `release`, ejecución `b12ddc47-3cc8-499a-8257-66f8e4c1dd15`, **20/20 pasos con estado 0**.
+- Navegador **47/47 en cada perfil**, con 0 inesperados, 0 omitidos y 0 intermitentes:
+  - Desarrollo.
+  - Candidata en workerd: revisión `95b2596`, paquete `53db163e…`.
+  - Reversión en workerd: revisión `b108c19`, paquete `5eee0920…`.
+- Demostración 2/2.
+- Servidor 1411/1411: eran 1405, más 5 de la redirección y 1 del identificador `.ics`. Cliente 186/186, exportación nativa 1/1 y guardias de Node 161/161.
+- Staging (`staging.json`), candidata `95b2596`:
+  - 130 archivos de cliente, 35 de Natalia y 61 relaciones anónimas sin exposición.
+  - **`transport` 308 a `https://cita-suite-staging.cita-suite.workers.dev/login`, `redirects: true`** (exigido).
+  - Reserva nativa en escritorio y móvil: misma pestaña, recuperación sin duplicar y cancelación.
+- El único paso omitido del job es la revisión de tipos del nivel `browser`.
+
+**Lectura previa de producción aprobada** (`production-state-v3.mjs --capture-before`, `production-before.json`):
+
+- Preservación: HEAD, índice, lock y plan, todo igual.
+- App `d0ac2bcf-7e6a-4786-b2fb-5ff14687d643` (`b108c19`), deployment `4b8f88de…`, 33 enlaces.
+- Programador `f105c4ff…` con los cinco cron; staging, 0.
+- Base: 126 migraciones, entrada heredada apagada, 19 negocios, **122 pacientes** (121 a las 02:4x UTC; los turnos siguen en 107), 1 conexión y 1 evento de Calendar. Se creó un paciente entre las dos lecturas; probablemente el usuario, al probar. Los datos son ficticios, pero las lecturas posteriores comparan la base exacta con esta.
+- Autenticación interna 401/410. Agenda autenticada 200 por `app.cita-suite.com.ar` y por workers.dev.
+
+**Hallazgo — copias programadas atrasadas.**
+
+- El ejecutor privado tiene `backup.yml` con `cron: '7 4 * * *'` (04:07 UTC) y `monitor.yml` con `cron: '43 10 * * *'` (10:43 UTC), los dos activos y con las variables habilitadas.
+- La copia programada del 26-oct (`40303961884`) corrió a las 10:00 UTC, unas 6 h tarde; el monitor del 26-oct (`40364212526`), a las 16:58, también unas 6 h tarde.
+- La copia del 27-oct de las 04:07 UTC no había corrido a las 08:59 UTC.
+- GitHub documenta que los eventos `schedule` pueden demorarse o descartarse con carga alta. La copia diaria no está garantizada a horario.
+- Quedan pendientes: decidir una segunda programación en otro minuto, o que el monitor alerte por correo (hoy no está certificado), y comprobar si la copia del 27 corre más tarde o se perdió.
+
+**Copia manual previa a publicar, certificada:** `backup.yml` en modo `backup`, corrida **40477404643** (08:59:25 UTC, fuente `742e5de`).
+
+- `check-manual-backup.py 40477404643`: 105 tablas, 4016 filas (3935 a las 02:45, por la actividad normal), 24 objetos reutilizados, 126 migraciones, rol `cita_suite_backup` de sólo lectura con BYPASSRLS, instantánea completa.
+- Descarga independiente desde Drive: archivo `1S1c62AqP4hTsoFMNTSwZjfrRYmDyQujW`, 420.410 B, cifrado `b2d61b0055ad53a11f58668ca8bfb4d8189ebd4675ca1b7e296f0b14328415a9`, manifiesto `2eea2a612ceffc73774d8aa679ad1bd0e344eec3e70dab1b0e0330ec8c628bca`, dueño y carpeta privados comprobados.
+- Recibos `manual-backup{,-readback}.json`.
+
+**Cambio de la decisión sobre el secreto de Calendar.**
+
+- La sonda de inicio no encontró turnos futuros activos de `capacity-01`: ese consultorio ya no existe (`calendar-start-0-before` no llegó a crear recibo).
+- El inventario de sólo lectura por consultorio muestra turnos futuros activos únicamente en `juanpabloaltamira-0a488c83` (3), el consultorio propio del usuario. La cuenta de prueba (`cuentaprueba3-855fc174`) no tiene ninguno.
+- La autorización del 17-oct exige datos sintéticos identificables, así que no se usan esos turnos.
+- Sin un caso real con el cual comprobar el retorno nuevo, **`GOOGLE_CALENDAR_REDIRECT_URI` no se borra en esta publicación**: Calendar conserva el retorno de workers.dev, que funciona y está registrado.
+- Pasarlo al subdominio queda pendiente: borrar el secreto y probarlo con un turno sintético futuro de la cuenta de prueba, creado y limpiado para eso, o con una prueba del usuario.
+
+**Control de permisos:** varias respuestas «sin veredicto» transitorias, incluido el paso de detener el programador (dos seguidas). No se ejecutó nada que cambie producción. Se reintenta.
+
+### Continuación del 27 de octubre, 09:20–09:40 UTC: carpetas reorganizadas, segunda lectura previa y publicación detenida por el control de permisos
+
+**Pedido literal del usuario (09:20 UTC):** «continua justo donde quedo. Si lo cree yo al paciente. La app aun no esta en uso real. Sobre el tema de las copias, no me afecta nada nada si se atrasa unas horas. El verdadero problema seria que no se este copiando o haya algun otro error subyacente peor. Ya cambie el nombre en supabase a cita suite. la contraseña de gmail para el correo de recuperacion, pone cualquiera, es una prueba, no una cuenta real que yo vaya a usar. Y sobre la landing hacelo. Tambien te aviso que re organice las carpetas. Continuamos en base al contexto de recien».
+
+**Releído antes de continuar:** `AGENTS.md`, el plan original completo (697 líneas, `5fef6e28…`, sin cambios), el traspaso vigente, `publicacion-y-reversion.md`, `dominio.md` y el final de este registro. La sesión nueva no tenía el contexto anterior: se recuperó de la transcripción de la sesión previa, y las dos memorias del proyecto se copiaron al espacio de memoria de la carpeta nueva.
+
+1. **Reorganización de carpetas del usuario.**
+   - Ubicación nueva: aplicación en `/home/usuario/CascadeProjects/CITA SUITE/Cita Suite App`, landing en `/home/usuario/CascadeProjects/CITA SUITE/Landing Cita Suite` y Natalia en `/home/usuario/CascadeProjects/CITA SUITE/Web Natalia`. `/home/usuario/CascadeProjects/Cita Suite` ya no existe.
+   - Preservación comprobada después del traslado: HEAD `80268e2…`, índice `55cd8f79…`, lock `98ce4b17…` y plan `5fef6e28…`, iguales a `prestate.json`. Desde aquí, Git se usa con `GIT_OPTIONAL_LOCKS=0` en el repositorio de la app.
+   - Sin dependencias de la ruta vieja: no hay `crontab` ni temporizadores de systemd propios, y `~/.config/cita-suite/` no menciona carpetas. Las herramientas de la publicación no tienen rutas absolutas. `pnpm --filter web exec wrangler --version` y el mismo para `scheduler` responden 4.86.0; no hay enlaces rotos en las dependencias.
+   - **Roto por el traslado y corregido:**
+     - Los siete *worktrees* (4 de Cursor en `~/.cursor/worktrees/Base_de_Datos_Sabrina/{ect,ocv,qpj,sgo}` y 3 de Codex en `Base-de-Datos-Sabrina-{patient-identity,session-pending,storage-phase1}`) apuntaban a `/home/usuario/CascadeProjects/Cita Suite/.git/worktrees/…` y Git no los reconocía. Copias previas de sus archivos `.git` en `.verification/reorganizacion-carpetas-20261027/worktrees-before/` (7). `git worktree repair` los reparó a la ruta nueva; cada uno conserva su commit (`e5d0870` ×4, `4265180`, `9ea7c6f`, `6ca97ec`).
+     - El enlace `Base de Datos Sabrina` apuntaba a `Cita Suite` (roto). Ahora apunta a `CITA SUITE/Cita Suite App`, así vuelven a funcionar los enlaces de la evidencia histórica, que no se reescribe.
+     - `.verification/dominio-landing-20261027/cf-domains.mjs` tenía las rutas de wrangler y de su configuración escritas a mano; ahora se calculan desde la ubicación del archivo. Sintaxis y rutas comprobadas; no se ejecutó.
+   - Documentación con la ruta vieja vigente corregida: traspaso (punto 6 de pendientes), `identidad-cita-suite.md` y `AGENTS.md`. La evidencia histórica conserva sus rutas.
+
+2. **Segunda lectura previa de producción aprobada** (`production-state-v3.mjs --capture-before`, 09:27:32 UTC). La de las 08:56 se renombró `production-before-20261027T0856Z.json`.
+   - Preservación igual; app `d0ac2bcf-7e6a-4786-b2fb-5ff14687d643` (`b108c19`) con 33 enlaces; programador `f105c4ff…` con los cinco cron; staging sin cron.
+   - Base: 126 migraciones, entrada heredada apagada, 19 negocios, 122 pacientes, 107 turnos, 1 conexión y 1 evento de Calendar (igual que a las 08:56).
+   - Autenticación interna 401/410; agenda autenticada 200 por `app.cita-suite.com.ar` y por workers.dev.
+   - La copia certificada `40477404643` (08:59 UTC) tenía menos de una hora: no se hizo otra.
+   - Antes de detener el programador se comprobó que la carpeta de trabajo coincide con la candidata `95b2596` en `apps/web/wrangler.jsonc`, `apps/scheduler/wrangler.jsonc`, `deploy-production-workers.mjs`, `verify-production-release.mjs`, `production-deploy.mjs`, `production-database.mjs`, `staging-deploy.mjs`, `capacity-load.mjs`, `apps/scheduler/src/index.ts` y `scheduled-jobs.ts` (mismos blobs), y que `.verification/ci-source.json` es la instantánea `95b2596` (1148 entradas).
+
+3. **Publicación detenida por el control de permisos.**
+   - 09:29 UTC: `deploy-production-workers.mjs scheduler-without-crons` fue **rechazado explícitamente** por el control de permisos de la herramienta, con el motivo «Production Deploy». A diferencia de las respuestas «sin veredicto» de las 09:06, es un rechazo: no se reintentó ni se buscó otro camino.
+   - La orden no se ejecutó: no existe `production-scheduler-without-crons.log`. Lectura de sólo lectura a las 09:38:08 (`crons-after-denial-20261027T0938Z.json`): app `d0ac2bcf…` (`b108c19`) y programador `f105c4ff…` con los cinco cron. Producción sin cambios.
+   - Para retomar hace falta la autorización del usuario; los pasos exactos están en el traspaso. Como ya habrá pasado más de una hora desde las 08:59, corresponde una copia nueva y otra lectura previa.
+
+4. **Respuestas del usuario aplicadas.**
+   - El paciente nuevo (121 → 122 entre las lecturas de las 02:4x y las 08:56 UTC) lo creó el usuario: hallazgo cerrado.
+   - «La app aun no esta en uso real»: coherente con el alcance vigente (datos ficticios). No cambia la regla de usar datos sintéticos identificables en las pruebas de producción.
+   - **Supabase:** comprobado con `supabase projects list` (CLI 2.115.0): `yjzferwuzbtgpmdnzlcb` se llama **«Cita Suite»** (`ACTIVE_HEALTHY`, sa-east-1, organización `mstbrfonbbsbgracxfge`). `ikaudqoilclfnztkxubz` sigue «Staging 455» (us-west-2, organización `waoipxhhnbpnpjhbdssn`, de la cuenta del hermano del usuario). «Odonto» (`qkiyrqhdomkwumfyvmza`, inactivo) no se toca.
+   - **Gmail:** el usuario dijo que la cuenta es de prueba y que se ponga «cualquiera». No es posible: Gmail sólo acepta para SMTP la contraseña de aplicación que Google genera dentro de la cuenta, con la verificación en dos pasos activa ([contraseñas de aplicación](https://support.google.com/accounts/answer/185833?hl=es)); cualquier otra, incluida la normal de la cuenta, la rechaza. Sigue pendiente del usuario. No bloquea mientras la aplicación no tenga uso real; sí antes del primer consultorio real.
+   - **Landing («hacelo»):** en `/home/usuario/CascadeProjects/CITA SUITE/Landing Cita Suite`, antes de cambiar: sin cambios en archivos con seguimiento, sin *stash*, todos los commits de `codex/interactive-diagnostic-flow` (`81baf74`) incluidos en `origin/main`, y los dos PNG sin seguimiento sin choque con `main`. `git switch main` y `git pull --ff-only origin main`: `04c3e16` → `ab3a2e0`, igual a GitHub y a lo que sirve Vercel. Los PNG siguen sin tocar; la rama anterior se conserva.
+
+5. **Revisión de las copias, a pedido del usuario** («el verdadero problema sería que no se esté copiando o haya algún otro error subyacente peor»). Todo de sólo lectura.
+   - Repositorio privado `Juan4787/cita-suite-respaldos`, creado el 26-oct a las 02:39 UTC: la copia programada sólo tuvo dos oportunidades. Los cuatro flujos están activos; `BILLING_HARD_CAP_VERIFIED` y `LIVE_BACKUP_ENABLED` valen `true`; los secretos `CITA_BACKUP_SOURCE` y `CITA_BACKUP_DRIVE` existen.
+   - Copia programada del 26-oct (`40303961884`, 10:00:17 UTC, unas 6 h tarde): éxito, 105 tablas, 3930 filas, 24 objetos, `snapshotComplete: true`.
+   - Monitor programado del 26-oct (`40364212526`, 16:58:23 UTC): encontró esa copia (`1q9TSieH3rAMZKu1i05jy3kXasy5T1Rua`, 6,9 h), la descargó y comprobó su huella. El monitor falla si la copia más reciente tiene más de 30 horas o si Drive no responde: una copia que deja de hacerse se detecta.
+   - Copia programada del 27-oct (04:07 UTC): no había corrido a las 09:34 UTC. La última copia es la manual de las 08:59.
+   - Riesgos ocultos descartados: el permiso de Drive está «En producción» (en modo de prueba, Google lo vencería a los 7 días); la recuperación completa se ensayó el 26-oct (`40265535110`) y la clave queda bajo custodia del usuario; minutos de Actions: 46 facturables desde la creación (19 corridas, duración de cada trabajo redondeada al minuto), unos 180 por mes en régimen, en el único repositorio privado de la cuenta (los demás son públicos y no consumen), frente a 2.000 gratuitos y gasto bloqueado en US$0. La interfaz de facturación de GitHub no se pudo leer (requiere el permiso `user`).
+   - **Sin certificar:** que los avisos de falla de GitHub lleguen al correo del usuario. Es la única pieza que falta para que una falla no pase inadvertida; queda como comprobación del usuario.
+   - **Decisión:** no se cambian los horarios. El usuario aceptó atrasos de horas, el monitor ya detecta la falta de copias, y más corridas no resuelven el aviso sin certificar.
+
+**Siguiente:** con la autorización del usuario, la publicación desde «Para retomar» del [traspaso](traspaso-dominio-origen-20261027.md). Después: Calendar al subdominio con un turno sintético y la corrección de las horas de la agenda.
+
+### Publicación productiva de `95b2596` (entrega de origen) — 27 de octubre, desde las 13:54 UTC
+
+**Autorización literal del usuario (13:5x UTC):** «Autorizo publicar en producción la versión 95b2596: hacer la copia de respaldo, detener el programador, instalar la aplicación nueva, ensayar la vuelta atrás y volver a la nueva, y reactivar el programador. sobre gmail ya tengo verificacion en 2 pasos y contraseña en esa cuenta, la tengo en bitwarden». La contraseña de aplicación la carga el usuario directamente en Supabase, después de esta publicación, para no mezclar dos cambios productivos; no pasa por la conversación. Recibos en `.verification/dominio-landing-20261027/`.
+
+1. **Copia previa a publicar, certificada.** Recibos de las 08:59 apartados con el sufijo `-20261027T0859Z`. `backup.yml` en modo `backup`, corrida **40516167872** (creada 13:54:06, terminada 14:02:09 UTC, fuente `742e5de`). `check-manual-backup.py 40516167872`: copia completa, 105 tablas, 4040 filas (4016 a las 08:59, por actividad normal), 24 objetos reutilizados, 126 migraciones. Descarga independiente desde Drive: archivo `1wH35aPN4dpxAoMvzxBCeSyhJ7ZBnC1Pp`, 421.662 B, cifrado `09ef21c06b1850023ea76e571281d3af9c700809be2d282f998b53b6abf23985`, manifiesto `71e56240601e01ea21565f251d1092baeb5290ca92199128074e090a28dddc80`, dueño y carpeta privados (`manual-backup{,-readback}.json`).
+   - De paso: la copia programada del 27-oct sí corrió, corrida `40483085072`, 09:44:33–09:48:38 UTC (5 h 37 min tarde), completa: 105 tablas, 4037 filas, 24 objetos, archivo `1WP8nP2PA_qWO--VLK9TvOwLzHAx89-aF`. El monitor del 27-oct (10:43 UTC) no había corrido a las 14:04 UTC.
+2. **Tercera lectura previa aprobada** (`production-before.json`, 14:02:50 UTC; la de las 09:27 se renombró `production-before-20261027T0927Z.json`): preservación igual; app `d0ac2bcf…` (`b108c19`), 33 enlaces; programador `f105c4ff…` con los cinco cron, staging sin cron; base 126 / heredada apagada / 19 / 122 / 107 / 1 / 1; autenticación 401/410; agenda 200 por las dos direcciones.
+3. **Programador sin cron:** `deploy-production-workers.mjs scheduler-without-crons` (14:03:13–14:03:28 UTC, `production-scheduler-without-crons.log`), versión **`5880c53b-f73f-4f3c-87ce-b5e06a66a911`**, mensaje «Cita Suite scheduler 95b2596… without crons», enlaces `APP` → `app` e `INTERNAL_JOB_SECRET`. Confirmación por la API a las **14:03:41.024 UTC** (`crons-after-stop.json`): producción y staging sin cron; app sin cambios. Margen de 15 min más 20 s: hasta las **14:19:01 UTC**. No se afirma observación directa de ejecuciones en vuelo.
+4. **Margen cumplido:** reconfirmación a las 14:19:12.904 UTC (`crons-before-app-deploy.json`), posterior al fin del margen (14:19:01): producción y staging sin cron, app todavía `d0ac2bcf…`.
+5. **App candidata:** `deploy-production-workers.mjs app .verification/releases/95b2596` (14:19:30–14:19:59 UTC, `production-app-candidate.log`), bytes del artefacto `40451368816`, sin compilación local; 37 archivos estáticos nuevos o modificados. Versión **`8b41ec56-5df3-4050-94f2-8b0f40347365`**, deployment `2e5c5e1e-9acc-41a9-93ba-d3813ecac725`. El instalador confirmó `version.json` = `95b2596` en `https://app.cita-suite.com.ar`.
+   - Convergencia (`production-app-candidate-convergence.json`, herramienta nueva `converge.py`: dos rondas seguidas limpias en las dos direcciones): 14:20:16 UTC.
+   - `verify-production-release.mjs`, dos mediciones limpias (`.verification/production-release-2026-10-27T14-20-53-149Z.json` y `…T14-21-38-794Z.json`): 130 archivos de cliente exactos, CSP sólo de `yjzferwuzbtgpmdnzlcb` (`https` y `wss` para conexión, `https` para imágenes), 70 relaciones anónimas y 0 expuestas. **HTTP a workers.dev: 308 a `https://app.cita-suite.workers.dev/login`, `redirects: true`** (exigido; antes respondía 200). Subdominio: 301 del borde, `redirects: true`.
+   - Lectura posterior aprobada (`after-candidate.json`, 14:21:48 UTC): revisión, 33 enlaces idénticos en nombre y tipo, servida `95b2596` en las dos direcciones, base preservada (126 / heredada apagada / 19 / 122 / 107 / 1 / 1), autenticación 401/410, agenda 200 sin errores por las dos direcciones.
+6. **Ensayo de vuelta atrás nativa:** `wrangler rollback d0ac2bcf-7e6a-4786-b2fb-5ff14687d643 --name app` (14:22:20 UTC, `production-rollback-rehearsal.log`), sin recompilar ni subir; deployment `f5aaf04b-a85b-4462-90ac-fe71b272ba06`. Convergencia a `b108c19` a las 14:22:32 (`production-rollback-rehearsal.json`).
+   - `verify-production-release.mjs .verification/releases/b108c19` (`…T14-22-56-122Z.json`): 130 archivos exactos, CSP correcto, 70/0. HTTP a workers.dev: 200, `redirects: false`, lo esperable en esa versión.
+   - Lectura posterior aprobada (`after-rollback.json`, 14:22:56 UTC): todos los controles verdaderos, base preservada, 401/410, agenda 200 sin errores por las dos direcciones.
+7. **Retorno nativo a la candidata:** `wrangler rollback 8b41ec56-5df3-4050-94f2-8b0f40347365 --name app` (14:23:24 UTC, `production-native-return.log`); deployment `69c43cc9-d0cd-48e5-aa35-724b558ffd73`. Convergencia a `95b2596` a las 14:23:36 (`production-native-return.json`).
+   - Dos mediciones limpias (`…T14-23-56-249Z.json` y `…T14-24-24-150Z.json`): 130 exactos, CSP correcto, 0 de 70 expuestas, workers.dev 308 con `redirects: true`, subdominio 301.
+   - **Lectura posterior fallida** (`after-native-return.json`, 14:24:24 UTC, `CONFIGURED_TEST_LOGIN_FAILED`): revisión, enlaces, servida y base verdaderos; autenticación 401/410; agenda 200 sin errores por el subdominio; **el ingreso de la cuenta de prueba por workers.dev fue rechazado**. Se conserva el recibo fallido.
+   - **Causa, comprobada:** el límite propio de la aplicación contra fuerza bruta, `login_password_by_email` (`rate-limits.ts`): 5 ingresos por correo en una ventana móvil de 15 minutos, contados antes de autenticar, también los exitosos; `consume_server_rate_limits` registra sólo los permitidos. Lectura de sólo lectura de `public.server_rate_limit_events` (`login-limit-events.mjs`, sólo horas y 8 caracteres de la huella salada): el mismo correo (`f01d3193`) tiene exactamente 5 ingresos permitidos en la ventana, a las 14:22:00, 14:22:04, 14:23:06, 14:23:08 y 14:24:36 UTC; los dos de las 14:03 ya habían salido. El sexto, por workers.dev, no figura: lo rechazó el límite. Los límites por IP (40 en 15 minutos) no se acercaron.
+   - **No es una regresión:** la protección funcionó como debe, y la misma versión `8b41ec56` ingresó por workers.dev a las 14:22. **Defecto del procedimiento:** desde `production-state-v3.mjs` cada lectura posterior ingresa dos veces (una por dirección), así que tres lecturas en menos de 15 minutos superan el límite. En la publicación de las 03:05 cada lectura ingresaba una sola vez. Corrección del procedimiento: no hacer más de dos lecturas posteriores en una ventana de 15 minutos con la misma cuenta.
+   - Decisión: repetir la lectura completa una sola vez, a las 14:38:30 UTC, con la ventana ya liberada. El programador sigue sin cron hasta tener esa lectura aprobada.
+8. **Lectura posterior repetida y aprobada** (`after-native-return-2.json`, 14:39:03 UTC). Antes, a las 14:38:53, la ventana del límite tenía un solo ingreso de la cuenta de prueba (14:24:36), es decir, cuatro lugares libres. Resultado: revisión, 33 enlaces idénticos, servida `95b2596` en las dos direcciones, base preservada (126 / heredada apagada / 19 / 122 / 107 / 1 / 1), autenticación 401/410, agenda 200 sin errores por `app.cita-suite.com.ar` y por workers.dev. Deployment `69c43cc9-d0cd-48e5-aa35-724b558ffd73`, versión `8b41ec56…`.
+9. **Programador con cron:** `deploy-production-workers.mjs scheduler` (14:39:31–14:39:51 UTC, `production-scheduler-with-crons.log`). Preflight de autenticación dentro del script: entrada heredada apagada, 401 sin credencial y 410 con credencial. Versión **`cae02746-2b69-4481-b9b6-d6441b512f10`**, snapshot `95b2596`, enlaces `APP` (servicio) e `INTERNAL_JOB_SECRET` (secreto). API a las 14:39:52.821 UTC (`crons-after-restore.json`): los cinco cron del plan en producción, staging sin cron, app `8b41ec56…`. Observación de eventos reales con un único `wrangler tail` acotado a 500 s (`production-scheduler-tail.jsonl`), iniciada a las 14:40 UTC.
+10. **Eventos programados reales del programador nuevo (`cae02746`)**, observados con tres `wrangler tail` acotados y secuenciales, sin otro Wrangler en paralelo (`production-scheduler-tail{,-2,-3}.jsonl`, resumidos con `tail-summary.py`, que sólo lee cron, hora, resultado, excepciones, CPU, tiempo total y versión):
+    - Primera ventana, 14:40:11–14:48:31 UTC: **ningún evento**. Salida de error vacía, igual que en las observaciones de la madrugada; corte por tiempo (124), el esperado. Coherente con la propagación de hasta 15 minutos que documenta Cloudflare para cambios de cron (el programador se instaló a las 14:39:51).
+    - Segunda ventana, 14:49:12–14:57:32 UTC: 5 eventos. Push `*/5` a las 14:50:33 y 14:55:33; calendario `1-59/5` a las 14:51:11 y 14:56:11; reseñas `2-59/10` a las 14:52:33. El primero llegó 10 min 42 s después de instalar.
+    - Tercera ventana, 14:58:15–15:21:15 UTC: 15 eventos, sin huecos. Push 5 de 5 (15:00:33 a 15:20:33), calendario 5 de 5 (15:01:11 a 15:21:11), reseñas 2 de 2 (15:02:33 y 15:12:33), cargas `3-59/15` 2 de 2 (15:03:11 y 15:18:11) y **mantenimiento `17 */3` a las 15:17:25**.
+    - Los 20 eventos: versión `cae02746…`, resultado `ok`, 0 excepciones, CPU 0–1 ms en el programador, tiempo total 323–1545 ms.
+11. **Estado final** (`crons-final.json`, 15:21:39 UTC): app `8b41ec56…` (`95b2596`) con 33 enlaces, servida en `app.cita-suite.com.ar` y en workers.dev; programador `cae02746…` con los cinco cron; staging sin cron. Preservación: HEAD, índice, lock y plan iguales a `prestate.json`.
+
+**Producción sirve `95b2596a9b4f24d8ae50d78a94e3f1c9f95b811a`. Publicación de la entrega de origen verificada de punta a punta.** Recuperación disponible: `wrangler rollback d0ac2bcf-7e6a-4786-b2fb-5ff14687d643 --name app` (`b108c19`), ensayada a las 14:22 UTC, después de detener el programador. No se cambiaron secretos (`GOOGLE_CALENDAR_REDIRECT_URI` sigue en workers.dev), esquema, Natalia ni datos.
+
+**Pendientes que siguen:** comprobación real del correo de recuperación cuando el usuario cargue la contraseña de aplicación en Supabase; retorno de Calendar al subdominio con un turno sintético; entrega de las horas de la agenda; nombre del proyecto de staging en Supabase; recepción de los avisos de GitHub por correo; verificación de marca de Google. El monitor de copias del 27-oct (10:43 UTC) no había corrido a las 15:21 UTC; el del 26-oct corrió 6 h 15 min tarde.
+
+## Correo de recuperación: activado y comprobado en producción (27-oct, 20:25–22:29 hora de Argentina)
+
+- **Configuración (usuario):** cuenta Gmail dedicada `citasuite@gmail.com`, creada el 27-oct, con verificación en dos pasos y contraseña de aplicación propia en Bitwarden. Supabase → SMTP Settings: remitente `citasuite@gmail.com`, nombre `Cita Suite`, `smtp.gmail.com:587`, usuario `citasuite@gmail.com`. Plantilla en español ya cargada. La contraseña nunca pasó por la conversación.
+- **Cuenta sintética:** `citasuite+recuperacion@gmail.com`, creada a las 23:25:08 UTC por el formulario real de registro en `app.cita-suite.com.ar` con una contraseña aleatoria guardada con permisos 600 fuera del repositorio. Se descartó la cuenta de prueba de las lecturas productivas: su buzón no es del usuario y cambiarle la contraseña rompería esas lecturas.
+- **Envío:** 23:25:17 UTC, `/reset` respondió éxito; Auth registró `recovery_sent_at` 23:25:17.
+- **Recepción (usuario, con captura):** en Recibidos, no en spam; `Cita Suite <citasuite@gmail.com>`, asunto `Recuperá tu contraseña de Cita Suite`, en español.
+- **Vencimiento:** el primer enlace, abierto unas dos horas después, mostró «El enlace es inválido o expiró. Volvé a solicitarlo.» (vencimiento de una hora).
+- **Segundo pedido:** llegó; el usuario eligió una contraseña nueva y entró (último ingreso 01:27:28 UTC del 28; Auth sin enlace pendiente). Reabrir el mismo enlace fue rechazado.
+- **Contraseña anterior:** 01:29:37 UTC, ingreso rechazado (`failure`, sin sesión). Después se borró ese archivo.
+- **Recibos:** `.verification/recuperacion-gmail-20261027/`. `realEmailDelivered=true`, `productionRecoveryVerified=true`. Guías actualizadas: correo de recuperación, dominio, auditoría final, publicación y reversión, traspaso.
+
+**Pendientes que siguen:** retorno de Calendar al subdominio con un turno sintético; corrección de las horas de la agenda; las acciones del usuario del traspaso (ingreso con Google, avisos de GitHub, nombre de staging).
+
+## Ingreso con Google en el subdominio: comprobado por el usuario (27-oct)
+
+Después de la prueba del correo, el usuario informó que probó «Entrar con Google» con su cuenta real en `https://app.cita-suite.com.ar/login` y que funciona bien. Con eso quedan comprobados en el subdominio los dos retornos de Auth: `/auth/callback` (Google) y `/reset/callback` (recuperación). Siguen: Calendar al subdominio, horas de la agenda, avisos de GitHub y nombre de staging.
+
+## Calendar al subdominio: preparado, detenido por permiso (28-oct, 01:48–01:51 UTC)
+
+El usuario pidió avanzar sin detenerse («dale avanza sin detenerte a cada rato»).
+
+1. **Turno sintético creado** por la acción real de la agenda (`/odonto/agenda?/create_appointment`) con la cuenta de prueba `cuentaprueba3-855fc174`: viernes 6 de noviembre de 2026, 13:30 de Córdoba, servicio, profesional y paciente sintéticos del último turno de esa cuenta, nota interna «Prueba sintética de Calendar 2026-10-28 (se borra después)». Los tres intentos previos fallaron sin crear nada: el primero y el segundo por no capturar el motivo y el tercero por el aviso de teléfono inválido del paciente sintético (se confirmó con `phone_warning_override=invalid`, como en la pantalla). Recibos `fixture-create-{1-fallo,2,3,4}.json` en `.verification/calendar-subdominio-20261028/`.
+2. **Medición previa** (`antes-dominio.json`, 01:50:04): desde `app.cita-suite.com.ar` el inicio de Calendar pide `redirect_uri=https://app.cita-suite.workers.dev/oauth/google-calendar/callback`, cliente `372761266416-54ln…`, PKCE S256 y estado opaco. La sonda es una copia de `probe-calendar-start.mjs` limitada a ese turno por su nota.
+3. **Versión activa anotada** (`antes-deployment.txt`): app `8b41ec56-5df3-4050-94f2-8b0f40347365`, 28 secretos.
+4. **`wrangler secret delete GOOGLE_CALENDAR_REDIRECT_URI --name app` rechazado por el control de permisos** con el motivo «Secret-Store Writes». No se esquivó. El secreto sigue intacto y Calendar sigue funcionando por workers.dev. Hace falta una autorización expresa del usuario que nombre el borrado de ese secreto de producción (o una regla de permisos).
+
+El turno sintético queda en la cuenta de prueba para completar la medición posterior y la vuelta atrás; se borra al terminar. Si vence sin usarse (6-nov), crear otro igual.
+
+## Horas de la agenda en la zona del consultorio (28-oct, desde 01:52 UTC)
+
+- **Causa:** la agenda diaria (`routes/odonto/agenda/+page.svelte`) y el detalle del turno (`routes/odonto/turnos/[appointmentId]/+page.svelte`) formateaban horas y días con la zona del navegador. El detalle tenía el mismo defecto (hora y fecha larga) y se incluyó.
+- **Corrección:** módulo `apps/web/src/lib/utils/agenda-dates.ts` (`agendaTime`, `agendaDateOf`, `agendaShortDayLabel`, `agendaLongDate`, `agendaToday`) con la zona de `data.context.business.timezone`; reutiliza `zonedDate` de `$lib/availability/calculate`.
+- **Pruebas primero:** `agenda-dates.test.ts`, con el consultorio en Tokio para que no coincida ni con Argentina ni con UTC. Rojas con el comportamiento anterior en `TZ=UTC` y `TZ=America/Argentina/Cordoba` (`roja-2.txt`, `roja-fecha-larga.txt`); verdes con la corrección. Suite completa: 1417 pruebas aprobadas en cada zona; `svelte-check` y `check:e2e` sin errores.
+- **Prueba de navegador** `e2e/agenda-business-timezone.spec.ts`: navegador en `Asia/Tokyo`, turno propio a las 23:30 del consultorio diez días adelante; exige 23:30 en la tarjeta, el día del consultorio en el enlace, y hora y fecha en el detalle. Limpia el turno y el paciente propios.
+  - Roja `e7a30e0` (95b2596 + sólo la prueba), corrida [40618513499](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/40618513499): falló en la hora de la tarjeta (la tarjeta sí aparecía).
+  - Candidata `e974d7e8feb2e774029bbea876b88df250b69be0` (95b2596 + 5 archivos), rama `verify/agenda-horas-candidata-20261028`, corrida [40618956841](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/40618956841): aprobada.
+  - Las dos versiones se armaron con un índice temporal a partir de `95b2596` (`.verification/agenda-horas-20261028/build.sh`); el índice del usuario y HEAD siguen intactos.
+- **Verificación completa** [40619314053](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/40619314053) de `e974d7e`: aprobada. Empaquetado `40620204229`, staging `4d839bcf`, cambio a `95b2596` (`f6879ca5`), vuelta atrás alojada `40620503845` aprobada, regreso.
+- **Auditoría `40620737983` de `e974d7e`: falló** en la compatibilidad con la versión anterior: la suite actual completa corre contra el binario de `95b2596`, que no tiene la corrección, y el verificador prohíbe omitir pruebas. Una prueba de conducta nueva no puede pasar ahí.
+  - **Resolución (v2 `a42794170475c53630d6f4844acabe1cca0d6fac`):** etiqueta `@candidate-behavior` (`scripts/lib/browser-report.mjs`, `browserGrepInvert`); sólo el perfil de compatibilidad la excluye y escribe la lista en `integration-rollback/excluded-candidate-behavior.txt`; la candidata la sigue exigiendo. Prueba de unidad nueva en `browser-report.test.mjs`; regla en [verificación](../architecture/verificacion.md). Precedente: en la entrega de origen la redirección nueva se registró pero no se exigió a la versión anterior.
+- **Auditoría `40623821132` de la v2: falló** en `booking-embed.spec.ts:653` (recorre `/odonto/agenda`): «09:00» se partía en dos líneas en la columna de la hora (56–64 px) a 320 y 390 px, en los dos temas. Defecto real de diseño que la corrección destapó: con el navegador de CI en UTC la agenda mostraba otra hora que entraba; los usuarios en Argentina ya veían «09:00». Corrida a las 00:03 de Argentina.
+  - **Corrección (v3 `aacba5b10ff6030ac061e20ce0cccdf28126c180`):** columna con ancho mínimo en vez de fijo (`min-w-14 sm:min-w-20`, `min-w-16 sm:min-w-24` con fecha) y horas con `whitespace-nowrap tabular-nums`.
+- **v3, rama `verify/agenda-horas-candidata-v3-20261028`, 9 archivos sobre `95b2596`:** verificación completa `40624834074` aprobada; empaquetado `40624836873` (218 archivos, mismo Worker para staging y producción); staging `642c21ef-c55b-417e-8c87-fc332c123b61`; cambio a `f6879ca5` y vuelta atrás alojada `40626088681` aprobada; regreso a la v3 a las 03:22:10; **auditoría completa [40626283483](https://github.com/Juan4787/cita-suite-verificacion/actions/runs/40626283483) aprobada** (03:22–03:41 UTC): 1417 unidades, 186 de cliente, navegador 48/48 en desarrollo y 48/48 sobre el paquete, 47/47 en compatibilidad con `95b2596` (excluida sólo la prueba etiquetada).
+- **Estado:** staging sirve la v3. Producción sigue en `95b2596` (`8b41ec56`). Publicar exige autorización expresa del usuario.
+
+## Publicación productiva de `aacba5b` y Calendar al subdominio (28-oct, 03:55–05:10 UTC)
+
+**Autorización literal del usuario:** «Autorizo publicar en producción la versión aacba5b: hacer la copia de respaldo, detener el programador, instalar la aplicación nueva, ensayar la vuelta atrás y volver a la nueva, reactivar el programador, y borrar el secreto GOOGLE_CALENDAR_REDIRECT_URI de producción para pasar Calendar al subdominio.»
+
+Herramientas en `.verification/publicacion-agenda-20261028/`, copiadas de la entrega de origen con candidata `aacba5b` y compatible `95b2596`; `production-readback.mjs` admite un tercer argumento, sólo `GOOGLE_CALENDAR_REDIRECT_URI`, para el enlace borrado a propósito. `prestate.json` (03:55): HEAD `80268e2`, índice `55cd8f79…`, lock `98ce4b17…`, plan `5fef6e28…`. `wrangler.jsonc` de la app y del programador idénticos byte a byte a la candidata (Git los mostraba como borrados sólo porque no están en el índice del usuario). El programador no cambia entre `95b2596` y `aacba5b`.
+
+1. **Copia** `40629440330` (03:55:52–04:00 UTC), certificada con `check-manual-backup.py`: 105 tablas, 4152 filas, 24 adjuntos, 126 migraciones, descargada de Drive con huella verificada.
+2. **Lectura previa** 04:01:14: app `8b41ec56` con 33 enlaces, cinco cron, 21 consultorios, 122 pacientes, 108 turnos (incluye el sintético), agenda con ingreso por las dos direcciones.
+3. **Programador sin cron** 04:01:51 (`fb5bdef3`); margen hasta 04:17:15, cron vacíos confirmados.
+4. **Aplicación** `aacba5b` instalada 04:17 (`a18e6001`), convergencia 04:17:48. Las dos primeras llamadas a `verify-production-release.mjs` no midieron nada: les faltó el argumento de la carpeta (`verify-release-{1,2}-sin-argumento.log`). Repetidas con `.verification/releases/aacba5b`: dos mediciones limpias 04:18:13 y 04:18:21 (131 archivos). Lectura `after-candidate` aprobada 04:18:28.
+5. **Calendar con el secreto** (04:18:37): workers.dev, como se esperaba.
+6. **Secreto borrado** 04:18:48 (`wrangler secret delete`): versión nueva `4e29aba6`, «Secret Change», sin mensaje, 32 enlaces. Calendar desde el subdominio (tres mediciones, 04:19:20–04:19:33) y desde workers.dev (04:19:54): retorno `https://app.cita-suite.com.ar/oauth/google-calendar/callback`. El retorno no usa cookies (el intento se guarda cifrado en la base), así que empezar en workers.dev y volver al subdominio funciona. Lectura `readback-sin-secreto` 04:20:12: revisión servida, enlaces (32), base, agenda en las dos direcciones y autenticación del programador correctos; `appRevision=false` sólo porque la versión del secreto no tiene mensaje. (Un primer intento de esa lectura con el nombre `after-secret-delete` no se ejecutó: el nombre ya lo usaba la lectura de cron.)
+7. **Ensayo de vuelta atrás** `wrangler rollback 8b41ec56…` 04:20:47, convergencia a `95b2596` 04:20:57. **Hallazgo: la vuelta atrás restaura los secretos de la versión de destino**: Calendar volvió a pedir workers.dev (04:20:58 y 04:21:03) y la lectura `after-rollback` (04:33:49, esperada por el límite de ingresos) dio 33 enlaces, aprobada.
+8. **Regreso nativo** a `4e29aba6` 04:34:20, convergencia 04:34:35; Calendar en el subdominio desde las dos direcciones; lectura `after-native-return` 04:35:27: todo correcto salvo el mensaje de versión (mismo motivo del paso 6). Una medición de Calendar desde workers.dev chocó de nombre de recibo y se repitió como `retorno-desde-workers-dev`.
+9. **Programador con cron** 04:35:57 (`ba7b746d`), cinco cron. Observación `wrangler tail` 04:36–05:06: primer evento 04:42 (6 minutos de propagación); 15 eventos `ok`, sin excepciones, de push, calendario, reseñas y cargas, todos de `ba7b746d`. Mantenimiento (`17 */3`): segunda observación 06:14–06:21, evento de 06:17:28 `ok`, sin excepciones, pared 2883 ms, versión `ba7b746d`; también 5 eventos `ok` de los otros cron (recibo `production-scheduler-tail-2.jsonl`). Los cinco cron quedaron vistos en ejecución real.
+10. **Turno sintético cancelado** por la acción de la agenda (05:06:36, `fixture-cancel.json`): `reserved` → `cancelled`.
+11. **Estado final** (`crons-final.json`, 05:06:44): app `4e29aba6` (`aacba5b`) con 32 enlaces servida en las dos direcciones; programador `ba7b746d` con cinco cron; staging sin cron; preservación intacta.
+
+**Producción sirve `aacba5b10ff6030ac061e20ce0cccdf28126c180` y Calendar usa el subdominio.** Recuperación: detener el programador y `wrangler rollback 8b41ec56-5df3-4050-94f2-8b0f40347365 --name app` (`95b2596`, con su secreto de Calendar).

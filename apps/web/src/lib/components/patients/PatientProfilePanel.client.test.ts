@@ -133,3 +133,54 @@ describe('patient profile deferred changes', () => {
 		expect(screen.queryByText(event.summary)).not.toBeInTheDocument();
 	});
 });
+
+describe('contacto por WhatsApp desde la ficha', () => {
+	const ANDROID =
+		'Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36';
+	const DESKTOP =
+		'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+	const renderWith = (patient: Record<string, unknown>, userAgent: string) => {
+		vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(userAgent);
+		render(PatientProfilePanel, {
+			...props(),
+			active: true,
+			deferred: false,
+			patient: { ...props().patient, ...patient }
+		});
+	};
+
+	it('en el teléfono abre WhatsApp con el número argentino normalizado y sin texto armado', async () => {
+		renderWith({ phone: '0342 15 123-4567', phone_e164: '+5493421234567' }, ANDROID);
+		const link = await screen.findByRole('link', { name: 'Abrir WhatsApp' });
+		await waitFor(() => expect(link).toHaveAttribute('href', 'https://wa.me/5493421234567'));
+		expect(link).toHaveAttribute('target', '_blank');
+		expect(link).toHaveAttribute('rel', 'noreferrer');
+		expect(screen.getByRole('button', { name: 'Copiar teléfono' })).toBeInTheDocument();
+	});
+
+	it('en una computadora abre WhatsApp Web', async () => {
+		renderWith({ phone: '0342 15 123-4567', phone_e164: '+5493421234567' }, DESKTOP);
+		const link = await screen.findByRole('link', { name: 'Abrir WhatsApp' });
+		await waitFor(() =>
+			expect(link).toHaveAttribute('href', 'https://web.whatsapp.com/send?phone=5493421234567')
+		);
+	});
+
+	it('usa el teléfono escrito si no hay uno normalizado guardado', async () => {
+		renderWith({ phone: '0342 15 123-4567', phone_e164: null }, ANDROID);
+		await waitFor(() =>
+			expect(screen.getByRole('link', { name: 'Abrir WhatsApp' })).toHaveAttribute('href', 'https://wa.me/5493421234567')
+		);
+	});
+
+	it('no ofrece WhatsApp si el número no se puede abrir, y deja copiarlo igual', () => {
+		renderWith({ phone: '123456789', phone_e164: null }, ANDROID);
+		expect(screen.queryByRole('link', { name: 'Abrir WhatsApp' })).toBeNull();
+		expect(screen.getByRole('button', { name: 'Copiar teléfono' })).toBeInTheDocument();
+	});
+
+	it('sin teléfono no muestra el botón', () => {
+		renderWith({ phone: null, phone_e164: null }, ANDROID);
+		expect(screen.queryByRole('link', { name: 'Abrir WhatsApp' })).toBeNull();
+	});
+});

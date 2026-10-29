@@ -7,9 +7,11 @@
 	import { onMount } from 'svelte';
 	import { formatDateTime, formatInTimeZone } from '$lib/utils/format';
 	import { isActiveAppointmentStatus } from '$lib/utils/appointment-visibility';
+	import type { PracticeWhatsAppNotice } from '$lib/scheduling/contracts';
 	import {
 		refineDeviceClass,
 		samsungAppNotificationToggleStep,
+		whatsappHrefFor,
 		type DeviceClass,
 		type NotificationBrowserProfile,
 		type NotificationGuide
@@ -44,6 +46,7 @@
 			};
 			calendarMessage: string | null;
 			bookingInformationEnabled?: boolean;
+			practiceWhatsApp: PracticeWhatsAppNotice | null;
 		};
 		form?: { success?: boolean; message?: string };
 	} = $props();
@@ -1391,6 +1394,25 @@
 	{/if}
 {/snippet}
 
+{#snippet practiceWhatsAppCard(notice: PracticeWhatsAppNotice)}
+	<section class="ux-card">
+		<h2 class="ux-section-title">{data.created ? 'Avisale al consultorio' : 'Contacto con el consultorio'}</h2>
+		<p class="mt-2 text-sm text-white/65">
+			{data.created
+				? 'Mandales un WhatsApp con tu nombre, el día y la hora: así les queda el aviso y el chat abierto. Podés revisar el mensaje antes de enviarlo.'
+				: 'Si necesitás escribirle al consultorio por este turno, el mensaje ya sale con tu nombre, el día y la hora.'}
+		</p>
+		<a
+			href={whatsappHrefFor(device, notice.whatsappUrl, notice.whatsappWebUrl)}
+			target="_blank"
+			rel="noreferrer"
+			class="ux-btn-primary mt-4 w-full"
+		>
+			{data.created ? 'Avisar al consultorio por WhatsApp' : 'Escribir al consultorio por WhatsApp'}
+		</a>
+	</section>
+{/snippet}
+
 {#snippet locationCard(current: NonNullable<PageData['appointment']>)}
 	<section class="ux-card">
 		{#if data.isSoon}
@@ -1506,6 +1528,9 @@
 		</section>
 
 		{#if appointment}
+			{#if data.created && data.practiceWhatsApp}
+				{@render practiceWhatsAppCard(data.practiceWhatsApp)}
+			{/if}
 			{#if data.bookingInformationEnabled && isActive}
 				<section class="ux-soft-card p-5"><h2 class="ux-section-title">Información para tu consulta</h2><p class="mt-2 text-white/65">Podés ampliar la información para la profesional. Los campos configurados se incorporan a tu perfil. Tu reserva se conserva.</p><a class="ux-btn-primary mt-4" href={`/turno/${appointment.token}/informacion`}>Ver y ampliar mis datos</a></section>
 			{/if}
@@ -1566,11 +1591,15 @@
 				<a
 					href={`${base}/comprobante.pdf`}
 					download="comprobante-turno.pdf"
-					class="ux-btn-secondary mt-6 w-full"
+					class="ux-btn-secondary mt-6 w-full px-3 sm:px-5"
 				>
 					<Icon name="receipt" />Guardar comprobante
 				</a>
 			</section>
+
+			{#if !data.created && data.practiceWhatsApp}
+				{@render practiceWhatsAppCard(data.practiceWhatsApp)}
+			{/if}
 
 			{#if !data.isSoon && (appointment.business.address || isVirtual)}
 				{@render locationCard(appointment)}

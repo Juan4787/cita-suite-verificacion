@@ -55,7 +55,8 @@ const appointment = (overrides: Partial<PublicAppointmentView> = {}): PublicAppo
 		logo_url: null,
 		timezone: 'America/Argentina/Buenos_Aires',
 		is_active: true,
-		cancellation_policy: null
+		cancellation_policy: null,
+		whatsapp_contact_phone: null
 	},
 	patient_name: 'Paciente que no debe exponerse',
 	public_status_label: 'Reservado',

@@ -13,6 +13,7 @@ import {
 	type PublicAppointmentView
 } from '$lib/server/scheduling/public/public-appointments';
 import { canRegisterCalendarAction, markCalendarOffered } from '$lib/server/integrations/public/calendar-tracking';
+import { buildPracticeWhatsAppNotice } from '$lib/server/scheduling/public/practice-whatsapp';
 import {
 	getGoogleCalendarPublicMessage,
 	loadGoogleCalendarUiState,
@@ -109,11 +110,13 @@ export const load: PageServerLoad = async ({ params, fetch, url, request, setHea
 
 	if (env.DEMO_MODE === 'true') {
 		const appointment = demoPublicAppointment(params.token);
+		const created = url.searchParams.has('creado');
 		return {
 			appointment,
 			bookingInformationEnabled: bookingInformationEnabled(),
 			message: getPublicAppointmentMessage(appointment),
-			created: url.searchParams.has('creado'),
+			created,
+			practiceWhatsApp: buildPracticeWhatsAppNotice(appointment, { created }),
 			suggestedAction: url.searchParams.get('accion') ?? '',
 			demo: true,
 			device,
@@ -157,11 +160,13 @@ export const load: PageServerLoad = async ({ params, fetch, url, request, setHea
 			// Best-effort: los previews de WhatsApp/Telegram quedan filtrados por UA.
 			await markCalendarOffered(supabase, appointment, now);
 		}
+		const created = url.searchParams.has('creado');
 		return {
 			appointment,
 			bookingInformationEnabled: bookingInformationEnabled(),
 			message: getPublicAppointmentMessage(appointment),
-			created: url.searchParams.has('creado'),
+			created,
+			practiceWhatsApp: appointment ? buildPracticeWhatsAppNotice(appointment, { created }) : null,
 			suggestedAction: url.searchParams.get('accion') ?? '',
 			demo: false,
 			device,
@@ -180,6 +185,7 @@ export const load: PageServerLoad = async ({ params, fetch, url, request, setHea
 			bookingInformationEnabled: false,
 			message: 'El enlace no es válido o no está disponible.',
 			created: false,
+			practiceWhatsApp: null,
 			suggestedAction: '',
 			demo: false,
 			device,

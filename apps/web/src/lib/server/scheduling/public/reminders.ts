@@ -1,8 +1,12 @@
 import { readChoice } from '$lib/contracts/json';
-// Sección Recordatorios: turnos próximos SIN cobertura de recordatorio registrada,
-// para refuerzo manual por WhatsApp desde recepción.
+// Sección Recordatorios: turnos próximos para refuerzo manual por WhatsApp desde
+// recepción. `loadReminderList` trae todos los turnos activos del día con su
+// cobertura; `loadReminderCandidates` y el aviso de la agenda, sólo los que no
+// tienen cobertura registrada. Los cubiertos se muestran aparte para que recepción
+// decida si igual manda el recordatorio final de asistencia (campaña de señas y
+// avisos, plan aprobado el 29 de octubre de 2026, sección 4.11).
 //
-// Criterios de inclusión (ver plan, Fase 8):
+// Criterios de cobertura (ver plan, Fase 8):
 // - turno activo, dentro de la ventana Hoy/Mañana (TZ del negocio), futuro.
 // - sin acción de calendario (not_offered/offered) → "Sin recordatorio confirmado",
 //   o reprogramado después de una acción → "Calendario pendiente de actualizar".
@@ -28,6 +32,7 @@ import { formatInTimeZone } from '$lib/utils/format';
 import { publicAppointmentUrl } from '$lib/server/integrations/public/messaging';
 import { resolveMapsUrl } from '$lib/sites/location';
 import { normalizeArgentineWhatsAppPhone } from '$lib/utils/phone';
+import { buildWaMeUrl, buildWhatsAppWebUrl } from '$lib/utils/whatsapp';
 import type { Business } from '$lib/server/access/public/business';
 import { isManagedGoogleCalendarEnabled } from '$lib/server/integrations/public/google-calendar';
 
@@ -41,8 +46,8 @@ const CALENDAR_HANDOFF_STATUSES = new Set([
 	'clicked_phone_calendar'
 ]);
 
-import type { ReminderDay, ReminderCoverage, ReminderCandidate } from '$lib/scheduling/contracts';
-export type { ReminderDay, ReminderCoverage, ReminderCandidate } from '$lib/scheduling/contracts';
+import type { ReminderDay, ReminderCoverage, ReminderCandidate, ReminderListItem } from '$lib/scheduling/contracts';
+export type { ReminderDay, ReminderCoverage, ReminderCandidate, ReminderListItem } from '$lib/scheduling/contracts';
 
 // --- Ventanas de día en la zona horaria del negocio -------------------------
 
@@ -123,15 +128,17 @@ export const buildReminderWhatsAppMessage = (input: ReminderMessageInput): strin
 	if (input.modality === 'video') lines.push('Modalidad: Virtual');
 	if (input.modality !== 'video' && input.address) lines.push(`Dirección: ${input.address}`);
 	if (input.modality !== 'video' && input.mapsLink) lines.push(`Cómo llegar: ${input.mapsLink}`);
-	lines.push(`Ver turno: ${publicAppointmentUrl(input.token)}`);
+	// Pedirle que avise si no viene libera el horario a tiempo para dárselo a otra persona.
+	if (lines.length > 2) lines.push('');
+	lines.push(
+		'Si no podés venir, avisanos por acá o cancelalo desde el enlace, así le damos el horario a otra persona.',
+		`Ver turno: ${publicAppointmentUrl(input.token)}`
+	);
 	return lines.join('\n');
 };
 
-export const buildWaMeUrl = (phoneE164: string, message: string): string =>
-	`https://wa.me/${phoneE164.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
-
-export const buildWhatsAppWebUrl = (phoneE164: string, message: string): string =>
-	`https://web.whatsapp.com/send?phone=${phoneE164.replace(/\D/g, '')}&text=${encodeURIComponent(message)}`;
+// Los enlaces viven en un módulo puro para que el navegador use exactamente los mismos.
+export { buildWaMeUrl, buildWhatsAppWebUrl };
 
 export const buildArgentineWaMeUrl = (
 	phone: string | null | undefined,
@@ -274,7 +281,7 @@ export const hasConfirmedPushSubscription = (
 
 // --- Carga principal ----------------------------------------------------------
 
-export const loadReminderCandidates = async (
+const collectReminderItems = async (
 	supabase: CitaSupabaseClient,
 	business: Pick<Business, 'id' | 'name' | 'timezone' | 'address' | 'maps_url'>,
 	options: {
@@ -284,8 +291,9 @@ export const loadReminderCandidates = async (
 		// debe pasar un cliente service-role, después de validar el negocio y con
 		// los appointment_id ya autorizados por la consulta principal.
 		pushSubscriptionsSupabase: CitaSupabaseClient;
-	}
-): Promise<ReminderCandidate[]> => {
+	},
+	includeCovered: boolean
+): Promise<ReminderListItem[]> => {
 	const now = options.now ?? new Date();
 	const { start, end } = localDayWindowUtc(now, business.timezone, options.day);
 	const windowStart = start.getTime() > now.getTime() ? start : now;
@@ -372,7 +380,7 @@ export const loadReminderCandidates = async (
 	);
 	const mapsLink = resolveMapsUrl({ address: business.address, maps_url: business.maps_url });
 
-	const candidates: ReminderCandidate[] = [];
+	const items: ReminderListItem[] = [];
 	for (const row of appointments) {
 		const patient = row.patients;
 		if (patient?.blocked) continue;
@@ -389,7 +397,8 @@ export const loadReminderCandidates = async (
 				String(googleCalendar?.sync_status ?? '') === 'active' &&
 				Number(googleCalendar?.synced_sequence) === Number(row.calendar_sequence ?? 0)
 		});
-		if (!coverage) continue;
+		// El aviso de la agenda corre en cada carga: no arma mensajes que no va a mostrar.
+		if (!coverage && !includeCovered) continue;
 
 		// WhatsApp recibe siempre el móvil argentino canónico. Se recuperan formatos
 		// locales 0/15 y valores legados; si falta información no se inventa un wa.me.
@@ -410,7 +419,7 @@ export const loadReminderCandidates = async (
 				)
 			: null;
 
-		candidates.push({
+		items.push({
 			appointment_id: String(row.id),
 			patient_id: String(patient.id),
 			starts_at: String(row.starts_at),
@@ -419,15 +428,33 @@ export const loadReminderCandidates = async (
 			service_name: String(row.service_name_snapshot),
 			professional_name: String(row.professional_name_snapshot),
 			patient_name: patientName,
-			coverage,
+			coverage: coverage ?? 'aviso_automatico',
 			phone_e164: phone,
 			whatsapp_url: whatsappUrl,
 			whatsapp_opened_at: row.whatsapp_reminder_opened_at ?? null,
 			whatsapp_marked_sent_at: row.whatsapp_reminder_marked_sent_at ?? null
 		});
 	}
-	return candidates;
+	return items;
 };
+
+type ReminderLoadOptions = Parameters<typeof collectReminderItems>[2];
+type ReminderBusiness = Pick<Business, 'id' | 'name' | 'timezone' | 'address' | 'maps_url'>;
+
+const needsManualReminder = (item: ReminderListItem): item is ReminderCandidate =>
+	item.coverage !== 'aviso_automatico';
+
+// Todos los turnos activos del día, con su cobertura: la página de Recordatorios.
+export const loadReminderList = (supabase: CitaSupabaseClient, business: ReminderBusiness, options: ReminderLoadOptions) =>
+	collectReminderItems(supabase, business, options, true);
+
+// Turnos sin cobertura registrada: la lista de refuerzo y el aviso de la agenda.
+export const loadReminderCandidates = async (
+	supabase: CitaSupabaseClient,
+	business: ReminderBusiness,
+	options: ReminderLoadOptions
+): Promise<ReminderCandidate[]> =>
+	(await collectReminderItems(supabase, business, options, false)).filter(needsManualReminder);
 
 // El aviso de Agenda usa exactamente los mismos criterios que la sección
 // Recordatorios. Así no anuncia turnos que ya tienen recordatorio confirmado.

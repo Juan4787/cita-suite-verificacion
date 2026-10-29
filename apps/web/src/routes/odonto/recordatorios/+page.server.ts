@@ -5,15 +5,16 @@ import { createSupabaseAdminClient, createSupabaseServerClient } from '$lib/serv
 import { resolveActiveBusiness } from '$lib/server/access/public/business';
 import { writeAuditLog } from '$lib/server/platform/audit';
 import {
-	loadReminderCandidates,
-	type ReminderCandidate,
-	type ReminderDay
+	loadReminderList,
+	type ReminderDay,
+	type ReminderListItem
 } from '$lib/server/scheduling/public/reminders';
+import { isUuid } from '@cita-suite/shared/uuid';
 import type { Actions, PageServerLoad } from './$types';
 
 const parseDay = (raw: string | null): ReminderDay => (raw === 'hoy' ? 'hoy' : 'manana');
 
-const demoCandidates = (day: ReminderDay): ReminderCandidate[] => {
+const demoCandidates = (day: ReminderDay): ReminderListItem[] => {
 	const base = new Date();
 	base.setHours(15, 30, 0, 0);
 	if (day === 'manana') base.setDate(base.getDate() + 1);
@@ -52,6 +53,21 @@ const demoCandidates = (day: ReminderDay): ReminderCandidate[] => {
 			whatsapp_url: null,
 			whatsapp_opened_at: null,
 			whatsapp_marked_sent_at: null
+		},
+		{
+			appointment_id: 'demo-reminder-3',
+			patient_id: 'demo-patient-3',
+			starts_at: at(17),
+			time_label: '17:00',
+			status: 'confirmed',
+			service_name: 'Consulta',
+			professional_name: 'Dra. Jazmin Lopez',
+			patient_name: 'Laura Díaz',
+			coverage: 'aviso_automatico',
+			phone_e164: '+5493510000003',
+			whatsapp_url: 'https://wa.me/5493510000003?text=Demo',
+			whatsapp_opened_at: null,
+			whatsapp_marked_sent_at: null
 		}
 	];
 };
@@ -83,12 +99,12 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 
 	// Negocio restricted/archived: la sección no opera (§65 del documento madre).
 	const restricted = !context.access.canUseBusiness;
-	let candidates: ReminderCandidate[] = [];
+	let candidates: ReminderListItem[] = [];
 	let remindersUnavailable = false;
 	if (!restricted) {
 		try {
 			const pushSubscriptionsSupabase = await createSupabaseAdminClient('odonto', fetch);
-			candidates = await loadReminderCandidates(supabase, context.business, {
+			candidates = await loadReminderList(supabase, context.business, {
 				day,
 				pushSubscriptionsSupabase
 			});
@@ -120,11 +136,12 @@ export const actions: Actions = {
 
 		const form = await request.formData();
 		const appointmentId = String(form.get('appointment_id') ?? '').trim();
-		if (!appointmentId) return fail(400, { message: 'Falta el turno.' });
+		// Un identificador mal formado nunca llega a PostgreSQL (respondería 22P02).
+		if (!isUuid(appointmentId)) return fail(404, { message: 'No encontramos ese turno.' });
 
 		const userId = locals.verifiedUser?.id ?? null;
 		const now = new Date().toISOString();
-		const { error } = await supabase
+		const { data: marked, error } = await supabase
 			.from('appointments')
 			.update({
 				whatsapp_reminder_marked_sent_at: now,
@@ -132,11 +149,16 @@ export const actions: Actions = {
 				updated_at: now
 			})
 			.eq('id', appointmentId)
-			.eq('business_id', context.business.id);
+			.eq('business_id', context.business.id)
+			.select('id')
+			.maybeSingle();
 		if (error) {
 			logServerFailure('Error marcando recordatorio como enviado', error);
 			return fail(500, { message: 'No se pudo marcar el recordatorio.' });
 		}
+		// Sin fila actualizada (otro consultorio, turno borrado o sin permiso) no hay
+		// nada que confirmar ni que auditar.
+		if (!marked) return fail(404, { message: 'No encontramos ese turno en este consultorio.' });
 
 		await writeAuditLog(supabase, {
 			businessId: context.business.id,
