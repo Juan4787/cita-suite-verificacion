@@ -3,6 +3,10 @@
 -- turno: la base la crea al reservar, calcula sus fechas en la zona del consultorio,
 -- decide quién la registra, une «seña resuelta» con Confirmado y cancela sola sólo
 -- cuando no hay ninguna duda. Datos sintéticos; todo se deshace al final.
+--
+-- Two rules for every check below. A NULL never passes: comparisons use IS DISTINCT FROM,
+-- because `if NULL then raise` does not raise. A function and the reading of what it wrote
+-- never share a statement: a statement does not see the writes of the functions it calls.
 begin;
 select extensions.plan(20);
 
@@ -87,7 +91,7 @@ select extensions.ok(not exists(select 1 from public.appointment_deposits where 
 -- without overwriting a version saved by someone else.
 do $$
 declare v text; v_full jsonb:=jsonb_build_object('enabled',true,'auto_cancel_enabled',true,'amount_mode','fixed','fixed_amount',40000,
- 'request_days',7,'deadline_hours',48,'min_payment_hours',24,'transfer_details','Alias natalia.frutos','applies_to_manual',true,
+ 'percentage',null,'request_days',7,'deadline_hours',48,'min_payment_hours',24,'transfer_details','Alias natalia.frutos','applies_to_manual',true,
  'excluded_service_ids',jsonb_build_array(pg_temp.fid('service_free')));
 begin
  v:=pg_temp.as_actor('reception',format('select public.save_deposit_policy(%L,%L::jsonb,0)',pg_temp.fid('business'),v_full));
@@ -105,6 +109,22 @@ begin
  if v not like 'ERROR %DEPOSIT_POLICY_INVALID%' then raise exception 'TEST_POLICY_FRACTIONAL_PERCENTAGE %',v; end if;
  v:=pg_temp.save_policy(v_full||'{"fixed_amount":"40000"}',0);
  if v not like 'ERROR %DEPOSIT_POLICY_INVALID%' then raise exception 'TEST_POLICY_TEXT_AMOUNT %',v; end if;
+ -- No silent defaults: a missing key, a boolean written as text, a fractional number of days or
+ -- an unknown key is an error; so are a list instead of an object and a missing revision.
+ v:=pg_temp.save_policy(v_full-'applies_to_manual',0);
+ if v not like 'ERROR %DEPOSIT_POLICY_INVALID%' then raise exception 'TEST_POLICY_MISSING_KEY %',v; end if;
+ v:=pg_temp.save_policy(v_full||'{"enabled":"true"}',0);
+ if v not like 'ERROR %DEPOSIT_POLICY_INVALID%' then raise exception 'TEST_POLICY_TEXT_BOOLEAN %',v; end if;
+ v:=pg_temp.save_policy(v_full||'{"request_days":7.5}',0);
+ if v not like 'ERROR %DEPOSIT_POLICY_INVALID%' then raise exception 'TEST_POLICY_FRACTIONAL_DAYS %',v; end if;
+ v:=pg_temp.save_policy(v_full||'{"auto_cancel":true}',0);
+ if v not like 'ERROR %DEPOSIT_POLICY_INVALID%' then raise exception 'TEST_POLICY_UNKNOWN_KEY %',v; end if;
+ v:=pg_temp.save_policy(jsonb_build_array(v_full),0);
+ if v not like 'ERROR %DEPOSIT_POLICY_INVALID%' then raise exception 'TEST_POLICY_NOT_OBJECT %',v; end if;
+ v:=pg_temp.as_actor('owner',format('select public.save_deposit_policy(%L,%L::jsonb,null)',pg_temp.fid('business'),v_full));
+ if v not like 'ERROR %DEPOSIT_POLICY_INVALID%' then raise exception 'TEST_POLICY_NULL_REVISION %',v; end if;
+ if exists(select 1 from public.deposit_policies where business_id=pg_temp.fid('business')) then
+  raise exception 'TEST_POLICY_SAVED_INVALID'; end if;
  v:=pg_temp.save_policy(v_full,0);
  if v<>'1' then raise exception 'TEST_POLICY_SAVE %',v; end if;
  v:=pg_temp.save_policy(v_full||'{"fixed_amount":1}',0);
@@ -121,11 +141,12 @@ declare a uuid:=pg_temp.appt('public_far', date_trunc('hour',now())+interval '10
 begin
  d:=pg_temp.deposit('public_far');
  select starts_at into v_starts from public.appointments where id=a;
- if d.status is distinct from 'pending' or d.amount<>40000 or d.percentage is not null or d.reference_amount is not null
-  or d.due_at<>v_starts-interval '48 hours'
-  or d.request_from<>(((v_starts at time zone 'America/Argentina/Cordoba')::date-7)::timestamp at time zone 'America/Argentina/Cordoba')
-  or not d.auto_cancel or d.request_days<>7 or d.deadline_hours<>48 or d.min_payment_hours<>24 or d.revision<>1
-  or d.business_id<>pg_temp.fid('business') or d.recorded_by is not null or d.recorded_at is not null then
+ if d.status is distinct from 'pending' or d.amount is distinct from 40000::bigint or d.percentage is not null
+  or d.reference_amount is not null or d.due_at is distinct from v_starts-interval '48 hours'
+  or d.request_from is distinct from (((v_starts at time zone 'America/Argentina/Cordoba')::date-7)::timestamp at time zone 'America/Argentina/Cordoba')
+  or d.auto_cancel is not true or d.request_days is distinct from 7 or d.deadline_hours is distinct from 48
+  or d.min_payment_hours is distinct from 24 or d.revision is distinct from 1::bigint or d.policy_revision is distinct from 1::bigint
+  or d.business_id is distinct from pg_temp.fid('business') or d.recorded_by is not null or d.recorded_at is not null then
   raise exception 'TEST_DEPOSIT_CREATED %',row_to_json(d); end if;
 end $$;
 select extensions.pass('una reserva pública crea la seña pendiente con monto, pedido y vencimiento del consultorio');
@@ -146,17 +167,20 @@ declare v text;
 begin
  perform pg_temp.appt('excluded', date_trunc('hour',now())+interval '11 days 13 hours','public_booking','service_free');
  perform pg_temp.appt('manual_with', date_trunc('hour',now())+interval '11 days 15 hours','manual');
- if exists(select 1 from public.appointment_deposits where appointment_id=pg_temp.fid('excluded')) or pg_temp.deposit('manual_with') is null then
+ if exists(select 1 from public.appointment_deposits where appointment_id=pg_temp.fid('excluded'))
+  or not exists(select 1 from public.appointment_deposits where appointment_id=pg_temp.fid('manual_with')) then
   raise exception 'TEST_EXCLUSION_OR_MANUAL'; end if;
  v:=pg_temp.save_policy(jsonb_build_object('enabled',true,'auto_cancel_enabled',true,'amount_mode','fixed','fixed_amount',45000,
-  'request_days',14,'deadline_hours',72,'min_payment_hours',24,'transfer_details','Alias natalia.frutos','applies_to_manual',false,
+  'percentage',null,'request_days',14,'deadline_hours',72,'min_payment_hours',24,'transfer_details','Alias natalia.frutos','applies_to_manual',false,
   'excluded_service_ids',jsonb_build_array(pg_temp.fid('service_free'))),1);
  if v<>'2' then raise exception 'TEST_POLICY_UPDATE %',v; end if;
  perform pg_temp.appt('manual_without', date_trunc('hour',now())+interval '11 days 17 hours','manual');
  perform pg_temp.appt('public_new_policy', date_trunc('hour',now())+interval '11 days 19 hours');
  if exists(select 1 from public.appointment_deposits where appointment_id=pg_temp.fid('manual_without'))
-  or (pg_temp.deposit('public_new_policy')).amount<>45000 or (pg_temp.deposit('public_new_policy')).deadline_hours<>72
-  or (pg_temp.deposit('public_far')).amount<>40000 or (pg_temp.deposit('public_far')).deadline_hours<>48 then
+  or (pg_temp.deposit('public_new_policy')).amount is distinct from 45000::bigint
+  or (pg_temp.deposit('public_new_policy')).deadline_hours is distinct from 72
+  or (pg_temp.deposit('public_new_policy')).policy_revision is distinct from 2::bigint
+  or (pg_temp.deposit('public_far')).amount is distinct from 40000::bigint or (pg_temp.deposit('public_far')).deadline_hours is distinct from 48 then
   raise exception 'TEST_POLICY_SNAPSHOT'; end if;
 end $$;
 select extensions.pass('las prestaciones excluidas no piden seña y cambiar la política sólo afecta las reservas nuevas');
@@ -185,8 +209,9 @@ begin
  v:=pg_temp.as_actor('reception',format('select status from public.set_appointment_deposit(%L,%L,%L,%s)',
   pg_temp.fid('business'),pg_temp.fid('public_far'),'paid',v_rev-1));
  if v<>'paid' then raise exception 'TEST_PAID_REPEAT %',v; end if;
- if (select status from public.appointments where id=pg_temp.fid('public_far'))<>'confirmed'
-  or (pg_temp.deposit('public_far')).recorded_by<>pg_temp.fid('reception') or (pg_temp.deposit('public_far')).revision<>v_rev
+ if (select status from public.appointments where id=pg_temp.fid('public_far')) is distinct from 'confirmed'
+  or (pg_temp.deposit('public_far')).recorded_by is distinct from pg_temp.fid('reception')
+  or (pg_temp.deposit('public_far')).revision is distinct from v_rev
   or (select count(*) from public.audit_logs where entity_id=pg_temp.fid('public_far') and action='appointment.deposit_paid')<>1 then
   raise exception 'TEST_PAID_EFFECTS'; end if;
 end $$;
@@ -203,7 +228,10 @@ begin
  v:=pg_temp.as_actor('reception',format('select status from public.set_appointment_deposit(%L,%L,%L,%s)',
   pg_temp.fid('business'),pg_temp.fid('manual_with'),'paid',(pg_temp.deposit('manual_with')).revision+5));
  if v not like 'ERROR %DEPOSIT_CHANGED%' then raise exception 'TEST_STALE_REVISION %',v; end if;
- if (pg_temp.deposit('manual_with')).status<>'pending' then raise exception 'TEST_FORBIDDEN_CHANGED'; end if;
+ v:=pg_temp.as_actor('reception',format('select status from public.set_appointment_deposit(%L,%L,%L,null)',
+  pg_temp.fid('business'),pg_temp.fid('manual_with'),'paid'));
+ if v not like 'ERROR %DEPOSIT_ACTION_INVALID%' then raise exception 'TEST_NULL_REVISION %',v; end if;
+ if (pg_temp.deposit('manual_with')).status is distinct from 'pending' then raise exception 'TEST_FORBIDDEN_CHANGED'; end if;
 end $$;
 select extensions.pass('sólo dueña, administración y recepción registran señas, y una versión vieja es un conflicto');
 
@@ -213,12 +241,13 @@ do $$
 declare v text;
 begin
  v:=pg_temp.set_deposit('owner','public_far','pending');
- if v<>'pending' or (select status from public.appointments where id=pg_temp.fid('public_far'))<>'reserved'
-  or not (pg_temp.deposit('public_far')).auto_cancel then raise exception 'TEST_UNDO %',v; end if;
+ if v<>'pending' or (select status from public.appointments where id=pg_temp.fid('public_far')) is distinct from 'reserved'
+  or (pg_temp.deposit('public_far')).auto_cancel is not true then raise exception 'TEST_UNDO %',v; end if;
  v:=pg_temp.set_deposit('owner','public_far','paid');
+ if v<>'paid' then raise exception 'TEST_REPAY %',v; end if;
  update public.appointment_deposits set due_at=now()-interval '1 hour' where appointment_id=pg_temp.fid('public_far');
  v:=pg_temp.set_deposit('owner','public_far','pending');
- if v<>'pending' or (pg_temp.deposit('public_far')).auto_cancel then raise exception 'TEST_UNDO_AFTER_DUE %',v; end if;
+ if v<>'pending' or (pg_temp.deposit('public_far')).auto_cancel is not false then raise exception 'TEST_UNDO_AFTER_DUE %',v; end if;
 end $$;
 select extensions.pass('deshacer vuelve a pendiente y a Reservado, y después del vencimiento ya no cancela solo');
 
@@ -226,8 +255,9 @@ select extensions.pass('deshacer vuelve a pendiente y a Reservado, y después de
 do $$
 declare v text:=pg_temp.set_deposit('reception','manual_with','waived');
 begin
- if v<>'waived' or (pg_temp.deposit('manual_with')).waived_reason<>'staff'
-  or (select status from public.appointments where id=pg_temp.fid('manual_with'))<>'confirmed' then raise exception 'TEST_WAIVE %',v; end if;
+ if v<>'waived' or (pg_temp.deposit('manual_with')).waived_reason is distinct from 'staff'
+  or (select status from public.appointments where id=pg_temp.fid('manual_with')) is distinct from 'confirmed' then
+  raise exception 'TEST_WAIVE %',v; end if;
 end $$;
 select extensions.pass('exceptuar la seña confirma el turno y queda como decisión del consultorio');
 
@@ -240,14 +270,17 @@ begin
  update public.appointments set starts_at=v_new,ends_at=v_new+interval '60 minutes',blocking_starts_at=v_new,blocking_ends_at=v_new+interval '60 minutes'
  where id=pg_temp.fid('moved_pending');
  d_after:=pg_temp.deposit('moved_pending');
- if d_after.due_at<>v_new-make_interval(hours=>d_after.deadline_hours) or d_after.status<>'pending'
-  or d_after.request_from<>(((v_new at time zone 'America/Argentina/Cordoba')::date-d_after.request_days)::timestamp at time zone 'America/Argentina/Cordoba') then
+ if d_after.status is distinct from 'pending' or d_after.deadline_hours is distinct from 72 or d_after.request_days is distinct from 14
+  or d_after.due_at is distinct from v_new-interval '72 hours'
+  or d_after.request_from is distinct from (((v_new at time zone 'America/Argentina/Cordoba')::date-14)::timestamp at time zone 'America/Argentina/Cordoba')
+  or d_after.auto_cancel is not true or d_after.revision is distinct from 2::bigint then
   raise exception 'TEST_MOVE_PENDING %',row_to_json(d_after); end if;
  d_before:=pg_temp.deposit('manual_with');
+ if d_before.appointment_id is null or d_before.status is distinct from 'waived' then raise exception 'TEST_MOVE_SETTLED_FIXTURE'; end if;
  v_new:=date_trunc('hour',now())+interval '21 days 13 hours';
  update public.appointments set starts_at=v_new,ends_at=v_new+interval '60 minutes',blocking_starts_at=v_new,blocking_ends_at=v_new+interval '60 minutes'
  where id=pg_temp.fid('manual_with');
- if row_to_json(pg_temp.deposit('manual_with'))::text<>row_to_json(d_before)::text then raise exception 'TEST_MOVE_SETTLED'; end if;
+ if row_to_json(pg_temp.deposit('manual_with'))::text is distinct from row_to_json(d_before)::text then raise exception 'TEST_MOVE_SETTLED'; end if;
 end $$;
 select extensions.pass('reprogramar recalcula una seña pendiente con su fotografía y no toca una resuelta');
 
@@ -271,10 +304,12 @@ begin
  v_count:=private.expire_unpaid_deposits(v_now,100);
  if v_count<>1 then raise exception 'TEST_EXPIRE_COUNT %',v_count; end if;
  d:=pg_temp.deposit('expire_ok');
- if d.status<>'expired' or d.expired_at is null
-  or (select status from public.appointments where id=pg_temp.fid('expire_ok'))<>'cancelled'
+ if d.status is distinct from 'expired' or d.expired_at is distinct from v_now
+  or (select status from public.appointments where id=pg_temp.fid('expire_ok')) is distinct from 'cancelled'
+  or (select cancelled_at from public.appointments where id=pg_temp.fid('expire_ok')) is distinct from v_now
   or (select cancelled_by_user_id from public.appointments where id=pg_temp.fid('expire_ok')) is not null
-  or (select cancelled_reason from public.appointments where id=pg_temp.fid('expire_ok')) not like 'Seña no registrada antes del %'
+  or (select cancelled_reason from public.appointments where id=pg_temp.fid('expire_ok')) is distinct from
+   'Seña no registrada antes del '||to_char((v_now-interval '1 hour') at time zone 'America/Argentina/Cordoba','DD/MM/YYYY HH24:MI')
   or (select count(*) from public.audit_logs where entity_id=pg_temp.fid('expire_ok') and action='appointment.deposit_expired')<>1 then
   raise exception 'TEST_EXPIRE_EFFECTS %',row_to_json(d); end if;
  if exists(select 1 from public.appointments where id in (pg_temp.fid('expire_paid'),pg_temp.fid('expire_reschedule'),pg_temp.fid('expire_stale'),
@@ -292,8 +327,9 @@ begin
  if private.expire_deposit_if_still_due(pg_temp.fid('expire_paid'),v_now)
   or private.expire_deposit_if_still_due(pg_temp.fid('expire_reschedule'),v_now)
   or private.expire_deposit_if_still_due(pg_temp.fid('expire_stale'),v_now) then raise exception 'TEST_RECHECK'; end if;
- if (pg_temp.deposit('expire_paid')).status<>'paid' or (pg_temp.deposit('expire_reschedule')).status<>'pending'
-  or (select status from public.appointments where id=pg_temp.fid('expire_reschedule'))<>'reschedule_requested' then
+ if (pg_temp.deposit('expire_paid')).status is distinct from 'paid' or (pg_temp.deposit('expire_reschedule')).status is distinct from 'pending'
+  or (pg_temp.deposit('expire_stale')).status is distinct from 'pending'
+  or (select status from public.appointments where id=pg_temp.fid('expire_reschedule')) is distinct from 'reschedule_requested' then
   raise exception 'TEST_RECHECK_CHANGED'; end if;
 end $$;
 select extensions.pass('cada turno se decide releyendo seña, turno y política con el turno bloqueado');
@@ -309,22 +345,25 @@ select extensions.ok(pg_temp.fid('slot_reused') is not null, 'el horario de un t
 -- 14. Nothing is cancelled with the global switch off, the practice's automatic
 -- cancellation off, or a restricted practice; each run still records its heartbeat.
 do $$
-declare v_now timestamptz:=date_trunc('hour',now())+interval '110 days'; v text; v_before timestamptz;
+declare v_now timestamptz:=date_trunc('hour',now())+interval '110 days'; v text; v_before timestamptz; v_count integer;
 begin
  perform pg_temp.appt('guard_target', v_now+interval '47 hours');
  update public.appointment_deposits set due_at=v_now-interval '1 hour',auto_cancel=true where appointment_id=pg_temp.fid('guard_target');
  update private.deposit_automation set enabled=false;
  v_before:=(select last_run_finished_at from private.deposit_automation);
- if private.expire_unpaid_deposits(v_now,100)<>0 or (select last_run_finished_at from private.deposit_automation)=v_before then
-  raise exception 'TEST_GLOBAL_SWITCH'; end if;
+ v_count:=private.expire_unpaid_deposits(v_now,100);
+ if v_count<>0 or (select last_run_finished_at from private.deposit_automation) is not distinct from v_before
+  or (select last_run_processed from private.deposit_automation) is distinct from 0 then
+  raise exception 'TEST_GLOBAL_SWITCH %',v_count; end if;
  update private.deposit_automation set enabled=true;
  v:=pg_temp.save_policy(jsonb_build_object('enabled',true,'auto_cancel_enabled',false,'amount_mode','fixed','fixed_amount',45000,
-  'request_days',14,'deadline_hours',72,'min_payment_hours',24,'transfer_details','Alias natalia.frutos','applies_to_manual',false,
+  'percentage',null,'request_days',14,'deadline_hours',72,'min_payment_hours',24,'transfer_details','Alias natalia.frutos','applies_to_manual',false,
   'excluded_service_ids',jsonb_build_array(pg_temp.fid('service_free'))),2);
  if v<>'3' or private.expire_unpaid_deposits(v_now,100)<>0 then raise exception 'TEST_PRACTICE_SWITCH %',v; end if;
  v:=pg_temp.save_policy(jsonb_build_object('enabled',true,'auto_cancel_enabled',true,'amount_mode','fixed','fixed_amount',45000,
-  'request_days',14,'deadline_hours',72,'min_payment_hours',24,'transfer_details','Alias natalia.frutos','applies_to_manual',false,
+  'percentage',null,'request_days',14,'deadline_hours',72,'min_payment_hours',24,'transfer_details','Alias natalia.frutos','applies_to_manual',false,
   'excluded_service_ids',jsonb_build_array(pg_temp.fid('service_free'))),3);
+ if v<>'4' then raise exception 'TEST_PRACTICE_SWITCH_BACK %',v; end if;
  update public.business_subscriptions set commercial_access_enabled=false where business_id=pg_temp.fid('business');
  if private.expire_unpaid_deposits(v_now,100)<>0 then raise exception 'TEST_RESTRICTED'; end if;
  update public.business_subscriptions set commercial_access_enabled=true where business_id=pg_temp.fid('business');
@@ -343,10 +382,10 @@ begin
  v:=pg_temp.save_policy(jsonb_build_object('enabled',true,'auto_cancel_enabled',true,'amount_mode','percentage','percentage',35,
   'fixed_amount',null,'request_days',7,'deadline_hours',48,'min_payment_hours',24,'transfer_details','Alias natalia.frutos','applies_to_manual',true,
   'excluded_service_ids','[]'::jsonb),v_rev);
- if v<>(v_rev+1)::text then raise exception 'TEST_PERCENTAGE_POLICY %',v; end if;
+ if v_rev is null or v is distinct from (v_rev+1)::text then raise exception 'TEST_PERCENTAGE_POLICY %',v; end if;
  perform pg_temp.appt('percentage', date_trunc('hour',now())+interval '13 days 13 hours','manual');
- if (pg_temp.deposit('percentage')).amount<>40300 or (pg_temp.deposit('percentage')).percentage<>35
-  or (pg_temp.deposit('percentage')).reference_amount<>115000 then raise exception 'TEST_PERCENTAGE %',row_to_json(pg_temp.deposit('percentage')); end if;
+ if (pg_temp.deposit('percentage')).amount is distinct from 40300::bigint or (pg_temp.deposit('percentage')).percentage is distinct from 35::numeric
+  or (pg_temp.deposit('percentage')).reference_amount is distinct from 115000::bigint then raise exception 'TEST_PERCENTAGE %',row_to_json(pg_temp.deposit('percentage')); end if;
 end $$;
 select extensions.pass('la seña puede ser un porcentaje del arancel del turno, con su redondeo');
 
@@ -363,9 +402,11 @@ begin
  v:=public.get_deposit_terms(v_business,v_service,v_starts,'public_booking',v_quote);
  v_without:=public.get_deposit_terms(v_business,v_service,v_starts,'public_booking',null);
  reset role;
- if v->>'required'<>'true' or (v->>'amount')::bigint<>40300 or (v->>'due_at')::timestamptz<>v_starts-interval '48 hours'
-  or v->>'auto_cancel'<>'true' or v->>'transfer_details'<>'Alias natalia.frutos' then raise exception 'TEST_TERMS %',v; end if;
- if v_without->>'required'<>'false' then raise exception 'TEST_TERMS_WITHOUT_QUOTE %',v_without; end if;
+ if v->>'required' is distinct from 'true' or (v->>'amount')::bigint is distinct from 40300::bigint
+  or (v->>'due_at')::timestamptz is distinct from v_starts-interval '48 hours'
+  or v->>'auto_cancel' is distinct from 'true' or v->>'transfer_details' is distinct from 'Alias natalia.frutos' then
+  raise exception 'TEST_TERMS %',v; end if;
+ if v_without->>'required' is distinct from 'false' then raise exception 'TEST_TERMS_WITHOUT_QUOTE %',v_without; end if;
  v_denied:=pg_temp.as_actor('stranger',format('select public.get_deposit_terms(%L,%L,%L,%L,null)::text',
   v_business,v_service,v_starts,'public_booking'));
  if v_denied not like 'ERROR %permission denied%' then raise exception 'TEST_TERMS_PRIVILEGE %',v_denied; end if;
@@ -378,13 +419,17 @@ do $$
 declare v text; v_rev bigint:=(select revision from public.deposit_policies where business_id=pg_temp.fid('business'));
 begin
  v:=pg_temp.save_policy(jsonb_build_object('enabled',false,'auto_cancel_enabled',false,'amount_mode','fixed','fixed_amount',40000,
-  'request_days',7,'deadline_hours',48,'min_payment_hours',24,'transfer_details','','applies_to_manual',true,'excluded_service_ids','[]'::jsonb),v_rev);
- if v<>(v_rev+1)::text then raise exception 'TEST_DISABLE %',v; end if;
+  'percentage',null,'request_days',7,'deadline_hours',48,'min_payment_hours',24,'transfer_details','','applies_to_manual',true,
+  'excluded_service_ids','[]'::jsonb),v_rev);
+ if v_rev is null or v is distinct from (v_rev+1)::text then raise exception 'TEST_DISABLE %',v; end if;
  if exists(select 1 from public.appointment_deposits where business_id=pg_temp.fid('business') and status='pending')
-  or (pg_temp.deposit('late_window')).waived_reason<>'policy_disabled'
-  or (select status from public.appointments where id=pg_temp.fid('late_window'))<>'reserved' then raise exception 'TEST_DISABLE_EFFECTS'; end if;
+  or (pg_temp.deposit('late_window')).status is distinct from 'waived'
+  or (pg_temp.deposit('late_window')).waived_reason is distinct from 'policy_disabled'
+  or (select status from public.appointments where id=pg_temp.fid('late_window')) is distinct from 'reserved' then
+  raise exception 'TEST_DISABLE_EFFECTS'; end if;
  perform pg_temp.appt('after_disable', date_trunc('hour',now())+interval '14 days 13 hours');
- if pg_temp.deposit('after_disable') is not null then raise exception 'TEST_DISABLE_NEW'; end if;
+ if exists(select 1 from public.appointment_deposits where appointment_id=pg_temp.fid('after_disable')) then
+  raise exception 'TEST_DISABLE_NEW'; end if;
 end $$;
 select extensions.pass('apagar la política exceptúa las pendientes sin confirmar turnos ni crear señas nuevas');
 
@@ -399,8 +444,13 @@ begin
  if v<>'0' then raise exception 'TEST_RLS_STRANGER %',v; end if;
  v:=pg_temp.as_actor('owner',format('update public.appointment_deposits set status=''paid'' where appointment_id=%L returning status',pg_temp.fid('late_past')));
  if v not like 'ERROR %permission denied%' then raise exception 'TEST_DIRECT_WRITE %',v; end if;
- if has_table_privilege('service_role','public.appointment_deposits','INSERT,UPDATE,DELETE')
-  or has_table_privilege('authenticated','public.deposit_policies','INSERT,UPDATE,DELETE') then raise exception 'TEST_WRITE_GRANTS'; end if;
+ if exists(select 1 from unnest(array['anon','authenticated','service_role']) r(role)
+   cross join unnest(array['public.appointment_deposits','public.deposit_policies','public.deposit_service_exclusions']) t(name)
+   where has_table_privilege(r.role,t.name,'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+    or (r.role='anon' and has_table_privilege(r.role,t.name,'SELECT')))
+  or exists(select 1 from unnest(array['anon','authenticated','service_role']) r(role)
+   where has_table_privilege(r.role,'private.deposit_automation','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')) then
+  raise exception 'TEST_WRITE_GRANTS'; end if;
 end $$;
 select extensions.pass('las señas se leen con seguridad por fila y nadie las escribe directo');
 

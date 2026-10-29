@@ -229,7 +229,7 @@ begin
  if v_role is null or not (v_role=any(p_allowed)) then return null; end if;
  perform 1 from public.business_users bu where bu.business_id=p_business_id and bu.user_id=auth.uid()
   and coalesce(bu.status,'active')='active' and bu.accepted_at is not null for share;
- if not public.business_allows_operation(p_business_id) then return null; end if;
+ if public.business_allows_operation(p_business_id) is not true then return null; end if;
  return v_role;
 end $$;
 
@@ -243,7 +243,8 @@ language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
 #variable_conflict use_column
 declare a public.appointments; d public.appointment_deposits; v_now timestamptz:=now(); v_audit text;
 begin
- if p_action is null or p_action not in ('paid','waived','pending') then raise exception 'DEPOSIT_ACTION_INVALID'; end if;
+ if p_action is null or p_action not in ('paid','waived','pending') or p_expected_revision is null then
+  raise exception 'DEPOSIT_ACTION_INVALID'; end if;
  if p_note is not null and char_length(p_note)>300 then raise exception 'DEPOSIT_NOTE_INVALID'; end if;
  if private.deposit_actor(p_business_id,array['owner','admin','reception']) is null then raise exception 'DEPOSIT_FORBIDDEN'; end if;
  select * into a from public.appointments ap where ap.business_id=p_business_id and ap.id=p_appointment_id for no key update;
@@ -252,7 +253,7 @@ begin
  if not found then raise exception 'DEPOSIT_NOT_FOUND'; end if;
  if a.status='cancelled' or d.status='expired' then raise exception 'DEPOSIT_APPOINTMENT_CLOSED'; end if;
  if d.status=p_action then return query select d.status,d.revision,a.status; return; end if;
- if d.revision<>p_expected_revision then raise exception 'DEPOSIT_CHANGED'; end if;
+ if d.revision is distinct from p_expected_revision then raise exception 'DEPOSIT_CHANGED'; end if;
  if p_action in ('paid','waived') then
   if d.status<>'pending' then raise exception 'DEPOSIT_CHANGED'; end if;
   update public.appointment_deposits ad set status=p_action,waived_reason=case when p_action='waived' then 'staff' end,
@@ -310,27 +311,37 @@ declare v_current public.deposit_policies; v_new public.deposit_policies; v_excl
  v_locked uuid[]; v_waived integer:=0; v_fixed numeric; v_percentage numeric;
 begin
  if private.deposit_actor(p_business_id,array['owner','admin']) is null then raise exception 'DEPOSIT_POLICY_FORBIDDEN'; end if;
- if jsonb_typeof(p_settings) is distinct from 'object' or octet_length(p_settings::text)>8192 then raise exception 'DEPOSIT_POLICY_INVALID'; end if;
+ -- Every key is required with its JSON type and no other key is accepted: a missing or mistyped
+ -- value is an error, never a default (an unchecked box that is simply absent must not become
+ -- «yes»). The expected revision is required as well.
+ if p_expected_revision is null or jsonb_typeof(p_settings) is distinct from 'object' or octet_length(p_settings::text)>8192 then
+  raise exception 'DEPOSIT_POLICY_INVALID'; end if;
+ -- Its own statement: the order of evaluation inside one condition is not guaranteed, and the
+ -- keys of a non-object would raise a different error.
+ if exists(select 1 from (values ('enabled','{boolean}'),('auto_cancel_enabled','{boolean}'),('amount_mode','{string}'),
+    ('fixed_amount','{number,null}'),('percentage','{number,null}'),('request_days','{number}'),('deadline_hours','{number}'),
+    ('min_payment_hours','{number}'),('transfer_details','{string,null}'),('applies_to_manual','{boolean}'),
+    ('excluded_service_ids','{array}')) k(name,types)
+   where not (coalesce(jsonb_typeof(p_settings->k.name),'missing')=any(k.types::text[])))
+  or (select count(*) from jsonb_object_keys(p_settings))<>11 then
+  raise exception 'DEPOSIT_POLICY_INVALID'; end if;
  select * into v_current from public.deposit_policies dp where dp.business_id=p_business_id for update;
  if coalesce(v_current.revision,0)<>p_expected_revision then raise exception 'DEPOSIT_POLICY_CHANGED'; end if;
  begin
   v_new.business_id:=p_business_id;
-  v_new.enabled:=coalesce((p_settings->>'enabled')::boolean,false);
-  v_new.auto_cancel_enabled:=coalesce((p_settings->>'auto_cancel_enabled')::boolean,false);
-  v_new.amount_mode:=coalesce(p_settings->>'amount_mode','fixed');
+  v_new.enabled:=(p_settings->>'enabled')::boolean;
+  v_new.auto_cancel_enabled:=(p_settings->>'auto_cancel_enabled')::boolean;
+  v_new.amount_mode:=p_settings->>'amount_mode';
   -- Parsed as written: assigning to bigint or numeric(5,2) would round silently.
-  v_fixed:=case when jsonb_typeof(p_settings->'fixed_amount')='number' then (p_settings->>'fixed_amount')::numeric end;
-  v_percentage:=case when jsonb_typeof(p_settings->'percentage')='number' then (p_settings->>'percentage')::numeric end;
-  if (p_settings ? 'fixed_amount' and jsonb_typeof(p_settings->'fixed_amount') not in ('number','null'))
-   or (p_settings ? 'percentage' and jsonb_typeof(p_settings->'percentage') not in ('number','null')) then
-   raise exception 'DEPOSIT_POLICY_INVALID'; end if;
-  v_new.request_days:=coalesce((p_settings->>'request_days')::integer,7);
-  v_new.deadline_hours:=coalesce((p_settings->>'deadline_hours')::integer,48);
-  v_new.min_payment_hours:=coalesce((p_settings->>'min_payment_hours')::integer,24);
+  v_fixed:=(p_settings->>'fixed_amount')::numeric;
+  v_percentage:=(p_settings->>'percentage')::numeric;
+  -- An integer column rejects 7.5 instead of rounding it.
+  v_new.request_days:=(p_settings->>'request_days')::integer;
+  v_new.deadline_hours:=(p_settings->>'deadline_hours')::integer;
+  v_new.min_payment_hours:=(p_settings->>'min_payment_hours')::integer;
   v_new.transfer_details:=nullif(btrim(p_settings->>'transfer_details'),'');
-  v_new.applies_to_manual:=coalesce((p_settings->>'applies_to_manual')::boolean,true);
-  select coalesce(array_agg(distinct value::uuid),'{}') into v_excluded
-  from jsonb_array_elements_text(coalesce(p_settings->'excluded_service_ids','[]'::jsonb));
+  v_new.applies_to_manual:=(p_settings->>'applies_to_manual')::boolean;
+  select coalesce(array_agg(distinct value::uuid),'{}') into v_excluded from jsonb_array_elements_text(p_settings->'excluded_service_ids');
  exception when others then raise exception 'DEPOSIT_POLICY_INVALID';
  end;
  if v_new.amount_mode not in ('fixed','percentage')
@@ -405,7 +416,7 @@ begin
   or a.status<>'reserved' or a.starts_at<=p_now or not p.enabled or not p.auto_cancel_enabled
   or not coalesce((select da.enabled from private.deposit_automation da where da.singleton),false)
   or not exists(select 1 from public.businesses b where b.id=a.business_id and b.is_active)
-  or not public.business_allows_operation(a.business_id) then
+  or public.business_allows_operation(a.business_id) is not true then
   return false;
  end if;
  select b.timezone into v_timezone from public.businesses b where b.id=a.business_id;

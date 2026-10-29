@@ -16,13 +16,15 @@ professional_id='d5000000-0000-4000-8000-000000000004'
 service_id='d5000000-0000-4000-8000-000000000005'
 tmpdir=$(mktemp -d)
 holder_pid=''
+# psql prints a boolean as t or f: it is restored as a quoted literal, never as a bare word.
 previous_switch=$(psql "$database_url" -X -v ON_ERROR_STOP=1 -qAtc "select enabled from private.deposit_automation;")
+case "$previous_switch" in t|f) ;; *) echo "Unexpected deposit automation switch: '$previous_switch'." >&2; exit 1 ;; esac
 cleanup() {
  local status=$?
  trap - EXIT
  if [[ -n "$holder_pid" ]]; then kill "$holder_pid" 2>/dev/null || true; wait "$holder_pid" 2>/dev/null || true; fi
  if ! psql "$database_url" -X -v ON_ERROR_STOP=1 -q <<SQL
-update private.deposit_automation set enabled=${previous_switch:-false};
+update private.deposit_automation set enabled='$previous_switch'::boolean;
 delete from public.businesses where id='$business_id' and slug='$slug';
 delete from auth.users where id in('$owner_id','$reception_id') and email like 'deposit-race-%@example.test';
 SQL
@@ -196,7 +198,7 @@ set statement_timeout='15s';
 set role authenticated;
 select set_config('request.jwt.claim.sub','$owner_id',false);
 select set_config('request.jwt.claim.role','authenticated',false);
-select public.save_deposit_policy('$business_id','{"enabled":false,"auto_cancel_enabled":false,"amount_mode":"fixed","fixed_amount":40000,"request_days":7,"deadline_hours":48,"min_payment_hours":24,"transfer_details":"","applies_to_manual":true,"excluded_service_ids":[]}'::jsonb,
+select public.save_deposit_policy('$business_id','{"enabled":false,"auto_cancel_enabled":false,"amount_mode":"fixed","fixed_amount":40000,"percentage":null,"request_days":7,"deadline_hours":48,"min_payment_hours":24,"transfer_details":"","applies_to_manual":true,"excluded_service_ids":[]}'::jsonb,
  (select revision from public.deposit_policies where business_id='$business_id'));
 SQL
 wait "$holder_pid"; holder_pid=''
