@@ -10,13 +10,27 @@ import {
 	buildReminderWhatsAppMessage,
 	buildRescheduleWhatsAppMessage,
 	buildWaMeUrl,
+	buildWhatsAppWebUrl,
 	classifyReminderCoverage,
 	countTomorrowUncovered,
 	hasConfirmedPushSubscription,
 	loadReminderCandidates,
+	loadReminderList,
 	localDayWindowUtc
 } from '$lib/server/scheduling/public/reminders';
+import {
+	buildWaMeUrl as sharedBuildWaMeUrl,
+	buildWhatsAppWebUrl as sharedBuildWhatsAppWebUrl
+} from '$lib/utils/whatsapp';
 import { publicRescheduleUrl } from '$lib/server/integrations/public/messaging';
+
+const CANCEL_SENTENCE =
+	'Si no podés venir, avisanos por acá o cancelalo desde el enlace, así le damos el horario a otra persona.';
+
+it('el servidor arma los enlaces con las mismas funciones que el navegador, sin una segunda copia', () => {
+	expect(buildWaMeUrl).toBe(sharedBuildWaMeUrl);
+	expect(buildWhatsAppWebUrl).toBe(sharedBuildWhatsAppWebUrl);
+});
 
 const CORDOBA = 'America/Argentina/Cordoba'; // UTC-3, sin DST
 
@@ -216,6 +230,24 @@ describe('buildReminderWhatsAppMessage', () => {
 		expect(message).toContain('/turno/tok-1');
 		// neutral: nada clínico
 		expect(message).not.toMatch(/extracci|conducto|implante|diagn/i);
+	});
+
+	it('invita a avisar o cancelar para liberar el horario, antes del enlace del turno', () => {
+		for (const modality of [undefined, 'video'] as const) {
+			const message = buildReminderWhatsAppMessage({
+				modality,
+				patientName: 'Juan Pérez',
+				startsAt: '2026-06-15T17:30:00.000Z',
+				timezone: CORDOBA,
+				businessName: 'Clínica Sabrina',
+				address: 'Av. Santa Fe 1234',
+				mapsLink: null,
+				token: 'tok-1'
+			});
+			const lines = message.split('\n');
+			expect(lines.filter((line) => line === CANCEL_SENTENCE)).toHaveLength(1);
+			expect(lines.indexOf(CANCEL_SENTENCE)).toBeLessThan(lines.findIndex((line) => line.startsWith('Ver turno: ')));
+		}
 	});
 
 	it('omite dirección y maps si faltan', () => {
@@ -607,6 +639,50 @@ describe('loadReminderCandidates · exclusión por avisos activados', () => {
 				pushSubscriptionsSupabase: countSupabase
 			})
 		).resolves.toBe(3);
+	});
+
+	it('la lista completa conserva los turnos con aviso automático, y la lista para recordar y el contador no cambian', async () => {
+		const rows = [
+			appointmentRow('sin-cobertura'),
+			{ ...appointmentRow('google'), calendar_action_status: 'clicked_google' },
+			appointmentRow('push-confirmado'),
+			{ ...appointmentRow('reprogramado'), calendar_action_status: 'clicked_google', calendar_update_required_at: now.toISOString() }
+		];
+		const queues = () => ({
+			appointments: [{ data: rows, error: null }],
+			push_subscriptions: [{ data: [pushCoverageRow('push-confirmado')], error: null }],
+			message_dispatches: [{ data: [], error: null }]
+		});
+
+		const listSupabase = makeSupabase(queues());
+		const list = await loadReminderList(listSupabase, business, {
+			day: 'manana',
+			now,
+			pushSubscriptionsSupabase: listSupabase
+		});
+		expect(list.map((item) => [item.appointment_id, item.coverage])).toEqual([
+			['sin-cobertura', 'sin_calendario'],
+			['google', 'aviso_automatico'],
+			['push-confirmado', 'aviso_automatico'],
+			['reprogramado', 'pendiente_actualizar']
+		]);
+		// Un turno con aviso automático conserva su botón: recepción decide si igual lo manda.
+		const covered = list.find((item) => item.appointment_id === 'google');
+		expect(covered?.phone_e164).toBe('+5493510000001');
+		expect(covered?.whatsapp_url).toMatch(/^https:\/\/wa\.me\/5493510000001\?text=/);
+
+		const candidatesSupabase = makeSupabase(queues());
+		const candidates = await loadReminderCandidates(candidatesSupabase, business, {
+			day: 'manana',
+			now,
+			pushSubscriptionsSupabase: candidatesSupabase
+		});
+		expect(candidates.map((candidate) => candidate.appointment_id)).toEqual(['sin-cobertura', 'reprogramado']);
+
+		const countSupabase = makeSupabase(queues());
+		await expect(
+			countTomorrowUncovered(countSupabase, business, { now, pushSubscriptionsSupabase: countSupabase })
+		).resolves.toBe(2);
 	});
 
 	it('excluye un evento Google únicamente cuando la versión vigente fue confirmada', async () => {

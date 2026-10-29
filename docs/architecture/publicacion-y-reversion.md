@@ -1,10 +1,36 @@
 # Publicación y reversión
 
-## Continuación vigente — 27 de octubre, 04:20 UTC
+## Continuación vigente — 28 de octubre, 05:10 UTC
 
-**Hosts (27 de octubre, 04:20 UTC):** la aplicación se sirve en `app.cita-suite.com.ar` y `app.cita-suite.workers.dev`; `cita-suite.com.ar` sirve la landing desde el Worker `cita-suite-landing`. `PUBLIC_SITE_URL`, `PRODUCTION_APP_ORIGIN` y las verificaciones siguen en workers.dev hasta la entrega de origen. Topología, procedimientos y reversión de dominios: [dominio](dominio.md). Las publicaciones de la app no tocan dominios (`wrangler.jsonc` no declara `routes`). No agregarlas: `wrangler deploy` reemplaza el conjunto de dominios del Worker y, sin terminal interactiva, reasigna dominios de otros Workers y pisa registros DNS en conflicto (comprobado en el código de wrangler 4.86.0).
+**Publicada y verificada el 28 de octubre, 03:55–05:06 UTC** (autorización expresa del usuario; recibos en `.verification/publicacion-agenda-20261028/`, detalle en el registro):
 
-**Publicada y verificada:** producción sirve `b108c1912e2c3bc57403b006bcf33b71cdb91c23`, versión `d0ac2bcf-7e6a-4786-b2fb-5ff14687d643`. Programador `f105c4ff-160b-4e00-8b5d-14deb9f33b84` con cinco cron y eventos reales observados. La secuencia ejecutada y sus recibos están en el registro y en [el traspaso del panel](../plans/traspaso-apertura-panel-20261026.md). Recuperación: `wrangler rollback e3af637d-a115-4f06-a89a-ba64583f5e9c --name app` (compatible `dbd69d2`, con la corrección de recuperación), con las verificaciones de este documento. El acceso local a la base exige que esta máquina no salga por ProtonVPN (el pooler de sesión no responde por esa ruta). El dominio `cita-suite.com.ar` sirve el mismo Worker; el cambio de `PUBLIC_SITE_URL` será una entrega propia, después de que el usuario agregue los retornos de Supabase y Google.
+- Aplicación `aacba5b10ff6030ac061e20ce0cccdf28126c180` (horas de la agenda y del detalle del turno en la zona del consultorio; hora de la tarjeta sin partirse en celulares). Instalada como `a18e6001-84a5-4502-ba12-57c686291197`; dos mediciones limpias de `verify-production-release.mjs` (131 archivos de cliente). **Versión vigente `4e29aba6-8039-4340-8869-5e0b77bda328`**: la misma aplicación sin el secreto `GOOGLE_CALENDAR_REDIRECT_URI` (32 enlaces). La creó `wrangler secret delete` y no tiene mensaje («Secret Change»): la lectura posterior compara el mensaje de versión y lo marca como diferente; la revisión servida en las dos direcciones es `aacba5b`.
+- Calendar pide el retorno del subdominio (ver [dominio](dominio.md), punto 6).
+- Programador **`ba7b746d-7d86-4016-91aa-dfbea35ba464`** con los cinco cron (mismo código del programador que `95b2596`). Eventos reales desde las 04:42 UTC (unos 6 minutos de propagación): push, calendario, reseñas y cargas, 15 eventos `ok` sin excepciones hasta las 05:06; mantenimiento (`17 */3`) observado a las 06:17:28 UTC, `ok` sin excepciones, también de `ba7b746d`.
+- Copia previa `40629440330` certificada y descargada de Drive (105 tablas, 4152 filas, 24 adjuntos).
+- **Recuperación vigente:** detener primero el programador (`node scripts/deploy-production-workers.mjs scheduler-without-crons`) y después `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback 8b41ec56-5df3-4050-94f2-8b0f40347365 --name app --message "<motivo>" --yes` (`95b2596`). Ensayada a las 04:20 UTC: sirve `95b2596`, recupera su secreto de Calendar (workers.dev) y sus 33 enlaces; lectura aprobada. Regreso nativo a `4e29aba6` a las 04:34.
+- El límite de ingresos de la cuenta de prueba (abajo) se respetó separando las lecturas: 04:18, 04:20, 04:33:49 y 04:35:27.
+
+## Continuación anterior — 27 de octubre, 15:00 UTC (antecedente)
+
+**Direcciones (desde la entrega de origen, 27 de octubre, 14:19 UTC):**
+
+- La aplicación se sirve en `app.cita-suite.com.ar` y en `app.cita-suite.workers.dev`.
+- `cita-suite.com.ar` es la landing, servida por Vercel por decisión del usuario.
+- `PUBLIC_SITE_URL` y `PRODUCTION_APP_ORIGIN` son `https://app.cita-suite.com.ar`. `PUBLIC_SITE_URL_FALLBACK`, Natalia y el retorno de Calendar (secreto `GOOGLE_CALENDAR_REDIRECT_URI`) siguen en workers.dev. Las verificaciones comprueban las dos direcciones.
+- Por HTTP, workers.dev responde 308 a HTTPS desde la propia aplicación; el subdominio, 301 desde el borde de Cloudflare.
+
+**Publicada y verificada el 27 de octubre, 14:03–14:57 UTC** (autorización expresa del usuario; recibos en `.verification/dominio-landing-20261027/`, detalle en el registro):
+
+- Aplicación `95b2596a9b4f24d8ae50d78a94e3f1c9f95b811a`, versión **`8b41ec56-5df3-4050-94f2-8b0f40347365`**, servida en las dos direcciones; 130 archivos de cliente exactos, CSP sólo del proyecto propio, 0 de 70 relaciones expuestas, 33 enlaces idénticos.
+- Programador **`cae02746-2b69-4481-b9b6-d6441b512f10`** con los cinco cron. Eventos reales observados entre las 14:50:33 y las 15:21:11 UTC: los cinco tipos (push, calendario, reseñas, cargas y mantenimiento), 20 eventos, todos `ok`, sin excepciones y sin huecos. El primero llegó 10 min 42 s después de instalar, dentro de la propagación de hasta 15 minutos que documenta Cloudflare: una primera ventana de observación vacía no indica una falla.
+- Copia previa `40516167872`, certificada y descargada de Drive.
+- **Recuperación vigente:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback d0ac2bcf-7e6a-4786-b2fb-5ff14687d643 --name app --message "<motivo>" --yes` (compatible `b108c19`), ensayada el 27-oct a las 14:22 UTC con verificación y lectura aprobadas. Primero se detiene el programador (`deploy-production-workers.mjs scheduler-without-crons`). Con `b108c19`, workers.dev vuelve a aceptar HTTP sin redirigir.
+- **Límite de ingreso de la cuenta de prueba:** la aplicación admite 5 ingresos por correo en una ventana móvil de 15 minutos (`login_password_by_email`), y cada lectura posterior (`production-readback.mjs`) ingresa dos veces, una por dirección. No hacer más de dos lecturas posteriores en 15 minutos; la tercera falla con `CONFIGURED_TEST_LOGIN_FAILED` sin que haya una regresión (pasó el 27-oct a las 14:24 UTC).
+
+Topología, procedimientos y reversión de dominios: [dominio](dominio.md). Las publicaciones de la app no tocan dominios (`wrangler.jsonc` no declara `routes`). No agregarlas: `wrangler deploy` reemplaza el conjunto de dominios del Worker y, sin terminal interactiva, reasigna dominios de otros Workers y pisa registros DNS en conflicto (comprobado en el código de wrangler 4.86.0).
+
+**Antecedente, publicada y verificada el 27-oct a las 03:11 UTC:** producción servía `b108c1912e2c3bc57403b006bcf33b71cdb91c23`, versión `d0ac2bcf-7e6a-4786-b2fb-5ff14687d643`. Programador `f105c4ff-160b-4e00-8b5d-14deb9f33b84` con cinco cron y eventos reales observados. La secuencia ejecutada y sus recibos están en el registro y en [el traspaso del panel](../plans/traspaso-apertura-panel-20261026.md). Recuperación: `wrangler rollback e3af637d-a115-4f06-a89a-ba64583f5e9c --name app` (compatible `dbd69d2`, con la corrección de recuperación), con las verificaciones de este documento. El acceso local a la base exige que esta máquina no salga por ProtonVPN (el pooler de sesión no responde por esa ruta). El subdominio `app.cita-suite.com.ar` sirve el mismo Worker. El cambio de `PUBLIC_SITE_URL` es una entrega propia: el usuario ya agregó los retornos de Supabase y Google, comprobados el 27-oct.
 
 ## Antecedente — recuperación, 26 de octubre, 17:59 UTC
 
@@ -18,7 +44,9 @@ Procedimiento del [plan íntegro](../plans/refactorizacion-cita-suite.md). Actua
 
 La autorización del 17 de octubre permite publicación y ensayos sintéticos en producción. La decisión del 20 exige demostrar el lanzamiento de dos consultorios en infraestructura gratuita; no autoriza contratar. **Publicar para verificar no habilita abrir a clientes reales.** La instrucción del 24 permite controlar el Samsung y continuar sin preguntas intermedias; las dependencias externas se informan al final.
 
-## Estado y revisiones vigentes
+## Estado y revisiones del 24 y 25 de octubre (antecedente)
+
+Esta sección se tituló «vigentes» hasta el 27 de octubre. Ya no lo es: la aplicación, el programador y la copia actuales están en «Continuación vigente», al principio de este documento. Lo que sigue conserva el estado de su fecha.
 
 Comprobación del 24 de octubre, posterior al ensayo de las 13:15 UTC. Las cargas40078561771 y40099997857 fallaron latencia e impiden aprobar el lanzamiento. Cierre25-oct01:40UTC:130app/35Natalia/70relaciones públicos comprobados; Vercel conserva su despliegue. La sesión administrativaCFactual no ve la cuenta destino y devuelve403/10000; las versiones y cron de la tabla son la última metadata aprobada24-oct13:36, no una relectura25-oct. Restaurar acceso y comprobar antes de cualquier mutación; no desplegar por ese403.
 
@@ -41,7 +69,7 @@ Los ensayos y versiones anteriores se conservan en sus recibos. El resto del pro
 | Recurso | Identificador estable |
 |---|---|
 | Cuenta Cloudflare |`52b358653379c162b5a07b10ae5e84b3`, planFree |
-| App / programador |`app.cita-suite.workers.dev`, Worker `app`; `cita-suite-scheduler`, bindingAPP→app, cinco cron del plan |
+| App / programador | Worker `app`, servido en `app.cita-suite.com.ar` (dominio de Worker) y en `app.cita-suite.workers.dev`. Programador `cita-suite-scheduler`, con *binding* `APP`→`app` y los cinco cron del plan. Landing aparte: `cita-suite.com.ar`, en Vercel ([dominio](dominio.md)). |
 | Producción Supabase |`yjzferwuzbtgpmdnzlcb`,sa-east-1; conservar API/Auth/Storage/refs, nombres visibles se tratan por separado |
 | Staging |`cita-suite-staging`, `ikaudqoilclfnztkxubz`,us-west-2; programador de staging sin cron durante la observación productiva |
 | Natalia Vercel |`natalia-frutos.vercel.app`, proyecto `prj_ddhAhez9VNro373XWSykLkhU5vBS`, equipo `team_CGSlkRXKKlw98jb3O2wSmcyt`,Hobby |
@@ -134,7 +162,13 @@ Promoción con padre/lease del HEAD leído, preservando índice/HEAD del usuario
 
 ## Dependencias y criterio de cierre
 
-Dominio pendiente de compra por el usuario; continuar desde [la guía específica](acceso-google-calendar.md#retomar-cuando-el-usuario-comunique-la-compra-del-dominio), con DNS, presentación pública, privacidad/términos, marca y ambos recorridosGoogle separados. SMTP está activado pero no tiene proveedor/remitente configurados; la entrega de recuperación no está comprobada. Destino de respaldos para futuros datos reales requiere decisión del usuario. No inventar ni contratar esos recursos.
+El dominio `cita-suite.com.ar` está comprado y operativo desde el 27-oct ([dominio](dominio.md)). Siguen pendientes:
+
+- **Verificación de marca de Google:** no se envió. Bloqueo probable: el dominio autorizado de Supabase no se puede verificar ([guía](acceso-google-calendar.md#retomar-cuando-el-usuario-comunique-la-compra-del-dominio)).
+- **SMTP:** configurado con Gmail (`citasuite@gmail.com`) y comprobado con un correo real el 27-oct ([correo de recuperación](correo-de-recuperacion.md)).
+- **Respaldos:** el destino ya lo eligió el usuario (Drive, 26-oct). Su estado está en la [auditoría final](auditoria-final.md), punto 6.
+
+No inventar ni contratar esos recursos.
 
 La auditoría final contrasta todos los requisitos, distingue CI/simulación/producción/dispositivo y conserva fallos. Si Free no cumple, la campaña no se declara cerrada ni el lanzamiento habilitado. Se entrega evidencia concreta, alternativas y pasos restantes; no se enmascara el impedimento con un verde parcial.
 

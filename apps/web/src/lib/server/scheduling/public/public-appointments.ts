@@ -18,6 +18,7 @@ import {
 	recordPublicBookingAttempt
 } from '$lib/server/scheduling/public/public-booking';
 import { sanitizePublicImageUrl } from '$lib/server/sites/public/public-image';
+import { normalizeArgentineWhatsAppPhone } from '$lib/utils/phone';
 
 export type PublicAppointmentAction = 'confirm' | 'cancel' | 'reschedule';
 
@@ -50,6 +51,8 @@ export type PublicAppointmentView = {
 		timezone: string;
 		is_active: boolean;
 		cancellation_policy: string | null;
+		/** WhatsApp público del consultorio, normalizado; null si no lo habilitó o no se puede abrir. */
+		whatsapp_contact_phone: string | null;
 	};
 	patient_name: string | null;
 	public_status_label: string;
@@ -88,7 +91,8 @@ export const demoPublicAppointment = (token: string): PublicAppointmentView => (
 		logo_url: null,
 		timezone: 'America/Argentina/Cordoba',
 		is_active: true,
-		cancellation_policy: null
+		cancellation_policy: null,
+		whatsapp_contact_phone: '+5493515550101'
 	},
 	patient_name: 'Paciente demo',
 	public_status_label: 'Reservado',
@@ -99,7 +103,10 @@ export const demoPublicAppointment = (token: string): PublicAppointmentView => (
 	is_past: false
 });
 
-const appointmentSelect = `id,confirmation_token,status,starts_at,ends_at,service_name_snapshot,    price_quote_snapshot,patient_instructions_snapshot,public_reminder_description_snapshot,professional_name_snapshot,calendar_action_status,calendar_action_at,calendar_action_count,calendar_sequence,calendar_update_required_at,businesses!inner(${PUBLIC_BUSINESS_SELECT}),patients(full_name),appointment_professionals(professional_id)` as const;
+// The practice's WhatsApp is read only here, never in PUBLIC_BUSINESS_SELECT: that
+// one also feeds the booking page, whose data reaches the browser even when the
+// practice did not enable a public WhatsApp contact.
+const appointmentSelect = `id,confirmation_token,status,starts_at,ends_at,service_name_snapshot,    price_quote_snapshot,patient_instructions_snapshot,public_reminder_description_snapshot,professional_name_snapshot,calendar_action_status,calendar_action_at,calendar_action_count,calendar_sequence,calendar_update_required_at,businesses!inner(${PUBLIC_BUSINESS_SELECT},whatsapp_phone,whatsapp_contact_enabled),patients(full_name),appointment_professionals(professional_id)` as const;
 
 const publicActionAttempt: Record<
 	PublicAppointmentAction,
@@ -185,7 +192,9 @@ export const loadPublicAppointmentByToken = async (
 			logo_url: sanitizePublicImageUrl(business.logo_url),
 			timezone: String(business.timezone),
 			is_active: Boolean(business.is_active),
-			cancellation_policy: business.cancellation_policy ?? null
+			cancellation_policy: business.cancellation_policy ?? null,
+			whatsapp_contact_phone:
+				business.whatsapp_contact_enabled === true ? normalizeArgentineWhatsAppPhone(business.whatsapp_phone) : null
 		},
 		patient_name: data.patients?.full_name ?? null,
 		public_status_label: APPOINTMENT_STATUS_LABELS[status],

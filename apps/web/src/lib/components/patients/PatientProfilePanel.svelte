@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { createClientReadiness } from '$lib/client/readiness.svelte';
 	const client = createClientReadiness();
-	import { onDestroy, untrack } from 'svelte';
+	import { onDestroy, onMount, untrack } from 'svelte';
+	import { classifyUserAgent, refineDeviceClass, whatsappHrefFor, type DeviceClass } from '$lib/device';
+	import { normalizeArgentineWhatsAppPhone } from '$lib/utils/phone';
+	import { buildWaMeUrl, buildWhatsAppWebUrl } from '$lib/utils/whatsapp';
 	import type {
 		PatientDetailViewData,
 		PatientChangeEvent,
@@ -30,6 +33,20 @@
 		businessTimeZone?: string;
 		onEdit: () => void;
 	} = $props();
+	// Sin JavaScript, wa.me sirve en cualquier dispositivo; ya cargada la ficha, en una
+	// computadora se abre WhatsApp Web directo, como en el resto de la app.
+	let whatsappDevice = $state<DeviceClass | null>(null);
+	onMount(() => {
+		whatsappDevice = refineDeviceClass(classifyUserAgent(navigator.userAgent), navigator);
+	});
+	const whatsappPhone = $derived(normalizeArgentineWhatsAppPhone(patient.phone_e164 ?? patient.phone));
+	const whatsappHref = $derived(
+		whatsappPhone
+			? whatsappDevice
+				? whatsappHrefFor(whatsappDevice, buildWaMeUrl(whatsappPhone, ''), buildWhatsAppWebUrl(whatsappPhone, ''))
+				: buildWaMeUrl(whatsappPhone, '')
+			: null
+	);
 	let changeEvents = $state<PatientChangeEvent[]>(untrack(() => initialChangeEvents ?? []));
 	let changeEventsLoaded = $state(untrack(() => !deferred || demo));
 	let loadingChangeEvents = $state(false);
@@ -127,6 +144,10 @@
 		)
 	);
 </script>
+
+{#snippet chatIcon()}
+	<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 20l1.4-4.2A8 8 0 1 1 8.6 19L4 20z" /></svg>
+{/snippet}
 
 {#snippet copyIcon()}
 	<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" /><path stroke-linecap="round" stroke-linejoin="round" d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" /></svg>
@@ -265,6 +286,17 @@
 									>
 										{@render copyIcon()}
 									</button>
+								{/if}
+								{#if whatsappHref}
+									<a
+										href={whatsappHref}
+										target="_blank"
+										rel="noreferrer"
+										class="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-neutral-200 text-xs text-neutral-600 dark:border-[#1f3554] dark:text-neutral-200"
+										aria-label="Abrir WhatsApp" title="Abrir WhatsApp"
+									>
+										{@render chatIcon()}
+									</a>
 								{/if}
 							</div>
 						</div>

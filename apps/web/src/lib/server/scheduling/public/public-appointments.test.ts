@@ -35,7 +35,8 @@ const appointment = (overrides: Partial<PublicAppointmentView>): PublicAppointme
 		logo_url: null,
 		timezone: 'America/Argentina/Cordoba',
 		is_active: true,
-		cancellation_policy: null
+		cancellation_policy: null,
+		whatsapp_contact_phone: null
 	},
 	patient_name: 'Paciente',
 	public_status_label: 'Reservado',
@@ -180,6 +181,96 @@ describe('loadPublicAppointmentByToken', () => {
 			is_joint: true,
 			professional_name_snapshot: 'Dra. Uno, Dr. Dos'
 		});
+	});
+});
+
+describe('loadPublicAppointmentByToken · WhatsApp del consultorio', () => {
+	const load = async (business: { whatsapp_contact_enabled: boolean; whatsapp_phone: string | null }) => {
+		const selects: Record<string, string> = {};
+		const rows: Record<string, unknown> = {
+			appointments: {
+				id: 'appointment-1',
+				confirmation_token: 'token-1',
+				status: 'reserved',
+				starts_at: '2026-11-20T13:00:00.000Z',
+				ends_at: '2026-11-20T14:00:00.000Z',
+				service_name_snapshot: 'Primera consulta',
+				professional_name_snapshot: 'Dra. Natalia',
+				calendar_action_status: 'not_offered',
+				calendar_action_at: null,
+				calendar_action_count: 0,
+				calendar_sequence: 0,
+				calendar_update_required_at: null,
+				businesses: {
+					id: 'business-1',
+					name: 'Consultorio',
+					slug: 'consultorio',
+					phone: null,
+					address: null,
+					address_instructions: null,
+					maps_url: null,
+					logo_url: null,
+					timezone: 'America/Argentina/Cordoba',
+					public_booking_enabled: true,
+					is_active: true,
+					created_at: '2026-01-01T00:00:00.000Z',
+					min_booking_notice_minutes: 0,
+					max_booking_days_ahead: 30,
+					cancellation_policy: null,
+					...business
+				},
+				patients: { full_name: 'Ana Pérez' },
+				appointment_professionals: [{ professional_id: 'professional-1' }]
+			},
+			business_subscriptions: {
+				id: 'subscription-1',
+				business_id: 'business-1',
+				commercial_access_enabled: true,
+				is_permanent: true,
+				subscription_status: 'active',
+				paid_until: null,
+				grace_until: null,
+				restricted_until: null,
+				archived_at: null,
+				expiration_notice_enabled: false
+			}
+		};
+		const supabase = {
+			from: (table: string) => ({
+				select: (columns: string) => {
+					selects[table] = columns;
+					const builder: Record<string, unknown> = {};
+					builder.eq = () => builder;
+					builder.maybeSingle = async () => ({ data: rows[table], error: null });
+					return builder;
+				}
+			})
+		};
+		const view = await loadPublicAppointmentByToken(supabase as never, 'token-1', new Date('2026-11-01T12:00:00.000Z'));
+		return { view, selects };
+	};
+
+	it('lo pide junto con el turno, en la misma consulta', async () => {
+		const { selects } = await load({ whatsapp_contact_enabled: true, whatsapp_phone: '+543421234567' });
+		expect(selects.appointments).toMatch(/businesses!inner\([^)]*whatsapp_phone[^)]*whatsapp_contact_enabled/);
+	});
+
+	it('lo expone normalizado para WhatsApp sólo si el consultorio lo habilitó', async () => {
+		const enabled = await load({ whatsapp_contact_enabled: true, whatsapp_phone: '+543421234567' });
+		expect(enabled.view?.business.whatsapp_contact_phone).toBe('+5493421234567');
+
+		const disabled = await load({ whatsapp_contact_enabled: false, whatsapp_phone: '+543421234567' });
+		expect(disabled.view?.business.whatsapp_contact_phone).toBeNull();
+		// El número guardado nunca viaja crudo en la vista pública.
+		expect(disabled.view?.business).not.toHaveProperty('whatsapp_phone');
+		expect(disabled.view?.business).not.toHaveProperty('whatsapp_contact_enabled');
+	});
+
+	it('un número que WhatsApp no puede abrir no se ofrece', async () => {
+		const missing = await load({ whatsapp_contact_enabled: true, whatsapp_phone: null });
+		expect(missing.view?.business.whatsapp_contact_phone).toBeNull();
+		const foreign = await load({ whatsapp_contact_enabled: true, whatsapp_phone: '+59899123456' });
+		expect(foreign.view?.business.whatsapp_contact_phone).toBeNull();
 	});
 });
 

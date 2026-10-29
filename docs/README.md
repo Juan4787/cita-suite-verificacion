@@ -2,6 +2,14 @@
 
 La fuente de verdad de esta campaña es el [plan aprobado íntegro](plans/refactorizacion-cita-suite.md), incluidas sus ampliaciones y decisiones posteriores. El [registro](plans/registro-refactorizacion-cita-suite.md) identifica cambios, fallas, corridas, revisiones y evidencias. El [traspaso](plans/traspaso-refactorizacion-cita-suite.md) fija el siguiente trabajo pendiente. Una conclusión histórica no certifica el estado actual.
 
+## Campaña de señas y avisos (desde el 29 de octubre)
+
+Para el consultorio de Natalia Frutos, la primera clienta, rigen estos documentos:
+- el [plan aprobado](plans/propuesta-senas-avisos-natalia.md), cuya sección 12 tiene la aprobación literal y los ajustes posteriores;
+- el [registro](plans/registro-senas-avisos-natalia.md);
+- el [traspaso](plans/traspaso-senas-avisos-natalia.md);
+- la [información que mandó la clienta](clientes/natalia-frutos/informacion-20261029.md).
+
 ## Contratos y operación vigentes
 
 | Tema | Documento |
@@ -19,6 +27,7 @@ La fuente de verdad de esta campaña es el [plan aprobado íntegro](plans/refact
 | Correo para recuperar contraseñas | [Configuración temporal con Gmail y prueba real](architecture/correo-de-recuperacion.md) |
 | Estado punto por punto | [Auditoría final](architecture/auditoria-final.md) |
 | Nombres y destinos | [Identidad Cita Suite](architecture/identidad-cita-suite.md) |
+| Dominio, landing y direcciones públicas | [Dominio](architecture/dominio.md) |
 | Decisiones y trabajo nuevo | [Decisiones](architecture/decisiones.md), [guía para nuevas funciones](architecture/guia-nuevas-funciones.md) |
 
 ## Evidencias e historia
