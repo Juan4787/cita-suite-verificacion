@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: mocks.env }));
+vi.mock('$env/dynamic/public', () => ({ env: {} }));
 vi.mock('$app/environment', () => ({ dev: false }));
 vi.mock('$lib/server/platform/supabase', () => ({
 	createSupabaseServerClient: mocks.createSupabaseServerClient,
@@ -61,6 +62,23 @@ beforeEach(() => {
 });
 
 describe('login/register server actions', () => {
+	it('abre un paso normal cuando el alta requiere confirmar el correo, sin crear una sesión', async () => {
+		mocks.createSupabaseServerClient.mockResolvedValue({ auth: {
+			signUp: vi.fn().mockResolvedValue({ data: { user: { id: 'new-user' }, session: null }, error: null })
+		} });
+		const event = makeEvent({ email: 'NUEVO@example.com', password: 'secret123', confirm_password: 'secret123', accepted_terms: 'true' });
+		await expect(actions.register(event as never)).rejects.toMatchObject({ status: 303, location: '/confirmar-correo' });
+		expect(event.cookies.set).not.toHaveBeenCalledWith('sb-access-token', expect.anything(), expect.anything());
+		expect(event.cookies.set).not.toHaveBeenCalledWith('sb-refresh-token', expect.anything(), expect.anything());
+		expect(event.cookies.set).toHaveBeenCalledWith('cita-email-confirmation', expect.stringContaining('nuevo@example.com'), expect.objectContaining({ httpOnly: true, secure: true, sameSite: 'lax' }));
+	});
+	it('lleva al paso de confirmación si Auth rechaza el ingreso por email no confirmado', async () => {
+		mocks.createSupabaseServerClient.mockResolvedValue({ auth: {
+			signInWithPassword: vi.fn().mockResolvedValue({ data: { session: null }, error: { code: 'email_not_confirmed', message: 'Confirm the address first', status: 400 } })
+		} });
+		await expect(actions.login(makeEvent({ email: 'nuevo@example.com', password: 'secret123' }) as never))
+			.rejects.toMatchObject({ status: 303, location: '/confirmar-correo' });
+	});
 	it('explica cuando el cierre remoto no pudo confirmarse', () => {
 		const result = load({
 			locals: { auth: null },
@@ -97,7 +115,8 @@ describe('login/register server actions', () => {
 		expect(mocks.enforceRateLimitsFailOpen).toHaveBeenCalled();
 		expect(auth.signUp).toHaveBeenCalledWith({
 			email: 'nuevo@example.com',
-			password: 'secret123'
+			password: 'secret123',
+			options: { emailRedirectTo: 'https://app.test/confirmar-correo' }
 		});
 		expect(supabase.rpc).not.toHaveBeenCalledWith('is_email_enabled', expect.anything());
 	});

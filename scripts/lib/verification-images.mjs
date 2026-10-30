@@ -10,7 +10,12 @@ export const verificationImages = [
 	image: 'public.ecr.aws/supabase/' + tag,
 	source: `docker.io/${repository}@sha256:${digest}`,
 	digest: 'sha256:' + digest
-}));
+})).concat([{
+	// Official Mailpit mirror, release v1.32.0, immutable OCI manifest. CI only.
+	image: 'ghcr.io/axllent/mailpit:v1.32.0',
+	source: 'ghcr.io/axllent/mailpit@sha256:0790692be935ea4420d085694f7985b1f692ca6a8771ab0e0bd8ba75ac180498',
+	digest: 'sha256:0790692be935ea4420d085694f7985b1f692ca6a8771ab0e0bd8ba75ac180498'
+}]);
 
 // Only registry/transport failures are retryable. Missing images, bad tags and
 // denied credentials must remain visible instead of consuming the retry budget.

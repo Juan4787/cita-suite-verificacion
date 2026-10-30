@@ -54,8 +54,9 @@ test('password recovery with real disposable Auth rejects an unchanged password,
 		if (generatedResult.error || !generatedResult.data.properties) throw new Error('Could not generate the owned recovery link.');
 		const generated = generatedResult.data;
 		if (generated.user.id !== user.id) throw new Error('Recovery token belongs to an unexpected synthetic identity.');
-		// The fixture has no SMTP inbox or email redirect gateway. Validate the
-		// one-use token with real Auth, then exercise the actual callback UI. This
+		// This case generates its one-use token directly; the signup confirmation
+		// spec covers the separate SMTP capture and followed email URL. Validate the
+		// one-use recovery token with real Auth, then exercise its actual callback UI. This
 		// is explicit token-level proof, not email delivery or a followed email URL.
 		const verified = await auth.auth.verifyOtp({ type: 'recovery', token_hash: generated.properties.hashed_token });
 		if (verified.error || !verified.data.session) throw new Error('Disposable Auth did not issue a recovery session.');
