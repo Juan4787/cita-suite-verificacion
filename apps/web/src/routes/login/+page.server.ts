@@ -15,6 +15,8 @@ import {
 import { dev } from '$app/environment';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { EMAIL_CONFIRMATION_PATH } from '$lib/access/email-confirmation';
+import { writeEmailConfirmation } from '$lib/server/access/public/email-confirmation';
 
 const LOGIN_UNAVAILABLE_MESSAGE =
 	'El ingreso no está disponible en este momento. Probá de nuevo en unos minutos. Si continúa, contactá a soporte.';
@@ -71,7 +73,8 @@ export const load: PageServerLoad = ({ locals, url }) => {
 		throw redirect(302, getModuleEntryRoute(locals.auth.module));
 	}
 	return {
-		message: authErrorMessage(url.searchParams.get('auth_error'))
+		message: authErrorMessage(url.searchParams.get('auth_error')),
+		...(url.searchParams.get('registro') === '1' ? { initialMode: 'register' as const } : {})
 	};
 };
 
@@ -132,8 +135,9 @@ export const actions: Actions = {
 				logServerFailure('El proveedor de ingreso por email no está disponible', { code, status });
 				return loginFail(503, LOGIN_UNAVAILABLE_MESSAGE, email);
 			}
-			if (msg.includes('email not confirmed')) {
-				return loginFail(400, 'Tu correo electrónico todavía no está confirmado.', email);
+			if (code === 'email_not_confirmed' || msg.includes('email not confirmed')) {
+				writeEmailConfirmation(cookies, email, 'pending');
+				throw redirect(303, EMAIL_CONFIRMATION_PATH);
 			}
 			if (msg.includes('invalid api key') || msg.includes('invalid jwt') || msg.includes('jwt')) {
 				logServerFailure('Supabase Auth rechazó la configuración del ingreso', { code, status });
@@ -234,7 +238,9 @@ export const actions: Actions = {
 		let authResult;
 		try {
 			const supabase = await createSupabaseServerClient('odonto', null, fetch);
-			authResult = await supabase.auth.signUp({ email, password });
+			authResult = await supabase.auth.signUp({ email, password, options: {
+				emailRedirectTo: new URL(EMAIL_CONFIRMATION_PATH, request.url).toString()
+			} });
 		} catch (error) {
 			logServerFailure('No se pudo conectar con Supabase Auth durante el registro', error);
 			return registerFail(503, REGISTER_UNAVAILABLE_MESSAGE, email, acceptedTerms);
@@ -279,12 +285,8 @@ export const actions: Actions = {
 		}
 
 		if (!data.session) {
-			return registerFail(
-				400,
-				'La cuenta se creó pero falta confirmar el correo electrónico.',
-				email,
-				acceptedTerms
-			);
+			writeEmailConfirmation(cookies, email, 'pending', true);
+			throw redirect(303, EMAIL_CONFIRMATION_PATH);
 		}
 
 		const cookieOptions = {

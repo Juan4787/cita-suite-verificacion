@@ -1,11 +1,13 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
+	import { afterNavigate } from '$app/navigation';
+	import { EMAIL_CONFIRMATION_PATH, emailConfirmationFragment } from '$lib/access/email-confirmation';
 
 	let { data, form }: PageProps = $props();
 	type AuthMode = 'login' | 'register';
 	let showPassword = $state(false);
 	let showConfirmPassword = $state(false);
-	let mode = $state<AuthMode>('login');
+	let mode = $state<AuthMode>(data?.initialMode === 'register' ? 'register' : 'login');
 	const formEmail = $derived(form?.email ?? '');
 	const formMode = $derived(form?.mode as AuthMode | undefined);
 	const serverMessage = $derived(form?.message ?? data?.message ?? '');
@@ -16,6 +18,14 @@
 	let googleSubmitting = $state(false);
 	let localMessage = $state('');
 	const message = $derived(localMessage || serverMessage);
+
+	// Older emails may return to the configured site URL. Preserve their fragment
+	// for the dedicated verifier; password recovery and Google keep their own flows.
+	afterNavigate(() => {
+		if (emailConfirmationFragment(window.location.hash).kind !== 'none') {
+			window.location.replace(EMAIL_CONFIRMATION_PATH + window.location.hash);
+		}
+	});
 
 	const setMode = (nextMode: AuthMode) => {
 		mode = nextMode;
