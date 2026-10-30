@@ -10,7 +10,7 @@
 -- The automatic cancellation runs from pg_cron without a user, so each call below clears the
 -- user claim that an earlier actor left in the transaction.
 begin;
-select extensions.plan(24);
+select extensions.plan(25);
 
 create temporary table dep_fixture(label text primary key, id uuid not null);
 grant select on dep_fixture to authenticated;
@@ -804,6 +804,54 @@ select extensions.ok(
   and command='select private.expire_unpaid_deposits()')
  and exists(select 1 from cron.job where jobname='cita-suite-cron-history-retention' and schedule='37 5 * * *'),
  'pg_cron corre la baja automática cada 5 minutos y poda su historial');
+
+-- 20. The terms shown before booking are a request-scoped expectation. The trigger must
+-- compare them with the current policy under its lock; no stale amount, earlier due date
+-- or newly enabled automatic cancellation is accepted silently. Unknown terms and relaxations
+-- keep the approved non-blocking fallback. These headers are how PostgREST scopes HTTP metadata.
+create function pg_temp.try_quoted_deposit(p_label text,p_starts timestamptz,p_expected jsonb) returns text language plpgsql as $$
+begin
+ perform set_config('request.headers',jsonb_build_object('x-cita-deposit-terms',p_expected::text)::text,true);
+ begin
+  perform pg_temp.appt(p_label,p_starts);
+  return 'OK';
+ exception when others then return sqlerrm;
+ end;
+end $$;
+do $$
+declare v_starts timestamptz:=date_trunc('hour',now())+interval '230 days'; v_expected jsonb; v text;
+begin
+ perform set_config('request.jwt.claim.sub','',true);
+ update private.deposit_automation set enabled=true where singleton;
+ update public.deposit_policies set enabled=true,auto_cancel_enabled=true,amount_mode='fixed',fixed_amount=50000,
+  applies_to_manual=true,deadline_hours=48,min_payment_hours=24 where business_id=pg_temp.fid('business');
+ v_expected:=jsonb_build_object('amount',40000,'dueAt',v_starts-interval '48 hours','autoCancel',true);
+ v:=pg_temp.try_quoted_deposit('quoted_stale',v_starts,v_expected);
+ if v is distinct from 'DEPOSIT_TERMS_CHANGED' then raise exception 'TEST_STALE_DEPOSIT_TERMS %',v; end if;
+ v:=pg_temp.try_quoted_deposit('quoted_newly_required',v_starts,'"none"');
+ if v is distinct from 'DEPOSIT_TERMS_CHANGED' then raise exception 'TEST_NEW_DEPOSIT_TERMS %',v; end if;
+ v_expected:=v_expected||jsonb_build_object('amount',50000,'autoCancel',false);
+ v:=pg_temp.try_quoted_deposit('quoted_new_auto_cancel',v_starts,v_expected);
+ if v is distinct from 'DEPOSIT_TERMS_CHANGED' then raise exception 'TEST_NEW_AUTO_CANCEL %',v; end if;
+ v_expected:=v_expected||jsonb_build_object('autoCancel',true);
+ v:=pg_temp.try_quoted_deposit('quoted_new_due',v_starts,v_expected||jsonb_build_object('dueAt',v_starts-interval '24 hours'));
+ if v is distinct from 'DEPOSIT_TERMS_CHANGED' then raise exception 'TEST_NEW_DEPOSIT_DUE %',v; end if;
+ v:=pg_temp.try_quoted_deposit('quoted_valid',v_starts,v_expected);
+ if v is distinct from 'OK' or (pg_temp.deposit('quoted_valid')).amount is distinct from 50000 then raise exception 'TEST_VALID_DEPOSIT_TERMS %',v; end if;
+ v_starts:=v_starts+interval '2 hours';
+ v:=pg_temp.try_quoted_deposit('quoted_unknown',v_starts,'"unknown"');
+ if v is distinct from 'OK' then raise exception 'TEST_UNKNOWN_DEPOSIT_TERMS %',v; end if;
+ update public.deposit_policies set auto_cancel_enabled=false where business_id=pg_temp.fid('business');
+ v_starts:=v_starts+interval '2 hours';
+ v_expected:=v_expected||jsonb_build_object('dueAt',v_starts-interval '48 hours');
+ v:=pg_temp.try_quoted_deposit('quoted_relaxed',v_starts,v_expected);
+ if v is distinct from 'OK' or (pg_temp.deposit('quoted_relaxed')).auto_cancel is not false then raise exception 'TEST_RELAXED_DEPOSIT_TERMS %',v; end if;
+ update public.deposit_policies set enabled=false where business_id=pg_temp.fid('business');
+ v:=pg_temp.try_quoted_deposit('quoted_removed',v_starts+interval '2 hours',v_expected);
+ if v is distinct from 'OK' or exists(select 1 from public.appointment_deposits where appointment_id=pg_temp.fid('quoted_removed')) then raise exception 'TEST_REMOVED_DEPOSIT_TERMS %',v; end if;
+ perform set_config('request.headers','',true);
+end $$;
+select extensions.pass('la reserva rechaza condiciones de seña desactualizadas y permite sólo condiciones desconocidas o relajadas explícitas');
 
 select * from extensions.finish();
 rollback;
