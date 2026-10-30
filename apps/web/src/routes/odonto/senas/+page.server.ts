@@ -103,9 +103,12 @@ const demoRows = (now: Date, timezone: string): DepositRow[] => {
 	];
 };
 
-export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
+export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 	if (!locals.auth) throw redirect(303, '/login');
 	const now = new Date();
+	const rawPage = url.searchParams.get('pagina') ?? '1';
+	const requestedPage = /^\d{1,7}$/.test(rawPage) ? Number(rawPage) : 1;
+	const page = requestedPage >= 1 && requestedPage <= 1_000_000 ? requestedPage : 1;
 
 	if (env.DEMO_MODE === 'true') {
 		const timezone = 'America/Argentina/Cordoba';
@@ -116,6 +119,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 			policyEnabled: true,
 			sections: groupRows(demoRows(now, timezone)),
 			truncated: false,
+			page: 1,
 			automation: { tone: 'ok', text: 'Última revisión automática: hace 3 min.' } as DepositAutomationNotice
 		};
 	}
@@ -140,6 +144,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 			policyEnabled: false,
 			sections: emptySections(),
 			truncated: false,
+			page: 1,
 			automation: null
 		};
 	}
@@ -150,7 +155,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 	try {
 		[policy, list] = await Promise.all([
 			loadDepositPolicy(supabase, business.id),
-			loadDepositList(supabase, business.id, now)
+			loadDepositList(supabase, business.id, now, page)
 		]);
 	} catch (loadError) {
 		// Never an empty list in place of one that could not be read.
@@ -240,6 +245,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 		policyEnabled: policy.enabled,
 		sections: groupRows(rows),
 		truncated: list.truncated,
+		page,
 		automation: describeDepositAutomation({ practiceAutoCancel: policy.autoCancelEnabled, status: automationStatus, now })
 	};
 };

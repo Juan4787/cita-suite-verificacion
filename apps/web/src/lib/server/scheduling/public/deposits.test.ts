@@ -265,10 +265,10 @@ describe('lista de señas', () => {
 	const listClient = (rows: unknown[]) => {
 		const calls: Array<[string, unknown[]]> = [];
 		const builder: Record<string, unknown> = {};
-		for (const method of ['select', 'eq', 'gt', 'or', 'order', 'limit']) {
+		for (const method of ['select', 'eq', 'gt', 'or', 'order', 'limit', 'range']) {
 			builder[method] = (...args: unknown[]) => {
 				calls.push([method, args]);
-				return method === 'limit' ? Promise.resolve({ data: rows, error: null }) : builder;
+				return method === 'limit' || method === 'range' ? Promise.resolve({ data: rows, error: null }) : builder;
 			};
 		}
 		return { client: { from: () => builder } as never, calls };
@@ -312,6 +312,13 @@ describe('lista de señas', () => {
 		const result = await loadDepositList(listClient(rows).client, BUSINESS, now);
 		expect(result.truncated).toBe(true);
 		expect(result.items).toHaveLength(DEPOSIT_LIST_LIMIT);
+	});
+
+	it('la página siguiente usa una ventana acotada y un desempate estable', async () => {
+		const { client, calls } = listClient([row('next')]);
+		await loadDepositList(client, BUSINESS, now, 2);
+		expect(calls).toContainEqual(['range', [DEPOSIT_LIST_LIMIT, DEPOSIT_LIST_LIMIT * 2]]);
+		expect(calls).toContainEqual(['order', ['appointment_id', { ascending: true }]]);
 	});
 
 	it('una fila mal formada es un error, nunca una seña omitida en silencio', async () => {

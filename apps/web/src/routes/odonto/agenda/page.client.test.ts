@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, render, screen, waitFor } from '@testing-library/svelte';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom/vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -145,7 +145,33 @@ describe('señas en la agenda', () => {
 		starts_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
 		ends_at: new Date(Date.now() + 2.5 * 60 * 60 * 1000).toISOString(),
 		status,
-		appointment_deposits: depositStatus ? { status: depositStatus } : null
+		appointment_deposits: depositStatus ? { status: depositStatus, revision: 7, waived_reason: null } : null
+	});
+
+	it('ofrece registrar, exceptuar y deshacer desde la agenda con la revisión observada', () => {
+		render(Page, { data: { ...data, context: { ...data.context, canOperate: true }, canRecordDeposit: true,
+			appointments: [upcoming('a', 'reserved', 'pending'), upcoming('b', 'confirmed', 'paid')]
+		} as never });
+		const pending = document.querySelector('[data-agenda-deposit="a"]') as HTMLElement;
+		const received = document.querySelector('[data-agenda-deposit="b"]') as HTMLElement;
+		expect(pending).not.toBeNull();
+		expect(received).not.toBeNull();
+		const paidForm = within(pending).getByRole('button', { name: 'Confirmar seña', exact: true }).closest('form')!;
+		expect(paidForm).toHaveAttribute('action', '/odonto/turnos/a?/deposit');
+		expect(Object.fromEntries(new FormData(paidForm))).toEqual({ deposit_action: 'paid', expected_revision: '7' });
+		expect(pending.querySelector('form input[value="waived"]')).not.toBeNull();
+		expect(received.querySelector('form input[value="pending"]')).not.toBeNull();
+	});
+
+	it('no ofrece acciones de seña sin permiso, con política apagada o en un turno cancelado', () => {
+		const disabledPolicy = { ...upcoming('c', 'reserved', 'waived'), appointment_deposits: { status: 'waived', revision: 8, waived_reason: 'policy_disabled' } };
+		render(Page, { data: { ...data, context: { ...data.context, canOperate: true }, canRecordDeposit: true,
+			appointments: [disabledPolicy, upcoming('d', 'cancelled', 'expired')]
+		} as never });
+		expect(document.querySelector('[data-agenda-deposit]')).toBeNull();
+		cleanup();
+		render(Page, { data: { ...data, canRecordDeposit: false, appointments: [upcoming('a', 'reserved', 'pending')] } as never });
+		expect(document.querySelector('[data-agenda-deposit]')).toBeNull();
 	});
 
 	it('cada tarjeta dice el estado con su seña, con el mismo dato que filtros y conteos', () => {

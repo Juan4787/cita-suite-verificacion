@@ -98,10 +98,10 @@ test('appointment deposits: booking terms, registration, agenda and automatic ca
 			await matrix(page, info, `condiciones-${theme}`, notice, issues);
 		}
 		await page.getByLabel('Nombre y apellido').fill(fullName);
-		await page.getByLabel('Teléfono', { exact: true }).fill('3425' + String(Date.now() % 1_000_000).padStart(6, '0'));
-		await page.getByLabel('Obra social y plan', { exact: true }).fill('Particular sintético');
+		await page.getByLabel('Teléfono').fill('3425' + String(Date.now() % 1_000_000).padStart(6, '0'));
+		await page.getByLabel('Obra social y plan').fill('Particular sintético');
 		await page.getByLabel('Edad', { exact: true }).fill('35');
-		await page.getByLabel('Obra social del perfil', { exact: true }).fill('Particular sintético');
+		await page.getByLabel('Obra social del perfil').fill('Particular sintético');
 		await page.getByRole('group', { name: 'Estudios recientes', exact: true }).getByRole('radio', { name: 'No', exact: true }).check();
 		await page.getByRole('button', { name: 'Confirmar reserva', exact: true }).click();
 		await expect(page).toHaveURL(/\/turno\/[^/?]+\?creado=1/);
@@ -120,6 +120,18 @@ test('appointment deposits: booking terms, registration, agenda and automatic ca
 			await page.goto(`${publicPath}?creado=1&color_mode=${theme}`);
 			await matrix(page, info, `turno-pendiente-${theme}`, page.getByRole('heading', { name: 'Seña del turno', exact: true }), issues);
 		}
+
+		await page.goto(`/odonto/agenda?date=${date}`);
+		await expect(page.getByText('Reservado, seña pendiente', { exact: true })).toBeVisible();
+		const agendaActions = page.locator(`[data-agenda-deposit="${appointment.id}"]`);
+		await expect(agendaActions.getByRole('button', { name: 'Confirmar seña', exact: true })).toBeVisible();
+		await matrix(page, info, 'agenda', agendaActions, issues);
+		await page.getByRole('button', { name: 'Buscar', exact: true }).click();
+		const searchResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/odonto/agenda/buscar' && response.request().method() === 'GET');
+		await page.getByRole('searchbox', { name: 'Paciente o teléfono', exact: true }).fill(fullName.slice(0, 30));
+		expect(await (await searchResponse).json()).toMatchObject({ upcoming: [expect.objectContaining({ id: appointment.id, appointment_deposits: { status: 'pending', revision: 1, waived_reason: null } })] });
+		await expect(agendaActions.getByRole('button', { name: 'Confirmar seña', exact: true })).toBeVisible();
+		await expect(page.getByText('Reservado, seña pendiente', { exact: true })).toBeVisible();
 
 		await page.goto('/odonto/senas');
 		const row = page.locator(`[data-deposit-row="${appointment.id}"]`);

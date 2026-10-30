@@ -45,12 +45,12 @@ const context = (overrides: Record<string, unknown> = {}) => ({
 	...overrides
 });
 
-const event = (form?: Record<string, string>) =>
+const event = (form?: Record<string, string>, search = '') =>
 	({
 		locals: { auth: { access_token: 'test-token' } },
 		fetch: vi.fn(),
 		cookies: { get: vi.fn() },
-		url: new URL('http://localhost/odonto/senas'),
+		url: new URL('http://localhost/odonto/senas' + search),
 		request: new Request('http://localhost/odonto/senas?/deposit', { method: 'POST', body: new URLSearchParams(form ?? {}) })
 	}) as never;
 
@@ -97,6 +97,13 @@ beforeEach(() => {
 });
 
 describe('Señas · carga', () => {
+	it('carga la página pedida y normaliza las páginas inválidas sin consultas ilimitadas', async () => {
+		await expect(load(event(undefined, '?pagina=2'))).resolves.toMatchObject({ page: 2 });
+		expect(mocks.loadDepositList).toHaveBeenLastCalledWith(expect.anything(), BUSINESS_ID, expect.any(Date), 2);
+		for (const page of ['0', '-1', '1000001', 'dos', '2.5']) {
+			await expect(load(event(undefined, `?pagina=${page}`))).resolves.toMatchObject({ page: 1 });
+		}
+	});
 	it('las profesionales y la lectura sola van a sus páginas: no registran señas', async () => {
 		mocks.resolveActiveBusiness.mockResolvedValue(context({ role: 'professional' }));
 		await expect(load(event())).rejects.toMatchObject({ status: 303, location: '/odonto/mis-turnos' });

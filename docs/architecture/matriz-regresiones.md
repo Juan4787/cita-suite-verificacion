@@ -21,6 +21,8 @@ Lecturas, escrituras, identificadores manipulados y funciones llamadas directame
 
 ## 2. Revocación de membresía, cambio de rol y estados comerciales
 
+- **Señas:** `appointment_deposits.sql` comprueba roles, consultorio ajeno, suspensión, acceso anónimo y rechazo de escrituras directas; `senas.server.test.ts`, `senas-config.server.test.ts`, `abrir.server.test.ts` y `appointment-detail.server.test.ts` cubren rutas y mensajes. SQL no delega el permiso a la pantalla. Ver [registro propio](../plans/registro-senas-avisos-natalia.md) para no confundir las capas aprobadas con las pendientes.
+
 - **SQL:** `tenant_context_revocation.sql` (el contexto refleja el rol nuevo y la revocación de inmediato, también para RPC clínicos directos); `appointment_actor_revalidation.sql` (17 controles: una creación en curso revalida el rol en SQL, la recuperación idempotente no expone el turno a quien perdió el permiso); `patient_archive_actor_scope.sql`, `patient_registration_transaction.sql` y `team_editor_atomic_commands.sql` (membresía revocada, asistencia revocada y pausa comercial); `availability_windows.sql` (la revocación actúa en la siguiente llamada SQL); `role_access_audit.sql`, `team_access_transactions.sql` y `manual_access_then_mp_payment.sql`.
 - **Carreras:** `run_appointment_actor_concurrency.sh`, `run_patient_archive_actor_concurrency.sh`, `run_patient_registration_concurrency.sh` y `run_team_editor_concurrency.sh`: el cambio de rol o la revocación entre la comprobación y la escritura.
 - **SQL, auditoría transversal:** `user_business_contexts.sql` (una ayuda vencida, terminada o revocada, un soporte deshabilitado o un consultorio sin operación no dan contexto) y `assistance_business_settings.sql` (la ayuda vencida no lee ni guarda).
@@ -34,6 +36,8 @@ Lecturas, escrituras, identificadores manipulados y funciones llamadas directame
 - **Navegador:** `clinical-storage-policy.spec.ts` (política maestra por consultorio), `patient-structure-ux.spec.ts` (alcance por rol).
 
 ## 4. Reservas simultáneas, repetidas y reprogramadas
+
+- **Señas:** `appointment_deposits.sql` exige seña/Confirmado coherentes y auditoría atómica, fotografía histórica, idempotencia, apagado seguro y condiciones de cancelación. `run_deposit_expiry_concurrency.sh` verifica los dos órdenes de cobro/baja, reprogramación/deshacer, hijos con FK, `skip locked` y apagado de política, con cero bloqueos mutuos. `appointment-deposits.spec.ts` comprueba reserva nativa con condiciones, apertura de WhatsApp interceptando sólo el destino externo, registro real, agenda, vista pública y baja invocada sobre datos sintéticos en PostgreSQL; no simula la persistencia.
 
 - **SQL:** `patient_identity_atomicity.sql` (creación de paciente y turno atómica e idempotente); `price_confirmation_lifecycle.sql` (un reintento tras una respuesta perdida devuelve la reserva confirmada aunque cambie la política); `joint_appointments.sql`; `public_booking_patient_policy.sql`; `availability_windows.sql`.
 - **Carreras:** `run_patient_identity_idempotency_concurrency.sh`, `run_public_booking_limit_concurrency.sh`, `run_public_patient_resolution_concurrency.sh`, `run_availability_snapshot_concurrency.sh`, `run_availability_configuration_concurrency.sh`.
@@ -88,6 +92,8 @@ Lecturas, escrituras, identificadores manipulados y funciones llamadas directame
 - **Staging:** Web Push real desde el enlace de gestión del turnero, en el mismo origen al que navega Natalia (etapa 6). El recorrido desde el sitio de Natalia publicado pertenece a las comprobaciones de release y posteriores a la publicación.
 
 ## 12. Vistas de 320, 390, 768, 1280 y 1600 píxeles, contenido largo y teclado
+
+- **Señas:** `appointment-deposits.spec.ts` agrega los cinco anchos en configuración, lista, condiciones previas y turno pendiente/cancelado; Natalia claro y oscuro en las superficies públicas. Acumula `layoutIssues`, alinea cada tarea para la captura y exige comprobaciones de salud del navegador. `odonto.smoke.spec.ts` agrega las páginas nuevas al perfil demo. Estado de ejecución en el registro propio; escribir una matriz no significa haberla aprobado.
 
 - **Guardas de diseño** sobre todas las vistas (`scripts/lib`): `font-weights.test.mjs` (sólo pesos cargados), `heading-kickers.test.mjs` (sin rótulos sobre los títulos), `glyph-icons.test.mjs` (íconos dibujados, no emojis ni glifos), `type-scale.test.mjs` (tamaños de la escala, no literales) y `text-truncation.test.mjs` (el texto de la tarea ajusta; los recortes revisados se declaran). En el navegador, `layoutIssues` reporta además un texto de ayuda más ancho que el espacio de su campo (`clipped-placeholder`), y `login-register-ux.spec.ts` y `patients-real-ux-audit.spec.ts` lo comprueban a 320 y 390 px.
 - **Navegador:** `patient-structure-ux.spec.ts` (los cinco anchos, contenido largo y teclado por rol), `access-recovery-ui.spec.ts` (los cinco anchos y teclado), `booking-embed.spec.ts` (cinco anchos en las tareas profesionales y la reserva nativa), `clinical-storage-policy.spec.ts`, `layout-usability.spec.ts` (el detector de palabras comprimidas), `mobile-navigation-ux.spec.ts`, `roles-agenda-regression.spec.ts`. Las matrices visuales usan `layoutIssues` y `alignTaskForCapture` según la [guía de verificación](verificacion.md).

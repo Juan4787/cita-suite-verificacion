@@ -21,6 +21,7 @@ Esta matriz identifica los recorridos existentes. La presencia de una prueba en 
 | Sitios y Natalia | Configurador y visitante | Orígenes exactos, alcance, navegación nativa, tema y misma aplicación de reserva | `booking_integration_foundation.sql`, `booking-integrations.test.ts`, `qa-natalia-direct-booking.mjs` |
 | Gestión y notificaciones | Token del turno/dispositivo autorizado | Alcance mínimo, permisos por origen, privacidad y recuperación | `push_notification_click.sql`, `push_device_separation.sql`, `push.test.ts` |
 | Calendario y reseñas | Tarea interna con credencial | Reclamación atómica, revalidación, entrega incierta y reintentos persistentes | `google_review_requests.sql`, `google-calendar-sync.test.ts`, `google-reviews.test.ts` |
+| Señas de turnos | Dueño/admin/recepción registran; dueño/admin configuran; paciente consulta por token | Seña fotografiada por turno, Confirmado sólo con seña resuelta, revisión optimista, cambios y auditoría atómicos; ante la duda no cancelar | `appointment_deposits.sql`, `run_deposit_expiry_concurrency.sh`, `deposits.test.ts`, `appointment-deposits.spec.ts` (verificación de campaña en curso) |
 
 ## Verificación de las capas
 
@@ -67,3 +68,17 @@ Los tipos de estas funciones provienen del generador fijado sobre la reconstrucc
 - El parser y mapping horario único viven en `lib/team/professional-form.ts`. Los helpers de sincronización HTTP de asignaciones y el fallback horario sin consumidores se retiraron, sin alterar RPC públicos aplicados.
 
 Estos consumidores y su descomposición son parte de la matriz de cierre de etapa5, cuyo estado/evidencia vigente está en `evidencia-etapa5-estructura.md`. No deducir publicación de estas firmas ni capacidad alojada de su aprobación en base descartable.
+
+## Señas: contratos de la campaña del 29 de octubre de 2026
+
+Fuente: [plan aprobado de señas y avisos](../plans/propuesta-senas-avisos-natalia.md), incluidas sus correcciones y autorización posterior. Estado y evidencia: su [registro](../plans/registro-senas-avisos-natalia.md). La implementación todavía no acredita publicación.
+
+- `lib/scheduling/deposits.ts` contiene la proyección validada, secciones y textos; no calcula fechas ni montos de negocio. SQL es la única autoridad de esas reglas.
+- `scheduling/public/deposits.ts` llama a `set_appointment_deposit`, `open_appointment_deposit_reminder`, `save_deposit_policy` y las lecturas. Una respuesta desconocida o incompleta falla explícitamente. Las condiciones por día exigen exactamente una respuesta por horario, sin duplicados, montos fraccionarios ni vencimientos inválidos. Si la carga no puede calcularlas, el resumen dice que se comprobarán al terminar y no bloquea la reserva (ajustes 3 y 4 del plan).
+- La seña pendiente bloquea Confirmado en SQL y la confirmación pública en el servidor. Registrar o exceptuar confirma en la misma transacción; deshacer devuelve a pendiente y a Reservado si estaba Confirmado. Reprogramar conserva una seña resuelta. Sin seña se conserva el recorrido anterior.
+- La política guarda sus 11 campos explícitos y su revisión, nunca completa silenciosamente claves ausentes. Cambiarla afecta sólo reservas nuevas; apagarla exceptúa las pendientes sin confirmar sus turnos. El monto puede ser fijo o porcentaje del arancel fotografiado.
+- La cancelación por `private.expire_unpaid_deposits` vive en PostgreSQL, con interruptor global y por consultorio. Tiene ventana de 24 horas desde el vencimiento, excluye turnos iniciados o con pedido de reprogramación y revalida seña, turno, política y operación comercial después de bloquear. La app informa una revisión desconocida o atrasada. La reversión debe apagar el interruptor global antes de volver a una app sin controles de seña.
+- Las aperturas de WhatsApp sólo registran quién abrió el enlace; no prueban envío ni recepción. La segunda apertura requiere consentimiento explícito bajo el mismo bloqueo. Los avisos no nombran la prestación. El modo demo no abre WhatsApp ni escribe.
+- La historia del turno usa `appointment.deposit_paid`, `appointment.deposit_waived`, `appointment.deposit_reopened`, `appointment.deposit_reminder_opened` y `appointment.deposit_expired`; `business.deposit_policy_saved` pertenece al consultorio y no se agrega al historial de un turno.
+- La agenda diaria, la búsqueda autoritativa y su precarga conservan la etiqueta y la revisión de la seña. Las dos RPC JSON históricas se completan con una lectura RLS por lote, limitada a sus IDs; no se cambian firmas SQL ni se escanean pacientes. Las acciones de agenda reutilizan el manejador del detalle y muestran el resultado allí.
+- «Señas» pagina en ventanas de 300 filas con centinela y orden por vencimiento/ID. Un resumen de agenda cuya ventana quedó incompleta no se presenta como conteo total: informa que no pudo comprobarlo y ofrece la lista paginada.

@@ -333,10 +333,12 @@ export const DEPOSIT_LIST_LIMIT = 300;
 export const loadDepositList = async (
 	supabase: CitaSupabaseClient,
 	businessId: string,
-	now: Date = new Date()
+	now: Date = new Date(),
+	page = 1
 ): Promise<{ items: DepositListItem[]; truncated: boolean }> => {
+	if (!Number.isSafeInteger(page) || page < 1 || page > 1_000_000) throw new DepositError('DEPOSIT_UNEXPECTED');
 	const since = new Date(now.getTime() - 7 * 24 * 3_600_000).toISOString();
-	const { data, error } = await supabase
+	const query = supabase
 		.from('appointment_deposits')
 		.select(
 			'appointment_id, status, amount, currency, request_from, due_at, auto_cancel, waived_reason, recorded_at, reminder_opened_at, reminder_opened_by, expired_at, revision, appointments!inner(id, starts_at, status, confirmation_token, professional_id, service_id, patients!inner(id, full_name, phone_e164))'
@@ -346,7 +348,9 @@ export const loadDepositList = async (
 		// The instant is quoted: inside a PostgREST logic tree `.` and `:` are reserved.
 		.or(`status.eq.pending,and(status.eq.expired,expired_at.gte."${since}")`)
 		.order('due_at', { ascending: true })
-		.limit(DEPOSIT_LIST_LIMIT + 1);
+		.order('appointment_id', { ascending: true });
+	const offset = (page - 1) * DEPOSIT_LIST_LIMIT;
+	const { data, error } = await (page === 1 ? query.limit(DEPOSIT_LIST_LIMIT + 1) : query.range(offset, offset + DEPOSIT_LIST_LIMIT));
 	if (error) throw error;
 	const rows = readArray(data ?? [], 'depositList');
 	const items: DepositListItem[] = [];

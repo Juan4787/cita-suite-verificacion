@@ -39,7 +39,7 @@ import type { Actions, PageServerLoad } from './$types';
 
 
 const APPOINTMENT_COLUMNS =
-	'id, patient_id, service_id, professional_id, starts_at, ends_at, status, source, service_name_snapshot, professional_name_snapshot, internal_note, cancelled_reason, patients(full_name, phone_e164, dni, email), appointment_deposits(status)';
+	'id, patient_id, service_id, professional_id, starts_at, ends_at, status, source, service_name_snapshot, professional_name_snapshot, internal_note, cancelled_reason, patients(full_name, phone_e164, dni, email), appointment_deposits(status, revision, waived_reason)';
 
 // Who records deposits (the database enforces the same roles): they get the deposit alerts.
 const DEPOSIT_ROLES = new Set(['owner', 'admin', 'reception']);
@@ -75,6 +75,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			referencesLoaded: true,
 			reminderCount: 0,
 			depositAlerts: { toRequest: 0, dueSoon: 0, cancelledToday: 0 } as DepositAlerts | null,
+			canRecordDeposit: false,
 			appointmentRequestId,
 			demo: true
 		};
@@ -106,7 +107,8 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 		if (!DEPOSIT_ROLES.has(business.role) || !business.access.canUseBusiness) return { toRequest: 0, dueSoon: 0, cancelledToday: 0 };
 		try {
 			const now = new Date();
-			return summarizeDepositAlerts((await loadDepositList(supabase, business.business.id, now)).items, now);
+			const list = await loadDepositList(supabase, business.business.id, now);
+			return list.truncated ? null : summarizeDepositAlerts(list.items, now);
 		} catch (depositError) {
 			// Unknown, not zero: the page says it could not check them.
 			logServerFailure('Error contando las señas de la agenda', depositError);
@@ -253,6 +255,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 		referencesLoaded: shouldLoadReferences,
 		reminderCount,
 		depositAlerts,
+		canRecordDeposit: DEPOSIT_ROLES.has(business.role) && business.canOperate,
 		appointmentRequestId,
 		demo: false
 	};

@@ -181,8 +181,7 @@
 
 		{#if data.truncated}
 			<p class="ux-alert" role="alert">
-				Hay más señas de las que entran en esta lista: las que vencen más tarde pueden faltar. Resolvé
-				las de arriba y recargá la página.
+			Hay más señas de las que entran en esta página. Usá «Página siguiente» para verlas.
 			</p>
 		{/if}
 
@@ -215,6 +214,13 @@
 				{/if}
 			{/if}
 		{/each}
+		{#if data.page > 1 || data.truncated}
+			<nav aria-label="Páginas de señas" class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+				{#if data.page > 1}<a href={`?pagina=${data.page - 1}`} class="ux-btn-secondary">Página anterior</a>{/if}
+				<p class="text-sm text-white/65">Página {data.page ?? 1}</p>
+				{#if data.truncated}<a href={`?pagina=${(data.page ?? 1) + 1}`} class="ux-btn-secondary">Página siguiente</a>{/if}
+			</nav>
+		{/if}
 	{/if}
 
 	{#if data.demo}

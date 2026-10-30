@@ -6,6 +6,7 @@ import { ACTIVE_BUSINESS_COOKIE } from '$lib/server/access/public/business';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import { createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { splitActiveAppointmentGroups } from '$lib/utils/appointment-visibility';
+import { withAgendaDeposits } from '$lib/server/scheduling/public/agenda-deposits';
 import { json, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
@@ -53,5 +54,10 @@ export const GET: RequestHandler = async ({ url, locals, fetch, cookies, setHead
 		return json({ message: 'No pudimos buscar turnos ahora. Revisá tu conexión y volvé a intentar.' }, { status: 500 });
 	}
 
-	return json(splitActiveAppointmentGroups(Array.isArray(data) ? data : []));
+	try {
+		return json(splitActiveAppointmentGroups(await withAgendaDeposits(supabase, businessId, data)));
+	} catch (depositError) {
+		logServerFailure('Error comprobando las señas de la búsqueda', depositError);
+		return json({ message: 'No pudimos comprobar los turnos y sus señas. Volvé a intentar en unos segundos.' }, { status: 503 });
+	}
 };

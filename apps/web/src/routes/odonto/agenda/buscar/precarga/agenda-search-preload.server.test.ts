@@ -20,6 +20,8 @@ const { GET } = await import('./+server');
 const businessId = '00000000-0000-4000-8000-000000000001';
 const supabase = { rpc: mocks.rpc };
 
+vi.mock('$lib/server/scheduling/public/agenda-deposits', () => ({ withAgendaDeposits: vi.fn(async (_client: unknown, _businessId: string, rows: unknown) => rows) }));
+
 const makeEvent = (cookieValue: string | undefined = businessId) => {
 	const setHeaders = vi.fn();
 	return {

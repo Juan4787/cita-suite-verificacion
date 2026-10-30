@@ -6,6 +6,7 @@ import { ACTIVE_BUSINESS_COOKIE } from '$lib/server/access/public/business';
 import { getOdontoContext } from '$lib/server/access/public/odonto-context';
 import { createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { json, redirect } from '@sveltejs/kit';
+import { withAgendaDeposits } from '$lib/server/scheduling/public/agenda-deposits';
 import type { RequestHandler } from './$types';
 
 const MAX_SNAPSHOT_RESULTS = 400;
@@ -48,5 +49,10 @@ export const GET: RequestHandler = async ({ locals, fetch, cookies, setHeaders }
 		return json({ message: 'No pudimos preparar la búsqueda de turnos. Recargá la agenda y volvé a intentar.' }, { status: 500 });
 	}
 
-	return json({ appointments: Array.isArray(data) ? data : [] });
+	try {
+		return json({ appointments: await withAgendaDeposits(supabase, businessId, data) });
+	} catch (depositError) {
+		logServerFailure('Error comprobando las señas de la precarga', depositError);
+		return json({ message: 'No pudimos preparar los turnos y sus señas. Volvé a intentar en unos segundos.' }, { status: 503 });
+	}
 };

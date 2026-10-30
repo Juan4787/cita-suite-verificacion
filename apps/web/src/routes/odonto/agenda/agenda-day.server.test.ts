@@ -76,6 +76,12 @@ describe('daily agenda load', () => {
 		expect([result.appointments, result.professionals, result.reminderCount]).toEqual([[appointment], snapshot.professionals, 2]);
 	});
 
+	it('no presenta el conteo de una lista incompleta como el total de señas', async () => {
+		mocks.from.mockReturnValue(query({ data: [appointment], error: null }));
+		mocks.loadDepositList.mockResolvedValue({ items: [], truncated: true });
+		await expect(load(event())).resolves.toMatchObject({ depositAlerts: null });
+	});
+
 	it('counts the deposit alerts from the same list as the deposits page, for whoever records deposits', async () => {
 		mocks.from.mockReturnValue(query({ data: [appointment], error: null }));
 		const now = Date.now();

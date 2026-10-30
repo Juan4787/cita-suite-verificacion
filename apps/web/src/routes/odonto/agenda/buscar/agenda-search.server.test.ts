@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
 	from: vi.fn()
 }));
 
+vi.mock('$lib/server/scheduling/public/agenda-deposits', () => ({ withAgendaDeposits: vi.fn(async (_client: unknown, _businessId: string, rows: unknown) => rows) }));
+
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
 vi.mock('$lib/server/access/public/business', () => ({ ACTIVE_BUSINESS_COOKIE: 'active-business-id' }));
 vi.mock('$lib/server/platform/supabase', () => ({

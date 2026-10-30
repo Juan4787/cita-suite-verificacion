@@ -33,7 +33,7 @@
 		professional_name_snapshot: string;
 		internal_note?: string | null;
 		patients?: { full_name: string; phone_e164: string | null; dni?: string | null; email?: string | null } | null;
-		appointment_deposits?: { status: string } | null;
+		appointment_deposits?: { status: string; revision: number; waived_reason: string | null } | null;
 	};
 	type AppointmentGroups = { upcoming: Appointment[]; past: Appointment[] };
 	type Professional = { id: string; name: string; specialty?: string | null; is_active: boolean };
@@ -75,6 +75,7 @@
 			referencesLoaded?: boolean;
 			reminderCount?: number | null;
 			depositAlerts?: { toRequest: number; dueSoon: number; cancelledToday: number } | null;
+			canRecordDeposit?: boolean;
 			appointmentRequestId: string;
 			demo: boolean;
 		};
@@ -565,6 +566,36 @@
 		</div>
 		<svg class="h-5 w-5 shrink-0 text-white/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
 	</a>
+	{#if data.canRecordDeposit && canOperate && isUpcomingActiveAppointment(appointment) && appointment.appointment_deposits && appointment.appointment_deposits.waived_reason !== 'policy_disabled'}
+		<div class="flex flex-col gap-2 px-3 pb-2 sm:flex-row sm:flex-wrap sm:px-4" data-agenda-deposit={appointment.id}>
+			{#if appointment.appointment_deposits.status === 'pending'}
+				<form method="POST" action={`/odonto/turnos/${appointment.id}?/deposit`}>
+					<input type="hidden" name="deposit_action" value="paid" />
+					<input type="hidden" name="expected_revision" value={appointment.appointment_deposits.revision} />
+					<button class="ux-btn-primary w-full">Confirmar seña</button>
+				</form>
+				<details>
+					<summary class="ux-btn-secondary cursor-pointer list-none">Exceptuar</summary>
+					<form method="POST" action={`/odonto/turnos/${appointment.id}?/deposit`} class="mt-2 grid gap-2">
+						<p class="max-w-sm text-sm text-white/65">El turno queda Confirmado sin seña. Queda registrado como decisión del consultorio.</p>
+						<input type="hidden" name="deposit_action" value="waived" />
+						<input type="hidden" name="expected_revision" value={appointment.appointment_deposits.revision} />
+						<button class="ux-btn-secondary">Sí, exceptuar la seña</button>
+					</form>
+				</details>
+			{:else if ['paid', 'waived'].includes(appointment.appointment_deposits.status)}
+				<details>
+					<summary class="ux-btn-secondary cursor-pointer list-none">Deshacer</summary>
+					<form method="POST" action={`/odonto/turnos/${appointment.id}?/deposit`} class="mt-2 grid gap-2">
+						<p class="max-w-sm text-sm text-white/65">La seña vuelve a pendiente. Si el turno estaba Confirmado, vuelve a Reservado.</p>
+						<input type="hidden" name="deposit_action" value="pending" />
+						<input type="hidden" name="expected_revision" value={appointment.appointment_deposits.revision} />
+						<button class="ux-btn-secondary">Sí, deshacer el registro</button>
+					</form>
+				</details>
+			{/if}
+		</div>
+	{/if}
 {/snippet}
 
 <section class="ux-page gap-6 sm:gap-5">

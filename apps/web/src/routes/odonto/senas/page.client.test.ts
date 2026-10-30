@@ -47,6 +47,7 @@ const data = (rows: ReturnType<typeof row>[], overrides: Record<string, unknown>
 		canConfigure: false,
 		policyEnabled: true,
 		truncated: false,
+		page: 1,
 		automation: { tone: 'ok', text: 'Última revisión automática: hace 3 min.' },
 		sections: SECTIONS.map((section) => ({ ...section, rows: rows.filter((item) => item.section === section.id) })),
 		...overrides
@@ -155,10 +156,18 @@ describe('página de señas', () => {
 
 	it('si la lista no entra completa lo dice, y sin señas dice que no hay nada pendiente', () => {
 		render(Page, { data: data([row()], { truncated: true }) });
-		expect(screen.getByRole('alert')).toHaveTextContent('Hay más señas de las que entran en esta lista');
+		expect(screen.getByRole('alert')).toHaveTextContent('Hay más señas de las que entran en esta página');
+		expect(screen.getByRole('link', { name: 'Página siguiente', exact: true })).toHaveAttribute('href', '?pagina=2');
 		cleanup();
 		render(Page, { data: data([]) });
 		expect(screen.getByText('No hay señas para pedir ni turnos cancelados por la seña en los últimos 7 días.')).toBeInTheDocument();
+	});
+
+	it('deja volver desde una página posterior sin inventar otra página cuando ya no hay más', () => {
+		render(Page, { data: data([row()], { page: 2 }) });
+		expect(screen.getByRole('navigation', { name: 'Páginas de señas' })).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Página anterior', exact: true })).toHaveAttribute('href', '?pagina=1');
+		expect(screen.queryByRole('link', { name: 'Página siguiente', exact: true })).toBeNull();
 	});
 
 	it('un consultorio restringido no muestra acciones', () => {
