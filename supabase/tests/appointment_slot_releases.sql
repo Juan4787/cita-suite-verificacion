@@ -1,7 +1,7 @@
 -- Stage C: owned synthetic rows, rollback at the end. Each assertion uses IS DISTINCT
 -- FROM, and writes and their readback are separate statements (no NULL or snapshot pass).
 begin;
-select extensions.plan(13);
+select extensions.plan(14);
 create temporary table slot_fixture(label text primary key,id uuid not null);
 grant select on slot_fixture to authenticated;
 do $$
@@ -186,6 +186,17 @@ do $$begin
 end $$;
 select extensions.ok(true,'una falla del registro revierte también la cancelación');
 drop trigger zz_slot_test_failure on public.appointment_slot_releases;
+
+-- 14 (before 13 so each independently reproduced defect can reach its assertion).
+-- Statement start is earlier than the effective move (and can precede a lock wait).
+-- Occupation of the new interval begins when the change actually runs.
+select pg_temp.slot_appt('clock',date_trunc('day',now())+interval '13 days 9 hours');
+do $$declare before_update timestamptz:=clock_timestamp(); actual timestamptz; begin
+ update public.appointments set starts_at=starts_at+interval '2 hours',ends_at=ends_at+interval '2 hours' where id=pg_temp.sid('clock');
+ select released_at into actual from public.appointment_slot_releases where appointment_id=pg_temp.sid('clock');
+ if (actual>=before_update and actual<=clock_timestamp()) is not true then raise exception 'SLOT_EFFECTIVE_MOVE_TIME'; end if;
+end $$;
+select extensions.ok(true,'la ocupación nueva comienza al mover efectivamente, no al empezar una sentencia que pudo esperar');
 
 -- 13. A timestamp is not a total event order: two releases in one statement can have the
 -- same timestamp and UUIDs sort randomly. A newer quick correction must suppress the older
