@@ -228,11 +228,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 		response.headers.set('content-security-policy', policy + "; frame-ancestors " + event.locals.bookingFrameAncestors.join(' '));
 	}
 	const securityHeaders: Record<string, string> = {
-		...(event.url.pathname.startsWith('/embed/v1/') ? { 'cache-control': 'no-store' } : {}),
+		...(event.url.pathname.startsWith('/embed/v1/') || event.url.pathname === '/confirmar-correo' ? { 'cache-control': 'no-store' } : {}),
 		'strict-transport-security': 'max-age=31536000',
 		'x-content-type-options': 'nosniff',
 		...(event.locals.bookingFrameAncestors?.length ? {} : { 'x-frame-options': 'DENY' }),
-		'referrer-policy': 'strict-origin-when-cross-origin',
+		'referrer-policy': event.url.pathname === '/confirmar-correo' ? 'no-referrer' : 'strict-origin-when-cross-origin',
 		'permissions-policy': 'camera=(), microphone=(), geolocation=()'
 	};
 	for (const [name, value] of Object.entries(securityHeaders)) {
