@@ -21,6 +21,8 @@ Lecturas, escrituras, identificadores manipulados y funciones llamadas directame
 
 ## 2. Revocación de membresía, cambio de rol y estados comerciales
 
+- **Horarios liberados:** `appointment_slot_releases.sql` comprueba RLS, escrituras directas rechazadas y ocultar sólo por dueño/admin/recepción, con auditoría única; el actor reutiliza la revalidación bajo bloqueo verificada por las carreras de señas. La ruta valida ID y permiso antes de ejecutar; profesional y sólo lectura no tienen acciones en la interfaz.
+
 - **Señas:** `appointment_deposits.sql` comprueba roles, consultorio ajeno, suspensión, acceso anónimo y rechazo de escrituras directas; `senas.server.test.ts`, `senas-config.server.test.ts`, `abrir.server.test.ts` y `appointment-detail.server.test.ts` cubren rutas y mensajes. SQL no delega el permiso a la pantalla. Ver [registro propio](../plans/registro-senas-avisos-natalia.md) para no confundir las capas aprobadas con las pendientes.
 
 - **SQL:** `tenant_context_revocation.sql` (el contexto refleja el rol nuevo y la revocación de inmediato, también para RPC clínicos directos); `appointment_actor_revalidation.sql` (17 controles: una creación en curso revalida el rol en SQL, la recuperación idempotente no expone el turno a quien perdió el permiso); `patient_archive_actor_scope.sql`, `patient_registration_transaction.sql` y `team_editor_atomic_commands.sql` (membresía revocada, asistencia revocada y pausa comercial); `availability_windows.sql` (la revocación actúa en la siguiente llamada SQL); `role_access_audit.sql`, `team_access_transactions.sql` y `manual_access_then_mp_payment.sql`.
@@ -36,6 +38,8 @@ Lecturas, escrituras, identificadores manipulados y funciones llamadas directame
 - **Navegador:** `clinical-storage-policy.spec.ts` (política maestra por consultorio), `patient-structure-ux.spec.ts` (alcance por rol).
 
 ## 4. Reservas simultáneas, repetidas y reprogramadas
+
+- **Horarios liberados:** `appointment_slot_releases.sql` prueba OLD de equipo, antigüedad por intervalo, correcciones rápidas, paso desde fecha pasada, ocupación parcial, bloqueos, orden de hechos con marcas iguales, fecha efectiva, cancelación por seña real y rollback si el registro falla. `appointment-slot-releases.spec.ts` recorre cancelación por la UI, reasignación real, desaparición por ocupación y ocultar sin cambiar la disponibilidad. Su ejecución está identificada en el registro; no deducir aprobación de su mera presencia.
 
 - **Señas:** `appointment_deposits.sql` exige seña/Confirmado coherentes y auditoría atómica, fotografía histórica, idempotencia, apagado seguro y condiciones de cancelación. `run_deposit_expiry_concurrency.sh` verifica los dos órdenes de cobro/baja, reprogramación/deshacer, hijos con FK, `skip locked` y apagado de política, con cero bloqueos mutuos. `appointment-deposits.spec.ts` comprueba reserva nativa con condiciones, apertura de WhatsApp interceptando sólo el destino externo, registro real, agenda, vista pública y baja invocada sobre datos sintéticos en PostgreSQL; no simula la persistencia.
 
@@ -92,6 +96,8 @@ Lecturas, escrituras, identificadores manipulados y funciones llamadas directame
 - **Staging:** Web Push real desde el enlace de gestión del turnero, en el mismo origen al que navega Natalia (etapa 6). El recorrido desde el sitio de Natalia publicado pertenece a las comprobaciones de release y posteriores a la publicación.
 
 ## 12. Vistas de 320, 390, 768, 1280 y 1600 píxeles, contenido largo y teclado
+
+- **Horarios liberados:** `appointment-slot-releases.spec.ts` añade los cinco anchos con nombre profesional largo, `layoutIssues` acumulado, captura alineada y activación por teclado de «Dar este horario»; modo demo sin acciones reales. Sólo los recibos completos del registro acreditan su ejecución.
 
 - **Señas:** `appointment-deposits.spec.ts` agrega los cinco anchos en configuración, lista, condiciones previas y turno pendiente/cancelado; Natalia claro y oscuro en las superficies públicas. Acumula `layoutIssues`, alinea cada tarea para la captura y exige comprobaciones de salud del navegador. `odonto.smoke.spec.ts` agrega las páginas nuevas al perfil demo. Estado de ejecución en el registro propio; escribir una matriz no significa haberla aprobado.
 

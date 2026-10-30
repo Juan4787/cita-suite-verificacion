@@ -75,6 +75,12 @@ test.describe('Reserva pública - modo demo', () => {
 		await expect(page.getByRole('heading', { name: 'Señas', exact: true, level: 1 })).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Guardar', exact: true })).toBeDisabled();
 		await expect(page.getByRole('textbox', { name: /^Monto fijo, en pesos/ })).toHaveValue('40000');
+		await page.goto('/odonto/agenda');
+		const releases = page.locator('[data-slot-release-alert]');
+		await expect(releases.getByText('Dra. de ejemplo', { exact: true })).toBeVisible();
+		await expect(releases.getByRole('button', { name: 'Dar este horario', exact: true })).toBeDisabled();
+		await expect(releases.getByRole('button', { name: 'Ocultar', exact: true })).toBeDisabled();
+		await expect(releases.locator('a')).toHaveCount(0);
 	});
 
 	test('muestra reserva pública, turno por token y aliases de respuesta', async ({ page }) => {

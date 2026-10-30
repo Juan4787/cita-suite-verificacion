@@ -86,6 +86,8 @@ Las pruebas de interfaz de roles siguen la regla de ocultar y redirigir: una sec
 
 ## Señas (campaña del 29 de octubre de 2026)
 
+**Horarios liberados (etapa C):** la lectura usa los mismos conjuntos autorizados que turnos y señas: dueño/admin/recepción/sólo lectura ven el consultorio operativo; profesional, sólo sus turnos asignados. La app sigue dirigiendo profesionales a «Mis turnos». Sólo dueño/admin/recepción ocultan avisos; SQL bloquea y revalida autoridad/comercial, aplica cambio y auditoría en una transacción. Soporte conserva únicamente su concesión vigente. Anónimo no lee ni ejecuta; ningún rol API escribe directamente el registro. El disparador es la única fuente de los hechos. `appointment_slot_releases.sql` verifica estos límites; la prueba de navegador no los sustituye.
+
 La migración `20261029010000_appointment_deposits.sql` y `private.deposit_actor` vuelven a comprobar la membresía activa y la operación comercial dentro de la transacción. La interfaz no reemplaza ese permiso.
 
 | Acción | Autoridad | Límite |

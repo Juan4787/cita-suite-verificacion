@@ -61,7 +61,8 @@
   <nav class="mt-4 flex flex-wrap items-center gap-3" aria-label="Páginas de horarios liberados">
    {#if list.page > 1}<a href={pageHref(list.page - 1)} class="ux-btn-secondary">Anteriores</a>{/if}
    <span class="text-sm text-white/60">Página {list.page}</span>
-   {#if list.truncated}<a href={pageHref(list.page + 1)} class="ux-btn-secondary">Más horarios</a>{/if}
+   {#if list.truncated && list.page < 1001}<a href={pageHref(list.page + 1)} class="ux-btn-secondary">Más horarios</a>{/if}
   </nav>
  {/if}
+ {#if list.truncated && list.page >= 1001}<p class="mt-3 text-sm text-white/65">Hay más horarios. Elegí un rango más corto para revisarlos.</p>{/if}
 </details>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import SlotReleaseAlerts from '$lib/components/agenda/SlotReleaseAlerts.svelte';
+	import { page } from '$app/state';
 	import type { SlotReleaseListView } from '$lib/scheduling/slot-releases';
 	import { parseAvailabilitySnapshot } from '$lib/availability/http';
 	import { readRecord } from '$lib/contracts/json';

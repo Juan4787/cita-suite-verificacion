@@ -28,6 +28,11 @@ it('una lectura desconocida se explica y no se presenta como una lista vacía', 
  expect(screen.getByRole('alert')).toHaveTextContent('No pudimos comprobar los horarios liberados');
  expect(screen.queryByText(/No hay horarios/)).not.toBeInTheDocument();
 });
+it('al alcanzar la ventana máxima no ofrece una página inválida que vuelva al principio', () => {
+ render(SlotReleaseAlerts, { ...props(), list: { ...props().list, page: 1001 } });
+ expect(screen.queryByRole('link', { name: 'Más horarios' })).not.toBeInTheDocument();
+ expect(screen.getByText(/Elegí un rango más corto/)).toBeVisible();
+});
 it('sólo lectura y demo no ofrecen escrituras ni enlaces reales de reasignación en demo', () => {
  const first = render(SlotReleaseAlerts, { ...props(), canOperate: false });
  expect(screen.queryByRole('button', { name: 'Ocultar' })).not.toBeInTheDocument();

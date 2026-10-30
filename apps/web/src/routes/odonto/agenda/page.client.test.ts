@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Page from './+page.svelte';
 
 vi.mock('$app/navigation', () => ({ afterNavigate: vi.fn() }));
+vi.mock('$app/state', () => ({ page: { url: new URL('http://localhost/odonto/agenda?date=2026-08-27') } }));
 
 const appointment = (id: string, fullName: string) => ({
 	id,
