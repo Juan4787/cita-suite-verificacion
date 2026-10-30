@@ -1715,7 +1715,7 @@
 					<div class="mt-5 grid gap-3">
 						{#if depositPending}
 							<p class="ux-empty">Tu turno se confirma cuando el consultorio recibe la seña.</p>
-						{:else}
+						{:else if !appointment.deposit || appointment.deposit.waived_reason === 'policy_disabled'}
 							<form method="POST" action="?/confirm" use:enhance>
 								<button disabled={!appointment.can_confirm} class="ux-btn-primary w-full">Confirmo que voy</button>
 							</form>

@@ -106,6 +106,16 @@ describe('Configuración de señas · carga', () => {
 		mocks.tables.service_price_policies = { data: null, error: { message: 'read failed' } };
 		await expect(load(event())).rejects.toMatchObject({ status: 503 });
 	});
+
+	it('una falla al comprobar la automatización no se informa como habilitada', async () => {
+		mocks.loadDepositAutomationStatus.mockRejectedValue(new Error('status unavailable'));
+		await expect(load(event())).resolves.toMatchObject({ automationStopped: null });
+	});
+
+	it('un teléfono presente pero inválido no cuenta como WhatsApp configurado', async () => {
+		mocks.tables.businesses = { data: { whatsapp_phone: 'incompleto', whatsapp_contact_enabled: true }, error: null };
+		await expect(load(event())).resolves.toMatchObject({ whatsappConfigured: false });
+	});
 });
 
 describe('Configuración de señas · guardar', () => {

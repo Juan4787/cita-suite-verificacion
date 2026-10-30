@@ -1181,6 +1181,16 @@ describe('seña del turno', () => {
 		});
 		expect(screen.getByText('Recibimos tu seña. Tu turno está confirmado.')).toBeInTheDocument();
 		expect(screen.queryByRole('heading', { name: 'Seña del turno' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Confirmo que voy', exact: true })).toBeNull();
+	});
+
+	it('una seña exceptuada por el equipo tampoco pide confirmar; apagar la política conserva la confirmación habitual', () => {
+		installNotificationEnvironment();
+		render(Page, { data: { ...pageData, appointment: withDeposit({ ...pendingDeposit, status: 'waived', waived_reason: 'staff' }, { status: 'confirmed' }) } });
+		expect(screen.queryByRole('button', { name: 'Confirmo que voy', exact: true })).toBeNull();
+		cleanup();
+		render(Page, { data: { ...pageData, appointment: withDeposit({ ...pendingDeposit, status: 'waived', waived_reason: 'policy_disabled' }, { can_confirm: true }) } });
+		expect(screen.getByRole('button', { name: 'Confirmo que voy', exact: true })).toBeEnabled();
 	});
 
 	it('cancelado por la seña vencida explica por qué, ofrece escribir al consultorio y reservar otro turno', () => {

@@ -194,7 +194,7 @@
 		{#each data.sections as section (section.id)}
 			{#if section.rows.length > 0}
 				{#if section.folded}
-					<details class="ux-card">
+					<details>
 						<summary class="ux-section-title cursor-pointer">{section.title} ({section.rows.length})</summary>
 						<div class="mt-5 grid gap-3">
 							{#each section.rows as row (row.appointmentId)}
@@ -203,14 +203,14 @@
 						</div>
 					</details>
 				{:else}
-					<div class="ux-card">
+					<section class="grid gap-4">
 						<h2 class="ux-section-title">{section.title} ({section.rows.length})</h2>
-						<div class="mt-5 grid gap-3">
+						<div class="grid gap-3">
 							{#each section.rows as row (row.appointmentId)}
 								{@render depositRow(row)}
 							{/each}
 						</div>
-					</div>
+					</section>
 				{/if}
 			{/if}
 		{/each}

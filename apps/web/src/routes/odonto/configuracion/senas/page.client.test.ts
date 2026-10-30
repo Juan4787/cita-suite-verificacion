@@ -69,6 +69,11 @@ describe('configuración de señas', () => {
 		expect(screen.getByText(/detenida por el operador de Cita Suite/)).toBeInTheDocument();
 	});
 
+	it('informa que no se pudo comprobar la habilitación del operador, sin asumir que está encendida', () => {
+		render(Page, { data: data({ automationStopped: null }) });
+		expect(screen.getByRole('alert')).toHaveTextContent('No pudimos comprobar si las señas están habilitadas');
+	});
+
 	it('con porcentaje y sin monto fijo dice qué prestaciones no van a pedir seña', async () => {
 		render(Page, { data: data({ policy: policy({ amountMode: 'percentage', percentage: 35, fixedAmount: null }) }) });
 		const notice = document.querySelector('[data-without-fee]') as HTMLElement;

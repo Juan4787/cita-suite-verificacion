@@ -16,6 +16,7 @@ import {
 	saveDepositPolicy
 } from '$lib/server/scheduling/public/deposits';
 import { parsePolicyForm } from '$lib/server/scheduling/public/deposit-policy-form';
+import { normalizeArgentineWhatsAppPhone } from '$lib/utils/phone';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -94,8 +95,8 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 			policy,
 			services,
 			// Without the practice's WhatsApp the person's buttons do not appear (plan, section 4.7).
-			whatsappConfigured: Boolean(business?.whatsapp_contact_enabled && String(business.whatsapp_phone ?? '').trim()),
-			automationStopped: automation ? !automation.enabled : false
+			whatsappConfigured: Boolean(business?.whatsapp_contact_enabled && normalizeArgentineWhatsAppPhone(business.whatsapp_phone)),
+			automationStopped: automation ? !automation.enabled : null
 		};
 	} catch (loadError) {
 		logServerFailure('Error cargando la configuración de señas', loadError);

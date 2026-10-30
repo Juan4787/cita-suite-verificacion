@@ -544,27 +544,27 @@
 {#snippet appointmentRow(appointment: Appointment, showDate: boolean)}
 	<a
 		href={`/odonto/turnos/${appointment.id}?from_date=${showDate ? localDateOf(appointment.starts_at) : data.date}`}
-		class="ux-choice flex min-w-0 items-center gap-3 p-3 sm:gap-4 sm:p-4"
+		class="ux-choice grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:gap-4 sm:p-4"
 	>
 		<!-- Ancho mínimo, no fijo: «09:00» en negrita no entra en 56 px y se partía en dos líneas. -->
-		<div class={`shrink-0 text-center ${showDate ? 'min-w-16 sm:min-w-24' : 'min-w-14 sm:min-w-20'}`}>
+		<div class={`flex flex-wrap items-baseline gap-2 sm:row-span-2 sm:block sm:text-center ${showDate ? 'min-w-16 sm:min-w-24' : 'min-w-14 sm:min-w-20'}`}>
 			{#if showDate}
 				<p class="text-micro font-bold uppercase tracking-wide text-[#c4b5fd]">{shortDayLabel(appointment.starts_at)}</p>
 			{/if}
 			<p class="whitespace-nowrap text-xl font-bold tabular-nums text-white sm:text-2xl">{timeOnly(appointment.starts_at)}</p>
 			<p class="mt-0.5 whitespace-nowrap text-xs tabular-nums text-white/40">{timeOnly(appointment.ends_at)}</p>
 		</div>
-		<div class="min-w-0 flex-1">
+		<div class="col-span-2 min-w-0 sm:col-span-1">
 			<p class="break-words text-base font-bold text-white sm:text-lg">{appointment.patients?.full_name ?? 'Paciente'}</p>
 			<p class="mt-0.5 break-words text-sm text-white/55">
 				{appointment.service_name_snapshot} ·&nbsp;{appointment.professional_name_snapshot}
 			</p>
-			<div class="mt-2 flex flex-wrap gap-2">
-				<span class={appointmentStatusTone(appointment)}>{appointmentStatusLabel(appointment)}</span>
-				{#if appointment.source === 'public_booking'}<span class="ux-badge">Online</span>{/if}
-			</div>
 		</div>
-		<svg class="h-5 w-5 shrink-0 text-white/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+		<svg class="col-start-2 row-start-1 h-5 w-5 shrink-0 text-white/30 sm:col-start-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+		<div class="col-span-2 flex flex-wrap gap-2 sm:col-start-2">
+			<span class={appointmentStatusTone(appointment)}>{appointmentStatusLabel(appointment)}</span>
+			{#if appointment.source === 'public_booking'}<span class="ux-badge">Online</span>{/if}
+		</div>
 	</a>
 	{#if data.canRecordDeposit && canOperate && isUpcomingActiveAppointment(appointment) && appointment.appointment_deposits && appointment.appointment_deposits.waived_reason !== 'policy_disabled'}
 		<div class="flex flex-col gap-2 px-3 pb-2 sm:flex-row sm:flex-wrap sm:px-4" data-agenda-deposit={appointment.id}>

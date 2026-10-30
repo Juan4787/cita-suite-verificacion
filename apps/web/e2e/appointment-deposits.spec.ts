@@ -41,6 +41,7 @@ function ownedFixture() {
 }
 
 async function matrix(page: Page, info: TestInfo, label: string, anchor: Locator, issues: Array<LayoutIssue & { width: number; screen: string }>) {
+	const firstIssue = issues.length;
 	for (const width of [320, 390, 768, 1280, 1600]) {
 		await page.setViewportSize({ width, height: 900 });
 		issues.push(...(await layoutIssues(page, 'main a:visible, main button:visible, main input:visible, main textarea:visible', 'main'))
@@ -48,6 +49,7 @@ async function matrix(page: Page, info: TestInfo, label: string, anchor: Locator
 		await alignTaskForCapture(anchor);
 		await page.screenshot({ path: info.outputPath(`${label}-${width}.jpg`), type: 'jpeg', quality: 65 });
 	}
+	await info.attach(`${label}-layout`, { body: JSON.stringify({ widths: [320, 390, 768, 1280, 1600], issues: issues.slice(firstIssue) }), contentType: 'application/json' });
 	await page.setViewportSize({ width: 1280, height: 900 });
 }
 

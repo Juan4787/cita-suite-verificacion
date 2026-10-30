@@ -76,10 +76,15 @@
 			el comprobante. <a href="/odonto/configuracion/whatsapp" class="underline">Configurar el WhatsApp</a>
 		</p>
 	{/if}
-	{#if data.automationStopped}
+	{#if data.automationStopped === null}
+		<p class="ux-alert" role="alert">
+			No pudimos comprobar si las señas están habilitadas por el operador de Cita Suite. Revisá las señas
+			pendientes a mano y volvé a cargar esta página en unos segundos.
+		</p>
+	{:else if data.automationStopped}
 		<p class="ux-alert" role="alert">
 			La cancelación automática está detenida por el operador de Cita Suite: aunque la enciendas acá,
-			ningún turno se cancela solo hasta que vuelva a encenderse.
+			ningún turno se cancela solo ni las reservas nuevas piden seña hasta que vuelva a encenderse.
 		</p>
 	{/if}
 	{#if form?.message}
