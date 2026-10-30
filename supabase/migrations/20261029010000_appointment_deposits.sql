@@ -178,7 +178,7 @@ end $$;
 -- row: zz_appointment_price runs before it, and all BEFORE triggers run before any AFTER one.
 create function private.create_appointment_deposit() returns trigger
 language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
-declare v jsonb;
+declare v jsonb; v_expected jsonb; v_raw_expected text;
 begin
  if new.status<>'reserved' then return null; end if;
  -- Serialize with save_deposit_policy before reading the snapshot. If disabling wins,
@@ -188,6 +188,37 @@ begin
  -- policy→existing-appointment lock order used by disabling.
  perform 1 from public.deposit_policies dp where dp.business_id=new.business_id for share;
  v:=private.deposit_terms(new.business_id,new.service_id,new.source,new.starts_at,new.created_at,new.price_quote_snapshot);
+ -- PostgREST exposes request headers as transaction-scoped JSON. The application sends
+ -- only the amount/deadline/automatic-cancellation conditions the person saw. Compare
+ -- under the policy lock for every public creation path, with no new RPC signature.
+ -- Missing/unknown conditions keep the explicitly disclosed fallback; removing the
+ -- requirement or relaxing automatic cancellation never blocks the booking.
+ if new.source='public_booking' then
+  begin
+   v_raw_expected:=nullif(current_setting('request.headers',true),'')::jsonb->>'x-cita-deposit-terms';
+   if v_raw_expected is not null then
+    v_expected:=v_raw_expected::jsonb;
+    if v_expected='"unknown"'::jsonb then null;
+    elsif v_expected='"none"'::jsonb then
+     if (v->>'required')::boolean is true then raise exception 'DEPOSIT_TERMS_CHANGED'; end if;
+    elsif jsonb_typeof(v_expected)='object' then
+     if jsonb_typeof(v_expected->'amount') is distinct from 'number'
+      or jsonb_typeof(v_expected->'dueAt') is distinct from 'string'
+      or jsonb_typeof(v_expected->'autoCancel') is distinct from 'boolean'
+      or (v_expected->>'amount')::numeric not between 1 and 1000000000000
+      or (v_expected->>'amount')::numeric<>trunc((v_expected->>'amount')::numeric) then
+      raise exception 'DEPOSIT_TERMS_CHANGED'; end if;
+     if (v->>'required')::boolean is true and (
+      (v_expected->>'amount')::numeric is distinct from (v->>'amount')::numeric
+      or (v_expected->>'dueAt')::timestamptz is distinct from (v->>'due_at')::timestamptz
+      or ((v_expected->>'autoCancel')::boolean is false and (v->>'auto_cancel')::boolean is true)) then
+      raise exception 'DEPOSIT_TERMS_CHANGED'; end if;
+    else raise exception 'DEPOSIT_TERMS_CHANGED';
+    end if;
+   end if;
+  exception when others then raise exception 'DEPOSIT_TERMS_CHANGED';
+  end;
+ end if;
  if (v->>'required')::boolean is not true then return null; end if;
  insert into public.appointment_deposits(appointment_id,business_id,amount,percentage,reference_amount,request_days,deadline_hours,
   min_payment_hours,policy_revision,request_from,due_at,auto_cancel)
