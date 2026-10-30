@@ -1,10 +1,15 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { signInWithPassword } from './helpers/shared-auth';
+import { ownedEmailFixture, capturedSignupMessages, capturedSignupUrl } from './helpers/email-confirmation';
 import { observeRenderHealth } from './helpers/render-health';
 import { layoutIssues, type LayoutIssue } from './helpers/layout-usability';
 import { alignTaskForCapture } from './helpers/task-capture';
 import { randomUUID } from 'node:crypto';
 import { createFixtureClient, must, write, type FixtureClient } from './helpers/fixture-db';
+
+// Both cases follow email credentials; retain manual UI captures only.
+// Playwright requires these options at file scope.
+test.use({ trace: 'off', video: 'off', screenshot: 'off' });
 
 const allowDestructive = process.env.E2E_ALLOW_DESTRUCTIVE === 'true';
 const supabaseUrl = process.env.ODONTO_SUPABASE_URL;
@@ -378,6 +383,20 @@ const replaceNumberLikeAUser = async (input: Locator, value: string) => {
 	await input.pressSequentially(value);
 };
 
+// Follow real SMTP for both pending roles. The compatible checkpoint's old
+// signup uses SiteURL; only this association test accepts that known return.
+// The dedicated signup UX tests still require /confirmar-correo exactly.
+const confirmInvitedSignup = async (page: Page, email: string) => {
+	const confirmation = ownedEmailFixture();
+	await expect.poll(async () => (await capturedSignupMessages(confirmation.mail, email)).length, { timeout: 15_000 }).toBe(1);
+	const link = await capturedSignupUrl(confirmation.mail, email, confirmation.origin, confirmation.site,
+		[confirmation.site + '/confirmar-correo', confirmation.site, confirmation.site + '/']);
+	try { await page.goto(link); } catch { throw new Error('Could not follow the invited account confirmation link.'); }
+	const confirmed = await confirmation.auth.auth.signInWithPassword({ email, password });
+	if (confirmed.error || !confirmed.data.user?.email_confirmed_at) throw new Error('Invited account email was not confirmed by Auth.');
+	return confirmed.data.user.id;
+};
+
 test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 	test.skip(
 		!allowDestructive || !supabaseUrl || !serviceRoleKey,
@@ -528,6 +547,8 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 			.locator('form')
 			.getByRole('button', { name: 'Crear cuenta', exact: true })
 			.click();
+		fixture.authUserIds.push(await confirmInvitedSignup(pendingPage, pendingProfessionalEmail));
+		await signInWithPassword(pendingPage, pendingProfessionalEmail, password);
 		await expect(pendingPage).toHaveURL(/\/odonto\/mis-turnos/);
 		await expect(pendingPage.getByRole('link', { name: 'Mis turnos' })).toBeVisible();
 		await expect(pendingPage.getByRole('link', { name: 'Pacientes' })).toBeVisible();
@@ -550,7 +571,7 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		const acceptedUserId = acceptedInvite.accepted_user_id;
 		if (!acceptedUserId) throw new Error('La invitación aceptada no registró su cuenta.');
 		expect(acceptedUserId).not.toBe(fixture.ownerUserId);
-		fixture.authUserIds.push(acceptedUserId);
+		if (!fixture.authUserIds.includes(acceptedUserId)) fixture.authUserIds.push(acceptedUserId);
 		expect(acceptedInvite.professional_id).toBe(pendingProfessionalId);
 
 		const acceptedMembership = await must(
@@ -960,6 +981,8 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 			.locator('form')
 			.getByRole('button', { name: 'Crear cuenta', exact: true })
 			.click();
+		fixture.authUserIds.push(await confirmInvitedSignup(adminPage, adminEmail));
+		await signInWithPassword(adminPage, adminEmail, password);
 		await expect(adminPage).toHaveURL(/\/odonto\/agenda/);
 
 		const acceptedInvite = await must(
@@ -972,7 +995,7 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		expect(acceptedInvite.status).toBe('accepted');
 		const adminUserId = acceptedInvite.accepted_user_id;
 		if (!adminUserId) throw new Error('La invitación de administrador aceptada no registró su cuenta.');
-		fixture.authUserIds.push(adminUserId);
+		if (!fixture.authUserIds.includes(adminUserId)) fixture.authUserIds.push(adminUserId);
 		expect(acceptedInvite.professional_id).toBe(adminProfessionalId);
 
 		const adminMembership = await must(

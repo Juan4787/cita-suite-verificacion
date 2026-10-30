@@ -150,6 +150,7 @@ try {
 		E2E_PASSWORD: 'CitaFixtureLocal!2026', CITA_SUITE_TEST_PASSWORD: 'CitaFixtureLocal!2026',
 		CITA_SUITE_TEST_BUSINESS_ID: runtime.businessId, MASTER_EMAIL: 'master@cita-suite-test.local',
 		E2E_MASTER_PASSWORD: 'E2eMasterLocal!2026', PUBLIC_SITE_URL: runtime.appOrigin,
+		CITA_AUTH_MAILBOX_ORIGIN: runtime.mailOrigin ?? '',
 		MP_ACCESS_TOKEN: '', MP_WEBHOOK_SECRET: '', E2E_VALIDATE_MP_REDIRECT: 'false',
 		PLAYWRIGHT_JSON_OUTPUT_NAME: join(evidence, diagnostic ? 'browser-diagnostic.json' : 'browser.json'),
 		PLAYWRIGHT_OUTPUT_DIR: join(evidence, 'browser-artifacts')

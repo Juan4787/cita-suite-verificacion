@@ -1,0 +1,203 @@
+import { randomUUID } from 'node:crypto';
+import { expect, test, type Page } from '@playwright/test';
+import { write } from './helpers/fixture-db';
+import { ownedEmailFixture as fixture, capturedSignupMessages as messages, capturedSignupUrl as confirmationUrl } from './helpers/email-confirmation';
+import { layoutIssues, type LayoutIssue } from './helpers/layout-usability';
+import { alignTaskForCapture } from './helpers/task-capture';
+import { observeRenderHealth } from './helpers/render-health';
+import { loginWithSharedSession, signInWithPassword } from './helpers/shared-auth';
+
+// The captured SMTP messages and Auth links stay in memory. Never retain them
+// in traces, videos, automatic failure screenshots or assertion diagnostics.
+test.use({ trace: 'off', video: 'off', screenshot: 'off' });
+
+async function signup(page: Page, email: string, password: string) {
+	await page.goto('/login?registro=1');
+	await page.getByLabel('Correo electrónico').fill(email);
+	await page.locator('#password').fill(password);
+	await page.getByLabel('Confirmar contraseña').fill(password);
+	await page.getByRole('checkbox').check();
+	await page.locator('form').first().getByRole('button', { name: 'Crear cuenta', exact: true }).click();
+	await expect(page.getByRole('heading', { name: 'Revisá tu correo' })).toBeVisible();
+	expect(new URL(page.url()).pathname).toBe('/confirmar-correo');
+}
+
+async function follow(page: Page, link: string) {
+	try { await page.goto(link); } catch { throw new Error('Could not follow the owned confirmation email link.'); }
+}
+async function noAppSession(page: Page) {
+	expect((await page.context().cookies()).some(cookie => ['sb-access-token', 'sb-refresh-token'].includes(cookie.name))).toBe(false);
+}
+
+// Also runs against the recovery binary: links already emailed by the new
+// registration flow must remain usable after a rollback.
+test('email confirmation compatibility: an already-issued signup link survives the recovery binary', async ({ page }, info) => {
+	const f = fixture();
+	const email = `confirmation-compatible-${randomUUID()}@example.test`, password = `Synthetic!${randomUUID()}`;
+	const generated = await f.admin.auth.admin.generateLink({ type: 'signup', email, password, options: { redirectTo: f.site + '/confirmar-correo' } });
+	if (generated.error || !generated.data.user || !generated.data.properties?.action_link) throw new Error('Owned compatibility link was not generated.');
+	const health = await observeRenderHealth(page);
+	try {
+		await follow(page, generated.data.properties.action_link);
+		await expect(page.getByRole('heading', { name: 'Correo confirmado', exact: true })).toBeVisible();
+		expect(new URL(page.url()).hash.length).toBe(0);
+		await noAppSession(page);
+		const login = await f.auth.auth.signInWithPassword({ email, password });
+		expect(Boolean(!login.error && login.data.user?.email_confirmed_at)).toBe(true);
+		await expect(page.getByRole('link', { name: 'Ingresar a mi cuenta' })).toHaveAttribute('href', '/login');
+		await health.assertAndAttach(info, 'email-confirmation-compatible-health');
+		await info.attach('email-confirmation-compatible-proof', { body: JSON.stringify({ realDisposableAuth: true, generatedLink: true, emailDelivered: false, issuedLinkFollowed: true, confirmationRoutePreserved: true, noAutomaticAppSession: true, manualPasswordLoginAvailable: true }), contentType: 'application/json' });
+	} finally { await write(f.admin.auth.admin.deleteUser(generated.data.user.id)); }
+});
+
+test('email confirmation compatibility: confirming another address preserves the open account', async ({ page }, info) => {
+	const f = fixture();
+	const ownerEmail = process.env.E2E_EMAIL, ownerPassword = process.env.E2E_PASSWORD;
+	if (!ownerEmail || !ownerPassword) throw new Error('Owned existing account is unavailable.');
+	const email = `confirmation-other-${randomUUID()}@example.test`, password = `Synthetic!${randomUUID()}`;
+	const generated = await f.admin.auth.admin.generateLink({ type: 'signup', email, password, options: { redirectTo: f.site + '/confirmar-correo' } });
+	if (generated.error || !generated.data.user || !generated.data.properties?.action_link) throw new Error('Owned second account link was not generated.');
+	const health = await observeRenderHealth(page);
+	try {
+		await loginWithSharedSession(page, { email: ownerEmail, password: ownerPassword });
+		const before = (await page.context().cookies()).find(cookie => cookie.name === 'sb-access-token')?.value;
+		if (!before) throw new Error('Owned open session is unavailable.');
+		await follow(page, generated.data.properties.action_link);
+		await expect(page.getByRole('heading', { name: 'Correo confirmado', exact: true })).toBeVisible();
+		await expect(page.getByText('Hay otra cuenta abierta en este navegador. Cerrá esa sesión para ingresar con este correo.')).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Cerrar sesión e ingresar' })).toBeVisible();
+		const after = (await page.context().cookies()).find(cookie => cookie.name === 'sb-access-token')?.value;
+		expect(before === after).toBe(true);
+		expect(new URL(page.url()).hash.length).toBe(0);
+		await health.assertAndAttach(info, 'email-confirmation-existing-session-health');
+	} finally { await write(f.admin.auth.admin.deleteUser(generated.data.user.id)); }
+});
+
+test('email confirmation: signup, SMTP resend, new browser, password login and reused link', { tag: '@candidate-behavior' }, async ({ page, browser }, info) => {
+	test.setTimeout(180_000);
+	const f = fixture();
+	const email = `confirmation-${randomUUID()}@example.test`, password = `Synthetic!${randomUUID()}`;
+	let userId: string | undefined;
+	const health = await observeRenderHealth(page);
+	const other = await browser.newContext({ baseURL: f.site });
+	const confirmationPage = await other.newPage();
+	const confirmationHealth = await observeRenderHealth(confirmationPage);
+	try {
+		await signup(page, email, password);
+		await expect(page.getByRole('alert')).toHaveCount(0);
+		await expect(page.getByText(email, { exact: true })).toBeVisible();
+		await noAppSession(page);
+		const blocked = await f.auth.auth.signInWithPassword({ email, password });
+		expect(blocked.error?.code).toBe('email_not_confirmed');
+		expect(blocked.data.session === null).toBe(true);
+		await expect.poll(async () => (await messages(f.mail, email)).length, { timeout: 15_000 }).toBe(1);
+		const issues: LayoutIssue[] = [];
+		for (const width of [320, 390, 768, 1280, 1600]) {
+			await page.setViewportSize({ width, height: 900 });
+			issues.push(...await layoutIssues(page, 'button, a, input:not([type=hidden])', 'body'));
+			await alignTaskForCapture(page.getByRole('heading', { name: 'Revisá tu correo' }));
+			await page.screenshot({ path: info.outputPath(`confirmation-pending-${width}.jpg`), type: 'jpeg', quality: 65, fullPage: true });
+		}
+		expect(issues).toEqual([]);
+		await expect(page.getByRole('button', { name: 'Reenviar correo', exact: true })).toBeEnabled({ timeout: 70_000 });
+		await page.getByRole('button', { name: 'Reenviar correo', exact: true }).click();
+		await expect(page.getByText('Si tu cuenta necesita confirmación, vas a recibir un nuevo enlace. Revisá también el correo no deseado.')).toBeVisible();
+		await expect(page.getByRole('alert')).toHaveCount(0);
+		await expect.poll(async () => (await messages(f.mail, email)).length, { timeout: 15_000 }).toBe(2);
+		const link = await confirmationUrl(f.mail, email, f.origin, f.site);
+		await follow(confirmationPage, link);
+		await expect(confirmationPage.getByRole('heading', { name: 'Correo confirmado', exact: true })).toBeVisible();
+		expect(new URL(confirmationPage.url()).hash.length).toBe(0);
+		await noAppSession(confirmationPage);
+		const confirmed = await f.auth.auth.signInWithPassword({ email, password });
+		if (confirmed.error || !confirmed.data.user?.email_confirmed_at) throw new Error('Owned confirmed account cannot sign in.');
+		userId = confirmed.data.user.id;
+		await write(f.admin.from('business_users').insert({ business_id: f.businessId, user_id: userId, role: 'owner', status: 'active', accepted_at: new Date().toISOString() }));
+		await signInWithPassword(page, email, password);
+		await expect(page.getByRole('button', { name: '+ Nuevo turno', exact: true })).toBeVisible();
+		await follow(confirmationPage, link);
+		await expect(confirmationPage.getByRole('heading', { name: 'Abrí el enlace más reciente' })).toBeVisible();
+		await expect(confirmationPage.getByRole('heading', { name: 'Correo confirmado', exact: true })).toHaveCount(0);
+		expect(new URL(confirmationPage.url()).hash.length).toBe(0);
+		await noAppSession(confirmationPage);
+		await health.assertAndAttach(info, 'email-confirmation-signup-health');
+		await confirmationHealth.assertAndAttach(info, 'email-confirmation-link-health');
+		await info.attach('email-confirmation-proof', { body: JSON.stringify({ realDisposableAuth: true, emailConfirmationRequired: true, unconfirmedLoginRejected: true, isolatedSmtpMessages: 2, isolatedEmailUrlFollowed: true, externalMailboxDelivery: false, newBrowserConfirmation: true, manualPasswordLogin: true, reusedLinkNeutral: true, noAutomaticAppSession: true, widths: [320, 390, 768, 1280, 1600] }), contentType: 'application/json' });
+	} finally {
+		await other.close();
+		if (!userId) {
+			const listed = await f.admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+			if (listed.error) throw new Error('Owned signup cleanup lookup failed.');
+			userId = listed.data.users.find(user => user.email === email)?.id;
+		}
+		if (userId) {
+			await write(f.admin.from('business_users').delete().eq('business_id', f.businessId).eq('user_id', userId));
+			await write(f.admin.auth.admin.deleteUser(userId));
+		}
+	}
+});
+
+test('email confirmation: invalid token overrides previous confirmed context', { tag: '@candidate-behavior' }, async ({ page }, info) => {
+	const f = fixture();
+	const email = `confirmation-invalid-${randomUUID()}@example.test`, password = `Synthetic!${randomUUID()}`;
+	const created = await f.admin.auth.admin.createUser({ email, password, email_confirm: true });
+	if (created.error || !created.data.user) throw new Error('Owned confirmation user was not created.');
+	const health = await observeRenderHealth(page);
+	try {
+		const login = await f.auth.auth.signInWithPassword({ email, password });
+		if (login.error || !login.data.session) throw new Error('Owned confirmation token is unavailable.');
+		await follow(page, f.site + '/confirmar-correo#' + new URLSearchParams({ access_token: login.data.session.access_token, type: 'signup' }));
+		await expect(page.getByRole('heading', { name: 'Correo confirmado', exact: true })).toBeVisible();
+		const responsePromise = page.waitForResponse(response => new URL(response.url()).pathname === '/confirmar-correo' && response.request().method() === 'POST');
+		await follow(page, f.site + '/confirmar-correo#access_token=a.b.c&type=signup');
+		const response = await responsePromise;
+		// Enhanced Kit actions encode failures in the response envelope. The
+		// transport remains 200; require the actual action rejection explicitly.
+		expect(response.status()).toBe(200);
+		const result = await response.json();
+		expect(result.type).toBe('failure');
+		expect(result.status).toBe(410);
+		await expect(page.getByRole('heading', { name: 'Abrí el enlace más reciente' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Correo confirmado', exact: true })).toHaveCount(0);
+		expect(new URL(page.url()).hash.length).toBe(0);
+		await noAppSession(page);
+		await health.assertAndAttach(info, 'email-confirmation-invalid-health');
+	} finally { await write(f.admin.auth.admin.deleteUser(created.data.user.id)); }
+});
+
+test('email confirmation: native forms with JavaScript disabled retain a usable exit', { tag: '@candidate-behavior' }, async ({ browser }, info) => {
+	const f = fixture();
+	const email = `confirmation-native-${randomUUID()}@example.test`, password = `Synthetic!${randomUUID()}`;
+	const context = await browser.newContext({ baseURL: f.site, javaScriptEnabled: false });
+	const page = await context.newPage();
+	let userId: string | undefined;
+	try {
+		await signup(page, email, password);
+		await expect(page.locator('noscript p')).toBeVisible();
+		await expect(page.locator('noscript p')).toContainText('recargá esta página');
+		await noAppSession(page);
+		await expect.poll(async () => (await messages(f.mail, email)).length, { timeout: 15_000 }).toBe(1);
+		await follow(page, await confirmationUrl(f.mail, email, f.origin, f.site));
+		// Auth itself confirms the address; fragment cleanup/verified success UI
+		// needs JavaScript. The native page explicitly offers password sign-in.
+		const login = await f.auth.auth.signInWithPassword({ email, password });
+		if (login.error || !login.data.user?.email_confirmed_at) throw new Error('Native email confirmation did not verify the owned account.');
+		userId = login.data.user.id;
+		await write(f.admin.from('business_users').insert({ business_id: f.businessId, user_id: userId, role: 'owner', status: 'active', accepted_at: new Date().toISOString() }));
+		await page.getByRole('link', { name: 'Ya confirmé, ir a ingresar' }).click();
+		await signInWithPassword(page, email, password);
+		await expect(page.getByRole('link', { name: 'Pacientes', exact: true }).first()).toBeVisible();
+		await info.attach('email-confirmation-native-proof', { body: JSON.stringify({ javaScriptEnabled: false, nativeSignup: true, isolatedEmailUrlFollowed: true, providerConfirmed: true, manualPasswordLogin: true, callbackFragmentCleanupRequiresJavaScript: true }), contentType: 'application/json' });
+	} finally {
+		await context.close();
+		if (!userId) {
+			const listed = await f.admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+			if (listed.error) throw new Error('Owned native signup cleanup lookup failed.');
+			userId = listed.data.users.find(user => user.email === email)?.id;
+		}
+		if (userId) {
+			await write(f.admin.from('business_users').delete().eq('business_id', f.businessId).eq('user_id', userId));
+			await write(f.admin.auth.admin.deleteUser(userId));
+		}
+	}
+});
