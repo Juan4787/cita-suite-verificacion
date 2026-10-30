@@ -4,6 +4,7 @@ begin;
 create table public.appointment_slot_releases (
  business_id uuid not null,
  id uuid primary key default gen_random_uuid(),
+ event_order bigint generated always as identity,
  event_id uuid not null,
  appointment_id uuid not null,
  professional_id uuid not null,
@@ -25,8 +26,8 @@ create table public.appointment_slot_releases (
  check((hidden_at is null)=(hidden_by is null))
 );
 create index appointment_slot_releases_window on public.appointment_slot_releases(business_id,starts_at,id);
-create index appointment_slot_releases_history on public.appointment_slot_releases(business_id,appointment_id,released_at desc);
-create index appointment_slot_releases_latest on public.appointment_slot_releases(business_id,professional_id,starts_at,ends_at,released_at desc,id);
+create index appointment_slot_releases_history on public.appointment_slot_releases(business_id,appointment_id,event_order desc);
+create index appointment_slot_releases_latest on public.appointment_slot_releases(business_id,professional_id,starts_at,ends_at,event_order desc);
 alter table public.appointment_slot_releases enable row level security;
 revoke all on public.appointment_slot_releases from public,anon,authenticated,service_role;
 grant select on public.appointment_slot_releases to authenticated,service_role;
@@ -37,7 +38,7 @@ create policy appointment_slot_releases_read on public.appointment_slot_releases
 
 create function private.record_appointment_slot_release() returns trigger
 language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
-declare since_at timestamptz; released timestamptz:=statement_timestamp(); event uuid:=gen_random_uuid(); why text;
+declare since_at timestamptz; released timestamptz:=clock_timestamp(); event uuid:=gen_random_uuid(); why text;
 begin
  if old.status not in ('reserved','confirmed','reschedule_requested') then return null; end if;
  if new.status='cancelled' and old.status is distinct from new.status then
@@ -49,8 +50,8 @@ begin
  else return null; end if;
  -- The appointment is already locked by its UPDATE. Child inserts use its real FK and
  -- remain compatible with FOR NO KEY UPDATE in the deposit operations.
- select max(r.released_at) into since_at from public.appointment_slot_releases r
- where r.business_id=old.business_id and r.appointment_id=old.id;
+ select r.released_at into since_at from public.appointment_slot_releases r
+ where r.business_id=old.business_id and r.appointment_id=old.id order by r.event_order desc limit 1;
  since_at:=coalesce(since_at,old.created_at,released);
  -- OLD supplies time, never the synchronized allocation times. This trigger sorts before
  -- appointments_sync_professionals, retaining even the old professional on a combined edit.
@@ -83,7 +84,7 @@ begin
  -- Dedupe before hiding: hiding the latest event must never reveal an older duplicate.
  and not exists(select 1 from public.appointment_slot_releases newer where newer.business_id=r.business_id
   and newer.professional_id=r.professional_id and newer.starts_at=r.starts_at and newer.ends_at=r.ends_at
-  and (newer.released_at,newer.id)>(r.released_at,r.id))
+  and newer.event_order>r.event_order)
  and not exists(select 1 from public.appointment_professionals a where a.business_id=r.business_id and a.professional_id=r.professional_id
   and a.status in ('reserved','confirmed','reschedule_requested') and a.blocking_starts_at<r.ends_at and a.blocking_ends_at>r.starts_at)
  and not exists(select 1 from public.availability_exceptions e where e.business_id=r.business_id and e.type='blocked'
