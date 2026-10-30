@@ -488,6 +488,87 @@ result=$(psql "$database_url" -X -v ON_ERROR_STOP=1 -qAtc "select (select status
 if [[ "$result" != paid/0 ]]; then cat "$tmpdir/holder.log" "$tmpdir/policy.log" >&2; echo "Policy race failed: $result" >&2; exit 1; fi
 echo 'PASS: turning the policy off waited for the turn reception held and waived the rest.'
 
+# 9. A booking while disabling the policy must serialize with that policy. Accept either a
+# real wait or a completed uncommitted statement, so the old broken implementation reaches
+# the state assertion instead of failing only an overlap helper.
+hold_until_attempt() {
+ cat <<SQL
+reset role;
+do \$\$
+begin
+ for attempt in 1..400 loop
+  perform pg_stat_clear_snapshot();
+  if exists(select 1 from pg_stat_activity a where
+   (a.application_name='$1' and a.wait_event_type='Lock' and pg_backend_pid()=any(pg_blocking_pids(a.pid)))
+   or (a.application_name='$1-done' and a.state='idle in transaction')) then return; end if;
+  perform pg_sleep(0.025);
+ end loop;
+ raise exception 'DEPOSIT_RACE_ATTEMPT_NOT_OBSERVED';
+end;
+\$\$;
+SQL
+}
+additional_failures=0
+progress 'scenario 9: creation against policy disable'
+enable_policy
+psql "$database_url" -X -v ON_ERROR_STOP=1 -qAt >"$tmpdir/holder.log" 2>&1 <<SQL &
+begin;
+$(disable_policy_sql)
+\echo POLICY_DISABLED_UNCOMMITTED
+$(hold_until_attempt cita-deposit-create)
+commit;
+SQL
+holder_pid=$!
+wait_for_marker "$tmpdir/holder.log" POLICY_DISABLED_UNCOMMITTED
+created=$(PGAPPNAME=cita-deposit-create psql "$database_url" -X -v ON_ERROR_STOP=1 -qAt <<SQL
+begin;
+set local statement_timeout='15s';
+with patient as (
+ insert into public.patients(owner_id,business_id,full_name) values('$owner_id','$business_id','Synthetic booking during disable') returning id
+), appointment as (
+ insert into public.appointments(business_id,patient_id,service_id,professional_id,starts_at,ends_at,blocking_starts_at,blocking_ends_at,
+ status,source,service_name_snapshot,professional_name_snapshot,duration_minutes_snapshot)
+ select '$business_id',patient.id,'$service_id','$professional_id',$now_expr+interval '75 hours',$now_expr+interval '76 hours',
+ $now_expr+interval '75 hours',$now_expr+interval '76 hours','reserved','manual','Synthetic consultation','Synthetic deposit professional',60
+ from patient returning id
+) select id from appointment;
+set application_name='cita-deposit-create-done';
+\! sleep 1.5
+commit;
+SQL
+)
+wait "$holder_pid"; holder_pid=''
+if [[ "$(state_of "$created")" != none/reserved ]]; then
+ echo "FAIL: a booking that waited for policy disable retained $(state_of "$created")." >&2
+ additional_failures=$((additional_failures+1))
+else echo 'PASS: a booking during policy disable re-read the policy and created no deposit.'; fi
+
+# 10. Changing reception to read-only while its deposit operation waits must revalidate the
+# locked row, not return the old role computed before the wait.
+progress 'scenario 10: role change against deposit registration'
+enable_policy
+appointment=$(prepare role_changed 77)
+psql "$database_url" -X -v ON_ERROR_STOP=1 -qAt >"$tmpdir/holder.log" 2>&1 <<SQL &
+begin;
+update public.business_users set role='readonly' where business_id='$business_id' and user_id='$reception_id';
+\echo ROLE_CHANGED_UNCOMMITTED
+$(hold_until_attempt cita-deposit-actor)
+commit;
+SQL
+holder_pid=$!
+wait_for_marker "$tmpdir/holder.log" ROLE_CHANGED_UNCOMMITTED
+actor_status=0
+PGAPPNAME=cita-deposit-actor psql "$database_url" -X -v ON_ERROR_STOP=1 -qAt >"$tmpdir/actor.log" 2>&1 <<SQL || actor_status=$?
+set statement_timeout='15s';
+$(reception_sql "$appointment" paid)
+SQL
+wait "$holder_pid"; holder_pid=''
+if [[ "$actor_status" -eq 0 || "$(state_of "$appointment")" != pending/reserved ]] || ! grep -q 'DEPOSIT_FORBIDDEN' "$tmpdir/actor.log"; then
+ cat "$tmpdir/actor.log" >&2; echo 'FAIL: a role revoked before the deposit lock was not rejected.' >&2
+ additional_failures=$((additional_failures+1))
+else echo 'PASS: a concurrent role change was revalidated before recording the deposit.'; fi
+
 deadlocks_after=$(deadlocks)
 if [[ "$deadlocks_after" != "$deadlocks_before" ]]; then echo "Deadlocks observed: $deadlocks_before -> $deadlocks_after" >&2; exit 1; fi
 echo "PASS: no deadlock in any deposit race ($deadlocks_after)."
+if [[ "$additional_failures" -ne 0 ]]; then echo "$additional_failures added deposit race checks failed." >&2; exit 1; fi
