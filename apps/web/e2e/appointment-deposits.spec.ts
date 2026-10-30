@@ -61,7 +61,9 @@ test('appointment deposits: booking terms, registration, agenda and automatic ca
 	const previousAutomation = f.sql('select enabled::text from private.deposit_automation where singleton;');
 	expect(['true', 'false']).toContain(previousAutomation);
 	const startedAt = new Date().toISOString();
-	const fullName = `Paciente de señas ${randomUUID().slice(0, 8)} Apellido compuesto para verificar contenido extenso`;
+	// Public names accept letters, not digits: retain uniqueness without defeating validation.
+	const suffix = [...randomUUID().slice(0, 8)].map(char => String.fromCharCode(97 + parseInt(char, 16))).join('');
+	const fullName = `Paciente de señas ${suffix} Apellido compuesto para verificar contenido extenso`;
 	let appointmentId: string | null = null;
 	let patientId: string | null = null;
 	const issues: Array<LayoutIssue & { width: number; screen: string }> = [];
@@ -103,6 +105,7 @@ test('appointment deposits: booking terms, registration, agenda and automatic ca
 		await page.getByLabel('Edad', { exact: true }).fill('35');
 		await page.getByLabel('Obra social del perfil').fill('Particular sintético');
 		await page.getByRole('group', { name: 'Estudios recientes', exact: true }).getByRole('radio', { name: 'No', exact: true }).check();
+		expect(await page.locator('form').evaluate(form => form instanceof HTMLFormElement && form.checkValidity())).toBe(true);
 		await page.getByRole('button', { name: 'Confirmar reserva', exact: true }).click();
 		await expect(page).toHaveURL(/\/turno\/[^/?]+\?creado=1/);
 		const publicPath = new URL(page.url()).pathname;
