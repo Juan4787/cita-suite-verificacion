@@ -8,7 +8,7 @@ import { createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { resolveActiveBusiness } from '$lib/server/access/public/business';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { getPublicSiteUrl } from '$lib/server/integrations/public/messaging';
-import { loadRebookUrl } from '$lib/server/scheduling/public/public-appointments';
+import { loadRebookUrls } from '$lib/server/scheduling/public/public-appointments';
 import {
 	DEPOSIT_ACTIONS,
 	DepositError,
@@ -183,21 +183,22 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 	]);
 	const userLabels = new Map(users.map((user) => [String(user.user_id), String(user.email ?? '')]));
 	const siteUrl = getPublicSiteUrl();
+	let bookingPaths = new Map<string, string | null>();
+	const cancelledIds = list.items.filter(item => item.section === 'cancelled').map(item => item.appointment.id);
+	if (cancelledIds.length) {
+		try {
+			bookingPaths = await loadRebookUrls(supabase, { id: business.id, slug: business.slug }, cancelledIds);
+		} catch (rebookError) {
+			// The cancellation notice still works without the optional booking destination.
+			logServerFailure('Error resolviendo dónde volver a reservar', rebookError);
+		}
+	}
 
-	const toRow = async (item: DepositListItem): Promise<DepositRow> => {
+	const toRow = (item: DepositListItem): DepositRow => {
 		const phone = normalizeArgentineWhatsAppPhone(item.patient.phoneE164);
 		let cancellation: DepositRow['cancellation'] = null;
 		if (item.section === 'cancelled') {
-			let bookingPath: string | null = null;
-			try {
-				bookingPath = await loadRebookUrl(supabase, {
-					id: item.appointment.id,
-					business: { id: business.id, slug: business.slug }
-				});
-			} catch (rebookError) {
-				// The notice still goes out, without the link to book again.
-				logServerFailure('Error resolviendo dónde volver a reservar', rebookError);
-			}
+			const bookingPath = bookingPaths.get(item.appointment.id);
 			const message = buildDepositCancellationMessage({
 				patientName: item.patient.name,
 				businessName: business.name,
@@ -237,7 +238,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 		};
 	};
 
-	const rows = await Promise.all(list.items.map(toRow));
+	const rows = list.items.map(toRow);
 	return {
 		demo: false,
 		restricted: false,

@@ -8,6 +8,7 @@ import {
 	getPublicTokenErrorMessage,
 	loadPublicAppointmentByToken,
 	loadRebookUrl,
+	loadRebookUrls,
 	type PublicAppointmentView
 } from '$lib/server/scheduling/public/public-appointments';
 
@@ -396,11 +397,17 @@ describe('dónde volver a reservar después de la baja por seña', () => {
 	// integration is looked up inside the same practice.
 	const client = (rows: Record<string, unknown>, failing?: string) => {
 		const filters: Record<string, Array<[string, unknown]>> = {};
+		const reads: string[] = [];
 		const supabase = {
 			from: (table: string) => {
+				reads.push(table);
 				filters[table] = [];
-				const builder: any = {
+				const result = () => failing === table ? { data: null, error: new Error('READ_FAILED') } : { data: rows[table] ?? null, error: null };
+				const builder = {
 					select: () => builder,
+					limit: () => builder,
+					in: (column: string, value: unknown) => { filters[table].push([column, value]); return builder; },
+					then: (resolve: (value: ReturnType<typeof result>) => unknown) => Promise.resolve(result()).then(resolve),
 					eq: (column: string, value: unknown) => {
 						filters[table].push([column, value]);
 						return builder;
@@ -411,18 +418,41 @@ describe('dónde volver a reservar después de la baja por seña', () => {
 				return builder;
 			}
 		};
-		return { supabase: supabase as never, filters };
+		return { supabase: supabase as never, filters, reads };
 	};
 
+	it('trescientos turnos mixtos requieren sólo tres lecturas y conservan cada destino', async () => {
+		bookingFlags.BOOKING_CONTEXTS_AVAILABLE = 'true';
+		const ids = Array.from({ length: 300 }, (_, i) => `appointment-${i}`);
+		const { supabase, filters, reads } = client({
+			appointment_booking_contexts: ids.slice(0, 200).map(appointment_id => ({ appointment_id, integration_id: 'integration-1' })),
+			booking_integrations: [{ id: 'integration-1', public_key: KEY, is_active: true }],
+			businesses: { public_booking_enabled: true }
+		});
+		const paths = await loadRebookUrls(supabase, target.business, ids);
+		expect(paths.size).toBe(300);
+		for (const id of ids.slice(0, 200)) expect(paths.get(id)).toBe(`/embed/v1/${KEY}`);
+		for (const id of ids.slice(200)) expect(paths.get(id)).toBe('/reservar/consultorio%20uno');
+		expect(Object.keys(filters)).toEqual(['appointment_booking_contexts', 'booking_integrations', 'businesses']);
+		expect(reads).toEqual(['appointment_booking_contexts', 'booking_integrations', 'businesses']);
+		expect(filters.appointment_booking_contexts).toEqual([['business_id', 'business-1'], ['appointment_id', ids]]);
+		expect(filters.booking_integrations).toEqual([['business_id', 'business-1'], ['id', ['integration-1']]]);
+	});
+	it('una lista vacía no consulta y una ventana fuera de límite se rechaza', async () => {
+		const { supabase, filters } = client({});
+		await expect(loadRebookUrls(supabase, target.business, [])).resolves.toEqual(new Map());
+		await expect(loadRebookUrls(supabase, target.business, Array.from({ length: 301 }, (_, i) => String(i)))).rejects.toThrow('REBOOK_WINDOW_INVALID');
+		expect(filters).toEqual({});
+	});
 	it('vuelve a la integración por la que reservó, buscada dentro del mismo consultorio', async () => {
 		bookingFlags.BOOKING_CONTEXTS_AVAILABLE = 'true';
 		const { supabase, filters } = client({
-			appointment_booking_contexts: { integration_id: 'integration-1' },
-			booking_integrations: { public_key: KEY, is_active: true }
+			appointment_booking_contexts: [{ appointment_id: 'appointment-1', integration_id: 'integration-1' }],
+			booking_integrations: [{ id: 'integration-1', public_key: KEY, is_active: true }]
 		});
 		await expect(loadRebookUrl(supabase, target)).resolves.toBe(`/embed/v1/${KEY}`);
-		expect(filters.appointment_booking_contexts).toEqual([['business_id', 'business-1'], ['appointment_id', 'appointment-1']]);
-		expect(filters.booking_integrations).toEqual([['business_id', 'business-1'], ['id', 'integration-1']]);
+		expect(filters.appointment_booking_contexts).toEqual([['business_id', 'business-1'], ['appointment_id', ['appointment-1']]]);
+		expect(filters.booking_integrations).toEqual([['business_id', 'business-1'], ['id', ['integration-1']]]);
 		expect(filters.businesses).toBeUndefined();
 	});
 
@@ -430,8 +460,8 @@ describe('dónde volver a reservar después de la baja por seña', () => {
 		bookingFlags.BOOKING_CONTEXTS_AVAILABLE = 'true';
 		for (const integration of [{ public_key: KEY, is_active: false }, { public_key: 'no-es-una-clave', is_active: true }]) {
 			const { supabase } = client({
-				appointment_booking_contexts: { integration_id: 'integration-1' },
-				booking_integrations: integration,
+				appointment_booking_contexts: [{ appointment_id: 'appointment-1', integration_id: 'integration-1' }],
+				booking_integrations: [{ id: 'integration-1', ...integration }],
 				businesses: { public_booking_enabled: true }
 			});
 			await expect(loadRebookUrl(supabase, target)).resolves.toBe('/reservar/consultorio%20uno');
@@ -454,7 +484,7 @@ describe('dónde volver a reservar después de la baja por seña', () => {
 		bookingFlags.BOOKING_CONTEXTS_AVAILABLE = 'true';
 		for (const failing of ['appointment_booking_contexts', 'booking_integrations', 'businesses']) {
 			const { supabase } = client(
-				{ appointment_booking_contexts: { integration_id: 'integration-1' }, booking_integrations: null },
+				{ appointment_booking_contexts: [{ appointment_id: 'appointment-1', integration_id: 'integration-1' }], booking_integrations: null },
 				failing
 			);
 			await expect(loadRebookUrl(supabase, target)).rejects.toThrow('READ_FAILED');

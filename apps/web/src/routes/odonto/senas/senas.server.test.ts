@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
 	loadDepositAutomationStatus: vi.fn(),
 	setAppointmentDeposit: vi.fn(),
 	loadRebookUrl: vi.fn(),
+	loadRebookUrls: vi.fn(),
 	logServerFailure: vi.fn(),
 	rpc: vi.fn()
 }));
@@ -18,7 +19,7 @@ vi.mock('$lib/server/platform/supabase', () => ({
 vi.mock('$lib/server/access/public/business', () => ({ resolveActiveBusiness: mocks.resolveActiveBusiness }));
 vi.mock('$lib/server/platform/logging', () => ({ logServerFailure: mocks.logServerFailure }));
 vi.mock('$lib/server/integrations/public/messaging', () => ({ getPublicSiteUrl: () => 'https://app.test' }));
-vi.mock('$lib/server/scheduling/public/public-appointments', () => ({ loadRebookUrl: mocks.loadRebookUrl }));
+vi.mock('$lib/server/scheduling/public/public-appointments', () => ({ loadRebookUrl: mocks.loadRebookUrl, loadRebookUrls: mocks.loadRebookUrls }));
 // The real error codes, messages and statuses; only the database reads are replaced.
 vi.mock('$lib/server/scheduling/public/deposits', async (importOriginal) => ({
 	...(await importOriginal<typeof import('$lib/server/scheduling/public/deposits')>()),
@@ -94,9 +95,17 @@ beforeEach(() => {
 	mocks.loadDepositAutomationStatus.mockResolvedValue({ enabled: true, lastRunFinishedAt: new Date().toISOString() });
 	mocks.rpc.mockResolvedValue({ data: [{ user_id: OPENER, email: 'aye@consultorio.test' }], error: null });
 	mocks.loadRebookUrl.mockResolvedValue('/embed/v1/0123456789abcdef0123456789abcdef');
+	mocks.loadRebookUrls.mockResolvedValue(new Map([[APPOINTMENT_ID, '/embed/v1/0123456789abcdef0123456789abcdef']]));
 });
 
 describe('Señas · carga', () => {
+	it('resuelve una página de canceladas en un lote, sin consultas por cada turno', async () => {
+		const ids = Array.from({ length: 300 }, (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`);
+		mocks.loadDepositList.mockResolvedValue({ items: ids.map(id => item('cancelled', { appointment: { ...item('x').appointment, id } })), truncated: false });
+		await load(event());
+		expect(mocks.loadRebookUrl).not.toHaveBeenCalled();
+		expect(mocks.loadRebookUrls).toHaveBeenCalledExactlyOnceWith(expect.anything(), { id: BUSINESS_ID, slug: 'consultorio' }, ids);
+	});
 	it('carga la página pedida y normaliza las páginas inválidas sin consultas ilimitadas', async () => {
 		await expect(load(event(undefined, '?pagina=2'))).resolves.toMatchObject({ page: 2 });
 		expect(mocks.loadDepositList).toHaveBeenLastCalledWith(expect.anything(), BUSINESS_ID, expect.any(Date), 2);
@@ -159,7 +168,7 @@ describe('Señas · carga', () => {
 	});
 
 	it('sin teléfono válido no arma el aviso, y una falla al buscar dónde reservar no lo impide', async () => {
-		mocks.loadRebookUrl.mockRejectedValue(new Error('read failed'));
+		mocks.loadRebookUrls.mockRejectedValue(new Error('read failed'));
 		mocks.loadDepositList.mockResolvedValue({
 			items: [
 				item('cancelled', { deposit: deposit({ status: 'expired', expired_at: '2026-11-18T13:05:00.000Z' }) }),

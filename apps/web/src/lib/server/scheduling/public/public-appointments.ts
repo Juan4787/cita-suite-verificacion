@@ -234,35 +234,44 @@ export const loadPublicAppointmentByToken = async (
 export const loadRebookUrl = async (
 	supabase: CitaSupabaseClient,
 	appointment: Pick<PublicAppointmentView, 'id'> & { business: Pick<PublicAppointmentView['business'], 'id' | 'slug'> }
-): Promise<string | null> => {
+): Promise<string | null> => (await loadRebookUrls(supabase, appointment.business, [appointment.id])).get(appointment.id) ?? null;
+
+/** The same rebooking destinations for a bounded page, with at most three reads in total. */
+export const loadRebookUrls = async (
+	supabase: CitaSupabaseClient,
+	business: Pick<PublicAppointmentView['business'], 'id' | 'slug'>,
+	appointmentIds: readonly string[]
+): Promise<Map<string, string | null>> => {
+	const ids = [...new Set(appointmentIds)];
+	if (ids.length > 300) throw new Error('REBOOK_WINDOW_INVALID');
+	const paths = new Map<string, string | null>(ids.map(id => [id, null]));
+	if (!ids.length) return paths;
 	if (bookingContextsAvailable()) {
-		const { data: context, error: contextError } = await supabase
-			.from('appointment_booking_contexts')
-			.select('integration_id')
-			.eq('business_id', appointment.business.id)
-			.eq('appointment_id', appointment.id)
-			.maybeSingle();
+		const { data: contexts, error: contextError } = await supabase.from('appointment_booking_contexts')
+			.select('appointment_id, integration_id').eq('business_id', business.id).in('appointment_id', ids).limit(ids.length);
 		if (contextError) throw contextError;
-		if (context) {
-			const { data: integration, error: integrationError } = await supabase
-				.from('booking_integrations')
-				.select('public_key, is_active')
-				.eq('business_id', appointment.business.id)
-				.eq('id', context.integration_id)
-				.maybeSingle();
+		const integrationIds = [...new Set((contexts ?? []).map(row => row.integration_id))];
+		if (integrationIds.length) {
+			const { data: integrations, error: integrationError } = await supabase.from('booking_integrations')
+				.select('id, public_key, is_active').eq('business_id', business.id).in('id', integrationIds).limit(integrationIds.length);
 			if (integrationError) throw integrationError;
-			if (integration?.is_active === true && BOOKING_INTEGRATION_KEY_PATTERN.test(integration.public_key)) {
-				return `/embed/v1/${integration.public_key}`;
+			const byId = new Map((integrations ?? []).map(row => [row.id, row]));
+			for (const row of contexts ?? []) {
+				const integration = byId.get(row.integration_id);
+				if (paths.has(row.appointment_id) && integration?.is_active === true && BOOKING_INTEGRATION_KEY_PATTERN.test(integration.public_key)) {
+					paths.set(row.appointment_id, `/embed/v1/${integration.public_key}`);
+				}
 			}
 		}
 	}
-	const { data: business, error: businessError } = await supabase
-		.from('businesses')
-		.select('public_booking_enabled')
-		.eq('id', appointment.business.id)
-		.maybeSingle();
-	if (businessError) throw businessError;
-	return business?.public_booking_enabled === true ? `/reservar/${encodeURIComponent(appointment.business.slug)}` : null;
+	if ([...paths.values()].some(path => path === null)) {
+		const { data: row, error } = await supabase.from('businesses').select('public_booking_enabled').eq('id', business.id).maybeSingle();
+		if (error) throw error;
+		if (row?.public_booking_enabled === true) {
+			for (const [id, path] of paths) if (path === null) paths.set(id, `/reservar/${encodeURIComponent(business.slug)}`);
+		}
+	}
+	return paths;
 };
 
 export const getPublicAppointmentMessage = (appointment: PublicAppointmentView | null) => {
