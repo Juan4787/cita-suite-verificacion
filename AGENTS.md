@@ -44,6 +44,7 @@
   - producción sólo con una autorización expresa que nombre la acción.
 - **Ajustes al plan:** van como subsección nueva de la sección 12, con su motivo y las secciones que reemplazan. Nunca se edita en silencio el texto aprobado.
 - **Producción:** no cargar configuración en el consultorio real de Natalia ni escribir en producción sin autorización expresa.
+- **Autorización posterior (30 de octubre, literal):** «Te concedo por adelantado la autorizacion para escribir en produccion y probar lo que sea necesario». Autoriza las escrituras y pruebas necesarias para esta campaña sin otra consulta de permiso; sustituye la espera de autorización de los puntos anteriores. Conservar CI, staging, respaldo, recuperación, reversión y verificación del destino; datos sintéticos propios con limpieza comprobada y sin usar el consultorio de Juan como fixture. No inventar decisiones de configuración de Natalia ni contratar servicios; D y E siguen en pausa. Aplicación completa en la sección 12.8 del plan.
 
 ## Pruebas de navegador
 

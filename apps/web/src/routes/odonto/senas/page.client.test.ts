@@ -66,6 +66,13 @@ afterEach(() => {
 });
 
 describe('página de señas', () => {
+	it('en demo no ofrece enlaces que contacten personas ni rutas de apertura reales', () => {
+		render(Page, { data: data([row(), row({ appointmentId: 'expired-demo', section: 'cancelled', cancellation: {
+			rebookHref: '/odonto/agenda', notice: { whatsappUrl: 'https://wa.me/5493421112222?text=Demo', whatsappWebUrl: 'https://web.whatsapp.com/send?phone=5493421112222&text=Demo' }
+		} })], { demo: true }) });
+		expect(document.querySelector('a[href*="/senas/abrir/"]')).toBeNull();
+		expect(document.querySelector('a[href*="wa.me"], a[href*="web.whatsapp.com"]')).toBeNull();
+	});
 	it('muestra cada sección con su cantidad y deja «Más adelante» plegada', () => {
 		render(Page, {
 			data: data([row(), row({ appointmentId: '00000000-0000-4000-8000-0000000000a2', section: 'later', patientName: 'Lejana' })])

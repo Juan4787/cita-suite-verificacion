@@ -43,7 +43,9 @@
 
 {#snippet depositActions(row: Row)}
 	<div class="flex shrink-0 flex-col gap-2 sm:items-end">
-		{#if !row.hasPhone}
+		{#if data.demo}
+			<button class="ux-btn-primary" disabled>Pedir seña por WhatsApp</button>
+		{:else if !row.hasPhone}
 			<span class="ux-badge ux-badge-warning">Revisar teléfono</span>
 			<p class="max-w-60 text-xs leading-relaxed text-white/50 sm:text-right">
 				Falta un número argentino completo con código de área.
@@ -79,7 +81,9 @@
 
 {#snippet cancelledActions(row: Row)}
 	<div class="flex shrink-0 flex-col gap-2 sm:items-end">
-		{#if row.cancellation?.notice}
+		{#if data.demo}
+			<button class="ux-btn-primary" disabled>Avisar a la persona</button>
+		{:else if row.cancellation?.notice}
 			<a
 				href={whatsappHrefFor(whatsappDevice ?? 'unknown', row.cancellation.notice.whatsappUrl, row.cancellation.notice.whatsappWebUrl)}
 				target="_blank"

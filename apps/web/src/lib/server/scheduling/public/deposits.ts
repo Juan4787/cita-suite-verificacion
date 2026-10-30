@@ -291,16 +291,20 @@ export const loadDepositTermsForSlots = async (
 		if (error) throw error;
 		const rows = readArray(data, 'depositTerms');
 		if (rows.length !== part.length) throw new DepositError('DEPOSIT_UNEXPECTED');
+		const seen = new Set<string>();
 		for (const value of rows) {
 			const row = readRecord(value, 'depositTerms.slot');
 			const startsAt = requested.get(Date.parse(readText(row.starts_at, 'depositTerms.startsAt')));
-			if (!startsAt || !part.includes(startsAt)) throw new DepositError('DEPOSIT_UNEXPECTED');
+			if (!startsAt || !part.includes(startsAt) || seen.has(startsAt)) throw new DepositError('DEPOSIT_UNEXPECTED');
+			seen.add(startsAt);
 			if (readBoolean(row.required, 'depositTerms.required') === false) continue;
 			const amount = readFiniteNumber(row.amount, 'depositTerms.amount');
 			if (!Number.isSafeInteger(amount) || amount < 1) throw new DepositError('DEPOSIT_UNEXPECTED');
+			const dueAt = readText(row.due_at, 'depositTerms.dueAt');
+			if (!Number.isFinite(Date.parse(dueAt))) throw new DepositError('DEPOSIT_UNEXPECTED');
 			terms[startsAt] = {
 				amount,
-				dueAt: readText(row.due_at, 'depositTerms.dueAt'),
+				dueAt,
 				autoCancel: readBoolean(row.auto_cancel, 'depositTerms.autoCancel')
 			};
 		}

@@ -219,6 +219,23 @@ describe('condiciones antes de reservar', () => {
 		expect(calls[0]).toMatchObject({ args: { p_starts_at: ['2026-11-20T13:00:00.000Z'] } });
 	});
 
+	it('una respuesta duplicada no puede ocultar un horario sin condiciones', async () => {
+		const slots = ['2026-11-20T13:00:00.000Z', '2026-11-20T14:00:00.000Z'];
+		const { client } = rpcClient({ data: [
+			{ starts_at: slots[0], required: false },
+			{ starts_at: slots[0], required: false }
+		], error: null });
+		await expect(loadDepositTermsForSlots(client, input(slots))).rejects.toBeDefined();
+	});
+
+	it('no muestra un vencimiento que no es un instante válido', async () => {
+		const slot = '2026-11-20T13:00:00.000Z';
+		const { client } = rpcClient({ data: [
+			{ starts_at: slot, required: true, amount: 40000, due_at: 'fecha inválida', auto_cancel: true }
+		], error: null });
+		await expect(loadDepositTermsForSlots(client, input([slot]))).rejects.toBeDefined();
+	});
+
 	it('el error de la base se propaga', async () => {
 		const { client } = rpcClient({ data: null, error: { message: 'DEPOSIT_TERMS_INVALID' } });
 		await expect(loadDepositTermsForSlots(client, input(['2026-11-20T13:00:00.000Z']))).rejects.toBeDefined();
