@@ -351,11 +351,13 @@ describe('seña del turno en el detalle', () => {
 				userLabels: { 'user-1': 'aye@consultorio.test' },
 				auditLogs: [
 					{ id: 'log-1', user_id: 'user-1', action: 'appointment.deposit_paid', metadata: { amount: 40000, deposit_status: 'paid' }, created_at: '2026-08-15T15:00:00.000Z' },
+					{ id: 'log-slot', user_id: 'user-1', action: 'appointment.slot_release_hidden', metadata: {}, created_at: '2026-08-15T15:01:00.000Z' },
 					{ id: 'log-2', user_id: null, action: 'appointment.deposit_expired', metadata: { from_status: 'reserved', to_status: 'cancelled' }, created_at: '2026-08-18T15:05:00.000Z' }
 				]
 			}
 		});
 		expect(screen.getByText('aye@consultorio.test confirmó la seña')).toBeInTheDocument();
+		expect(screen.getByText('aye@consultorio.test ocultó un aviso de horario liberado')).toBeInTheDocument();
 		expect(screen.getByText(/Seña de \$\s40\.000/)).toBeInTheDocument();
 		expect(screen.getByText('El turno se canceló automáticamente porque no se registró la seña')).toBeInTheDocument();
 	});
