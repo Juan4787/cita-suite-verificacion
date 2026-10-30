@@ -129,7 +129,7 @@ try {
    page.on('response',response => { if (response.status() >= 500) failedResponses.push(response.status()); });
    await page.goto(`${STAGING_APP_ORIGIN}/login`);
    await page.getByLabel('Correo electrónico').fill(email);await page.getByLabel('Contraseña').fill(password);
-   await Promise.all([page.waitForURL(url => !url.pathname.startsWith('/login')),page.getByRole('button',{name:'Ingresar',exact:true}).click()]);
+   await Promise.all([page.waitForURL(url => !url.pathname.startsWith('/login')),page.locator('form').first().getByRole('button',{name:'Ingresar',exact:true}).click()]);
    for (const [label,text] of [['pending','Seña pendiente'],['paid','Seña recibida'],['waived','Seña exceptuada']]) {
     await page.goto(`${STAGING_APP_ORIGIN}/odonto/turnos/${id(label)}`);
     const panel=page.locator('[data-deposit-panel]');await expect(panel.getByText(text,{exact:true})).toBeVisible();
