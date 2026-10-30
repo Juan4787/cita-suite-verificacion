@@ -164,6 +164,7 @@
 				    <input type="hidden" name="modality" value={modality} />
 				  {/if}
 				  <input type="hidden" name="service_id" value={selectedService.id} />
+				  <input type="hidden" name="deposit_terms" value={JSON.stringify(depositTerms)} />
 				  <input type="hidden" name="booking_mode" value={selection.bookingMode} />
 				  <input
 				    type="hidden"

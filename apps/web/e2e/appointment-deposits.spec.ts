@@ -66,6 +66,7 @@ test('appointment deposits: booking terms, registration, agenda and automatic ca
 	// Public names accept letters, not digits: retain uniqueness without defeating validation.
 	const suffix = [...randomUUID().slice(0, 8)].map(char => String.fromCharCode(97 + parseInt(char, 16))).join('');
 	const fullName = `Paciente de señas ${suffix} Apellido compuesto para verificar contenido extenso`;
+	const patientPhone = '3425' + String(Date.now() % 1_000_000).padStart(6, '0');
 	let appointmentId: string | null = null;
 	let patientId: string | null = null;
 	const issues: Array<LayoutIssue & { width: number; screen: string }> = [];
@@ -102,12 +103,31 @@ test('appointment deposits: booking terms, registration, agenda and automatic ca
 			await matrix(page, info, `condiciones-${theme}`, notice, issues);
 		}
 		await page.getByLabel('Nombre y apellido').fill(fullName);
-		await page.getByLabel('Teléfono').fill('3425' + String(Date.now() % 1_000_000).padStart(6, '0'));
+		await page.getByLabel('Teléfono').fill(patientPhone);
 		await page.getByLabel('Obra social y plan').fill('Particular sintético');
 		await page.getByLabel('Edad', { exact: true }).fill('35');
 		await page.getByLabel('Obra social del perfil').fill('Particular sintético');
 		await page.getByRole('group', { name: 'Estudios recientes', exact: true }).getByRole('radio', { name: 'No', exact: true }).check();
 		expect(await page.locator('form').evaluate(form => form instanceof HTMLFormElement && form.checkValidity())).toBe(true);
+		// A real policy save in another tab invalidates the old offer. The refusal must preserve
+		// the form and the attempt, create no patient/turn, and show the revised offer before retry.
+		const policyPage = await context.newPage();
+		try {
+			await policyPage.goto('/odonto/configuracion/senas');
+			await policyPage.getByRole('textbox', { name: /^Monto fijo, en pesos/ }).fill('50.000');
+			await policyPage.getByRole('button', { name: 'Guardar', exact: true }).click();
+			await expect(policyPage.getByRole('status')).toContainText('Configuración de señas guardada.');
+		} finally { await policyPage.close(); }
+		const refusalPromise = page.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).pathname.startsWith('/embed/v1/'));
+		await page.getByRole('button', { name: 'Confirmar reserva', exact: true }).click();
+		const refusal = await refusalPromise;
+		expect(refusal.status()).toBe(200); // SvelteKit carries ActionFailure in its JSON envelope.
+		expect(await refusal.json()).toMatchObject({ type: 'failure', status: 400 });
+		await expect(page.getByText(/Las condiciones de la seña cambiaron mientras reservabas/)).toBeVisible();
+		expect(await must(f.admin.from('patients').select('id').eq('business_id', f.businessId).eq('full_name', fullName))).toHaveLength(0);
+		await expect(page.locator('[data-deposit-notice]')).toContainText(/seña de \$\s*50\.000/);
+		await expect(page.getByLabel('Nombre y apellido')).toHaveValue(fullName);
+		expect(JSON.parse(await page.locator('[name="deposit_terms"]').inputValue())).toMatchObject({ amount: 50000 });
 		await page.getByRole('button', { name: 'Confirmar reserva', exact: true }).click();
 		await expect(page).toHaveURL(/\/turno\/[^/?]+\?creado=1/);
 		const publicPath = new URL(page.url()).pathname;
@@ -118,7 +138,7 @@ test('appointment deposits: booking terms, registration, agenda and automatic ca
 		patientId = appointment.patient_id;
 		const deposit = () => must(f.admin.from('appointment_deposits').select('status, amount, due_at, revision, reminder_opened_at, recorded_at')
 			.eq('business_id', f.businessId).eq('appointment_id', appointment.id).single());
-		expect(await deposit()).toMatchObject({ status: 'pending', amount: 40000, revision: 1 });
+		expect(await deposit()).toMatchObject({ status: 'pending', amount: 50000, revision: 1 });
 		await expect(page.getByRole('button', { name: 'Confirmo que voy', exact: true })).toHaveCount(0);
 		await expect(page.getByRole('link', { name: 'Ya transferí: enviar el comprobante', exact: true })).toBeVisible();
 		for (const theme of ['light', 'dark']) {
@@ -201,8 +221,9 @@ test('appointment deposits: booking terms, registration, agenda and automatic ca
 			delete from public.patients where business_id=:'business'::uuid and (id=:'patient'::uuid or full_name=:'full_name');
 			delete from public.deposit_service_exclusions where business_id=:'business'::uuid;
 			delete from public.deposit_policies where business_id=:'business'::uuid;
+			delete from public.public_booking_attempts where business_id=:'business'::uuid and phone_e164=:'phone';
 			update private.deposit_automation set enabled=:'previous'::boolean where singleton;
-			commit;`, { appointment: appointmentId ?? '00000000-0000-0000-0000-000000000000', patient: patientId ?? '00000000-0000-0000-0000-000000000000', full_name: fullName, previous: previousAutomation, started: startedAt });
+			commit;`, { appointment: appointmentId ?? '00000000-0000-0000-0000-000000000000', patient: patientId ?? '00000000-0000-0000-0000-000000000000', full_name: fullName, phone: '+549' + patientPhone, previous: previousAutomation, started: startedAt });
 		expect(f.sql("select count(*) from public.deposit_policies where business_id=:'business'::uuid;")).toBe('0');
 		expect(f.sql('select enabled::text from private.deposit_automation where singleton;')).toBe(previousAutomation);
 		if (appointmentId) expect(await must(f.admin.from('appointments').select('id').eq('id', appointmentId))).toHaveLength(0);

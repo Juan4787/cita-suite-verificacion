@@ -12,7 +12,8 @@ import {
 	buildDepositRequestMessage,
 	buildDepositTermsNotice,
 	formatDepositAmount,
-	parseAppointmentDeposit
+	parseAppointmentDeposit,
+	parseBookingDepositTerms
 } from './deposits';
 
 // The practice is in Tokyo on purpose: its wall clock differs from Argentina's and from the
@@ -20,6 +21,21 @@ import {
 const PRACTICE_TIMEZONE = 'Asia/Tokyo';
 const STARTS_AT = '2026-11-20T01:00:00.000Z'; // 10:00 on 20 November in Tokyo
 const DUE_AT = '2026-11-18T01:00:00.000Z'; // 10:00 on 18 November in Tokyo
+
+describe('condiciones que la persona vio antes de reservar', () => {
+	it('valida el monto, vencimiento y cancelación, y distingue ninguna de desconocida', () => {
+		const terms = { amount: 40000, dueAt: DUE_AT, autoCancel: true };
+		expect(parseBookingDepositTerms(terms)).toEqual(terms);
+		expect(parseBookingDepositTerms('none')).toBe('none');
+		expect(parseBookingDepositTerms('unknown')).toBe('unknown');
+	});
+	it('rechaza condiciones incompletas, fechas inválidas y montos fraccionarios', () => {
+		for (const value of [null, [], {}, 'otra', { amount: 40000, dueAt: 'fecha', autoCancel: true },
+			{ amount: 40000.5, dueAt: DUE_AT, autoCancel: true }, { amount: 40000, dueAt: DUE_AT, autoCancel: 'false' }]) {
+			expect(() => parseBookingDepositTerms(value)).toThrow(InvalidDataContractError);
+		}
+	});
+});
 
 const row = (overrides: Record<string, unknown> = {}) => ({
 	appointment_id: '00000000-0000-4000-8000-0000000000a1',

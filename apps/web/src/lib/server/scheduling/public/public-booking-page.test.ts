@@ -4,7 +4,8 @@ const mocks = vi.hoisted(() => ({
 	loadPublicBookingState: vi.fn(),
 	loadDepositTermsForSlots: vi.fn(),
 	logServerFailure: vi.fn(),
-	rpc: vi.fn()
+	rpc: vi.fn(),
+	createPublicBooking: vi.fn()
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: { DEMO_MODE: 'false' } }));
@@ -18,14 +19,15 @@ vi.mock('$lib/server/patients/public/booking-information', () => ({
 }));
 vi.mock('$lib/server/scheduling/public/public-booking', async (importOriginal) => ({
 	...(await importOriginal<typeof import('$lib/server/scheduling/public/public-booking')>()),
-	loadPublicBookingState: mocks.loadPublicBookingState
+	loadPublicBookingState: mocks.loadPublicBookingState,
+	createPublicBooking: mocks.createPublicBooking
 }));
 vi.mock('$lib/server/scheduling/public/deposits', async (importOriginal) => ({
 	...(await importOriginal<typeof import('$lib/server/scheduling/public/deposits')>()),
 	loadDepositTermsForSlots: mocks.loadDepositTermsForSlots
 }));
 
-const { loadPublicBookingPage } = await import('./public-booking-page');
+const { loadPublicBookingPage, submitPublicBookingPage } = await import('./public-booking-page');
 
 const BUSINESS_ID = '00000000-0000-4000-8000-0000000000b1';
 const SERVICE_ID = '00000000-0000-4000-8000-0000000000d1';
@@ -84,6 +86,22 @@ beforeEach(() => {
 });
 
 describe('condiciones de la seña en el turnero', () => {
+	it('envía las condiciones mostradas a la creación y rechaza un formulario de condiciones inválido', async () => {
+		const terms = { amount: 40000, dueAt: '2026-11-18T13:00:00.000Z', autoCancel: true };
+		const submitEvent = (depositTerms: string) => ({
+			params: { businessSlug: BUSINESS_ID }, fetch: vi.fn(), url: new URL('http://localhost/reservar/consultorio'), getClientAddress: () => '127.0.0.1',
+			request: new Request('http://localhost/reservar/consultorio?/create_booking', { method: 'POST', body: new URLSearchParams({
+				service_id: SERVICE_ID, professional_id: PROFESSIONAL_ID, slot_starts_at: '2026-11-20T13:00:00.000Z',
+				patient_name: 'Ana Prueba', patient_phone: '3425048209', idempotency_key: '00000000-0000-4000-8000-0000000000a1', deposit_terms: depositTerms
+			}) })
+		}) as never;
+		mocks.createPublicBooking.mockResolvedValue({ appointment: { confirmation_token: 'owned-token' } });
+		await expect(submitPublicBookingPage(submitEvent(JSON.stringify(terms)))).rejects.toMatchObject({ status: 303, location: '/turno/owned-token?creado=1' });
+		expect(mocks.createPublicBooking).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ depositTerms: terms }));
+		mocks.createPublicBooking.mockClear();
+		await expect(submitPublicBookingPage(submitEvent('{"amount":"40000"}'))).resolves.toMatchObject({ status: 400, data: { message: expect.stringMatching(/No pudimos leer las condiciones de la seña/) } });
+		expect(mocks.createPublicBooking).not.toHaveBeenCalled();
+	});
 	it('pide las de todos los horarios del día con la cotización tal como la devolvió la base', async () => {
 		const result = (await loadPublicBookingPage(event(), undefined, 'public_page')) as { depositTerms: unknown };
 		expect(mocks.loadDepositTermsForSlots).toHaveBeenCalledWith(expect.anything(), {

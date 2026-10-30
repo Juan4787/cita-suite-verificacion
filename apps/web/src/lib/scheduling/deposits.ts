@@ -88,6 +88,15 @@ export type DepositSlotTerms = { amount: number; dueAt: string; autoCancel: bool
  */
 export type BookingDepositTerms = DepositSlotTerms | 'none' | 'unknown';
 
+/** The conditions shown in the summary, returned with the booking rather than recalculated by JS. */
+export const parseBookingDepositTerms = (value: unknown): BookingDepositTerms => {
+	if (value === 'none' || value === 'unknown') return value;
+	const row = readRecord(value, 'bookingDepositTerms');
+	const amount = readPositiveInteger(row.amount, 'bookingDepositTerms.amount');
+	if (amount > 1_000_000_000_000) throw new InvalidDataContractError('bookingDepositTerms.amount');
+	return { amount, dueAt: readInstant(row.dueAt, 'bookingDepositTerms.dueAt'), autoCancel: readBoolean(row.autoCancel, 'bookingDepositTerms.autoCancel') };
+};
+
 export type DepositListSection = 'to_request' | 'due_soon' | 'manual' | 'overdue' | 'later' | 'cancelled';
 
 /** The sections of the deposits page, in the order of the plan (section 4.8). */

@@ -383,6 +383,9 @@ it("shows the deposit of the chosen slot in the summary, before the person confi
     "Este turno requiere una seña de $ 40.000. Tenés tiempo hasta el sábado, 31 de octubre a las 09:00 para transferirla. Si no se registra, el turno se cancela automáticamente.",
   );
   const confirm = screen.getByRole("button", { name: "Confirmar reserva" });
+  const savedTerms = confirm.closest('form')!.querySelector<HTMLInputElement>('[name="deposit_terms"]');
+  expect(savedTerms).not.toBeNull();
+  expect(JSON.parse(savedTerms!.value)).toEqual(data.depositTerms['2026-11-02T09:00:00.000Z']);
   expect(
     notice!.compareDocumentPosition(confirm) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();

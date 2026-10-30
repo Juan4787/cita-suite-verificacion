@@ -2,6 +2,7 @@ import { isUuid } from '@cita-suite/shared/uuid';
 import type { CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
 import { isRecord } from '$lib/contracts/json';
 import type { IntegratedBookingInput } from '$lib/server/sites/public/booking-integrations';
+import type { BookingDepositTerms } from '$lib/scheduling/deposits';
 import { writeAuditLog } from '$lib/server/platform/audit';
 import { normalizePhoneE164, normalizePhoneRaw } from '$lib/utils/phone';
 import {
@@ -253,7 +254,8 @@ export type AppointmentPatientSelection =
 
 export type BookingPatientInformationInput = { schemaHash: string; answers: import('@cita-suite/shared/booking-integration').BookingIntakeAnswers; priceQuoteHash?: string };
 
-export type AtomicAppointmentInput = {
+type DepositBookingInput = { depositTerms?: BookingDepositTerms };
+export type AtomicAppointmentInput = DepositBookingInput & {
 	businessId: string;
 	ownerId?: string | null;
 	createdByUserId?: string | null;
@@ -380,6 +382,11 @@ const runAtomicAppointmentRpc = async (
 			p_idempotency_key: input.idempotencyKey.toLowerCase(),
 			p_replay_only: replayOnly
 		});
+	// Request-local builder headers are cloned by PostgREST's setHeader: concurrent bookings
+	// never share conditions. The database checks them inside the appointment transaction.
+	if (source === 'public_booking' && input.depositTerms !== undefined) {
+		rpc.setHeader('x-cita-deposit-terms', JSON.stringify(input.depositTerms));
+	}
 	const { data, error } = replayOnly ? await rpc.maybeSingle() : await rpc.single();
 	if (error) throw error;
 	const appointment = data;
@@ -399,7 +406,7 @@ export const findAppointmentCreationReplay = async (
 
 export const createManualAppointment = async (
 	supabase: CitaSupabaseClient,
-	input: {
+	input: DepositBookingInput & {
 		businessId: string;
 		ownerId?: string | null;
 		createdByUserId?: string | null;
@@ -427,7 +434,7 @@ export const createManualAppointment = async (
 
 export const createJointAppointment = async (
 	supabase: CitaSupabaseClient,
-	input: {
+	input: DepositBookingInput & {
 		businessId: string;
 		ownerId?: string | null;
 		createdByUserId?: string | null;

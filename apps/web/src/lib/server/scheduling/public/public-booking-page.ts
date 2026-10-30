@@ -29,7 +29,7 @@ import { assertIntegrationSelection, bookingPresentation, intakeAnswersFromForm,
 import { BOOKING_REQUEST_ID_PATTERN } from '@cita-suite/shared/booking-integration';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { loadDepositTermsForSlots } from '$lib/server/scheduling/public/deposits';
-import type { DepositSlotTerms } from '$lib/scheduling/deposits';
+import { parseBookingDepositTerms, type BookingDepositTerms, type DepositSlotTerms } from '$lib/scheduling/deposits';
 
 const valuesFromForm = (form: FormData) => Object.fromEntries(form.entries());
 
@@ -323,6 +323,12 @@ export const submitPublicBookingPage = async ({ request, params, fetch, url, get
 
 		try {
 			if ((integration || bookingInformationEnabled()) && (!isUuid(serviceId) || professionalIds.some((id) => !isUuid(id)) || slotStartsAt.length > 35 || !Number.isFinite(new Date(slotStartsAt).getTime()))) throw new Error('BOOKING_FORM_INVALID');
+			let depositTerms: BookingDepositTerms;
+			try {
+				const rawTerms = String(form.get('deposit_terms') ?? '"unknown"');
+				if (rawTerms.length > 1024) throw new Error('DEPOSIT_TERMS_INVALID');
+				depositTerms = parseBookingDepositTerms(JSON.parse(rawTerms));
+			} catch { throw new Error('DEPOSIT_TERMS_INVALID'); }
 			if ((integration || bookingInformationEnabled()) && (rawPatientName.length > 200 || patientPhone.length > 50 || patientEmail.length > 254 || note.length > 2000 || professionalIds.length > 16)) throw new Error('BOOKING_FORM_INVALID');
 			const modality = String(form.get('modality') ?? '');
 			const selectedModality = integration ? assertIntegrationSelection(integration, { serviceId, professionalIds, modality }) : null;
@@ -361,6 +367,7 @@ export const submitPublicBookingPage = async ({ request, params, fetch, url, get
 				idempotencyKey,
 				ipHash: publicHash(ip),
 				userAgent,
+				depositTerms,
                 bookingInformation: patientSchema ? { schemaHash: String(form.get('patient_schema_hash') ?? ''), answers: intakeAnswers!, priceQuoteHash: String(form.get('price_quote_hash') ?? '') } : undefined,
 				bookingIntegration: integration && selectedModality ? {
 					integrationId: integration.id, integrationRevision, entryPoint,

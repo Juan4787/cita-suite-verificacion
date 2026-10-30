@@ -156,7 +156,7 @@ describe('señas en la agenda', () => {
 		const received = document.querySelector('[data-agenda-deposit="b"]') as HTMLElement;
 		expect(pending).not.toBeNull();
 		expect(received).not.toBeNull();
-		const paidForm = within(pending).getByRole('button', { name: 'Confirmar seña', exact: true }).closest('form')!;
+		const paidForm = within(pending).getByRole('button', { name: 'Confirmar seña' }).closest('form')!;
 		expect(paidForm).toHaveAttribute('action', '/odonto/turnos/a?/deposit');
 		expect(Object.fromEntries(new FormData(paidForm))).toEqual({ deposit_action: 'paid', expected_revision: '7' });
 		expect(pending.querySelector('form input[value="waived"]')).not.toBeNull();
