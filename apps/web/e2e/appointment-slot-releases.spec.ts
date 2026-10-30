@@ -86,7 +86,8 @@ test('appointment slots released: real cancellation, reassignment, occupation an
   await page.getByLabel('Buscar por nombre, teléfono o DNI', { exact: true }).fill(patientName);
   await page.getByRole('button', { name: new RegExp(patientName) }).click();
   await page.getByRole('button', { name: 'Confirmar turno', exact: true }).click();
-  await expect(page).toHaveURL(/\/odonto\/turnos\/[0-9a-f-]+\?creado=1/);
+  await expect(page).toHaveURL(url => /^\/odonto\/turnos\/[0-9a-f-]+$/.test(url.pathname)
+   && url.searchParams.get('created') === '1' && url.searchParams.get('from_date') === date);
   const replacementId = new URL(page.url()).pathname.split('/').at(-1)!;
   appointmentIds.push(replacementId);
   const replacement = await must(f.admin.from('appointments').select('id, status, starts_at, patient_id').eq('business_id', f.businessId).eq('id', replacementId).single());
