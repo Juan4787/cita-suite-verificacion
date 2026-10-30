@@ -46,7 +46,9 @@
       <div class="mt-3 flex flex-col gap-2 sm:flex-row"><button class="ux-btn-primary" disabled>Dar este horario</button><button class="ux-btn-secondary" disabled>Ocultar</button></div>
      {:else if canOperate}
       <div class="mt-3 flex flex-col gap-2 sm:flex-row">
-       <a href={slotReleaseHref(release, timezone)} class="ux-btn-primary">Dar este horario</a>
+       <!-- This starts a new booking: a fresh page resets the wizard, including any old draft
+            and idempotency key, even when the user is already on the agenda. -->
+       <a href={slotReleaseHref(release, timezone)} data-sveltekit-reload class="ux-btn-primary">Dar este horario</a>
        <form method="POST" {action}>
         <input type="hidden" name="release_id" value={release.id} />
         <button class="ux-btn-secondary w-full">Ocultar</button>
