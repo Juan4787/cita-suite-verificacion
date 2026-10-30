@@ -402,11 +402,11 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 	}) => {
 		test.setTimeout(240_000);
 		if (!fixture) throw new Error('Fixture no inicializado.');
+		const wizardHealth = await observeRenderHealth(page);
 		await login(page, fixture);
 
 		const pendingProfessionalEmail = `e2e-prof-${fixture.suffix}@example.com`;
 		const pendingProfessionalName = `E2E Profesional Nuevo ${fixture.suffix}`;
-		const wizardHealth = await observeRenderHealth(page);
 
 		await page.goto('/odonto/configuracion/usuarios');
 		await expect(page.getByRole('heading', { name: 'Equipo' })).toBeVisible();

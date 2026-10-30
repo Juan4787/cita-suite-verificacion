@@ -3,6 +3,7 @@ import { fixtureRealtimeDiagnostic } from './realtime-diagnostics';
 declare global {
 	interface Window {
 		__citaFixtureSocketClose: (readyState: number) => Promise<void>;
+		__citaFixtureSocketCloseInstalled?: boolean;
 	}
 }
 type Failure = { status: number; method: string; path: string };
@@ -27,7 +28,9 @@ export async function observeRenderHealth(
 			if (!Number.isInteger(state) || state < 0 || state > 3) throw new Error('Invalid socket lifecycle metadata.');
 			socketCloseStates[state]++;
 		});
-		await page.addInitScript((apiOrigin) => {
+		const installSocketCloseProbe = (apiOrigin: string) => {
+			if (window.__citaFixtureSocketCloseInstalled) return;
+			window.__citaFixtureSocketCloseInstalled = true;
 			const api = new URL(apiOrigin);
 			const close = WebSocket.prototype.close;
 			WebSocket.prototype.close = function (this: WebSocket, code?: number, reason?: string) {
@@ -36,7 +39,11 @@ export async function observeRenderHealth(
 					void window.__citaFixtureSocketClose(this.readyState).catch(() => {});
 				return close.call(this, code, reason);
 			};
-		}, api.origin);
+		};
+		await page.addInitScript(installSocketCloseProbe, api.origin);
+		// addInitScript covers future documents only. A caller can already be on
+		// a loaded page whose cleanup will close a socket on the next navigation.
+		await page.evaluate(installSocketCloseProbe, api.origin);
 	}
 	const safePath = (raw: string) => {
 		try {
@@ -121,6 +128,7 @@ export async function observeRenderHealth(
 				messages.filter((message) => message.category === 'resource-failure').length === 0 ||
 					failedResponses.length > 0
 			).toBe(true);
+			return report;
 		}
 	};
 }

@@ -14,12 +14,14 @@ source = Path(sys.argv[1])
 destination = Path(sys.argv[2]).resolve()
 if destination.exists():
     raise SystemExit("Evidence destination must be new; existing results will not be overwritten.")
-if source.stat().st_size > 64 * 1024 ** 2:
+# Actions logs contain both the full job and the evidence step. Allow their
+# duplicated bounded archive, without increasing the 48 MiB extracted-data cap.
+if source.stat().st_size > 128 * 1024 ** 2:
     raise SystemExit("Workflow logs exceed their bounded download size.")
 with zipfile.ZipFile(source) as logs:
     candidates = []
     for member in logs.infolist():
-        if member.file_size > 64 * 1024 ** 2 or not member.filename.endswith(".txt"):
+        if member.file_size > 96 * 1024 ** 2 or not member.filename.endswith(".txt"):
             continue
         text = logs.read(member).decode("utf-8")
         digest = re.search(r"CITA_EVIDENCE_SHA256 ([a-f0-9]{64})", text)
@@ -27,7 +29,7 @@ with zipfile.ZipFile(source) as logs:
         if digest and complete:
             encoded = "".join(re.findall(r"CITA_EVIDENCE_CHUNK ([A-Za-z0-9+/=]+)", text))
             data = base64.b64decode(encoded, validate=True)
-            if len(data) > 24 * 1024 ** 2 or hashlib.sha256(data).hexdigest() != digest[1]:
+            if len(data) > 48 * 1024 ** 2 or hashlib.sha256(data).hexdigest() != digest[1]:
                 raise RuntimeError("Workflow evidence checksum mismatch.")
             candidates.append((digest[1], data))
     unique = {digest: data for digest, data in candidates}

@@ -39,7 +39,10 @@ if count == 0:
     raise RuntimeError("No verification evidence was generated.")
 data = archive.getvalue()
 print("CITA_EVIDENCE_BUDGET " + json.dumps({"rawBytes": total, "compressedBytes": len(data), "files": count, "largest": sorted(entries, key=lambda row: row["bytes"], reverse=True)[:12]}))
-if len(data) > 24 * 1024 ** 2:
+# Browser screenshots are already compressed. A failed three-profile release
+# can hold 37 MiB raw / 27 MiB gzip, still inside the unchanged 48 MiB raw cap.
+# Bound transport by that same cap instead of assuming images compress by half.
+if len(data) > 48 * 1024 ** 2:
     raise RuntimeError("Compressed evidence exceeded the workflow log budget.")
 print("CITA_EVIDENCE_SHA256 " + hashlib.sha256(data).hexdigest())
 encoded = base64.b64encode(data).decode("ascii")

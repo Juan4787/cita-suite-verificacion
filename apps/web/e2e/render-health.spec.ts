@@ -18,6 +18,33 @@ test.describe('render health socket evidence', () => {
 		if (process.env.CITA_E2E_ENVIRONMENT !== 'disposable') throw new Error('Requires the owned disposable fixture.');
 	});
 
+	test('a native close in the already loaded document is observed without requiring another navigation', async ({ page }, info) => {
+		const api = new URL(process.env.PUBLIC_ODONTO_SUPABASE_URL ?? '');
+		await openSocketProbe(page);
+		const health = await observeRenderHealth(page);
+		const warning = page.waitForEvent('console', {
+			predicate: message => fixtureRealtimeDiagnostic(message.text(), 'disposable', api.origin) === 'fixture-realtime-cancelled'
+		});
+		const beforeClose = await page.evaluate(async socketUrl => {
+			const socket = new WebSocket(socketUrl);
+			const closed = new Promise<void>(resolve => socket.addEventListener('close', () => resolve(), { once: true }));
+			const before = socket.readyState; socket.close(); await closed; return before;
+		}, api.origin.replace('http:', 'ws:') + '/realtime/v1/websocket');
+		expect(beforeClose).toBe(0); await warning;
+		const report = await health.assertAndAttach(info, 'current-document-native-close-render-health');
+		expect(report.fixtureSocketCloseStates[0]).toBe(1);
+	});
+
+	test('a forged cancellation in the current document still has no native evidence', async ({ page }, info) => {
+		const api = new URL(process.env.PUBLIC_ODONTO_SUPABASE_URL ?? '');
+		await openSocketProbe(page);
+		const health = await observeRenderHealth(page);
+		await page.evaluate(socketUrl => {
+			console.warn(`WebSocket connection to '${socketUrl}' failed: WebSocket is closed before the connection is established.`);
+		}, api.origin.replace('http:', 'ws:') + '/realtime/v1/websocket');
+		await expect(health.assertAndAttach(info, 'current-document-forged-close-render-health')).rejects.toThrow(/observed native close/);
+	});
+
 	test('a native close while connecting emits the fixture warning without application code', async ({ page }, info) => {
 		const api = new URL(process.env.PUBLIC_ODONTO_SUPABASE_URL ?? '');
 		const health = await observeRenderHealth(page);
@@ -35,7 +62,8 @@ test.describe('render health socket evidence', () => {
 		}, api.origin.replace('http:', 'ws:') + '/realtime/v1/websocket');
 		expect(beforeClose).toBe(0);
 		await warning;
-		await health.assertAndAttach(info, 'native-socket-close-render-health');
+		const report = await health.assertAndAttach(info, 'native-socket-close-render-health');
+		expect(report.fixtureSocketCloseStates[0]).toBe(1);
 	});
 
 	test('a cancellation message with no observed native close cannot certify console health', async ({ page }, info) => {

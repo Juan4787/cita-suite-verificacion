@@ -78,6 +78,20 @@ class EvidenceTests(unittest.TestCase):
         self.assertFalse((self.root / "result").exists())
         self.assertFalse((self.root / "escaped.json").exists())
 
+    def test_incompressible_failure_screenshots_fit_the_existing_raw_budget(self):
+        (self.root / ".verification").mkdir()
+        # A real failed release had 37 MiB raw / 27 MiB compressed. Screenshots
+        # already compressed by the browser cannot satisfy a 24 MiB gzip assumption.
+        data = random.Random(456).randbytes(25 * 1024 ** 2)
+        (self.root / ".verification/failure.png").write_bytes(data)
+        packaged = subprocess.run(["python3", str(self.root / "scripts/package-verification-evidence.py")],
+                                  capture_output=True, text=True)
+        self.assertEqual(packaged.returncode, 0, packaged.stderr)
+        packed = packaged.stdout
+        result = self.collect(packed)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.root / "result/.verification/failure.png").read_bytes(), data)
+
     def test_three_profiles_preserve_all_bounded_evidence(self):
         for profile in ["integration", "integration-artifact", "integration-rollback"]:
             directory = self.root / ".verification" / "runs" / "owned-run" / profile
