@@ -94,7 +94,11 @@ export const parseBookingDepositTerms = (value: unknown): BookingDepositTerms =>
 	const row = readRecord(value, 'bookingDepositTerms');
 	const amount = readPositiveInteger(row.amount, 'bookingDepositTerms.amount');
 	if (amount > 1_000_000_000_000) throw new InvalidDataContractError('bookingDepositTerms.amount');
-	return { amount, dueAt: readInstant(row.dueAt, 'bookingDepositTerms.dueAt'), autoCancel: readBoolean(row.autoCancel, 'bookingDepositTerms.autoCancel') };
+	return {
+		amount,
+		dueAt: readInstant(row.dueAt, 'bookingDepositTerms.dueAt'),
+		autoCancel: readBoolean(row.autoCancel, 'bookingDepositTerms.autoCancel')
+	};
 };
 
 export type DepositListSection = 'to_request' | 'due_soon' | 'manual' | 'overdue' | 'later' | 'cancelled';

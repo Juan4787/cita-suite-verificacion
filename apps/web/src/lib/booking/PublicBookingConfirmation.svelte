@@ -1,5 +1,6 @@
 <script lang="ts">
  import { enhance } from '$app/forms';
+ import { invalidateAll } from '$app/navigation';
  import type { SubmitFunction } from '@sveltejs/kit';
  import { BOOKING_MODALITY_LABELS, type BookingModality, type BookingIntakeField } from '@cita-suite/shared/booking-integration';
  import { isRecord } from '$lib/contracts/json';
@@ -99,7 +100,12 @@
 				if (data.integration && (result.type === 'error' || (result.type === 'failure' && result.data?.uncertain === true))) {
 					if (result.type === 'failure') await update({ reset: false });
 					onUncertain();
-				} else await update({ reset: false });
+				} else {
+					await update({ reset: false });
+					// Failure updates form data but does not rerun loads. Fetch the current offer
+					// before enabling another confirmation; entered fields and attempt stay intact.
+					if (result.type === 'failure' && result.data?.refreshDepositTerms === true) await invalidateAll();
+				}
 			} finally { bookingSubmitting = false; }
 			// El token de Turnstile es de un solo uso: tras un intento fallido hay
 			// que regenerarlo o el reintento moriría siempre en el captcha.

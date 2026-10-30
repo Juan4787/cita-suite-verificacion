@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/svelte";
 const requestId = "10000000-0000-4000-8000-000000000001";
 vi.mock("$app/forms", () => ({ enhance: () => ({ destroy() {} }) }));
-vi.mock("$app/navigation", () => ({ afterNavigate() {} }));
+vi.mock("$app/navigation", () => ({ afterNavigate() {}, invalidateAll: vi.fn(async () => {}) }));
 vi.mock("$app/state", () => ({
   page: {
     url: new URL(

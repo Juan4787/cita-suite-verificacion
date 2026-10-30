@@ -101,6 +101,10 @@ describe('condiciones de la seña en el turnero', () => {
 		mocks.createPublicBooking.mockClear();
 		await expect(submitPublicBookingPage(submitEvent('{"amount":"40000"}'))).resolves.toMatchObject({ status: 400, data: { message: expect.stringMatching(/No pudimos leer las condiciones de la seña/) } });
 		expect(mocks.createPublicBooking).not.toHaveBeenCalled();
+		mocks.createPublicBooking.mockRejectedValueOnce(new Error('DEPOSIT_TERMS_CHANGED'));
+		await expect(submitPublicBookingPage(submitEvent(JSON.stringify(terms)))).resolves.toMatchObject({
+			status: 400, data: { refreshDepositTerms: true, values: { patient_name: 'Ana Prueba' } }
+		});
 	});
 	it('pide las de todos los horarios del día con la cotización tal como la devolvió la base', async () => {
 		const result = (await loadPublicBookingPage(event(), undefined, 'public_page')) as { depositTerms: unknown };

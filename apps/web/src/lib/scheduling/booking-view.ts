@@ -55,6 +55,7 @@ export type BookingFormState = {
 	message?: string;
 	values?: Record<string, unknown>;
 	uncertain?: boolean;
+	refreshDepositTerms?: boolean;
 };
 
 /** Presentation projection, shared without importing a server implementation. */
