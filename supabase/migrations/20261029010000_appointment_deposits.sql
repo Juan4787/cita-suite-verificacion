@@ -181,6 +181,12 @@ language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
 declare v jsonb;
 begin
  if new.status<>'reserved' then return null; end if;
+ -- Serialize with save_deposit_policy before reading the snapshot. If disabling wins,
+ -- this waits and the following statement sees its committed policy; if booking wins,
+ -- disabling waits and then sees this new deposit among those it must waive. The new
+ -- appointment is not visible to other transactions yet, so this cannot invert the
+ -- policy→existing-appointment lock order used by disabling.
+ perform 1 from public.deposit_policies dp where dp.business_id=new.business_id for share;
  v:=private.deposit_terms(new.business_id,new.service_id,new.source,new.starts_at,new.created_at,new.price_quote_snapshot);
  if (v->>'required')::boolean is not true then return null; end if;
  insert into public.appointment_deposits(appointment_id,business_id,amount,percentage,reference_amount,request_days,deadline_hours,
@@ -233,11 +239,25 @@ create trigger appointments_deposit_confirmation before update of status on publ
 -- change or applies before it.
 create function private.deposit_actor(p_business_id uuid, p_allowed text[]) returns text
 language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
-declare v_role text:=public.user_business_role(p_business_id);
+declare v_actor uuid:=auth.uid(); v_role text; v_assistance uuid;
 begin
+ if v_actor is null then return null; end if;
+ -- Read the role from the locked row, not before waiting for it. A concurrent role
+ -- change/revocation must win before this operation or wait until it finishes.
+ select bu.role into v_role from public.business_users bu
+ where bu.business_id=p_business_id and bu.user_id=v_actor
+  and coalesce(bu.status,'active')='active' and bu.accepted_at is not null and bu.disabled_at is null for share;
+ -- Account assistance is an independent grant; preserve its admin capability and
+ -- lock both the grant and the support identity, as the existing team authority does.
+ select grants.id into v_assistance
+ from public.account_assistance_support_users support
+ join public.account_assistance_grants grants on grants.support_user_id=support.user_id
+ where support.user_id=v_actor and support.enabled and grants.business_id=p_business_id
+  and grants.status='active' and grants.revoked_at is null and grants.expires_at>now()
+ for share of support,grants;
+ if v_assistance is not null and v_role is distinct from 'owner' then v_role:='admin'; end if;
  if v_role is null or not (v_role=any(p_allowed)) then return null; end if;
- perform 1 from public.business_users bu where bu.business_id=p_business_id and bu.user_id=auth.uid()
-  and coalesce(bu.status,'active')='active' and bu.accepted_at is not null for share;
+ perform 1 from public.business_subscriptions bs where bs.business_id=p_business_id for share;
  if public.business_allows_operation(p_business_id) is not true then return null; end if;
  return v_role;
 end $$;
