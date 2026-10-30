@@ -1,4 +1,6 @@
 <script lang="ts">
+	import SlotReleaseAlerts from '$lib/components/agenda/SlotReleaseAlerts.svelte';
+	import type { SlotReleaseListView } from '$lib/scheduling/slot-releases';
 	import { parseAvailabilitySnapshot } from '$lib/availability/http';
 	import { readRecord } from '$lib/contracts/json';
 	import { afterNavigate } from '$app/navigation';
@@ -76,11 +78,13 @@
 			reminderCount?: number | null;
 			depositAlerts?: { toRequest: number; dueSoon: number; cancelledToday: number } | null;
 			canRecordDeposit?: boolean;
+			slotReleases?: SlotReleaseListView;
 			appointmentRequestId: string;
 			demo: boolean;
 		};
 			form?: {
 				message?: string;
+				slotReleaseMessage?: string;
 				phoneWarning?: { kind: 'missing' | 'invalid' };
 				values?: Record<string, unknown>;
 			};
@@ -691,6 +695,11 @@
 			{depositAlertParts.join(', ')}.
 			<a href="/odonto/senas" class="font-bold underline">Ver señas</a>
 		</div>
+	{/if}
+
+	{#if form?.slotReleaseMessage}<p class="ux-alert" role="status">{form.slotReleaseMessage}</p>{/if}
+	{#if data.slotReleases}
+		<SlotReleaseAlerts list={data.slotReleases} timezone={timeZone} {canOperate} demo={data.demo} query={page.url.search} />
 	{/if}
 
 	{#if needsSetup}

@@ -246,6 +246,12 @@ describe('horario conocido para volver a dar', () => {
 		});
 	};
 	const known = { service_id: 'service-1', professional_id: 'professional-1', date, time: '10:00', patient_id: 'patient-1' };
+	it('si la prestación del horario liberado ya no existe empieza por elegir una vigente', async () => {
+		renderWith({ initialValues: { ...known, service_id: 'retired-service' }, slots: availability('10:00', startsAt) });
+		expect(screen.getByRole('heading', { name: '¿Qué necesita el paciente?' })).toBeVisible();
+		expect(screen.getByRole('button', { name: /^Consulta/ })).toBeVisible();
+		expect(screen.queryByRole('button', { name: 'Confirmar turno' })).not.toBeInTheDocument();
+	});
 
 	it('con el horario libre lo deja elegido, listo para confirmar', async () => {
 		renderWith({ initialValues: known, slots: availability('10:00', startsAt) });

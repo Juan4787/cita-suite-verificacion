@@ -150,6 +150,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 		if (log.action === 'appointment.deposit_paid') return `${user} confirmó la seña`;
 		if (log.action === 'appointment.deposit_waived') return `${user} exceptuó la seña`;
 		if (log.action === 'appointment.deposit_reopened') return `${user} deshizo el registro de la seña`;
+		if (log.action === 'appointment.slot_release_hidden') return `${user} ocultó un aviso de horario liberado`;
 		if (log.action === 'appointment.deposit_reminder_opened') return `${user} abrió el pedido de seña por WhatsApp`;
 		if (log.action === 'appointment.deposit_expired') return 'El turno se canceló automáticamente porque no se registró la seña';
 		return `${user} registró ${log.action}`;

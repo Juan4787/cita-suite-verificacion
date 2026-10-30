@@ -97,6 +97,9 @@
 
 	const stepLabels = ['Servicio', 'Profesional', 'Día', 'Horario', 'Paciente'];
 	const initialStep = () => {
+		// A freed slot may refer to a service retired since the original booking.
+		// Choose an available service before using its old professional/time preselection.
+		if (!services.some(service => service.id === value('service_id'))) return 1;
 		if (value('time')) return 5;
 		if (value('date') && (value('professional_id') || value('professional_ids'))) return 4;
 		if (value('professional_id') || value('professional_ids')) return 3;
@@ -627,6 +630,14 @@
 	});
 
 	$effect(() => {
+		if (!selectedService) {
+			selectedProfessionalId = '';
+			selectedProfessionalIds = [];
+			clearSlotSelection();
+			pendingInitialTime = '';
+			step = 1;
+			return;
+		}
 		if (bookingMode === 'joint') {
 			const validIds = selectedProfessionalIds.filter((professionalId) =>
 				offeringProfessionals.some((professional: Professional) => professional.id === professionalId)

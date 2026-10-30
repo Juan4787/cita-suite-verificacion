@@ -676,6 +676,82 @@ export type Database = {
           },
         ]
       }
+      appointment_slot_releases: {
+        Row: {
+          appointment_id: string
+          business_id: string
+          ends_at: string
+          event_id: string
+          event_order: number
+          hidden_at: string | null
+          hidden_by: string | null
+          id: string
+          occupied_since: string
+          professional_id: string
+          professional_name: string
+          reason: string
+          released_at: string
+          service_id: string
+          starts_at: string
+        }
+        Insert: {
+          appointment_id: string
+          business_id: string
+          ends_at: string
+          event_id: string
+          event_order?: never
+          hidden_at?: string | null
+          hidden_by?: string | null
+          id?: string
+          occupied_since: string
+          professional_id: string
+          professional_name: string
+          reason: string
+          released_at: string
+          service_id: string
+          starts_at: string
+        }
+        Update: {
+          appointment_id?: string
+          business_id?: string
+          ends_at?: string
+          event_id?: string
+          event_order?: never
+          hidden_at?: string | null
+          hidden_by?: string | null
+          id?: string
+          occupied_since?: string
+          professional_id?: string
+          professional_name?: string
+          reason?: string
+          released_at?: string
+          service_id?: string
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_slot_releases_business_id_appointment_id_fkey"
+            columns: ["business_id", "appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["business_id", "id"]
+          },
+          {
+            foreignKeyName: "appointment_slot_releases_business_id_professional_id_fkey"
+            columns: ["business_id", "professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["business_id", "id"]
+          },
+          {
+            foreignKeyName: "appointment_slot_releases_business_id_service_id_fkey"
+            columns: ["business_id", "service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["business_id", "id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           blocking_ends_at: string
@@ -4592,6 +4668,25 @@ export type Database = {
         }
         Returns: string
       }
+      get_appointment_slot_releases: {
+        Args: {
+          p_business_id: string
+          p_days?: number
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: {
+          appointment_id: string
+          ends_at: string
+          id: string
+          professional_id: string
+          professional_name: string
+          reason: string
+          released_at: string
+          service_id: string
+          starts_at: string
+        }[]
+      }
       get_availability_catalog: {
         Args: { p_business_id: string; p_public: boolean }
         Returns: Json
@@ -4814,6 +4909,10 @@ export type Database = {
           storage_bucket: string
           storage_path: string
         }[]
+      }
+      hide_appointment_slot_release: {
+        Args: { p_business_id: string; p_release_id: string }
+        Returns: boolean
       }
       is_email_enabled: { Args: { p_email: string }; Returns: boolean }
       legacy_job_entrypoints_enabled: { Args: never; Returns: boolean }
