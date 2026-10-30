@@ -32,6 +32,7 @@ const data = {
 	selectedStatus: '',
 	selectedServiceId: '',
 	selectedPatientId: '',
+	selectedTime: '',
 	searchApplied: false,
 	appointments: [],
 	stats: [],
@@ -46,6 +47,7 @@ const data = {
 	patientsLoaded: false,
 	referencesLoaded: true,
 	reminderCount: 0,
+	depositAlerts: { toRequest: 0, dueSoon: 0, cancelledToday: 0 } as null | { toRequest: number; dueSoon: number; cancelledToday: number },
 	appointmentRequestId: 'request-1',
 	demo: false
 };
@@ -135,3 +137,43 @@ describe('buscador incremental de Agenda', () => {
 		expect(screen.getByText('Fernando Lopez')).toBeInTheDocument();
 	});
 });
+
+describe('señas en la agenda', () => {
+	// A turn later today, so the label is the stored status and never «Expirado».
+	const upcoming = (id: string, status: string, depositStatus: string | null) => ({
+		...appointment(id, `Paciente ${id}`),
+		starts_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+		ends_at: new Date(Date.now() + 2.5 * 60 * 60 * 1000).toISOString(),
+		status,
+		appointment_deposits: depositStatus ? { status: depositStatus } : null
+	});
+
+	it('cada tarjeta dice el estado con su seña, con el mismo dato que filtros y conteos', () => {
+		render(Page, {
+			data: {
+				...data,
+				appointments: [upcoming('a', 'reserved', 'pending'), upcoming('b', 'confirmed', 'paid'), upcoming('c', 'reserved', null)]
+			} as never
+		});
+		const pending = screen.getByText('Reservado, seña pendiente');
+		expect(pending).toHaveClass('ux-badge-warning');
+		expect(screen.getByText('Confirmado, seña recibida')).toBeInTheDocument();
+		expect(screen.getByText('Reservado')).toBeInTheDocument();
+	});
+
+	it('avisa qué hacer con las señas en una sola línea, con el enlace a la lista', () => {
+		render(Page, { data: { ...data, depositAlerts: { toRequest: 3, dueSoon: 1, cancelledToday: 2 } } as never });
+		const alert = document.querySelector('[data-deposit-alert]') as HTMLElement;
+		expect(alert).toHaveTextContent('3 señas para pedir, 1 vence en menos de 24 horas, 2 turnos se cancelaron por falta de seña.');
+		expect(alert.querySelector('a')).toHaveAttribute('href', '/odonto/senas');
+	});
+
+	it('sin nada que hacer no avisa, y si no pudo comprobarlas lo dice', () => {
+		render(Page, { data } as never);
+		expect(document.querySelector('[data-deposit-alert]')).toBeNull();
+		cleanup();
+		render(Page, { data: { ...data, depositAlerts: null } } as never);
+		expect(document.querySelector('[data-deposit-alert]')).toHaveTextContent('No pudimos comprobar las señas.');
+	});
+});
+

@@ -59,6 +59,8 @@ const appointment = (overrides: Partial<PublicAppointmentView> = {}): PublicAppo
 		whatsapp_contact_phone: null
 	},
 	patient_name: 'Paciente que no debe exponerse',
+	deposit: null,
+	deposit_transfer_details: null,
 	public_status_label: 'Reservado',
 	public_actions_available: true,
 	can_confirm: true,

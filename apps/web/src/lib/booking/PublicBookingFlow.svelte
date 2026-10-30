@@ -6,6 +6,7 @@
  import type { BookingViewData, BookingFormState, BookingService as Service, BookingProfessional as Professional, BookingSlot as Slot, BookingDay as Day, BookingQuery } from '$lib/scheduling/booking-view';
 	import "./patient-booking.css";
  import { formatQuotedPrice } from './pricing';
+ import type { BookingDepositTerms } from '$lib/scheduling/deposits';
 	import BookingAppearance from '$lib/booking/BookingAppearance.svelte';
 	import BookingFrameBridge from '$lib/booking/BookingFrameBridge.svelte';
 	import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/shared/booking-integration';
@@ -104,6 +105,12 @@
 	const currentPriceQuote = $derived(
 		!slotsStale && data.priceQuote?.date === selection.date ? data.priceQuote : null
 	);
+	// The deposit of the chosen slot, from the terms the server computed for the loaded day. While a
+	// new day loads, or when the server could not compute them, they are unknown, never «none».
+	const currentDepositTerms = $derived.by((): BookingDepositTerms => {
+		if (slotsStale || data.depositTerms === undefined || data.depositTerms === null) return 'unknown';
+		return data.depositTerms[selection.slot] ?? 'none';
+	});
 
 	const step = $derived(
 		!selectedService ? 1 : !professionalSelectionComplete ? 2 : !selection.date ? 3 : !selectedSlot ? 4 : 5
@@ -444,7 +451,7 @@
                     confirmation={{ service: selectedService, slot: selectedSlot, selection,
                         professionalLabel: professionalSelectionLabel,
                         professionalId: selectedProfessional?.id ?? selection.professionalIds[0] ?? '',
-                        priceQuote: currentPriceQuote, timezone, modality,
+                        priceQuote: currentPriceQuote, depositTerms: currentDepositTerms, timezone, modality,
                         action: data.integration ? queryFor({}) + '&/create_booking' : '?/create_booking' }}
                     bind:localDraft bind:activeStepCard
                     onUncertain={() => { uncertainRecoveryId = data.recoveryCheckId ?? ''; uncertainBooking = true; }} />

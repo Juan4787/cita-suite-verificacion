@@ -6,6 +6,7 @@
  import type { BookingViewData, BookingFormState, BookingConfirmation } from '$lib/scheduling/booking-view';
  import { normalizePatientFullName, patientFullNameErrorMessage, PATIENT_FULL_NAME_INVALID_ERROR_MESSAGE } from '$lib/utils/patient-name';
  import { formatQuotedPrice } from './pricing';
+ import { buildDepositTermsNotice, DEPOSIT_TERMS_UNAVAILABLE_NOTICE } from '$lib/scheduling/deposits';
  import PublicBookingIntakeField from './PublicBookingIntakeField.svelte';
 
  let { data, form, confirmation, requiresRecovery, onUncertain, localDraft = $bindable({}), activeStepCard = $bindable(null) }: {
@@ -13,7 +14,13 @@
   requiresRecovery: boolean; onUncertain: () => void; localDraft: Record<string, unknown>; activeStepCard: HTMLElement | null;
  } = $props();
  const { service: selectedService, slot: selectedSlot, selection, professionalLabel: professionalSelectionLabel,
-  priceQuote: currentPriceQuote, timezone, modality } = $derived(confirmation);
+  priceQuote: currentPriceQuote, depositTerms, timezone, modality } = $derived(confirmation);
+ // Before the person confirms (plan, section 4.9): what the booking will ask, from the database rule.
+ const depositNotice = $derived(
+  depositTerms === 'none' ? null
+   : depositTerms === 'unknown' ? DEPOSIT_TERMS_UNAVAILABLE_NOTICE
+   : buildDepositTermsNotice(depositTerms, timezone, new Date())
+ );
  const selectedProfessional = $derived({ id: confirmation.professionalId });
  const business = $derived(data.state.business);
  const values = $derived(form?.values ?? localDraft);
@@ -145,6 +152,7 @@
 				    {#if currentPriceQuote?.adjusted}<p class="patient-price-notice">
 				        Este arancel incluye los ajustes del consultorio para la fecha elegida.
 				      </p>{/if}
+				    {#if depositNotice}<p class="patient-price-notice" data-deposit-notice>{depositNotice}</p>{/if}
 				  </section>
 
 				  {#if data.integration}

@@ -280,6 +280,95 @@ export type Database = {
           },
         ]
       }
+      appointment_deposits: {
+        Row: {
+          amount: number
+          appointment_id: string
+          auto_cancel: boolean
+          business_id: string
+          created_at: string
+          currency: string
+          deadline_hours: number
+          due_at: string
+          expired_at: string | null
+          min_payment_hours: number
+          note: string | null
+          percentage: number | null
+          policy_revision: number
+          recorded_at: string | null
+          recorded_by: string | null
+          reference_amount: number | null
+          reminder_opened_at: string | null
+          reminder_opened_by: string | null
+          request_days: number
+          request_from: string
+          revision: number
+          status: string
+          updated_at: string
+          waived_reason: string | null
+        }
+        Insert: {
+          amount: number
+          appointment_id: string
+          auto_cancel: boolean
+          business_id: string
+          created_at?: string
+          currency?: string
+          deadline_hours: number
+          due_at: string
+          expired_at?: string | null
+          min_payment_hours: number
+          note?: string | null
+          percentage?: number | null
+          policy_revision: number
+          recorded_at?: string | null
+          recorded_by?: string | null
+          reference_amount?: number | null
+          reminder_opened_at?: string | null
+          reminder_opened_by?: string | null
+          request_days: number
+          request_from: string
+          revision?: number
+          status?: string
+          updated_at?: string
+          waived_reason?: string | null
+        }
+        Update: {
+          amount?: number
+          appointment_id?: string
+          auto_cancel?: boolean
+          business_id?: string
+          created_at?: string
+          currency?: string
+          deadline_hours?: number
+          due_at?: string
+          expired_at?: string | null
+          min_payment_hours?: number
+          note?: string | null
+          percentage?: number | null
+          policy_revision?: number
+          recorded_at?: string | null
+          recorded_by?: string | null
+          reference_amount?: number | null
+          reminder_opened_at?: string | null
+          reminder_opened_by?: string | null
+          request_days?: number
+          request_from?: string
+          revision?: number
+          status?: string
+          updated_at?: string
+          waived_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_deposits_business_id_appointment_id_fkey"
+            columns: ["business_id", "appointment_id"]
+            isOneToOne: true
+            referencedRelation: "appointments"
+            referencedColumns: ["business_id", "id"]
+          },
+        ]
+      }
       appointment_google_calendar_events: {
         Row: {
           appointment_id: string
@@ -1654,6 +1743,88 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patient_radiographs"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      deposit_policies: {
+        Row: {
+          amount_mode: string
+          applies_to_manual: boolean
+          auto_cancel_enabled: boolean
+          business_id: string
+          deadline_hours: number
+          enabled: boolean
+          fixed_amount: number | null
+          min_payment_hours: number
+          percentage: number | null
+          request_days: number
+          revision: number
+          transfer_details: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount_mode?: string
+          applies_to_manual?: boolean
+          auto_cancel_enabled?: boolean
+          business_id: string
+          deadline_hours?: number
+          enabled?: boolean
+          fixed_amount?: number | null
+          min_payment_hours?: number
+          percentage?: number | null
+          request_days?: number
+          revision?: number
+          transfer_details?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount_mode?: string
+          applies_to_manual?: boolean
+          auto_cancel_enabled?: boolean
+          business_id?: string
+          deadline_hours?: number
+          enabled?: boolean
+          fixed_amount?: number | null
+          min_payment_hours?: number
+          percentage?: number | null
+          request_days?: number
+          revision?: number
+          transfer_details?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deposit_policies_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deposit_service_exclusions: {
+        Row: {
+          business_id: string
+          service_id: string
+        }
+        Insert: {
+          business_id: string
+          service_id: string
+        }
+        Update: {
+          business_id?: string
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deposit_service_exclusions_business_id_service_id_fkey"
+            columns: ["business_id", "service_id"]
+            isOneToOne: true
+            referencedRelation: "services"
+            referencedColumns: ["business_id", "id"]
           },
         ]
       }
@@ -4458,6 +4629,23 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: Json
       }
+      get_deposit_automation_status: {
+        Args: never
+        Returns: {
+          enabled: boolean
+          last_run_finished_at: string
+        }[]
+      }
+      get_deposit_terms_for_slots: {
+        Args: {
+          p_business_id: string
+          p_price_quote: Json
+          p_service_id: string
+          p_source: string
+          p_starts_at: string[]
+        }
+        Returns: Json
+      }
       get_integrated_public_availability_snapshot: {
         Args: {
           p_business_id: string
@@ -4739,6 +4927,17 @@ export type Database = {
       }
       normalize_phone_e164: { Args: { value: string }; Returns: string }
       normalized_patient_name: { Args: { value: string }; Returns: string }
+      open_appointment_deposit_reminder: {
+        Args: {
+          p_appointment_id: string
+          p_business_id: string
+          p_reopen?: boolean
+        }
+        Returns: {
+          opened_at: string
+          previously_opened_at: string
+        }[]
+      }
       patient_document_in_appointment_scope: {
         Args: {
           p_actor_id: string
@@ -4984,6 +5183,14 @@ export type Database = {
         }
         Returns: Json
       }
+      save_deposit_policy: {
+        Args: {
+          p_business_id: string
+          p_expected_revision: number
+          p_settings: Json
+        }
+        Returns: number
+      }
       save_professional_booking_form: {
         Args: {
           p_business_id: string
@@ -5038,6 +5245,20 @@ export type Database = {
       search_upcoming_active_appointments: {
         Args: { p_business_id: string; p_limit?: number; p_query: string }
         Returns: Json
+      }
+      set_appointment_deposit: {
+        Args: {
+          p_action: string
+          p_appointment_id: string
+          p_business_id: string
+          p_expected_revision: number
+          p_note?: string
+        }
+        Returns: {
+          appointment_status: string
+          revision: number
+          status: string
+        }[]
       }
       set_business_clinical_storage_policy: {
         Args: {

@@ -29,8 +29,33 @@ import { classifyUserAgent } from '$lib/device';
 import { isActiveAppointmentStatus } from '$lib/utils/appointment-visibility';
 import { isAvailabilityDate } from '$lib/availability/windows';
 import { parsePriceQuote } from '$lib/scheduling/price-contracts';
+import { isUuid } from '@cita-suite/shared/uuid';
+import { parseAppointmentDeposit } from '$lib/scheduling/deposits';
+import {
+	DEPOSIT_ACTIONS,
+	DepositError,
+	getDepositErrorMessage,
+	getDepositErrorStatus,
+	setAppointmentDeposit,
+	type DepositAction
+} from '$lib/server/scheduling/public/deposits';
 import { error as kitError, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+
+// Who records deposits; the database enforces the same roles and the practice's state.
+const DEPOSIT_ROLES = new Set(['owner', 'admin', 'reception']);
+
+// A to-one relation as the generated types describe it: never a list.
+type OneToOne<T> = T extends readonly unknown[] ? never : T;
+
+const DEPOSIT_SUCCESS: Record<DepositAction, (appointmentStatus: string) => string> = {
+	paid: () => 'Seña confirmada. El turno quedó Confirmado.',
+	waived: () => 'Seña exceptuada. El turno quedó Confirmado.',
+	pending: (appointmentStatus) =>
+		appointmentStatus === 'reserved'
+			? 'Se deshizo el registro de la seña. El turno volvió a Reservado.'
+			: 'Se deshizo el registro de la seña. La seña volvió a pendiente.'
+};
 
 const localDateFor = (isoDate: string, timeZone: string) => {
 	const formatter = new Intl.DateTimeFormat('en-CA', {
@@ -50,6 +75,8 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
 		return {
 			context: demoBusinessContext(),
 			appointment: null,
+			deposit: null,
+			canRecordDeposit: false,
 			auditLogs: [],
 			userLabels: {},
 			reprogramDate: new Date().toISOString().slice(0, 10),
@@ -79,7 +106,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
 	const { data, error } = await supabase
 		.from('appointments')
 		.select(
-			'id, business_id, patient_id, service_id, professional_id, starts_at, ends_at, blocking_starts_at, blocking_ends_at, status, source, confirmation_token, service_name_snapshot, professional_name_snapshot, duration_minutes_snapshot, buffer_before_minutes_snapshot, buffer_after_minutes_snapshot, break_minutes_snapshot, ignore_break, confirmed_at, cancelled_at, cancelled_reason, reschedule_requested_at, internal_note, patient_instructions_snapshot, public_reminder_description_snapshot, price_quote_snapshot, phone_communication_status_at_booking, phone_warning_acknowledged_at, created_by_user_id, updated_by_user_id, cancelled_by_user_id, created_at, updated_at, patients(id, full_name, phone_e164, email, blocked)'
+			'id, business_id, patient_id, service_id, professional_id, starts_at, ends_at, blocking_starts_at, blocking_ends_at, status, source, confirmation_token, service_name_snapshot, professional_name_snapshot, duration_minutes_snapshot, buffer_before_minutes_snapshot, buffer_after_minutes_snapshot, break_minutes_snapshot, ignore_break, confirmed_at, cancelled_at, cancelled_reason, reschedule_requested_at, internal_note, patient_instructions_snapshot, public_reminder_description_snapshot, price_quote_snapshot, phone_communication_status_at_booking, phone_warning_acknowledged_at, created_by_user_id, updated_by_user_id, cancelled_by_user_id, created_at, updated_at, patients(id, full_name, phone_e164, email, blocked), appointment_deposits(appointment_id, status, amount, currency, request_from, due_at, auto_cancel, waived_reason, recorded_at, reminder_opened_at, expired_at, revision)'
 		)
 		.eq('business_id', business.business.id)
 		.eq('id', params.appointmentId)
@@ -97,6 +124,21 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
 			404,
 			'No encontramos ese turno o tu usuario no puede verlo. Volvé a la agenda y comprobá que siga disponible para tu rol.'
 		);
+	}
+	const { appointment_deposits: depositRelation, ...appointmentRow } = data;
+	const depositRow: OneToOne<typeof depositRelation> = depositRelation;
+	const deposit = parseAppointmentDeposit(depositRow ?? null);
+	// It cancels itself only with its own snapshot and the practice's switch both on; unknown is said
+	// as unknown, never as «no».
+	let depositCancelsItself: boolean | null = null;
+	if (deposit) {
+		const { data: depositPolicy, error: depositPolicyError } = await supabase
+			.from('deposit_policies')
+			.select('auto_cancel_enabled')
+			.eq('business_id', business.business.id)
+			.maybeSingle();
+		if (depositPolicyError) logServerFailure('Error cargando la política de señas del turno', depositPolicyError);
+		else depositCancelsItself = deposit.auto_cancel && depositPolicy?.auto_cancel_enabled === true;
 	}
  const {data:instructionScope,error:scopeError}=await supabase.rpc('patient_document_in_appointment_scope',{p_business_id:business.business.id,p_appointment_id:data.id,p_actor_id:userId});
  if(scopeError)throw kitError(503,'No pudimos revisar los permisos de las indicaciones. Volvé a intentar.');
@@ -193,7 +235,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
 	return {
 		context: business,canEditInstructions,
 		appointment: {
-			...data,
+			...appointmentRow,
 			// The quote saved with the booking is JSON: validated here, never trusted as is.
 			price_quote_snapshot: parsePriceQuote(data.price_quote_snapshot),
 			booking_context: bookingContext,
@@ -211,6 +253,8 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, url
 							}
 						]
 		},
+		deposit: deposit ? { ...deposit, cancelsItself: depositCancelsItself } : null,
+		canRecordDeposit: business.canOperate && DEPOSIT_ROLES.has(business.role),
 		auditLogs: auditResult.error ? null : auditResult.data,
 		userLabels,
 		reprogramDate,
@@ -239,6 +283,37 @@ export const actions: Actions = {
   const {error}=await supabase.rpc('save_appointment_patient_instructions',{p_business_id:business.business.id,p_appointment_id:event.params.appointmentId,p_expected_updated_at:String(form.get('updated_at')??''),p_instructions:String(form.get('instructions')??''),p_public_description:String(form.get('public_description')??'')});
   if(error)return fail(409,{message:error.message.includes('CARE_CONFIGURATION_CHANGED')?'El turno cambió. Recargá la página antes de guardar las indicaciones.':'No pudimos guardar las indicaciones. Revisá tu permiso y la extensión de los textos.'});return {success:true,message:'Las indicaciones de este turno quedaron guardadas.'};
  },
+	// «Confirmar seña», «Exceptuar» and «Deshacer» (plan, sections 4.2 and 4.5): one database transaction.
+	deposit: async ({ request, params, locals, fetch, cookies }) => {
+		if (!locals.auth) throw redirect(303, '/login');
+		if (env.DEMO_MODE === 'true') return fail(400, { message: 'No disponible en modo demo.' });
+		if (!isUuid(params.appointmentId)) return fail(404, { message: 'No encontramos ese turno.' });
+		const form = await request.formData();
+		const action = String(form.get('deposit_action') ?? '').trim();
+		if (!(DEPOSIT_ACTIONS as readonly string[]).includes(action)) {
+			return fail(400, { message: getDepositErrorMessage('DEPOSIT_ACTION_INVALID') });
+		}
+		// Digits only: Number('') is 0, and a missing revision must never pass as a stale one.
+		const rawRevision = String(form.get('expected_revision') ?? '').trim();
+		const expectedRevision = /^\d{1,15}$/.test(rawRevision) ? Number(rawRevision) : Number.NaN;
+		if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1) {
+			return fail(400, { message: 'No pudimos leer la versión de la seña. Recargá la página antes de seguir.' });
+		}
+		const { supabase, business } = await getOdontoContext({ locals, fetch, cookies });
+		try {
+			const change = await setAppointmentDeposit(supabase, {
+				businessId: business.business.id,
+				appointmentId: params.appointmentId,
+				action: action as DepositAction,
+				expectedRevision
+			});
+			return { success: true, message: DEPOSIT_SUCCESS[action as DepositAction](change.appointmentStatus) };
+		} catch (depositError) {
+			const code = depositError instanceof DepositError ? depositError.code : 'DEPOSIT_UNEXPECTED';
+			if (code === 'DEPOSIT_UNEXPECTED') logServerFailure('Error registrando la seña del turno', depositError);
+			return fail(getDepositErrorStatus(code), { message: getDepositErrorMessage(code) });
+		}
+	},
 	update_status: async ({ request, params, locals, fetch, cookies }) => {
 		if (!locals.auth) throw redirect(303, '/login');
 		if (env.DEMO_MODE === 'true') return fail(400, { message: 'No disponible en modo demo.' });

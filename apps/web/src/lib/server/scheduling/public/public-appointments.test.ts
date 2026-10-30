@@ -3,9 +3,11 @@ const bookingFlags = vi.hoisted(() => ({ BOOKING_INTEGRATIONS_ENABLED: 'false', 
 vi.mock('$env/dynamic/private', () => ({ env: bookingFlags }));
 beforeEach(() => { bookingFlags.BOOKING_INTEGRATIONS_ENABLED = 'false'; bookingFlags.BOOKING_CONTEXTS_AVAILABLE = 'false'; });
 import {
+	applyPublicAppointmentAction,
 	getPublicAppointmentMessage,
 	getPublicTokenErrorMessage,
 	loadPublicAppointmentByToken,
+	loadRebookUrl,
 	type PublicAppointmentView
 } from '$lib/server/scheduling/public/public-appointments';
 
@@ -39,6 +41,8 @@ const appointment = (overrides: Partial<PublicAppointmentView>): PublicAppointme
 		whatsapp_contact_phone: null
 	},
 	patient_name: 'Paciente',
+	deposit: null,
+	deposit_transfer_details: null,
 	public_status_label: 'Reservado',
 	public_actions_available: true,
 	can_confirm: true,
@@ -274,6 +278,90 @@ describe('loadPublicAppointmentByToken · WhatsApp del consultorio', () => {
 	});
 });
 
+describe('loadPublicAppointmentByToken · seña', () => {
+	const depositRow = (status: string) => ({
+		appointment_id: 'appointment-1', status, amount: 40000, currency: 'ARS', request_from: '2026-11-13T03:00:00+00:00',
+		due_at: '2026-11-18T13:00:00+00:00', auto_cancel: true, waived_reason: status === 'waived' ? 'staff' : null,
+		recorded_at: status === 'paid' ? '2026-11-02T12:00:00+00:00' : null, reminder_opened_at: null,
+		expired_at: status === 'expired' ? '2026-11-18T13:05:00+00:00' : null, revision: 2
+	});
+	const client = (deposit: unknown) => {
+		const writes: string[] = [];
+		const rows: Record<string, unknown> = {
+			appointments: {
+				id: 'appointment-1', confirmation_token: 'token-1', status: 'reserved', starts_at: '2026-11-20T13:00:00.000Z',
+				ends_at: '2026-11-20T14:00:00.000Z', service_name_snapshot: 'Primera consulta', professional_name_snapshot: 'Dra. Natalia',
+				calendar_action_status: 'not_offered', calendar_action_at: null, calendar_action_count: 0, calendar_sequence: 0,
+				calendar_update_required_at: null,
+				businesses: {
+					id: 'business-1', name: 'Consultorio', slug: 'consultorio', phone: null, address: null, address_instructions: null,
+					maps_url: null, logo_url: null, timezone: 'America/Argentina/Cordoba', public_booking_enabled: true, is_active: true,
+					created_at: '2026-01-01T00:00:00.000Z', min_booking_notice_minutes: 0, max_booking_days_ahead: 30,
+					cancellation_policy: null, whatsapp_phone: null, whatsapp_contact_enabled: false,
+					deposit_policies: { transfer_details: 'Alias natalia.frutos' }
+				},
+				patients: { full_name: 'Ana Pérez' },
+				appointment_professionals: [{ professional_id: 'professional-1' }],
+				appointment_deposits: deposit
+			},
+			business_subscriptions: {
+				id: 'subscription-1', business_id: 'business-1', commercial_access_enabled: true, is_permanent: true,
+				subscription_status: 'active', paid_until: null, grace_until: null, restricted_until: null, archived_at: null,
+				expiration_notice_enabled: false
+			}
+		};
+		const supabase = {
+			from: (table: string) => ({
+				select: () => {
+					const builder: Record<string, unknown> = {};
+					builder.eq = () => builder;
+					builder.maybeSingle = async () => ({ data: rows[table], error: null });
+					return builder;
+				},
+				insert: async () => {
+					writes.push(`insert:${table}`);
+					return { error: null };
+				},
+				update: () => {
+					writes.push(`update:${table}`);
+					throw new Error('UNEXPECTED_UPDATE');
+				}
+			})
+		};
+		return { supabase: supabase as never, writes };
+	};
+	const now = new Date('2026-11-01T12:00:00.000Z');
+
+	it('con la seña pendiente muestra cómo transferir y no ofrece «Confirmo que voy»', async () => {
+		const view = await loadPublicAppointmentByToken(client(depositRow('pending')).supabase, 'token-1', now);
+		expect(view?.deposit).toMatchObject({ status: 'pending', amount: 40000, revision: 2 });
+		expect(view?.deposit_transfer_details).toBe('Alias natalia.frutos');
+		expect(view?.can_confirm).toBe(false);
+		expect(view?.can_cancel).toBe(true);
+		expect(view?.can_request_reschedule).toBe(true);
+	});
+
+	it('con la seña resuelta no vuelve a mostrar los datos de transferencia', async () => {
+		for (const status of ['paid', 'waived', 'expired']) {
+			const view = await loadPublicAppointmentByToken(client(depositRow(status)).supabase, 'token-1', now);
+			expect(view?.deposit?.status).toBe(status);
+			expect(view?.deposit_transfer_details).toBeNull();
+		}
+		const withoutDeposit = await loadPublicAppointmentByToken(client(null).supabase, 'token-1', now);
+		expect(withoutDeposit).toMatchObject({ deposit: null, deposit_transfer_details: null, can_confirm: true });
+	});
+
+	it('el enlace no confirma un turno con la seña pendiente, y no toca el turno al rechazarlo', async () => {
+		const { supabase, writes } = client(depositRow('pending'));
+		await expect(applyPublicAppointmentAction(supabase, { token: 'token-1', action: 'confirm', now })).rejects.toThrow(
+			'PUBLIC_TOKEN_DEPOSIT_PENDING'
+		);
+		expect(writes).not.toContain('update:appointments');
+		expect(getPublicTokenErrorMessage(new Error('PUBLIC_TOKEN_DEPOSIT_PENDING'))).toContain('recibe la seña');
+		expect(getPublicTokenErrorMessage({ message: 'APPOINTMENT_DEPOSIT_PENDING' })).toContain('recibe la seña');
+	});
+});
+
 describe('getPublicTokenErrorMessage', () => {
 	it('traduce errores de token a mensajes humanos', () => {
 		expect(getPublicTokenErrorMessage(new Error('PUBLIC_TOKEN_NOT_FOUND'))).toBe(
@@ -298,5 +386,78 @@ describe('getPublicTokenErrorMessage', () => {
 		expect(message).toContain('turno');
 		expect(message).toContain('Volvé a abrirlo');
 		expect(message).not.toMatch(/PUBLIC_TOKEN_|SQL|HTTP|RPC/);
+	});
+});
+
+describe('dónde volver a reservar después de la baja por seña', () => {
+	const KEY = '0123456789abcdef0123456789abcdef';
+	const target = { id: 'appointment-1', business: { id: 'business-1', slug: 'consultorio uno' } };
+	// Each read answers with its table's row and records its filters, so the test can check that the
+	// integration is looked up inside the same practice.
+	const client = (rows: Record<string, unknown>, failing?: string) => {
+		const filters: Record<string, Array<[string, unknown]>> = {};
+		const supabase = {
+			from: (table: string) => {
+				filters[table] = [];
+				const builder: any = {
+					select: () => builder,
+					eq: (column: string, value: unknown) => {
+						filters[table].push([column, value]);
+						return builder;
+					},
+					maybeSingle: async () =>
+						failing === table ? { data: null, error: new Error('READ_FAILED') } : { data: rows[table] ?? null, error: null }
+				};
+				return builder;
+			}
+		};
+		return { supabase: supabase as never, filters };
+	};
+
+	it('vuelve a la integración por la que reservó, buscada dentro del mismo consultorio', async () => {
+		bookingFlags.BOOKING_CONTEXTS_AVAILABLE = 'true';
+		const { supabase, filters } = client({
+			appointment_booking_contexts: { integration_id: 'integration-1' },
+			booking_integrations: { public_key: KEY, is_active: true }
+		});
+		await expect(loadRebookUrl(supabase, target)).resolves.toBe(`/embed/v1/${KEY}`);
+		expect(filters.appointment_booking_contexts).toEqual([['business_id', 'business-1'], ['appointment_id', 'appointment-1']]);
+		expect(filters.booking_integrations).toEqual([['business_id', 'business-1'], ['id', 'integration-1']]);
+		expect(filters.businesses).toBeUndefined();
+	});
+
+	it('con la integración apagada o una clave inválida, la página pública si el consultorio reserva online', async () => {
+		bookingFlags.BOOKING_CONTEXTS_AVAILABLE = 'true';
+		for (const integration of [{ public_key: KEY, is_active: false }, { public_key: 'no-es-una-clave', is_active: true }]) {
+			const { supabase } = client({
+				appointment_booking_contexts: { integration_id: 'integration-1' },
+				booking_integrations: integration,
+				businesses: { public_booking_enabled: true }
+			});
+			await expect(loadRebookUrl(supabase, target)).resolves.toBe('/reservar/consultorio%20uno');
+		}
+	});
+
+	it('sin integración ni reserva online no inventa un enlace', async () => {
+		bookingFlags.BOOKING_CONTEXTS_AVAILABLE = 'true';
+		const { supabase } = client({ businesses: { public_booking_enabled: false } });
+		await expect(loadRebookUrl(supabase, target)).resolves.toBeNull();
+	});
+
+	it('sin contextos de reserva disponibles no los consulta', async () => {
+		const { supabase, filters } = client({ businesses: { public_booking_enabled: true } });
+		await expect(loadRebookUrl(supabase, target)).resolves.toBe('/reservar/consultorio%20uno');
+		expect(filters.appointment_booking_contexts).toBeUndefined();
+	});
+
+	it('una lectura fallida es un error, no un enlace equivocado', async () => {
+		bookingFlags.BOOKING_CONTEXTS_AVAILABLE = 'true';
+		for (const failing of ['appointment_booking_contexts', 'booking_integrations', 'businesses']) {
+			const { supabase } = client(
+				{ appointment_booking_contexts: { integration_id: 'integration-1' }, booking_integrations: null },
+				failing
+			);
+			await expect(loadRebookUrl(supabase, target)).rejects.toThrow('READ_FAILED');
+		}
 	});
 });

@@ -509,6 +509,30 @@ describe('rescheduleAppointment y versionado de calendario', () => {
 		expect(updates[0].calendar_update_required_at).toBeNull();
 	});
 
+	it('con la seña recibida o exceptuada el turno sigue Confirmado en la fecha nueva', async () => {
+		for (const depositStatus of ['paid', 'waived']) {
+			const { supabase, updates } = createRescheduleMock({
+				...baseRow,
+				confirmed_at: '2026-06-10T12:00:00.000Z',
+				appointment_deposits: { status: depositStatus }
+			});
+			await rescheduleAppointment(supabase, { businessId: 'biz-1', appointmentId: 'apt-1', userId: 'user-1', startsAt: newStart, now });
+			expect(updates[0]).toMatchObject({ status: 'confirmed', confirmed_at: '2026-06-10T12:00:00.000Z' });
+		}
+	});
+
+	it('sin seña, con la seña pendiente o vencida el turno vuelve a Reservado como siempre', async () => {
+		for (const deposit of [null, { status: 'pending' }, { status: 'expired' }]) {
+			const { supabase, updates } = createRescheduleMock({ ...baseRow, appointment_deposits: deposit });
+			await rescheduleAppointment(supabase, { businessId: 'biz-1', appointmentId: 'apt-1', userId: 'user-1', startsAt: newStart, now });
+			expect(updates[0]).toMatchObject({ status: 'reserved', confirmed_at: null });
+		}
+	});
+
+	it('si la seña se deshizo en el medio, la regla de la base se explica a quien reprograma', () => {
+		expect(getHumanAppointmentErrorMessage({ message: 'APPOINTMENT_DEPOSIT_PENDING', code: 'P0001' })).toContain('Confirmar seña');
+	});
+
 	it('vuelve a respetar el descanso salvo que la nueva reprogramación lo ignore explícitamente', async () => {
 		const { supabase, updates } = createRescheduleMock({
 			...baseRow,

@@ -29,9 +29,13 @@ import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import { env } from '$env/dynamic/private';
 import { canExportPatientData } from '$lib/server/patients/public/patient-permissions';
+import { loadDepositPolicyEnabled } from '$lib/server/scheduling/public/deposits';
 
 // A notice the shell could not check. It says so instead of showing nothing to do.
-type UnavailableNotice = 'follow-ups' | 'help-requests' | 'assistance';
+type UnavailableNotice = 'follow-ups' | 'help-requests' | 'assistance' | 'deposits';
+
+// Who records deposits (the database enforces the same roles): they get the «Señas» entry.
+const DEPOSIT_ROLES = new Set(['owner', 'admin', 'reception']);
 
 export const load: LayoutServerLoad = async ({
 	locals,
@@ -65,10 +69,12 @@ export const load: LayoutServerLoad = async ({
 	let followUpsTodayISO = '';
 	let accountAssistance: AccountAssistanceView | null = null;
 	let masterAssistanceRequests: MasterAccountAssistanceRequest[] = [];
+	let depositsEnabled = false;
 	const unavailableNotices: UnavailableNotice[] = [];
 
 	if (env.DEMO_MODE === 'true') {
 		activeBusiness = demoBusinessContext();
+		depositsEnabled = true;
 	} else {
 		try {
 			const supabase = await createSupabaseServerClient('odonto', auth, fetch);
@@ -93,7 +99,7 @@ export const load: LayoutServerLoad = async ({
 				});
 			}
 
-			const [nextAccountAssistance, nextMasterRequests, nextFollowUps] = await Promise.all([
+			const [nextAccountAssistance, nextMasterRequests, nextFollowUps, nextDepositsEnabled] = await Promise.all([
 				(async (): Promise<AccountAssistanceView | null> => {
 					if (
 						!activeBusiness ||
@@ -152,12 +158,26 @@ export const load: LayoutServerLoad = async ({
 						unavailableNotices.push('follow-ups');
 						return { notice: { count: 0, single: null, dismissalKey: '0' }, todayISO: '' };
 					}
+				})(),
+				(async (): Promise<boolean> => {
+					// «Señas» appears only while the practice asks for deposits (plan, section 4.8).
+					if (!activeBusiness || !DEPOSIT_ROLES.has(activeBusiness.role) || !activeBusiness.access.canUseBusiness) {
+						return false;
+					}
+					try {
+						return await loadDepositPolicyEnabled(supabase, activeBusiness.business.id);
+					} catch (depositError) {
+						logServerFailure('Error cargando la política de señas', depositError);
+						unavailableNotices.push('deposits');
+						return false;
+					}
 				})()
 			]);
 			accountAssistance = nextAccountAssistance;
 			masterAssistanceRequests = nextMasterRequests;
 			followUps = nextFollowUps.notice;
 			followUpsTodayISO = nextFollowUps.todayISO;
+			depositsEnabled = nextDepositsEnabled;
 		} catch (err) {
 			if (isDefaultBusinessPendingManualSetupError(err)) {
 				if (!pathname.startsWith('/odonto/pendiente')) {
@@ -200,6 +220,7 @@ export const load: LayoutServerLoad = async ({
 		masterAssistanceRequests,
 		followUps,
 		followUpsTodayISO,
+		depositsEnabled,
 		unavailableNotices,
 		mpAmount: getSubscriptionAmountArs()
 	};

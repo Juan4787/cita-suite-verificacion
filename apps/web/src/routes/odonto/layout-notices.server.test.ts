@@ -5,7 +5,8 @@ const mocks = vi.hoisted(() => ({
 	getNoticeSummary: vi.fn(),
 	loadActiveMasterAccountAssistanceRequests: vi.fn(),
 	loadAccountAssistanceView: vi.fn(),
-	isMasterEmail: vi.fn()
+	isMasterEmail: vi.fn(),
+	loadDepositPolicyEnabled: vi.fn()
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
@@ -35,6 +36,7 @@ vi.mock('$lib/server/access/public/account-assistance', () => ({
 }));
 vi.mock('$lib/server/integrations/public/mercadopago', () => ({ getSubscriptionAmountArs: () => 0 }));
 vi.mock('$lib/server/patients/public/patient-permissions', () => ({ canExportPatientData: () => false }));
+vi.mock('$lib/server/scheduling/public/deposits', () => ({ loadDepositPolicyEnabled: mocks.loadDepositPolicyEnabled }));
 
 const { load } = await import('./+layout.server');
 
@@ -69,6 +71,7 @@ describe('shell notices', () => {
 		mocks.getNoticeSummary.mockResolvedValue(notice);
 		mocks.loadActiveMasterAccountAssistanceRequests.mockResolvedValue([{ id: 'grant-1' }]);
 		mocks.loadAccountAssistanceView.mockResolvedValue(assistanceView);
+		mocks.loadDepositPolicyEnabled.mockResolvedValue(false);
 	});
 
 	it('passes the follow-up reminders and the help requests it read', async () => {
@@ -113,6 +116,36 @@ describe('shell notices', () => {
 			accountAssistance: null,
 			followUps: notice,
 			unavailableNotices: ['assistance'],
+			businessError: null
+		});
+	});
+
+	it('offers «Señas» to the roles that record deposits while the practice asks for them', async () => {
+		mocks.loadDepositPolicyEnabled.mockResolvedValue(true);
+		await expect(load(event())).resolves.toMatchObject({ depositsEnabled: true, unavailableNotices: [] });
+		expect(mocks.loadDepositPolicyEnabled).toHaveBeenCalledWith(expect.anything(), 'business-1');
+	});
+
+	it('does not read the deposit policy for roles that do not record deposits', async () => {
+		for (const role of ['professional', 'readonly']) {
+			mocks.loadDepositPolicyEnabled.mockClear();
+			mocks.resolveActiveBusiness.mockResolvedValue({
+				business: { id: 'business-1', timezone: 'America/Argentina/Buenos_Aires' },
+				role,
+				assistance: null,
+				access: { canUseBusiness: true }
+			});
+			await expect(load(event())).resolves.toMatchObject({ depositsEnabled: false });
+			expect(mocks.loadDepositPolicyEnabled).not.toHaveBeenCalled();
+		}
+	});
+
+	it('says the deposits could not be checked instead of hiding them silently', async () => {
+		mocks.loadDepositPolicyEnabled.mockRejectedValue(new Error('read failed'));
+		await expect(load(event())).resolves.toMatchObject({
+			depositsEnabled: false,
+			followUps: notice,
+			unavailableNotices: ['deposits'],
 			businessError: null
 		});
 	});

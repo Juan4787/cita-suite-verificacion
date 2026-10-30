@@ -61,6 +61,7 @@
 			href: '/odonto/recordatorios',
 			activePrefixes: ['/odonto/recordatorios']
 		},
+		{ label: 'Señas', href: '/odonto/senas', activePrefixes: ['/odonto/senas'] },
 		{
 			label: 'Seguimientos',
 			shortLabel: 'Seguir',
@@ -97,6 +98,7 @@
 		{ label: 'Equipo', href: '/odonto/configuracion/usuarios' },
 		{ label: 'Suscripción', href: '/odonto/configuracion/suscripcion' },
 		{ label: 'Reserva online', href: '/odonto/configuracion/reserva-online' },
+		{ label: 'Señas', href: '/odonto/configuracion/senas' },
 		{ label: 'Reseña de Google', href: '/odonto/configuracion/resena-google' },
 		{ label: 'Exportar datos', href: '/odonto/exportar-datos' },
 		{ label: 'Ayuda', href: '/odonto/configuracion/ayuda' }
@@ -197,6 +199,11 @@
 			message: 'No pudimos comprobar la ayuda de Cita Suite.',
 			href: '/odonto/configuracion/ayuda',
 			link: 'Ver detalle'
+		},
+		deposits: {
+			message: 'No pudimos comprobar si el consultorio pide señas.',
+			href: '/odonto/senas',
+			link: 'Ver señas'
 		}
 	} as const;
 	const unavailableNotices = $derived(
@@ -288,10 +295,12 @@
 		if (activeBusiness?.role === 'readonly') {
 			return readonlyNav;
 		}
+		// «Señas» only while the practice asks for deposits; the page itself says so otherwise.
+		const daily = dailyNav.filter((item) => item.href !== '/odonto/senas' || data?.depositsEnabled === true);
 		if (activeBusiness?.role === 'reception') {
-			return dailyNav.filter((item) => item.label !== 'Configuración');
+			return daily.filter((item) => item.label !== 'Configuración');
 		}
-		return dailyNav;
+		return daily;
 	});
 
 	const canShowConfigMenu = $derived(
@@ -502,6 +511,8 @@
 		if (path.startsWith('/odonto/disponibilidad')) return 'Equipo';
 		if (path.startsWith('/odonto/seguimientos')) return 'Seguimientos';
 		if (path.startsWith('/odonto/recordatorios')) return 'Turnos para recordar';
+		if (path.startsWith('/odonto/senas')) return 'Señas';
+		if (path.startsWith('/odonto/configuracion/senas')) return 'Señas';
 		if (path.startsWith('/odonto/mensajes')) return 'Comunicación';
 		if (path.startsWith('/odonto/mis-turnos')) return 'Mis turnos';
 		if (path.startsWith('/odonto/configuracion')) return 'Configuración';
@@ -536,6 +547,7 @@
 		if (routeId === '/odonto/seguimientos') return 'config';
 		if (routeId === '/odonto/seguimientos/importantes') return 'config';
 		if (routeId === '/odonto/recordatorios') return 'config';
+		if (routeId === '/odonto/senas') return 'config';
 		if (routeId === '/odonto/mensajes') return 'config';
 		if (routeId === '/odonto/disponibilidad') return 'availability';
 		if (routeId === '/odonto/servicios') return 'services';
@@ -552,6 +564,7 @@
 		if (path.startsWith('/odonto/mis-turnos')) return 'appointments';
 		if (path.startsWith('/odonto/seguimientos')) return 'config';
 		if (path.startsWith('/odonto/recordatorios')) return 'config';
+		if (path.startsWith('/odonto/senas')) return 'config';
 		if (path.startsWith('/odonto/mensajes')) return 'config';
 		if (path.startsWith('/odonto/disponibilidad')) return 'availability';
 		if (path.startsWith('/odonto/servicios')) return 'services';

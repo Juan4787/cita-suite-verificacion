@@ -8,6 +8,8 @@
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import { isUpcomingActiveAppointment } from '$lib/utils/appointment-visibility';
 	import { agendaLongDate, agendaTime } from '$lib/utils/agenda-dates';
+	import { DEPOSIT_STATUS_LABELS, formatDepositAmount, type AppointmentDepositView } from '$lib/scheduling/deposits';
+	import { formatInTimeZone } from '$lib/utils/format';
 	import type { PageData } from './$types';
 import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/shared/booking-integration';
 
@@ -24,6 +26,8 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 		data: {
 			context: { canOperate: boolean; role: string; business?: { timezone?: string } };canEditInstructions?:boolean;
 			appointment: PageData['appointment'];
+			deposit: (AppointmentDepositView & { cancelsItself: boolean | null }) | null;
+			canRecordDeposit: boolean;
 			auditLogs: AuditLog[] | null;
 			userLabels: Record<string, string>;
 			reprogramDate: string;
@@ -92,6 +96,28 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 
 	// Hora y fecha en la zona del consultorio, no en la del navegador.
 	const timeZone = $derived(data.context.business?.timezone ?? 'America/Argentina/Cordoba');
+
+	// The deposit is part of the status the practice reads (plan, section 4.2, point 5): one label.
+	const depositSuffix = $derived(
+		data.deposit?.status === 'pending' && data.appointment?.status === 'reserved'
+			? ', seña pendiente'
+			: data.deposit?.status === 'paid' && data.appointment?.status === 'confirmed'
+				? ', seña recibida'
+				: ''
+	);
+	const headerTone = $derived(
+		depositSuffix === ', seña pendiente' ? 'bg-amber-400/15 text-amber-100' : (statusTone[data.appointment?.status ?? ''] ?? 'bg-white/10 text-white')
+	);
+	const depositTone: Record<string, string> = {
+		pending: 'bg-amber-400/15 text-amber-100',
+		paid: 'bg-emerald-400/15 text-emerald-200',
+		waived: 'bg-white/10 text-white',
+		expired: 'bg-red-500/15 text-red-200'
+	};
+	// Only an active turn changes its deposit; a waiver made by turning the policy off is final.
+	const depositActionsAvailable = $derived(
+		Boolean(data.deposit && data.canRecordDeposit && !data.demo && data.appointment && data.appointment.status !== 'cancelled')
+	);
 	const timeOnly = (value: string) => agendaTime(value, timeZone);
 	const dateOnly = (value: string) => agendaLongDate(value, timeZone);
 
@@ -121,6 +147,11 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 		if (log.action === 'appointment.confirmed') return `${user} confirmó el turno`;
 		if (log.action === 'appointment.reschedule_requested') return `${user} marcó pedido de reprogramación`;
 		if (log.action === 'appointment.updated') return `${user} actualizó el turno`;
+		if (log.action === 'appointment.deposit_paid') return `${user} confirmó la seña`;
+		if (log.action === 'appointment.deposit_waived') return `${user} exceptuó la seña`;
+		if (log.action === 'appointment.deposit_reopened') return `${user} deshizo el registro de la seña`;
+		if (log.action === 'appointment.deposit_reminder_opened') return `${user} abrió el pedido de seña por WhatsApp`;
+		if (log.action === 'appointment.deposit_expired') return 'El turno se canceló automáticamente porque no se registró la seña';
 		return `${user} registró ${log.action}`;
 	};
 
@@ -129,6 +160,10 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 			const from = metadataValue(log, 'from_starts_at');
 			const to = metadataValue(log, 'to_starts_at');
 			if (from && to) return `${formatDateTime(from)} -> ${formatDateTime(to)}`;
+		}
+		const depositAmount = log.metadata?.amount;
+		if (['appointment.deposit_paid', 'appointment.deposit_waived', 'appointment.deposit_reopened'].includes(log.action) && typeof depositAmount === 'number') {
+			return `Seña de ${formatDepositAmount(depositAmount)}`;
 		}
 		const reason = metadataValue(log, 'reason');
 		if (reason) return reason;
@@ -441,8 +476,8 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 						{/if}
 					</div>
 				</div>
-				<span class={`w-fit rounded-full px-5 py-3 text-sm font-bold ${statusTone[data.appointment.status] ?? 'bg-white/10 text-white'}`}>
-					{statusLabels[data.appointment.status] ?? data.appointment.status}
+				<span class={`w-fit rounded-full px-5 py-3 text-sm font-bold ${headerTone}`}>
+					{statusLabels[data.appointment.status] ?? data.appointment.status}{depositSuffix}
 				</span>
 			</div>
 
@@ -515,6 +550,69 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 							<div><dt class="text-sm font-semibold text-white/55">{response.label}</dt><dd class="mt-1 whitespace-pre-wrap break-words">{response.value}</dd></div>
 						{/each}
 					</dl>
+				</section>
+			{/if}
+
+			{#if data.deposit}
+				<section class="ux-soft-card mt-5 p-5" data-deposit-panel>
+					<div class="flex flex-wrap items-center gap-3">
+						<h2 class="ux-section-title">Seña</h2>
+						<span class={`rounded-full px-3 py-1 text-sm font-bold ${depositTone[data.deposit.status]}`}>
+							{DEPOSIT_STATUS_LABELS[data.deposit.status]}
+						</span>
+					</div>
+					<p class="mt-3 text-white">
+						{formatDepositAmount(data.deposit.amount)} · vence el {formatInTimeZone(data.deposit.due_at, timeZone).full}
+					</p>
+					<p class="mt-2 text-sm text-white/65">
+						{#if data.deposit.status === 'pending'}
+							{data.deposit.cancelsItself === true
+								? 'Si no se registra antes del vencimiento, el turno se cancela solo.'
+								: data.deposit.cancelsItself === false
+									? 'No se cancela sola: si no llega, decide el consultorio.'
+									: 'No pudimos comprobar si este turno se cancela solo.'}
+						{:else if data.deposit.status === 'paid'}
+							Recibida{data.deposit.recorded_at ? ` el ${formatInTimeZone(data.deposit.recorded_at, timeZone).full}` : ''}.
+						{:else if data.deposit.status === 'waived'}
+							{data.deposit.waived_reason === 'policy_disabled'
+								? 'Exceptuada al apagar la seña del consultorio.'
+								: 'Exceptuada por el consultorio.'}
+						{:else}
+							Venció sin registrarse: el turno se canceló automáticamente.
+						{/if}
+					</p>
+					{#if depositActionsAvailable && data.deposit}
+						<div class="mt-4 flex flex-wrap gap-3">
+							{#if data.deposit.status === 'pending'}
+								<form method="POST" action="?/deposit">
+									<input type="hidden" name="deposit_action" value="paid" />
+									<input type="hidden" name="expected_revision" value={data.deposit.revision} />
+									<button class="ux-btn-primary">Confirmar seña</button>
+								</form>
+								<details>
+									<summary class="ux-btn-secondary cursor-pointer list-none">Exceptuar</summary>
+									<form method="POST" action="?/deposit" class="mt-2 flex flex-col gap-2">
+										<p class="max-w-72 text-xs text-white/55">El turno queda Confirmado sin seña, como decisión del consultorio.</p>
+										<input type="hidden" name="deposit_action" value="waived" />
+										<input type="hidden" name="expected_revision" value={data.deposit.revision} />
+										<button class="ux-btn-secondary">Sí, exceptuar la seña</button>
+									</form>
+								</details>
+							{:else if data.deposit.status === 'paid' || (data.deposit.status === 'waived' && data.deposit.waived_reason === 'staff')}
+								<details>
+									<summary class="ux-btn-secondary cursor-pointer list-none">Deshacer</summary>
+									<form method="POST" action="?/deposit" class="mt-2 flex flex-col gap-2">
+										<p class="max-w-72 text-xs text-white/55">
+											La seña vuelve a pendiente y, si el turno estaba Confirmado, vuelve a Reservado.
+										</p>
+										<input type="hidden" name="deposit_action" value="pending" />
+										<input type="hidden" name="expected_revision" value={data.deposit.revision} />
+										<button class="ux-btn-secondary">Sí, deshacer el registro</button>
+									</form>
+								</details>
+							{/if}
+						</div>
+					{/if}
 				</section>
 			{/if}
 

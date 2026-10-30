@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ getOdontoContext: vi.fn(), from: vi.fn(), rpc: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getOdontoContext: vi.fn(), from: vi.fn(), rpc: vi.fn(), setAppointmentDeposit: vi.fn() }));
 
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
 vi.mock('$lib/server/access/public/business', () => ({ demoBusinessContext: vi.fn() }));
@@ -12,8 +12,14 @@ vi.mock('$lib/server/sites/public/booking-integrations', () => ({
 }));
 vi.mock('$lib/server/integrations/public/google-calendar', () => ({ processAppointmentGoogleCalendarSync: vi.fn() }));
 vi.mock('$lib/server/integrations/public/push', () => ({ resetPushRemindersForReschedule: vi.fn(), sendReschedulePushNotice: vi.fn() }));
+// The real deposit errors and messages; only the database write is replaced.
+vi.mock('$lib/server/scheduling/public/deposits', async (importOriginal) => ({
+	...(await importOriginal<typeof import('$lib/server/scheduling/public/deposits')>()),
+	setAppointmentDeposit: mocks.setAppointmentDeposit
+}));
 
-const { load } = await import('./+page.server');
+const { load, actions } = await import('./+page.server');
+const { DepositError } = await import('$lib/server/scheduling/public/deposits');
 
 // A query builder: every chained call returns it, and awaiting it gives `result`.
 const query = (result: unknown) => {
@@ -111,3 +117,85 @@ describe('appointment detail load', () => {
 		}
 	});
 });
+
+describe('appointment deposit in the detail', () => {
+	const pending = {
+		appointment_id: appointmentId, status: 'pending', amount: 40000, currency: 'ARS', request_from: '2026-11-13T03:00:00.000Z',
+		due_at: '2026-11-18T13:00:00.000Z', auto_cancel: true, waived_reason: null, recorded_at: null, reminder_opened_at: null,
+		expired_at: null, revision: 3
+	};
+	const withRole = (role: string, canOperate = true) =>
+		mocks.getOdontoContext.mockResolvedValue({
+			supabase: { from: mocks.from, rpc: mocks.rpc },
+			business: { business: { id: 'business-1', name: 'Consultorio', timezone: 'America/Argentina/Buenos_Aires' }, role, canOperate, access: { canUseBusiness: true } },
+			userId: 'user-1'
+		});
+	type DepositDetail = { appointment: Record<string, unknown>; deposit: { cancelsItself: boolean | null; revision: number } | null; canRecordDeposit: boolean };
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		withRole('reception');
+		mocks.rpc.mockImplementation(() => query({ data: [], error: null }));
+	});
+
+	it('shows the deposit, whether it cancels itself, and who records it', async () => {
+		tables({ appointments: { data: { ...appointment, status: 'reserved', appointment_deposits: pending }, error: null }, deposit_policies: { data: { auto_cancel_enabled: true }, error: null } });
+		const result = (await load(event())) as DepositDetail;
+		expect(result.deposit).toMatchObject({ status: 'pending', revision: 3, cancelsItself: true });
+		expect(result.canRecordDeposit).toBe(true);
+		expect(result.appointment).not.toHaveProperty('appointment_deposits');
+	});
+
+	it('with the practice switch off the turn does not cancel itself; unknown is said as unknown', async () => {
+		tables({ appointments: { data: { ...appointment, appointment_deposits: pending }, error: null }, deposit_policies: { data: { auto_cancel_enabled: false }, error: null } });
+		await expect(load(event())).resolves.toMatchObject({ deposit: { cancelsItself: false } });
+		tables({ appointments: { data: { ...appointment, appointment_deposits: pending }, error: null }, deposit_policies: failure });
+		await expect(load(event())).resolves.toMatchObject({ deposit: { cancelsItself: null } });
+	});
+
+	it('without a deposit reads no policy', async () => {
+		tables({ appointments: { data: { ...appointment, appointment_deposits: null }, error: null } });
+		await expect(load(event())).resolves.toMatchObject({ deposit: null });
+		expect(mocks.from).not.toHaveBeenCalledWith('deposit_policies');
+	});
+
+	it('professionals, read-only users and a practice that does not operate do not record deposits', async () => {
+		for (const [role, canOperate] of [['professional', true], ['readonly', true], ['owner', false]] as const) {
+			withRole(role, canOperate);
+			tables({ appointments: { data: { ...appointment, appointment_deposits: pending }, error: null }, deposit_policies: { data: { auto_cancel_enabled: true }, error: null } });
+			await expect(load(event())).resolves.toMatchObject({ canRecordDeposit: false });
+		}
+	});
+
+	const post = (fields: Record<string, string>) =>
+		actions.deposit({
+			...(event() as object),
+			request: new Request(`http://localhost/odonto/turnos/${appointmentId}?/deposit`, { method: 'POST', body: new URLSearchParams(fields) })
+		} as never);
+
+	it('records the deposit with the revision the person saw', async () => {
+		mocks.setAppointmentDeposit.mockResolvedValue({ status: 'pending', revision: 5, appointmentStatus: 'reserved' });
+		await expect(post({ deposit_action: 'pending', expected_revision: '4' })).resolves.toEqual({
+			success: true,
+			message: 'Se deshizo el registro de la seña. El turno volvió a Reservado.'
+		});
+		expect(mocks.setAppointmentDeposit).toHaveBeenCalledWith(expect.anything(), {
+			businessId: 'business-1', appointmentId, action: 'pending', expectedRevision: 4
+		});
+	});
+
+	it('an unknown action or a missing revision never reaches the database', async () => {
+		await expect(post({ deposit_action: 'borrar', expected_revision: '4' })).resolves.toMatchObject({ status: 400 });
+		await expect(post({ deposit_action: 'paid', expected_revision: '' })).resolves.toMatchObject({ status: 400 });
+		expect(mocks.setAppointmentDeposit).not.toHaveBeenCalled();
+	});
+
+	it('a deposit rule answers with its own status and message', async () => {
+		mocks.setAppointmentDeposit.mockRejectedValue(new DepositError('DEPOSIT_FORBIDDEN'));
+		await expect(post({ deposit_action: 'paid', expected_revision: '4' })).resolves.toMatchObject({
+			status: 403,
+			data: { message: 'No tenés permiso para registrar señas en este consultorio.' }
+		});
+	});
+});
+

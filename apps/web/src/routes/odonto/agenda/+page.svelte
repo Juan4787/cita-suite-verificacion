@@ -33,6 +33,7 @@
 		professional_name_snapshot: string;
 		internal_note?: string | null;
 		patients?: { full_name: string; phone_e164: string | null; dni?: string | null; email?: string | null } | null;
+		appointment_deposits?: { status: string } | null;
 	};
 	type AppointmentGroups = { upcoming: Appointment[]; past: Appointment[] };
 	type Professional = { id: string; name: string; specialty?: string | null; is_active: boolean };
@@ -72,6 +73,7 @@
 			patientsLoaded?: boolean;
 			referencesLoaded?: boolean;
 			reminderCount?: number | null;
+			depositAlerts?: { toRequest: number; dueSoon: number; cancelledToday: number } | null;
 			appointmentRequestId: string;
 			demo: boolean;
 		};
@@ -339,14 +341,33 @@
 		};
 	});
 
-	const appointmentStatusLabel = (appointment: Pick<Appointment, 'starts_at' | 'status'>) =>
+	// The deposit is part of the status (plan, section 4.2, point 5): the same label as the turn's page.
+	const depositSuffix = (appointment: Pick<Appointment, 'status' | 'appointment_deposits'>) =>
+		appointment.appointment_deposits?.status === 'pending' && appointment.status === 'reserved'
+			? ', seña pendiente'
+			: appointment.appointment_deposits?.status === 'paid' && appointment.status === 'confirmed'
+				? ', seña recibida'
+				: '';
+	const appointmentStatusLabel = (appointment: Pick<Appointment, 'starts_at' | 'status' | 'appointment_deposits'>) =>
 		isExpiredActiveAppointment(appointment)
 			? 'Expirado'
-			: (statusLabels[appointment.status] ?? appointment.status);
-	const appointmentStatusTone = (appointment: Pick<Appointment, 'starts_at' | 'status'>) =>
-		isExpiredActiveAppointment(appointment)
+			: `${statusLabels[appointment.status] ?? appointment.status}${depositSuffix(appointment)}`;
+	const appointmentStatusTone = (appointment: Pick<Appointment, 'starts_at' | 'status' | 'appointment_deposits'>) =>
+		isExpiredActiveAppointment(appointment) || depositSuffix(appointment) === ', seña pendiente'
 			? 'ux-badge ux-badge-warning'
 			: (statusTone[appointment.status] ?? 'ux-badge');
+	// «3 señas para pedir, 1 vence en menos de 24 horas»: one line, only what has something to do.
+	const depositAlertParts = $derived.by(() => {
+		const alerts = data.depositAlerts;
+		if (!alerts) return [];
+		const parts: string[] = [];
+		if (alerts.toRequest > 0) parts.push(`${alerts.toRequest} ${alerts.toRequest === 1 ? 'seña para pedir' : 'señas para pedir'}`);
+		if (alerts.dueSoon > 0) parts.push(`${alerts.dueSoon} ${alerts.dueSoon === 1 ? 'vence' : 'vencen'} en menos de 24 horas`);
+		if (alerts.cancelledToday > 0) {
+			parts.push(`${alerts.cancelledToday} ${alerts.cancelledToday === 1 ? 'turno se canceló' : 'turnos se cancelaron'} por falta de seña`);
+		}
+		return parts;
+	});
 
 	// Al navegar (botón "Buscar", flechas de día, "Hoy") mandan los filtros:
 	// se limpia el buscador y la lista vuelve a los resultados del servidor.
@@ -504,7 +525,7 @@
 
 	$effect(() => {
 		if (initialized) return;
-		showCreate = Boolean(form?.message || form?.phoneWarning || data.selectedPatientId);
+		showCreate = Boolean(form?.message || form?.phoneWarning || data.selectedPatientId || data.selectedTime);
 		showSearch = Boolean(hasActiveSearch);
 		// Recepción usa esta pantalla para operar: empezamos el snapshot en
 		// background apenas abre /agenda, antes de que elija el primer servicio.
@@ -628,6 +649,18 @@
 		</div>
 	{/if}
 
+	{#if data.depositAlerts === null}
+		<div class="ux-alert ux-alert-warning" data-deposit-alert>
+			No pudimos comprobar las señas.
+			<a href="/odonto/senas" class="font-bold underline">Ver señas</a>
+		</div>
+	{:else if depositAlertParts.length > 0}
+		<div class="ux-alert ux-alert-warning" data-deposit-alert>
+			{depositAlertParts.join(', ')}.
+			<a href="/odonto/senas" class="font-bold underline">Ver señas</a>
+		</div>
+	{/if}
+
 	{#if needsSetup}
 		<div class="ux-card">
 			<h2 class="ux-section-title">Antes de tomar turnos</h2>
@@ -735,6 +768,15 @@
 					onNeedPatients={loadPatientReferences}
 					initialDate={data.date}
 					initialPatientId={data.selectedPatientId}
+					initialValues={data.selectedTime
+						? {
+								service_id: data.selectedServiceId,
+								professional_id: data.selectedProfessionalId,
+								date: data.date,
+								time: data.selectedTime,
+								patient_id: data.selectedPatientId
+							}
+						: {}}
 					appointmentRequestId={data.appointmentRequestId}
 					{canOperate}
 					{form}

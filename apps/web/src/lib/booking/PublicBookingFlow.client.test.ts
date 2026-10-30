@@ -200,6 +200,11 @@ function bookingFixture(modalities: Array<"in_person" | "video">) {
     mapsLink: null,
     turnstileSiteKey: null,
     bookingRequestId: requestId,
+    // The loaded day asks no deposit unless a test says otherwise, as the real load returns it.
+    depositTerms: {} as Record<
+      string,
+      { amount: number; dueAt: string; autoCancel: boolean }
+    > | null,
     integration: { publicKey: "a".repeat(32), revision: 1 },
     presentation: {
       theme: "cita-suite" as const,
@@ -349,4 +354,57 @@ it("shows the selected-date quote once in the final summary instead of the stati
     document.querySelector<HTMLInputElement>('[name="price_quote_hash"]')
       ?.value,
   ).toBe("d".repeat(64));
+});
+
+// The notice compares the due date with the current time: the clock is fixed so that the expected
+// text never changes with the day the test runs.
+const noticeFor = (data: ReturnType<typeof bookingFixture>) => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-20T12:00:00.000Z"));
+  try {
+    render(PublicBookingFlow, { data });
+  } finally {
+    vi.useRealTimers();
+  }
+  return document.querySelector("[data-deposit-notice]");
+};
+
+it("shows the deposit of the chosen slot in the summary, before the person confirms", () => {
+  const data = bookingFixture(["in_person"]);
+  data.depositTerms = {
+    "2026-11-02T09:00:00.000Z": {
+      amount: 40000,
+      dueAt: "2026-10-31T09:00:00.000Z",
+      autoCancel: true,
+    },
+  };
+  const notice = noticeFor(data);
+  expect(notice?.textContent?.replace(/\s+/g, " ")).toBe(
+    "Este turno requiere una seña de $ 40.000. Tenés tiempo hasta el sábado, 31 de octubre a las 09:00 para transferirla. Si no se registra, el turno se cancela automáticamente.",
+  );
+  const confirm = screen.getByRole("button", { name: "Confirmar reserva" });
+  expect(
+    notice!.compareDocumentPosition(confirm) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+});
+
+it("says so when the deposit terms could not be computed, without promising there is none", () => {
+  const data = bookingFixture(["in_person"]);
+  data.depositTerms = null;
+  expect(noticeFor(data)).toHaveTextContent(
+    "No pudimos calcular si este turno requiere una seña. Si corresponde, la vas a ver al terminar la reserva.",
+  );
+});
+
+it("says nothing about a deposit when the chosen slot asks none", () => {
+  const data = bookingFixture(["in_person"]);
+  data.depositTerms = {
+    "2026-11-02T10:00:00.000Z": {
+      amount: 40000,
+      dueAt: "2026-10-31T10:00:00.000Z",
+      autoCancel: true,
+    },
+  };
+  expect(noticeFor(data)).toBeNull();
+  expect(screen.queryByText(/seña/)).toBeNull();
 });

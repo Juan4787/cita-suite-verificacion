@@ -37,6 +37,7 @@
 		onNeedPatients = () => undefined,
 		initialDate,
 		initialPatientId = '',
+		initialValues = {},
 		appointmentRequestId,
 		canOperate,
 		form
@@ -52,6 +53,8 @@
 		onNeedPatients?: () => void | Promise<void>;
 		initialDate: string;
 		initialPatientId?: string;
+		/** A known slot to give again (service, professional, date, time, patient), from a link. */
+		initialValues?: Record<string, string>;
 		appointmentRequestId: string;
 		canOperate: boolean;
 		form?: {
@@ -61,7 +64,9 @@
 		};
 	} = $props();
 
-	const value = (key: string) => String(form?.values?.[key] ?? '');
+	// A failed submission restores what the person chose; otherwise a link that gives a known slot
+	// again («Volver a dar este horario») preselects it. The form wins: it is the latest choice.
+	const value = (key: string) => String(form?.values?.[key] ?? initialValues[key] ?? '');
 	const today = () => new Date().toISOString().slice(0, 10);
 	const addDays = (date: string, days: number) => {
 		const next = new Date(date + 'T12:00:00');
@@ -657,15 +662,20 @@
 	};
 
 	$effect(() => {
-		if (slots.length === 0 || !pendingInitialTime || !selectedSlotDate) return;
+		if (!slotsLoaded || !pendingInitialTime || !selectedSlotDate) return;
 		const initialSlot = slots.find(
 			(slot) => slot.date === selectedSlotDate && slot.time === pendingInitialTime
 		);
+		pendingInitialTime = '';
 		if (initialSlot) {
 			selectedSlotStartsAt = initialSlot.starts_at;
-			pendingInitialTime = '';
 			step = 5;
+			return;
 		}
+		// The time is no longer free (someone else got it): back to the other times of that same day,
+		// never a final step without one. The day stays chosen, so nothing reloads the message away.
+		step = 4;
+		slotsError = 'Ese horario ya no está libre. Elegí otro de los horarios disponibles.';
 	});
 
 	$effect(() => {

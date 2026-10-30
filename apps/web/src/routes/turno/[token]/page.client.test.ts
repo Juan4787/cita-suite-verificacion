@@ -4,6 +4,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/sv
 import '@testing-library/jest-dom/vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { notificationBrowserProfile } from '$lib/device';
+import { formatDepositAmount } from '$lib/scheduling/deposits';
+import { formatInTimeZone } from '$lib/utils/format';
 import Page from './+page.svelte';
 
 const USER_AGENT = {
@@ -32,6 +34,8 @@ const appointment = {
 	professional_name_snapshot: 'Profesional',
 	service_name_snapshot: 'Consulta',
 	patient_name: 'Paciente',
+	deposit: null,
+	deposit_transfer_details: null,
 	public_status_label: 'Reservado',
 	public_actions_available: true,
 	can_confirm: true,
@@ -71,7 +75,12 @@ const pageData = {
 		reminderLabel: '24 horas y 2 horas antes'
 	},
 	calendarMessage: null,
-	practiceWhatsApp: null as null | { message: string; whatsappUrl: string; whatsappWebUrl: string }
+	practiceWhatsApp: null as null | { message: string; whatsappUrl: string; whatsappWebUrl: string },
+	depositWhatsApp: null as null | {
+		paidNow: { message: string; whatsappUrl: string; whatsappWebUrl: string };
+		payLater: { message: string; whatsappUrl: string; whatsappWebUrl: string };
+	},
+	rebookUrl: null as string | null
 };
 
 type DeliveryState = 'accepted' | 'displayed' | 'clicked' | 'missing' | 'confirmed' | 'failed';
@@ -1052,5 +1061,175 @@ describe('aviso al consultorio por WhatsApp', () => {
 		installNotificationEnvironment();
 		render(Page, { data: { ...pageData, created: true, practiceWhatsApp: null } });
 		expect(screen.queryByRole('link', { name: /al consultorio por WhatsApp/ })).toBeNull();
+	});
+});
+
+describe('seña del turno', () => {
+	// Vence 48 horas antes del turno: el sábado 8 de agosto a las 12:00 en la zona del consultorio.
+	const pendingDeposit = {
+		appointment_id: appointment.id,
+		status: 'pending' as const,
+		amount: 40000,
+		currency: 'ARS' as const,
+		request_from: '2026-08-03T03:00:00.000Z',
+		due_at: '2026-08-08T15:00:00.000Z',
+		auto_cancel: true,
+		waived_reason: null,
+		recorded_at: null,
+		reminder_opened_at: null,
+		expired_at: null,
+		revision: 1
+	};
+	const link = (text: string) => ({
+		message: text,
+		whatsappUrl: `https://wa.me/5493421234567?text=${text}`,
+		whatsappWebUrl: `https://web.whatsapp.com/send?phone=5493421234567&text=${text}`
+	});
+	const depositWhatsApp = { paidNow: link('comprobante'), payLater: link('despues') };
+	const withDeposit = (deposit: Omit<typeof pendingDeposit, 'status' | 'expired_at'> & {
+		status: 'pending' | 'paid' | 'waived' | 'expired';
+		expired_at: string | null;
+	}, overrides: Record<string, unknown> = {}) => ({
+		...appointment,
+		can_confirm: false,
+		deposit,
+		deposit_transfer_details: 'Alias natalia.frutos\nTitular: Natalia Frutos',
+		...overrides
+	});
+	// The page and the expected text may separate words with different spaces (the amount uses a
+	// non-breaking one): both are compared with single spaces.
+	const plain = (text: string | null | undefined) => String(text ?? '').replace(/\s+/g, ' ').trim();
+	const cardOf = (title: string) => screen.getByRole('heading', { name: title }).closest('section') as HTMLElement;
+	afterEach(() => {
+		cleanup();
+		vi.unstubAllGlobals();
+	});
+
+	it('con la seña pendiente muestra monto, vencimiento, datos y los dos caminos por WhatsApp, sin «Confirmo que voy»', () => {
+		installNotificationEnvironment();
+		render(Page, { data: { ...pageData, created: true, appointment: withDeposit(pendingDeposit), depositWhatsApp } });
+		const card = plain(cardOf('Seña del turno').textContent);
+		const due = formatInTimeZone(pendingDeposit.due_at, appointment.business.timezone).full;
+		expect(card).toContain(plain(`Para confirmar tu turno, transferí la seña de ${formatDepositAmount(40000)} antes del ${due}.`));
+		expect(due).toContain('12:00');
+		expect(card).toContain('el turno se cancela automáticamente y el horario se libera');
+		expect(card).toContain('Alias natalia.frutos');
+		expect(screen.getByRole('link', { name: 'Ya transferí: enviar el comprobante' })).toHaveAttribute(
+			'href',
+			depositWhatsApp.paidNow.whatsappUrl
+		);
+		expect(screen.getByRole('link', { name: 'Voy a pagar la seña más adelante' })).toHaveAttribute(
+			'href',
+			depositWhatsApp.payLater.whatsappUrl
+		);
+		expect(screen.queryByRole('link', { name: /al consultorio por WhatsApp/ })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Confirmo que voy' })).toBeNull();
+		expect(screen.getByText('Tu turno se confirma cuando el consultorio recibe la seña.')).toBeInTheDocument();
+	});
+
+	it('en una computadora los dos caminos abren WhatsApp Web', () => {
+		installNotificationEnvironment();
+		render(Page, {
+			data: { ...pageData, device: 'desktop' as never, appointment: withDeposit(pendingDeposit), depositWhatsApp }
+		});
+		expect(screen.getByRole('link', { name: 'Ya transferí: enviar el comprobante' })).toHaveAttribute(
+			'href',
+			depositWhatsApp.paidNow.whatsappWebUrl
+		);
+		expect(screen.getByRole('link', { name: 'Voy a pagar la seña más adelante' })).toHaveAttribute(
+			'href',
+			depositWhatsApp.payLater.whatsappWebUrl
+		);
+	});
+
+	it('sin cancelación automática para este turno no la promete', () => {
+		installNotificationEnvironment();
+		render(Page, { data: { ...pageData, appointment: withDeposit({ ...pendingDeposit, auto_cancel: false }), depositWhatsApp } });
+		expect(plain(cardOf('Seña del turno').textContent)).not.toContain('se cancela automáticamente');
+	});
+
+	it('sin datos para transferir ni WhatsApp del consultorio igual dice cuánto y hasta cuándo', () => {
+		installNotificationEnvironment();
+		render(Page, {
+			data: { ...pageData, appointment: withDeposit(pendingDeposit, { deposit_transfer_details: null }), depositWhatsApp: null }
+		});
+		const card = plain(cardOf('Seña del turno').textContent);
+		expect(card).toContain(plain(formatDepositAmount(40000)));
+		expect(card).not.toContain('Datos para transferir');
+		expect(screen.queryByRole('link', { name: 'Ya transferí: enviar el comprobante' })).toBeNull();
+		expect(screen.queryByRole('link', { name: 'Voy a pagar la seña más adelante' })).toBeNull();
+		expect(screen.queryByRole('link', { name: /WhatsApp/ })).toBeNull();
+	});
+
+	it('copia los datos para transferir y lo confirma en el botón', async () => {
+		installNotificationEnvironment();
+		const writeText = vi.fn().mockResolvedValue(undefined);
+		vi.stubGlobal('navigator', Object.assign(Object.create(navigator), { clipboard: { writeText } }));
+		render(Page, { data: { ...pageData, appointment: withDeposit(pendingDeposit), depositWhatsApp } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Copiar datos' }));
+		expect(writeText).toHaveBeenCalledWith('Alias natalia.frutos\nTitular: Natalia Frutos');
+		await waitFor(() => expect(screen.getByRole('button', { name: 'Copiado' })).toBeInTheDocument());
+	});
+
+	it('con la seña recibida dice que el turno está confirmado y ya no muestra cómo pagar', () => {
+		installNotificationEnvironment();
+		render(Page, {
+			data: {
+				...pageData,
+				appointment: withDeposit(
+					{ ...pendingDeposit, status: 'paid', recorded_at: '2026-08-05T15:00:00.000Z' },
+					{ status: 'confirmed', public_status_label: 'Confirmado' }
+				)
+			}
+		});
+		expect(screen.getByText('Recibimos tu seña. Tu turno está confirmado.')).toBeInTheDocument();
+		expect(screen.queryByRole('heading', { name: 'Seña del turno' })).toBeNull();
+	});
+
+	it('cancelado por la seña vencida explica por qué, ofrece escribir al consultorio y reservar otro turno', () => {
+		installNotificationEnvironment();
+		const practiceWhatsApp = link('ya-transferi');
+		render(Page, {
+			data: {
+				...pageData,
+				appointment: withDeposit(
+					{ ...pendingDeposit, status: 'expired', expired_at: '2026-08-08T15:05:00.000Z' },
+					{ status: 'cancelled', public_status_label: 'Cancelado', can_cancel: false, can_request_reschedule: false }
+				),
+				practiceWhatsApp,
+				rebookUrl: '/embed/v1/0123456789abcdef0123456789abcdef'
+			}
+		});
+		const due = formatInTimeZone(pendingDeposit.due_at, appointment.business.timezone).full;
+		expect(plain(cardOf('Turno cancelado').textContent)).toContain(
+			plain(`Este turno se canceló porque no se registró la seña antes del ${due}. Si ya transferiste, escribile al consultorio.`)
+		);
+		expect(screen.getByRole('link', { name: 'Escribir al consultorio por WhatsApp' })).toHaveAttribute(
+			'href',
+			practiceWhatsApp.whatsappUrl
+		);
+		expect(screen.getAllByRole('link', { name: /al consultorio por WhatsApp/ })).toHaveLength(1);
+		expect(screen.getByRole('link', { name: 'Reservar otro turno' })).toHaveAttribute(
+			'href',
+			'/embed/v1/0123456789abcdef0123456789abcdef'
+		);
+		expect(screen.queryByRole('heading', { name: 'Seña del turno' })).toBeNull();
+	});
+
+	it('sin un lugar donde volver a reservar no muestra un enlace que no lleva a ningún lado', () => {
+		installNotificationEnvironment();
+		render(Page, {
+			data: {
+				...pageData,
+				appointment: withDeposit(
+					{ ...pendingDeposit, status: 'expired', expired_at: '2026-08-08T15:05:00.000Z' },
+					{ status: 'cancelled', public_status_label: 'Cancelado', can_cancel: false, can_request_reschedule: false }
+				),
+				practiceWhatsApp: null,
+				rebookUrl: null
+			}
+		});
+		expect(screen.queryByRole('link', { name: 'Reservar otro turno' })).toBeNull();
+		expect(screen.queryByRole('link', { name: /WhatsApp/ })).toBeNull();
 	});
 });

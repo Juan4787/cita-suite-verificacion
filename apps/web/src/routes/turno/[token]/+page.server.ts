@@ -10,10 +10,11 @@ import {
 	getPublicAppointmentMessage,
 	getPublicTokenErrorMessage,
 	loadPublicAppointmentByToken,
+	loadRebookUrl,
 	type PublicAppointmentView
 } from '$lib/server/scheduling/public/public-appointments';
 import { canRegisterCalendarAction, markCalendarOffered } from '$lib/server/integrations/public/calendar-tracking';
-import { buildPracticeWhatsAppNotice } from '$lib/server/scheduling/public/practice-whatsapp';
+import { buildTurnWhatsAppNotices } from '$lib/server/scheduling/public/practice-whatsapp';
 import {
 	getGoogleCalendarPublicMessage,
 	loadGoogleCalendarUiState,
@@ -116,7 +117,8 @@ export const load: PageServerLoad = async ({ params, fetch, url, request, setHea
 			bookingInformationEnabled: bookingInformationEnabled(),
 			message: getPublicAppointmentMessage(appointment),
 			created,
-			practiceWhatsApp: buildPracticeWhatsAppNotice(appointment, { created }),
+			...buildTurnWhatsAppNotices(appointment, { created }),
+			rebookUrl: null,
 			suggestedAction: url.searchParams.get('accion') ?? '',
 			demo: true,
 			device,
@@ -161,12 +163,22 @@ export const load: PageServerLoad = async ({ params, fetch, url, request, setHea
 			await markCalendarOffered(supabase, appointment, now);
 		}
 		const created = url.searchParams.has('creado');
+		let rebookUrl: string | null = null;
+		if (appointment?.status === 'cancelled' && appointment.deposit?.status === 'expired') {
+			try {
+				rebookUrl = await loadRebookUrl(supabase, appointment);
+			} catch (rebookError) {
+				// Sin el enlace la página sigue: el botón de WhatsApp queda para volver a reservar.
+				logServerFailure('Error resolviendo dónde volver a reservar', rebookError);
+			}
+		}
 		return {
 			appointment,
 			bookingInformationEnabled: bookingInformationEnabled(),
 			message: getPublicAppointmentMessage(appointment),
 			created,
-			practiceWhatsApp: appointment ? buildPracticeWhatsAppNotice(appointment, { created }) : null,
+			...(appointment ? buildTurnWhatsAppNotices(appointment, { created }) : { depositWhatsApp: null, practiceWhatsApp: null }),
+			rebookUrl,
 			suggestedAction: url.searchParams.get('accion') ?? '',
 			demo: false,
 			device,
@@ -185,7 +197,9 @@ export const load: PageServerLoad = async ({ params, fetch, url, request, setHea
 			bookingInformationEnabled: false,
 			message: 'El enlace no es válido o no está disponible.',
 			created: false,
+			depositWhatsApp: null,
 			practiceWhatsApp: null,
+			rebookUrl: null,
 			suggestedAction: '',
 			demo: false,
 			device,

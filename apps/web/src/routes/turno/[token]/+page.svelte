@@ -7,7 +7,8 @@
 	import { onMount } from 'svelte';
 	import { formatDateTime, formatInTimeZone } from '$lib/utils/format';
 	import { isActiveAppointmentStatus } from '$lib/utils/appointment-visibility';
-	import type { PracticeWhatsAppNotice } from '$lib/scheduling/contracts';
+	import type { DepositWhatsAppNotices, PracticeWhatsAppNotice } from '$lib/scheduling/contracts';
+	import { formatDepositAmount } from '$lib/scheduling/deposits';
 	import {
 		refineDeviceClass,
 		samsungAppNotificationToggleStep,
@@ -47,6 +48,8 @@
 			calendarMessage: string | null;
 			bookingInformationEnabled?: boolean;
 			practiceWhatsApp: PracticeWhatsAppNotice | null;
+			depositWhatsApp: DepositWhatsAppNotices | null;
+			rebookUrl: string | null;
 		};
 		form?: { success?: boolean; message?: string };
 	} = $props();
@@ -1115,6 +1118,20 @@
 		}
 	};
 
+	// Seña pendiente: pagarla es lo que confirma el turno (plan de señas y avisos, 4.2 y 4.9).
+	const depositPending = $derived(appointment?.deposit?.status === 'pending');
+	let transferCopied = $state(false);
+	const copyTransferDetails = async () => {
+		try {
+			await navigator.clipboard.writeText(appointment?.deposit_transfer_details ?? '');
+			transferCopied = true;
+			setTimeout(() => (transferCopied = false), 2500);
+		} catch {
+			// Sin portapapeles, los datos siguen a la vista para seleccionarlos a mano.
+			transferCopied = false;
+		}
+	};
+
 </script>
 
 {#snippet instructionList(guide: NotificationGuide)}
@@ -1394,6 +1411,50 @@
 	{/if}
 {/snippet}
 
+{#snippet depositCard(current: NonNullable<PageData['appointment']>, deposit: NonNullable<NonNullable<PageData['appointment']>['deposit']>)}
+	<section class="ux-card">
+		<h2 class="ux-section-title">Seña del turno</h2>
+		<p class="mt-2 text-white/80">
+			Para confirmar tu turno, transferí la seña de <strong class="text-white">{formatDepositAmount(deposit.amount)}</strong>
+			antes del {formatInTimeZone(deposit.due_at, current.business.timezone).full}.
+		</p>
+		{#if deposit.auto_cancel}
+			<p class="mt-2 text-sm text-white/65">
+				Si no se registra para esa fecha, el turno se cancela automáticamente y el horario se libera.
+			</p>
+		{/if}
+		{#if current.deposit_transfer_details}
+			<div class="ux-soft-card mt-4 p-4">
+				<p class="text-sm font-bold text-white/55">Datos para transferir</p>
+				<p class="mt-1 whitespace-pre-wrap break-words font-bold text-white">{current.deposit_transfer_details}</p>
+				<button type="button" class="ux-btn-secondary mt-3 w-full" onclick={copyTransferDetails}>
+					{#if transferCopied}<Icon name="check" class="h-4 w-4 shrink-0" />Copiado{:else}Copiar datos{/if}
+				</button>
+			</div>
+		{/if}
+		{#if data.depositWhatsApp}
+			<div class="mt-4 grid gap-3">
+				<a
+					href={whatsappHrefFor(device, data.depositWhatsApp.paidNow.whatsappUrl, data.depositWhatsApp.paidNow.whatsappWebUrl)}
+					target="_blank"
+					rel="noreferrer"
+					class="ux-btn-primary w-full"
+				>
+					Ya transferí: enviar el comprobante
+				</a>
+				<a
+					href={whatsappHrefFor(device, data.depositWhatsApp.payLater.whatsappUrl, data.depositWhatsApp.payLater.whatsappWebUrl)}
+					target="_blank"
+					rel="noreferrer"
+					class="ux-btn-secondary w-full"
+				>
+					Voy a pagar la seña más adelante
+				</a>
+			</div>
+		{/if}
+	</section>
+{/snippet}
+
 {#snippet practiceWhatsAppCard(notice: PracticeWhatsAppNotice)}
 	<section class="ux-card">
 		<h2 class="ux-section-title">{data.created ? 'Avisale al consultorio' : 'Contacto con el consultorio'}</h2>
@@ -1528,8 +1589,13 @@
 		</section>
 
 		{#if appointment}
-			{#if data.created && data.practiceWhatsApp}
+			{#if isActive && depositPending && appointment.deposit}
+				{@render depositCard(appointment, appointment.deposit)}
+			{:else if isActive && data.created && data.practiceWhatsApp}
 				{@render practiceWhatsAppCard(data.practiceWhatsApp)}
+			{/if}
+			{#if isActive && appointment.deposit?.status === 'paid'}
+				<p class="ux-alert ux-alert-success">Recibimos tu seña. Tu turno está confirmado.</p>
 			{/if}
 			{#if data.bookingInformationEnabled && isActive}
 				<section class="ux-soft-card p-5"><h2 class="ux-section-title">Información para tu consulta</h2><p class="mt-2 text-white/65">Podés ampliar la información para la profesional. Los campos configurados se incorporan a tu perfil. Tu reserva se conserva.</p><a class="ux-btn-primary mt-4" href={`/turno/${appointment.token}/informacion`}>Ver y ampliar mis datos</a></section>
@@ -1597,7 +1663,7 @@
 				</a>
 			</section>
 
-			{#if !data.created && data.practiceWhatsApp}
+			{#if isActive && !data.created && !depositPending && data.practiceWhatsApp}
 				{@render practiceWhatsAppCard(data.practiceWhatsApp)}
 			{/if}
 
@@ -1608,6 +1674,25 @@
 			{#if isCancelled}
 				<section class="ux-card">
 					<h2 class="ux-section-title">Turno cancelado</h2>
+					{#if appointment.deposit?.status === 'expired'}
+						<p class="mt-3 text-sm text-white/70">
+							Este turno se canceló porque no se registró la seña antes del {formatInTimeZone(appointment.deposit.due_at, timezone).full}.
+							Si ya transferiste, escribile al consultorio.
+						</p>
+						{#if data.practiceWhatsApp}
+							<a
+								href={whatsappHrefFor(device, data.practiceWhatsApp.whatsappUrl, data.practiceWhatsApp.whatsappWebUrl)}
+								target="_blank"
+								rel="noreferrer"
+								class="ux-btn-primary mt-4 w-full"
+							>
+								Escribir al consultorio por WhatsApp
+							</a>
+						{/if}
+						{#if data.rebookUrl}
+							<a href={data.rebookUrl} class="ux-btn-secondary mt-3 w-full">Reservar otro turno</a>
+						{/if}
+					{/if}
 					{#if data.googleCalendar.state === 'removed'}
 						<p class="mt-3 text-sm text-white/70">También quitamos el evento de tu cuenta Google.</p>
 					{:else if data.googleCalendar.state === 'removing'}
@@ -1628,9 +1713,13 @@
 				<section class="ux-card">
 					<h2 class="ux-section-title">Acciones</h2>
 					<div class="mt-5 grid gap-3">
-						<form method="POST" action="?/confirm" use:enhance>
-							<button disabled={!appointment.can_confirm} class="ux-btn-primary w-full">Confirmo que voy</button>
-						</form>
+						{#if depositPending}
+							<p class="ux-empty">Tu turno se confirma cuando el consultorio recibe la seña.</p>
+						{:else}
+							<form method="POST" action="?/confirm" use:enhance>
+								<button disabled={!appointment.can_confirm} class="ux-btn-primary w-full">Confirmo que voy</button>
+							</form>
+						{/if}
 						<details class="rounded-2xl border border-white/10 bg-white/[0.035]">
 							<summary class="cursor-pointer list-none px-5 py-4 text-base font-bold text-white">Necesito reprogramar</summary>
 							<form method="POST" action="?/request_reschedule" class="border-t border-white/10 p-5" use:enhance>

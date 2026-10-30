@@ -5,6 +5,7 @@ import type {
 } from '@cita-suite/shared/booking-integration';
 import type { AvailabilitySlot } from '$lib/availability/calculate';
 import type { PriceQuote } from '$lib/booking/pricing';
+import type { BookingDepositTerms, DepositSlotTerms } from '$lib/scheduling/deposits';
 
 export type BookingService = {
 	id: string;
@@ -59,6 +60,8 @@ export type BookingFormState = {
 /** Presentation projection, shared without importing a server implementation. */
 export type BookingViewData = {
 	priceQuote?: PriceQuote | null;
+	// Deposit terms of each slot of the loaded day (adjustment 4); null when they could not be computed.
+	depositTerms?: Record<string, DepositSlotTerms> | null;
 	state: {
 		business: {
 			name: string;
@@ -93,6 +96,7 @@ export type BookingConfirmation = {
 	professionalLabel: string;
 	professionalId: string;
 	priceQuote: PriceQuote | null;
+	depositTerms: BookingDepositTerms;
 	timezone: string;
 	modality: BookingModality;
 	action: string;
