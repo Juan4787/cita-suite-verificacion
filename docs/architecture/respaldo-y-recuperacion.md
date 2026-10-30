@@ -44,11 +44,15 @@ Cita Suite sigue ese procedimiento con `scripts/lib/supabase-backup.mjs`, que ad
    - comprueba cada archivo contra el manifiesto;
    - restaura en una sola transacción, con el comando de la guía ampliado: roles, esquema, datos con `session_replication_role = replica`, después `managed.sql` y `history.sql`;
    - sube los archivos almacenados.
-3. Configurar la app con la URL y las claves del proyecto nuevo.
+3. Si el respaldo incluye señas, ejecutar contra el **destino restaurado**, antes de servirlo, `supabase/operations/recover-deposit-automation.sql`. Recupera exactamente los dos trabajos versionados de esta función y deja el interruptor general apagado. No cambia señas, políticas ni turnos. Los registros de pg_cron no se recuperan por volver a cargar el historial de migraciones. Los otros trabajos históricos requieren su procedimiento propio; este paso cubre los dos agregados por la campaña de señas.
+   - El ensayo `backup-rehearsal.mjs` usa `recoverDepositAutomation` exclusivamente dentro de su contenedor restaurado, nunca contra staging/origen. Repite la operación, verifica nombres, horarios, estado activo y huellas de ambos comandos, y exige el interruptor apagado.
+   - Si existe `appointment_slot_releases`, comprueba que el próximo valor de su identidad sea mayor que el máximo restaurado (incluye `is_called`). No consume ni adelanta la secuencia para hacer pasar el control. Familias incompletas, valores nulos o trabajos faltantes/duplicados/alterados impiden certificar la recuperación.
+   - El recibo distingue respaldo anterior sin señas, respaldo B y respaldo B/C; informa filas por cada tabla nueva y si se comprobó la identidad. La prueba real con tablas nuevas sigue pendiente hasta conservar su recibo; los verdes anteriores de126migraciones no la sustituyen.
+4. Configurar la app con la URL y las claves del proyecto nuevo.
    - Las contraseñas se conservan, porque están en `auth.users`.
    - Las sesiones vigentes dejan de valer, porque el proyecto nuevo firma con otra clave.
    - Volver a cargar los secretos de las tareas.
-4. Verificar como el ensayo: filas por tabla, historial de migraciones, objetos de plataforma y huella de cada archivo.
+5. Verificar como el ensayo: filas por tabla, historial de migraciones, objetos de plataforma, huella de cada archivo y recuperación de los trabajos de señas con identidad segura. Habilitar la automatización sólo por decisión explícita después de comprobar el destino.
 
 ## Qué agrega al procedimiento oficial
 

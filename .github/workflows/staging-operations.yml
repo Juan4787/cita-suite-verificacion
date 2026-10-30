@@ -12,7 +12,8 @@ on:
         type: choice
         required: true
         options: [artifact, migrations, queue-seed, queue-seed-abandoned, queue-report, queue-cleanup, device-seed, device-report, device-cleanup,
-          capacity-seed, capacity-measure, capacity-report, capacity-cleanup, backup-rehearsal, release-fixture]
+          capacity-seed, capacity-measure, capacity-report, capacity-cleanup, backup-rehearsal, release-fixture,
+          deposit-seed, deposit-check, deposit-cleanup]
       practices:
         description: Practices of the hosted capacity scenario (2, the launch; 5, the earlier rehearsal)
         type: choice
@@ -21,6 +22,11 @@ on:
         options: ['2', '5']
       run_id:
         description: Run of the queue scenario or the device check, for report and cleanup
+        type: string
+        required: false
+        default: ''
+      expected_revision:
+        description: Exact served staging SHA required by deposit-check
         type: string
         required: false
         default: ''
@@ -48,10 +54,26 @@ jobs:
         with:
           node-version-file: .node-version
       - name: Install pinned package manager and dependencies
-        if: inputs.operation == 'artifact' || inputs.operation == 'capacity-measure' || inputs.operation == 'backup-rehearsal'
+        if: inputs.operation == 'artifact' || inputs.operation == 'capacity-measure' || inputs.operation == 'backup-rehearsal' || inputs.operation == 'deposit-check'
         run: |
           npm install --global pnpm@10.13.1
           pnpm install --frozen-lockfile --network-concurrency=1
+      - name: Prepare one browser for the hosted deposit recovery check
+        if: inputs.operation == 'deposit-check'
+        run: pnpm --filter web exec playwright install --with-deps chromium
+      - name: Operate only the owned deposit recovery practice on staging
+        if: startsWith(inputs.operation, 'deposit-')
+        env:
+          CITA_STAGING_DATABASE_URL: ${{ secrets.CITA_STAGING_DATABASE_URL }}
+          CITA_STAGING_SERVICE_ROLE_KEY: ${{ secrets.CITA_STAGING_SERVICE_ROLE_KEY }}
+          OPERATION: ${{ inputs.operation }}
+          EXPECTED_REVISION: ${{ inputs.expected_revision }}
+        run: |
+          if [ "$OPERATION" = deposit-check ]; then
+            node scripts/staging-deposit-recovery.mjs check "$EXPECTED_REVISION"
+          else
+            node scripts/staging-deposit-recovery.mjs "${OPERATION#deposit-}"
+          fi
       # The release: the app bundled for staging and production, and Natalia's site for each.
       - name: Build and bundle the release without deploying it
         if: inputs.operation == 'artifact'
@@ -124,3 +146,14 @@ jobs:
         env:
           CITA_STAGING_DATABASE_URL: ${{ secrets.CITA_STAGING_DATABASE_URL }}
         run: node scripts/staging-release-fixture.mjs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always() && (startsWith(inputs.operation, 'deposit-') || inputs.operation == 'backup-rehearsal' || inputs.operation == 'migrations')
+        with:
+          name: staging-receipt-${{ inputs.operation }}-${{ github.run_id }}
+          path: |
+            .verification/staging-deposit-recovery-*.json
+            .verification/backup-rehearsal.json
+            .verification/staging-migrations.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7

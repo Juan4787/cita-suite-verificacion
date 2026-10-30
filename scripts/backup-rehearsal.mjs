@@ -8,6 +8,7 @@ import { STAGING_PROJECT_REF, psqlDiagnostics, stagingConnection, stagingPsql } 
 import { countMismatches, objectMismatches } from './lib/backup-verification.mjs';
 import { MANAGED_OBJECTS_SQL, createSupabaseBackup, restoreArguments, restoreSupabaseBackup } from './lib/supabase-backup.mjs';
 import { createBackupStorageProbe } from './lib/backup-storage-probe.mjs';
+import { recoverDepositAutomation } from './lib/deposit-recovery.mjs';
 import { assertHostedIntegrationResources } from './lib/verification-resources.mjs';
 
 // Rehearses the backup and its restore (lib/supabase-backup.mjs) on staging and an isolated
@@ -156,6 +157,8 @@ try {
 		source: { policies: manifest.managed.policies.length, triggers: manifest.managed.triggers.length },
 		missing: [...manifest.managed.policies, ...manifest.managed.triggers].filter((name) => !restoredNames.includes(name))
 	};
+	// The source stays untouched. Recover versioned jobs only inside this run's restored container.
+	receipt.depositRecovery = recoverDepositAutomation(manifest.rows, restoredSql);
 	const readBack = new Map();
 	for (const object of manifest.objects) {
 		const body = Buffer.from(await (await storage(localApi, localKey, `object/authenticated/${objectPath(object.bucket, object.name)}`)).arrayBuffer());
