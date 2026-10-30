@@ -172,7 +172,7 @@
 			<p class="text-sm text-white/55">
 				Al vencer, el turno se cancela y el horario vuelve a estar disponible. Nunca cancela un turno reservado
 				con menos del plazo mínimo para pagar, uno con un pedido de reprogramación ni una seña vencida hace
-				más de 24 horas: esos quedan en la lista para decidir a mano.
+				más de 24&nbsp;horas: esos quedan en la lista para decidir a mano.
 			</p>
 		</div>
 

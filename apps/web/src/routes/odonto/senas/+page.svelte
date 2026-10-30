@@ -44,7 +44,7 @@
 {#snippet depositActions(row: Row)}
 	<div class="flex shrink-0 flex-col gap-2 sm:items-end">
 		{#if data.demo}
-			<button class="ux-btn-primary" disabled>Pedir seña por WhatsApp</button>
+			<button class="ux-btn-primary px-3 sm:px-5" disabled>Pedir seña por WhatsApp</button>
 		{:else if !row.hasPhone}
 			<span class="ux-badge ux-badge-warning">Revisar teléfono</span>
 			<p class="max-w-60 text-xs leading-relaxed text-white/50 sm:text-right">
@@ -55,7 +55,7 @@
 			<p class="max-w-60 text-xs text-white/45 sm:text-right">Ya se pidió por WhatsApp. ¿Abrirlo otra vez?</p>
 			<a href={openHref(row, true)} target="_blank" rel="noreferrer" class="ux-btn-secondary">Abrir de todos modos</a>
 		{:else}
-			<a href={openHref(row)} target="_blank" rel="noreferrer" class="ux-btn-primary">Pedir seña por WhatsApp</a>
+			<a href={openHref(row)} target="_blank" rel="noreferrer" class="ux-btn-primary px-3 sm:px-5">Pedir seña por WhatsApp</a>
 		{/if}
 		<form method="POST" action="?/deposit">
 			<input type="hidden" name="appointment_id" value={row.appointmentId} />
