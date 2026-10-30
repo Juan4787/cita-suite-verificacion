@@ -73,7 +73,7 @@ test('appointment slots released: real cancellation, reassignment, occupation an
   await expect(row).toContainText(longName);
   await expect(row).toContainText('Canceló el consultorio');
   await matrix(page, info, 'horario-liberado', issues);
-  await page.getByLabel('Ver próximos días', { exact: true }).selectOption('30');
+  await page.getByRole('combobox', { name: 'Ver próximos días', exact: true }).selectOption('30');
   await page.locator('[data-slot-release-alert]').getByRole('button', { name: 'Actualizar', exact: true }).click();
   await expect(page).toHaveURL(/dias_liberados=30/);
   expect(new URL(page.url()).searchParams.get('status')).toBe('reserved');
