@@ -1,7 +1,7 @@
 -- Stage C: owned synthetic rows, rollback at the end. Each assertion uses IS DISTINCT
 -- FROM, and writes and their readback are separate statements (no NULL or snapshot pass).
 begin;
-select extensions.plan(14);
+select extensions.plan(15);
 create temporary table slot_fixture(label text primary key,id uuid not null);
 grant select on slot_fixture to authenticated;
 do $$
@@ -35,7 +35,8 @@ begin
  exception when others then execute 'reset role'; return 'ERROR '||sqlerrm; end;
  return coalesce(answer,'');
 end $$;
-create function pg_temp.slot_appt(label text,start_at timestamptz,age interval default interval '1 hour',joint boolean default false)
+create function pg_temp.slot_appt(label text,start_at timestamptz,age interval default interval '1 hour',joint boolean default false,
+ professional_label text default 'professional')
 returns uuid language plpgsql as $$
 declare patient uuid; a uuid;
 begin
@@ -43,7 +44,7 @@ begin
  insert into public.patients(owner_id,business_id,full_name) values(pg_temp.sid('owner'),pg_temp.sid('business'),'Paciente '||label) returning id into patient;
  insert into public.appointments(business_id,patient_id,service_id,professional_id,starts_at,ends_at,blocking_starts_at,blocking_ends_at,
  status,source,service_name_snapshot,professional_name_snapshot,duration_minutes_snapshot,created_at)
- values(pg_temp.sid('business'),patient,pg_temp.sid('service'),pg_temp.sid('professional'),start_at,start_at+interval '1 hour',
+ values(pg_temp.sid('business'),patient,pg_temp.sid('service'),pg_temp.sid(professional_label),start_at,start_at+interval '1 hour',
  start_at,start_at+interval '1 hour','reserved','manual','Consulta','Primera profesional',60,statement_timestamp()-age) returning id into a;
  if joint then insert into public.appointment_professionals(business_id,appointment_id,professional_id,position,is_primary)
  values(pg_temp.sid('business'),a,pg_temp.sid('professional2'),1,false); end if;
@@ -212,5 +213,31 @@ values(pg_temp.sid('business'),'00000000-0000-4000-8000-000000000001',gen_random
  date_trunc('day',now())+interval '12 days 9 hours',date_trunc('day',now())+interval '12 days 10 hours',now(),now(),'patient_cancelled');
 do $$begin if pg_temp.visible('cancel') is distinct from 0::bigint then raise exception 'SLOT_SAME_TIMESTAMP_ORDER'; end if; end $$;
 select extensions.ok(true,'el orden de registro desambigua horas iguales y no revive un aviso viejo');
+
+-- 15. Professional/read-only visibility and commercial revocation. Deliberately broaden
+-- the policy and require the same actor/read to observe the leak, then restore it and
+-- require isolation again: the negative check is not passing because its fixture is absent.
+select pg_temp.slot_appt('other_professional',date_trunc('day',now())+interval '9 days 15 hours',interval '1 hour',false,'professional2');
+update public.appointments set status='cancelled',cancelled_at=now(),cancelled_by_user_id=null where id=pg_temp.sid('other_professional');
+do $$declare read_other text; release uuid; begin
+ if (select reason from public.appointment_slot_releases where appointment_id=pg_temp.sid('other_professional')) is distinct from 'patient_cancelled'
+ then raise exception 'SLOT_PATIENT_REASON'; end if;
+ read_other:=format('select count(*) from public.appointment_slot_releases where appointment_id=%L',pg_temp.sid('other_professional'));
+ if pg_temp.actor('pro',read_other) is distinct from '0'
+ or pg_temp.actor('readonly',read_other) is distinct from '1'
+ or pg_temp.actor('pro',format('select count(*) from public.appointment_slot_releases where appointment_id=%L',pg_temp.sid('joint'))) is distinct from '2'
+ then raise exception 'SLOT_READ_SET'; end if;
+ execute format('create policy slot_release_read_probe on public.appointment_slot_releases for select to authenticated using (business_id=%L::uuid)',pg_temp.sid('business'));
+ if pg_temp.actor('pro',read_other) is distinct from '1' then raise exception 'SLOT_READ_ORACLE_MISSED_LEAK'; end if;
+ execute 'drop policy slot_release_read_probe on public.appointment_slot_releases';
+ if pg_temp.actor('pro',read_other) is distinct from '0' then raise exception 'SLOT_READ_POLICY_NOT_RESTORED'; end if;
+ update public.business_subscriptions set commercial_access_enabled=false where business_id=pg_temp.sid('business');
+ if pg_temp.actor('readonly',read_other) is distinct from '0' then raise exception 'SLOT_RESTRICTED_READ'; end if;
+ select id into release from public.appointment_slot_releases where appointment_id=pg_temp.sid('other_professional');
+ if pg_temp.actor('reception',format('select public.hide_appointment_slot_release(%L,%L)',pg_temp.sid('business'),release))
+ not like 'ERROR %SLOT_RELEASE_FORBIDDEN%' then raise exception 'SLOT_RESTRICTED_HIDE'; end if;
+ update public.business_subscriptions set commercial_access_enabled=true where business_id=pg_temp.sid('business');
+end $$;
+select extensions.ok(true,'profesional ve sólo sus turnos, sólo lectura ve el consultorio y la restricción comercial retira lectura y escritura');
 select * from extensions.finish();
 rollback;
