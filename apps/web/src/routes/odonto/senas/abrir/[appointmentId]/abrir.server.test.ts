@@ -71,7 +71,7 @@ const event = (search = '', appointmentId = APPOINTMENT_ID, userAgent = 'Mozilla
 		request: new Request('http://localhost/', { headers: { 'user-agent': userAgent } })
 	}) as never;
 
-const redirectOf = async (promise: Promise<unknown>) => {
+const redirectOf = async (promise: PromiseLike<Response> | Response) => {
 	try {
 		await promise;
 	} catch (thrown) {

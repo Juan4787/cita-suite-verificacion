@@ -14,12 +14,14 @@ const PRACTICE_TIMEZONE = 'Asia/Tokyo';
 const STARTS_AT = '2026-11-20T01:00:00.000Z';
 const PHONE = '+5493421234567';
 
-const appointment = (overrides: Record<string, unknown> = {}) => ({
+type NoticeAppointment = Parameters<typeof buildTurnWhatsAppNotices>[0];
+const appointment = (overrides: Partial<NoticeAppointment> = {}): NoticeAppointment => ({
 	status: 'reserved' as const,
 	is_past: false,
 	starts_at: STARTS_AT,
 	patient_name: 'Ana Pérez',
 	business: { timezone: PRACTICE_TIMEZONE, whatsapp_contact_phone: PHONE },
+	deposit: null,
 	...overrides
 });
 
@@ -86,7 +88,7 @@ describe('aviso de la persona al consultorio por WhatsApp', () => {
 
 describe('aviso al consultorio con la seña pendiente', () => {
 	const DUE_AT = '2026-11-18T01:00:00.000Z'; // 10:00 on 18 November in Tokyo
-	const withDeposit = (status: string, overrides: Record<string, unknown> = {}) =>
+	const withDeposit = (status: NonNullable<NoticeAppointment['deposit']>['status'], overrides: Partial<NoticeAppointment> = {}) =>
 		appointment({ deposit: { status, due_at: DUE_AT }, ...overrides });
 
 	it('ofrece dos caminos: mandar el comprobante ya o avisar que paga antes del vencimiento', () => {
@@ -109,7 +111,7 @@ describe('aviso al consultorio con la seña pendiente', () => {
 	});
 
 	it('sólo con la seña pendiente, el WhatsApp del consultorio habilitado y el turno activo', () => {
-		for (const status of ['paid', 'waived', 'expired']) {
+		for (const status of ['paid', 'waived', 'expired'] as const) {
 			expect(buildDepositWhatsAppNotices(withDeposit(status), { created: true })).toBeNull();
 		}
 		expect(buildDepositWhatsAppNotices(appointment(), { created: true })).toBeNull();
@@ -125,8 +127,8 @@ describe('aviso al consultorio con la seña pendiente', () => {
 });
 
 describe('aviso al consultorio con el turno cancelado por la seña', () => {
-	const expired = (overrides: Record<string, unknown> = {}) =>
-		appointment({ status: 'cancelled', deposit: { status: 'expired' }, ...overrides });
+	const expired = (overrides: Partial<NoticeAppointment> = {}) =>
+		appointment({ status: 'cancelled', deposit: { status: 'expired', due_at: '2026-11-18T01:00:00.000Z' }, ...overrides });
 
 	it('ofrece mandar el comprobante, con el día y la hora del consultorio', () => {
 		const { dateLabel } = formatInTimeZone(STARTS_AT, PRACTICE_TIMEZONE);
@@ -139,7 +141,7 @@ describe('aviso al consultorio con el turno cancelado por la seña', () => {
 
 	it('sólo para un turno cancelado por la seña vencida, antes de su hora y con el WhatsApp habilitado', () => {
 		expect(buildExpiredDepositWhatsAppNotice(expired({ is_past: true }))).toBeNull();
-		expect(buildExpiredDepositWhatsAppNotice(expired({ deposit: { status: 'pending' } }))).toBeNull();
+		expect(buildExpiredDepositWhatsAppNotice(expired({ deposit: { status: 'pending', due_at: '2026-11-18T01:00:00.000Z' } }))).toBeNull();
 		expect(buildExpiredDepositWhatsAppNotice(expired({ deposit: null }))).toBeNull();
 		expect(buildExpiredDepositWhatsAppNotice(expired({ status: 'reserved' }))).toBeNull();
 		expect(
@@ -163,7 +165,7 @@ describe('qué avisos recibe la página del turno', () => {
 	});
 
 	it('sin seña, o con la seña resuelta, el aviso general del turno activo', () => {
-		for (const deposit of [null, { status: 'paid', due_at: DUE_AT }, { status: 'waived', due_at: DUE_AT }]) {
+		for (const deposit of [null, { status: 'paid', due_at: DUE_AT }, { status: 'waived', due_at: DUE_AT }] as const) {
 			const notices = buildTurnWhatsAppNotices(appointment({ deposit, status: deposit ? 'confirmed' : 'reserved' }), { created: false });
 			expect(notices.depositWhatsApp).toBeNull();
 			expect(notices.practiceWhatsApp?.message).toMatch(/^Hola, soy Ana Pérez\. Te escribo por mi turno del /);
@@ -185,7 +187,7 @@ describe('qué avisos recibe la página del turno', () => {
 			{ deposit: { status: 'pending', due_at: DUE_AT } },
 			{ deposit: null },
 			{ status: 'cancelled', deposit: { status: 'expired', due_at: DUE_AT } }
-		]) {
+		] satisfies Partial<NoticeAppointment>[]) {
 			expect(buildTurnWhatsAppNotices(appointment({ ...overrides, business }), { created: true })).toEqual({
 				depositWhatsApp: null,
 				practiceWhatsApp: null

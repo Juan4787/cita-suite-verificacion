@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/svelte';
 import '@testing-library/jest-dom/vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Page from './+page.svelte';
+import type { ComponentProps } from 'svelte';
 
 // The appointment as the load returns it, every selected column included, so the page
 // is checked against the shape it really receives.
@@ -62,10 +63,11 @@ const appointment = {
 	]
 };
 
-const data = {
+type PageData = ComponentProps<typeof Page>['data'];
+const data: PageData = {
 	context: { canOperate: true, role: 'owner' },
 	appointment,
-	deposit: null as null | Record<string, unknown>,
+	deposit: null,
 	canRecordDeposit: true,
 	auditLogs: [],
 	userLabels: {},
@@ -281,7 +283,7 @@ describe('visibilidad de cancelación por estado y fecha', () => {
 });
 
 describe('seña del turno en el detalle', () => {
-	const deposit = (overrides: Record<string, unknown> = {}) => ({
+	const deposit = (overrides: Partial<NonNullable<PageData['deposit']>> = {}): NonNullable<PageData['deposit']> => ({
 		appointment_id: 'appointment-1',
 		status: 'pending',
 		amount: 40000,

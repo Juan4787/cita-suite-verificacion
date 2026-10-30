@@ -16,6 +16,7 @@ import {
 	saveDepositPolicy
 } from '$lib/server/scheduling/public/deposits';
 import { parsePolicyForm } from '$lib/server/scheduling/public/deposit-policy-form';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import type { Actions, PageServerLoad } from './$types';
 
 // How each service gets a fee, as private.resolve_service_price looks for it: a policy for every
@@ -23,7 +24,7 @@ import type { Actions, PageServerLoad } from './$types';
 type ServiceFee = 'all' | 'some' | 'none';
 type ServiceView = { id: string; name: string; fee: ServiceFee };
 
-const loadServices = async (supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, businessId: string) => {
+const loadServices = async (supabase: CitaSupabaseClient, businessId: string) => {
 	const [servicesResult, feesResult] = await Promise.all([
 		supabase.from('services').select('id, name').eq('business_id', businessId).eq('is_active', true).order('name'),
 		supabase.from('service_price_policies').select('service_id, professional_id').eq('business_id', businessId)

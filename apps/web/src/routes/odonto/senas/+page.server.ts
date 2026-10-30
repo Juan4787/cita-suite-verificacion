@@ -158,22 +158,23 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 		throw kitError(503, 'No pudimos cargar las señas. Volvé a intentar en unos segundos.');
 	}
 
+	const loadTeam = async () => {
+		try {
+			const { data, error } = await supabase.rpc('list_business_users', { target_business_id: business.id });
+			if (error) throw error;
+			return data ?? [];
+		} catch (usersError) {
+			// Without the team the row says «alguien del equipo»: the opening itself is still shown.
+			logServerFailure('Error cargando el equipo para las señas', usersError);
+			return [];
+		}
+	};
 	const [automationStatus, users] = await Promise.all([
 		loadDepositAutomationStatus(supabase).catch((statusError) => {
 			logServerFailure('Error cargando la revisión automática de señas', statusError);
 			return null;
 		}),
-		supabase
-			.rpc('list_business_users', { target_business_id: business.id })
-			.then(({ data, error }) => {
-				if (error) throw error;
-				return data ?? [];
-			})
-			.catch((usersError) => {
-				// Without the team the row says «alguien del equipo»: the opening itself is still shown.
-				logServerFailure('Error cargando el equipo para las señas', usersError);
-				return [];
-			})
+		loadTeam()
 	]);
 	const userLabels = new Map(users.map((user) => [String(user.user_id), String(user.email ?? '')]));
 	const siteUrl = getPublicSiteUrl();

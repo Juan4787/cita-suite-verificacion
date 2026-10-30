@@ -61,6 +61,7 @@
 			selectedStatus: string;
 			selectedServiceId: string;
 			selectedPatientId: string;
+			selectedTime: string;
 			searchApplied: boolean;
 			appointments: Appointment[];
 			stats: Stat[];

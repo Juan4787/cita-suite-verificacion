@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/sv
 import '@testing-library/jest-dom/vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { notificationBrowserProfile } from '$lib/device';
-import { formatDepositAmount } from '$lib/scheduling/deposits';
+import { formatDepositAmount, type AppointmentDepositView } from '$lib/scheduling/deposits';
 import { formatInTimeZone } from '$lib/utils/format';
 import Page from './+page.svelte';
 
@@ -1086,10 +1086,7 @@ describe('seña del turno', () => {
 		whatsappWebUrl: `https://web.whatsapp.com/send?phone=5493421234567&text=${text}`
 	});
 	const depositWhatsApp = { paidNow: link('comprobante'), payLater: link('despues') };
-	const withDeposit = (deposit: Omit<typeof pendingDeposit, 'status' | 'expired_at'> & {
-		status: 'pending' | 'paid' | 'waived' | 'expired';
-		expired_at: string | null;
-	}, overrides: Record<string, unknown> = {}) => ({
+	const withDeposit = (deposit: AppointmentDepositView, overrides: Record<string, unknown> = {}) => ({
 		...appointment,
 		can_confirm: false,
 		deposit,
