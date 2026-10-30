@@ -36,6 +36,9 @@ const network = db + "-e2e-net";
 let storageFixture;
 const rest = db + "-rest";
 const authContainer = db + '-auth';
+const mailContainer = db + '-mail';
+let mailOrigin;
+let mailCreated = false;
 let authOrigin;
 let authCreated = false;
 let fixtureRunId;
@@ -106,6 +109,9 @@ function cleanup() {
   }), null, 2), { mode: 0o600 });
   if (authCreated) {
     try { docker(['rm', '-f', '-v', authContainer]); } catch {}
+  }
+  if (mailCreated) {
+    try { docker(['rm', '-f', '-v', mailContainer]); } catch {}
   }
   try {
     docker(["rm", "-f", rest]);
@@ -349,6 +355,22 @@ try {
   await new Promise((resolve) => host.listen(0, "127.0.0.1", resolve));
   const hostOrigin = "https://127.0.0.1:" + host.address().port;
   if (realAuth) {
+    // The internal network has no outbound relay. Actual GoTrue SMTP messages
+    // are captured here and never leave this disposable run.
+    const mailImage = 'ghcr.io/axllent/mailpit:v1.32.0';
+    docker(['image', 'inspect', mailImage]);
+    docker(['run', '-d', '--name', mailContainer, '--label', 'com.cita-suite.booking-fixture=true',
+      '--label', 'com.cita-suite.fixture-run=' + fixtureRunId, '--network', network,
+      '--memory', '64m', '--cpus', '0.25', '--read-only', '--tmpfs', '/tmp:size=16m',
+      '-e', 'MP_DATABASE=/tmp/mailpit.db', '-e', 'MP_MAX_MESSAGES=50', mailImage]);
+    mailCreated = true;
+    mailOrigin = 'http://' + docker(['inspect', '--format', '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}', mailContainer]) + ':8025';
+    let mailReady = false;
+    for (let attempt = 0; attempt < 40; attempt++) {
+      try { if ((await fetch(mailOrigin + '/api/v1/messages', { signal: AbortSignal.timeout(500) })).ok) { mailReady = true; break; } } catch {}
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    if (!mailReady) throw new Error('The owned SMTP capture did not become ready.');
     const authImage = 'public.ecr.aws/supabase/gotrue:v2.196.0';
     docker(['image', 'inspect', authImage]);
     docker(['exec', '-i', db, 'psql', '-X', '-U', 'supabase_admin', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-q'],
@@ -363,7 +385,11 @@ try {
       GOTRUE_JWT_SECRET: secret, GOTRUE_JWT_EXP: '7200', GOTRUE_JWT_AUD: 'authenticated',
 	  GOTRUE_JWT_DEFAULT_GROUP_NAME: 'authenticated',
       GOTRUE_JWT_ADMIN_ROLES: 'service_role', GOTRUE_EXTERNAL_EMAIL_ENABLED: 'true',
-      GOTRUE_MAILER_AUTOCONFIRM: 'true', GOTRUE_DISABLE_SIGNUP: 'false', GOTRUE_LOG_LEVEL: 'error'
+      GOTRUE_MAILER_AUTOCONFIRM: 'false', GOTRUE_DISABLE_SIGNUP: 'false', GOTRUE_LOG_LEVEL: 'error',
+      GOTRUE_URI_ALLOW_LIST: appOrigin + '/**',
+      GOTRUE_SMTP_HOST: mailContainer, GOTRUE_SMTP_PORT: '1025',
+      GOTRUE_SMTP_ADMIN_EMAIL: 'auth@cita-suite.fixture.test', GOTRUE_SMTP_SENDER_NAME: 'Cita Suite',
+      GOTRUE_RATE_LIMIT_EMAIL_SENT: '100'
     };
     docker(['run', '-d', '--name', authContainer, '--label', 'com.cita-suite.booking-fixture=true',
       '--label', 'com.cita-suite.fixture-run=' + fixtureRunId,
@@ -465,6 +491,9 @@ try {
       container: db,
       storageOrigin: storageFixture?.origin,
       realAuth,
+      mailOrigin,
+      mailContainer: mailCreated ? mailContainer : null,
+      emailConfirmationRequired: realAuth,
       runtime: runtimeLog,
       runId: fixtureRunId,
       followupId: "90000000-0000-4000-8000-000000000008",
