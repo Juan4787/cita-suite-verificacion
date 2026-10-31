@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ env: {} as Record<string, string>, publicEnv: {} as Record<string, string>, client: vi.fn(), rate: vi.fn(),
+const mocks = vi.hoisted(() => ({ env: {} as Record<string, string>, publicEnv: {} as Record<string, string>, client: vi.fn(), rate: vi.fn(), log: vi.fn(),
 	RateLimitExceededError: class extends Error { status = 429; userMessage = 'Too many'; } }));
+vi.mock('$lib/server/platform/logging', () => ({ logServerFailure: mocks.log }));
 vi.mock('$env/dynamic/private', () => ({ env: mocks.env }));
 vi.mock('$env/dynamic/public', () => ({ env: mocks.publicEnv }));
 vi.mock('$app/environment', () => ({ dev: false }));
@@ -63,6 +64,31 @@ describe('confirmation page actions', () => {
 	it('un rechazo temporal del proveedor no se presenta como enlace vencido', async () => {
 		mocks.client.mockResolvedValue({ auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: { status: 503, code: 'unexpected_failure' } }) } });
 		expect(await actions.confirm(event({ access_token: 'a.b.c', type: 'signup' }) as never)).toMatchObject({ status: 503, data: { kind: 'error' } });
+	});
+	// An outage of the verification must reach the operator, as resend failures do, never with the link's credentials.
+	it('una caída al comprobar el enlace queda registrada sin el token ni el error crudo', async () => {
+		mocks.client.mockRejectedValue(new Error('PRIVATE_CONNECTION_ERROR'));
+		await actions.confirm(event({ access_token: 'tok.secreto.firma', type: 'signup' }) as never);
+		expect(mocks.log).toHaveBeenCalledTimes(1);
+		expect(mocks.log).toHaveBeenCalledWith(expect.any(String), { code: 'confirmation_verify_unavailable' });
+		expect(JSON.stringify(mocks.log.mock.calls)).not.toMatch(/tok\.secreto\.firma|PRIVATE_CONNECTION_ERROR/);
+	});
+	it('un error del proveedor o un exceso de pedidos queda registrado con su estado', async () => {
+		for (const failure of [{ status: 503, code: 'unexpected_failure' }, { status: 429, code: 'over_request_rate_limit' }]) {
+			mocks.log.mockClear();
+			mocks.client.mockResolvedValue({ auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: { ...failure, message: 'PRIVATE_PROVIDER_ERROR' } }) } });
+			await actions.confirm(event({ access_token: 'tok.secreto.firma', type: 'email' }) as never);
+			expect(mocks.log).toHaveBeenCalledTimes(1);
+			expect(mocks.log).toHaveBeenCalledWith(expect.any(String), failure);
+			expect(JSON.stringify(mocks.log.mock.calls)).not.toMatch(/tok\.secreto\.firma|PRIVATE_PROVIDER_ERROR/);
+		}
+	});
+	it('un enlace vencido, usado o sin confirmar es un caso normal y no se registra como falla', async () => {
+		for (const result of [{ data: { user: null }, error: { status: 401, code: 'bad_jwt' } }, { data: { user: { email: 'nuevo@example.com', email_confirmed_at: null } }, error: null }]) {
+			mocks.client.mockResolvedValue({ auth: { getUser: vi.fn().mockResolvedValue(result) } });
+			expect(await actions.confirm(event({ access_token: 'a.b.c', type: 'signup' }) as never)).toMatchObject({ status: 410 });
+		}
+		expect(mocks.log).not.toHaveBeenCalled();
 	});
 	it('reenvía una confirmación con el retorno propio y contexto corto', async () => {
 		const resend = vi.fn().mockResolvedValue({ error: null }); mocks.client.mockResolvedValue({ auth: { resend } });

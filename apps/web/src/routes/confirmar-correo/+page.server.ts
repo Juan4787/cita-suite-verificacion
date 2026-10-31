@@ -57,11 +57,16 @@ export const actions: Actions = {
 		try {
 			const client = await createSupabaseServerClient('odonto', null, fetch);
 			const { data, error } = await client.auth.getUser(token);
-			if (error && (Number(error.status) >= 500 || Number(error.status) === 429)) return fail(503, { kind: 'error' as const, message: 'No pudimos comprobar el enlace en este momento. Podés intentar ingresar o pedir uno nuevo.' });
+			if (error && (Number(error.status) >= 500 || Number(error.status) === 429)) {
+				logServerFailure('No se pudo comprobar el enlace de confirmación de correo', { status: error.status, code: error.code });
+				return fail(503, { kind: 'error' as const, message: 'No pudimos comprobar el enlace en este momento. Podés intentar ingresar o pedir uno nuevo.' });
+			}
 			if (error || !data.user?.email_confirmed_at || !data.user.email) return fail(410, { kind: 'invalid' as const, message: badLink });
 			email = data.user.email.trim().toLowerCase();
 			if (!validConfirmationEmail(email)) return fail(410, { kind: 'invalid' as const, message: badLink });
 		} catch {
+			// Like resend: a fixed code, never the link's token or the raw provider error.
+			logServerFailure('No se pudo conectar para comprobar el enlace de confirmación', { code: 'confirmation_verify_unavailable' });
 			return fail(503, { kind: 'error' as const, message: 'No pudimos comprobar el enlace en este momento. Podés intentar ingresar o pedir uno nuevo.' });
 		}
 		// A verified address is not a login. Do not create or replace another user's session.
