@@ -1,181 +1,33 @@
-name: Verificación de Cita Suite
-
-# Manual only. This workflow never deploys or receives production credentials. The release level
-# also reads the deployed staging, with staging's own keys.
+name: UX publicada de confirmación de correo
 on:
   workflow_dispatch:
-    inputs:
-      level:
-        description: Verification level against disposable local services
-        type: choice
-        required: true
-        default: full
-        options: [fast, full, release, rollback, types, sql, browser, capacity, capacity-seed, capacity-quick, capacity-profile, capacity-targeted]
-      browser_grep:
-        description: Diagnostic selection only; never certifies full verification
-        type: string
-        required: false
-        default: 'isolated booking integration|patient structure|roles, profesionales' 
-      artifact_run:
-        description: Run of the staging workflow that packaged this revision's release (required by release; optional for a browser diagnostic of the build)
-        type: string
-        required: false
-        default: ''
-      rollback_run:
-        description: Successful packaging run of the distinct compatible rollback baseline (required by release and rollback)
-        type: string
-        required: false
-        default: ''
-
 permissions:
   contents: read
-  # Only to download the release packaged by the staging workflow of this repository.
-  actions: read
-
 concurrency:
-  group: cita-refactoring-verification
+  group: cita-production-auth-ux
   cancel-in-progress: false
-
 jobs:
-  verify:
+  browser:
     runs-on: ubuntu-24.04
-    # The capacity scenarios run three repetitions of twelve minutes for each of two sizes.
-    timeout-minutes: ${{ startsWith(inputs.level, 'capacity') && 240 || inputs.level == 'release' && 120 || 75 }}
+    timeout-minutes: 15
     env:
-      ASTRO_TELEMETRY_DISABLED: '1'
       NODE_OPTIONS: --max-old-space-size=1536
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           persist-credentials: false
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version-file: .node-version
-      - name: Install pinned package manager and dependencies
+      - name: Prepare existing pinned browser dependencies
         run: |
           npm install --global pnpm@10.13.1
           pnpm install --frozen-lockfile --network-concurrency=1
-      - name: Validate hosted resources
-        if: inputs.level != 'fast'
-        run: |
-          node --input-type=module - <<'JS'
-          import os from 'node:os';
-          import { statfsSync } from 'node:fs';
-          const disk = statfsSync('.');
-          if (os.totalmem() < 12 * 1024 ** 3 || os.cpus().length < 4 || disk.bavail * disk.bsize < 6 * 1024 ** 3)
-            throw new Error('Insufficient disposable runner resources. No database load started.');
-          console.log(JSON.stringify({cpu: os.cpus().length, memoryBytes: os.totalmem(), availableDiskBytes: disk.bavail * disk.bsize}));
-          JS
-      - name: Type-check diagnostic browser specs before service preparation
-        if: inputs.level == 'browser'
-        run: pnpm --filter web check:e2e
-      # Preparation only downloads and installs: a stalled mirror fails here, not at the job's limit.
-      - name: Prepare disposable service images
-        if: inputs.level != 'fast' && inputs.level != 'rollback'
-        timeout-minutes: 15
-        run: |
-          node scripts/prepare-ci-services.mjs
-      - name: Use the existing official Ubuntu fallback mirror
-        if: inputs.level == 'full' || inputs.level == 'release' || inputs.level == 'browser' || inputs.level == 'rollback'
-        timeout-minutes: 1
-        run: |
-          mkdir -p .verification
-          sudo python3 - <<'PY'
-          from pathlib import Path
-          path = Path('/etc/apt/apt-mirrors.txt')
-          original = path.read_text()
-          lines = [line for line in original.splitlines() if 'azure.archive.ubuntu.com' not in line]
-          if not any(line.startswith('https://archive.ubuntu.com/ubuntu/') for line in lines):
-              raise SystemExit('The runner has no reviewed official Ubuntu fallback mirror.')
-          updated = '\n'.join(lines) + '\n'
-          path.write_text(updated)
-          Path('.verification/apt-mirrors.log').write_text('Before:\n' + original + '\nAfter:\n' + updated)
-          print(updated)
-          PY
-      - name: Prepare one browser
-        if: inputs.level == 'full' || inputs.level == 'release' || inputs.level == 'browser' || inputs.level == 'rollback'
-        timeout-minutes: 20
-        run: pnpm --filter web exec playwright install --with-deps chromium
-      - name: Prepare pinned native spreadsheet reader
-        if: inputs.level == 'full' || inputs.level == 'release'
-        timeout-minutes: 10
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install --yes --no-install-recommends libreoffice-calc=4:24.2.7-0ubuntu0.24.04.7
-          mkdir -p .verification
-          dpkg-query -W -f='${Package} ${Version}\n' libreoffice-calc libreoffice-core libreoffice-common > .verification/office-toolchain.log
-          /usr/bin/libreoffice --version >> .verification/office-toolchain.log
-          sha256sum /usr/lib/libreoffice/program/soffice.bin >> .verification/office-toolchain.log
-      # The release of this exact revision, as the staging workflow packaged it; its manifest is checked before use.
-      - name: Download the packaged release
-        if: inputs.level == 'release' || (inputs.level == 'browser' && inputs.artifact_run != '')
+          pnpm --filter web exec playwright install --with-deps chromium
+      - name: Check actual production UX sequentially
         env:
-          GH_TOKEN: ${{ github.token }}
-          ARTIFACT_RUN: ${{ inputs.artifact_run }}
-        run: |
-          test -n "$ARTIFACT_RUN"
-          gh run download "$ARTIFACT_RUN" --repo "$GITHUB_REPOSITORY" --name "cloudflare-staging-$GITHUB_SHA" --dir "$RUNNER_TEMP/release"
-      - name: Download the explicitly identified rollback baseline
-        if: inputs.level == 'release' || inputs.level == 'rollback'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ROLLBACK_RUN: ${{ inputs.rollback_run }}
-        run: |
-          [[ "$ROLLBACK_RUN" =~ ^[0-9]+$ ]]
-          gh run view "$ROLLBACK_RUN" --repo "$GITHUB_REPOSITORY" --json status,conclusion,headSha > "$RUNNER_TEMP/rollback-run.json"
-          jq -e '.status == "completed" and .conclusion == "success" and (.headSha | test("^[0-9a-f]{40}$"))' "$RUNNER_TEMP/rollback-run.json"
-          baseline_revision=$(jq -r .headSha "$RUNNER_TEMP/rollback-run.json")
-          test "$baseline_revision" != "$GITHUB_SHA"
-          gh run download "$ROLLBACK_RUN" --repo "$GITHUB_REPOSITORY" --name "cloudflare-staging-$baseline_revision" --dir "$RUNNER_TEMP/release-rollback"
-          echo "CITA_ROLLBACK_REVISION=$baseline_revision" >> "$GITHUB_ENV"
-      - name: Verify sequentially
-        env:
-          VERIFICATION_LEVEL: ${{ inputs.level }}
-          BROWSER_GREP: ${{ inputs.browser_grep }}
-          ARTIFACT_RUN: ${{ inputs.artifact_run }}
-          CITA_RELEASE_ARTIFACT: ${{ (inputs.level == 'release' || inputs.artifact_run != '') && format('{0}/release', runner.temp) || '' }}
-          CITA_ROLLBACK_ARTIFACT: ${{ (inputs.level == 'release' || inputs.level == 'rollback') && format('{0}/release-rollback', runner.temp) || '' }}
-          CITA_STAGING_SERVICE_ROLE_KEY: ${{ (inputs.level == 'release' || inputs.level == 'rollback') && secrets.CITA_STAGING_SERVICE_ROLE_KEY || '' }}
-          CITA_STAGING_ANON_KEY: ${{ (inputs.level == 'release' || inputs.level == 'rollback') && secrets.CITA_STAGING_ANON_KEY || '' }}
-        run: |
-          case "$VERIFICATION_LEVEL" in
-            fast|full|release) pnpm "verify:$VERIFICATION_LEVEL" ;;
-            rollback)
-              echo 'Deployed staging rollback check only; this does not certify the candidate or full release.'
-              node scripts/verify-campaign-staging.mjs --rollback
-              ;;
-            types) node scripts/run-campaign-type-generation.mjs ;;
-            sql) node scripts/run-campaign-type-generation.mjs --verify-sql ;;
-            capacity) node scripts/run-campaign-capacity.mjs ;;
-            capacity-seed)
-              echo 'Seeding diagnostic only; this is not a capacity result.'
-              node scripts/run-campaign-capacity.mjs --seed-only
-              ;;
-            capacity-quick)
-              echo 'Short capacity diagnostic; this is not a capacity result.'
-              node scripts/run-campaign-capacity.mjs --quick
-              ;;
-            capacity-profile)
-              echo 'CPU profile of the short capacity diagnostic; this is not a capacity result.'
-              node scripts/run-campaign-capacity.mjs --profile
-              ;;
-            capacity-targeted)
-              echo 'Three-flow workerd CPU diagnostic, one synthetic practice; this is not hosted capacity acceptance.'
-              node scripts/run-campaign-capacity.mjs --targeted
-              ;;
-            browser)
-              test -n "$BROWSER_GREP"
-              echo 'Diagnostic browser execution only; this is not full verification.'
-              if [ -n "$ARTIFACT_RUN" ]; then
-                node scripts/run-campaign-integration.mjs --grep "$BROWSER_GREP" "--artifact=$CITA_RELEASE_ARTIFACT"
-              else
-                node scripts/run-campaign-integration.mjs --grep "$BROWSER_GREP"
-              fi
-              ;;
-            *) exit 2 ;;
-          esac
-      - name: Retain verification evidence
+          CITA_AUTH_UX_20261031: ${{ secrets.CITA_AUTH_UX_20261031 }}
+        run: node scripts/verify-production-auth-ux.mjs
+      - name: Preserve synthetic evidence without credential traces
         if: always()
-        # Standard public runners and their logs are free. Keep the evidence in
-        # bounded logs rather than consuming the account's billed artifact pool.
         run: python3 scripts/package-verification-evidence.py
