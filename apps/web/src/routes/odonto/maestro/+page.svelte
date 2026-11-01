@@ -2,6 +2,8 @@
 	import type { PageProps } from './$types';
 
 	import Modal from '$lib/components/Modal.svelte';
+	import ConfirmForm from '$lib/components/ConfirmForm.svelte';
+	import { ACCOUNT_ASSISTANCE_OPTIONS, formatAssistanceMoment, type AccountAssistanceKind } from '$lib/access/assistance-durations';
 	import {
 		accessDetail as directoryAccessDetail,
 		accessSummary as directoryAccessSummary,
@@ -67,6 +69,7 @@
 		businessName: string;
 		businessSlug: string;
 		requestedByEmail: string | null;
+		kind: AccountAssistanceKind | null;
 		startsAt: string;
 		expiresAt: string;
 	};
@@ -158,6 +161,8 @@
 
 	const businessTimeZone = (business: BusinessCard) =>
 		business.timezone || 'America/Argentina/Buenos_Aires';
+	const assistanceTimeZone = (businessId: string) =>
+		businesses.find((business) => business.id === businessId)?.timezone || 'America/Argentina/Buenos_Aires';
 	const dateTime = (value?: string | null, timeZone?: string | null) =>
 		value ? formatDateTime(value, timeZone || 'America/Argentina/Buenos_Aires') : 'Sin fecha';
 	const money = (value?: number | string | null) => {
@@ -353,22 +358,37 @@
 				<h2 id="assistance-title" class="font-bold text-white">
 					{assistance.length === 1 ? '1 cuenta pidió ayuda' : `${assistance.length} cuentas pidieron ayuda`}
 				</h2>
-				<p class="mt-1 text-sm text-white/55">Sólo aparecen mientras el permiso de una hora sigue vigente.</p>
+				<p class="mt-1 text-sm text-white/55">Sólo aparecen mientras la ayuda sigue vigente.</p>
 				<div class="mt-4 grid gap-3 lg:grid-cols-2">
-					{#each assistance as item}
+					{#each assistance as item (item.id)}
 						<div class="ux-soft-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
 							<div class="min-w-0">
 								<p class="break-words font-bold text-white">{item.businessName}</p>
 								<p class="mt-1 break-words text-sm text-white/55">{item.requestedByEmail ?? 'Dueño del consultorio'}</p>
 								<p class="mt-2 text-sm font-bold text-emerald-200">
-									{formatAccessRemaining(item.expiresAt) ?? `Hasta ${dateTime(item.expiresAt)}`}
+									{item.kind ? `${ACCOUNT_ASSISTANCE_OPTIONS[item.kind].title} · ` : ''}{formatAccessRemaining(item.expiresAt) ?? 'Vence pronto'}
+								</p>
+								<p class="mt-1 text-sm text-white/55">
+									Hasta {formatAssistanceMoment(item.expiresAt, assistanceTimeZone(item.businessId))?.full ?? dateTime(item.expiresAt)}
 								</p>
 							</div>
-							<form method="post" action="?/enter_assisted_business" class="shrink-0">
-								<input type="hidden" name="grant_id" value={item.id} />
-								<input type="hidden" name="business_id" value={item.businessId} />
-								<button class="ux-btn-primary w-full sm:w-auto">Abrir configuración</button>
-							</form>
+							<div class="flex w-full shrink-0 flex-col gap-2 sm:w-auto">
+								<form method="post" action="?/enter_assisted_business">
+									<input type="hidden" name="grant_id" value={item.id} />
+									<input type="hidden" name="business_id" value={item.businessId} />
+									<button class="ux-btn-primary w-full">Abrir configuración</button>
+								</form>
+								<ConfirmForm
+									action="?/end_assistance"
+									fields={{ grant_id: item.id, business_id: item.businessId, business_name: item.businessName }}
+									buttonClass="ux-btn-secondary w-full"
+									label="Terminar ayuda"
+									title="Terminar la ayuda"
+									body={() => `Vas a dejar de poder entrar a ${item.businessName} ahora. El consultorio va a ver que Cita Suite terminó la ayuda.`}
+									confirmLabel="Terminar ayuda"
+									tone="danger"
+								/>
+							</div>
 						</div>
 					{/each}
 				</div>
