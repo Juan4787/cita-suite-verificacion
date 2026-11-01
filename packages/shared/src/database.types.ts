@@ -108,9 +108,12 @@ export type Database = {
           dismissed_at: string | null
           dismissed_by_user_id: string | null
           expires_at: string
+          extended_at: string | null
           id: string
+          kind: string
           requested_by_user_id: string
           revoked_at: string | null
+          revoked_by_role: string | null
           revoked_by_user_id: string | null
           starts_at: string
           status: string
@@ -123,9 +126,12 @@ export type Database = {
           dismissed_at?: string | null
           dismissed_by_user_id?: string | null
           expires_at: string
+          extended_at?: string | null
           id?: string
+          kind?: string
           requested_by_user_id: string
           revoked_at?: string | null
+          revoked_by_role?: string | null
           revoked_by_user_id?: string | null
           starts_at?: string
           status?: string
@@ -138,9 +144,12 @@ export type Database = {
           dismissed_at?: string | null
           dismissed_by_user_id?: string | null
           expires_at?: string
+          extended_at?: string | null
           id?: string
+          kind?: string
           requested_by_user_id?: string
           revoked_at?: string | null
+          revoked_by_role?: string | null
           revoked_by_user_id?: string | null
           starts_at?: string
           status?: string
@@ -3932,6 +3941,10 @@ export type Database = {
           total_count: number
         }[]
       }
+      account_assistance_has_patients: {
+        Args: { target_business_id: string }
+        Returns: boolean
+      }
       activate_account_assistance: {
         Args: { target_business_id: string; target_support_user_id: string }
         Returns: {
@@ -4641,12 +4654,70 @@ export type Database = {
         Args: { target_business_id: string; target_grant_id: string }
         Returns: undefined
       }
+      end_account_assistance: {
+        Args: { target_business_id: string; target_grant_id: string }
+        Returns: {
+          business_id: string
+          created_at: string
+          dismissed_at: string | null
+          dismissed_by_user_id: string | null
+          expires_at: string
+          extended_at: string | null
+          id: string
+          kind: string
+          requested_by_user_id: string
+          revoked_at: string | null
+          revoked_by_role: string | null
+          revoked_by_user_id: string | null
+          starts_at: string
+          status: string
+          support_user_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "account_assistance_grants"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       ensure_user_default_business: {
         Args: { p_industry?: string; p_name?: string }
         Returns: {
           business_id: string
           role: string
         }[]
+      }
+      extend_account_assistance: {
+        Args: {
+          target_business_id: string
+          target_grant_id: string
+          target_kind: string
+        }
+        Returns: {
+          business_id: string
+          created_at: string
+          dismissed_at: string | null
+          dismissed_by_user_id: string | null
+          expires_at: string
+          extended_at: string | null
+          id: string
+          kind: string
+          requested_by_user_id: string
+          revoked_at: string | null
+          revoked_by_role: string | null
+          revoked_by_user_id: string | null
+          starts_at: string
+          status: string
+          support_user_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "account_assistance_grants"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       fail_google_calendar_event_sync: {
         Args: {
@@ -5407,6 +5478,37 @@ export type Database = {
           p_remind_on: string
         }
         Returns: undefined
+      }
+      start_account_assistance: {
+        Args: {
+          target_business_id: string
+          target_kind: string
+          target_support_user_id: string
+        }
+        Returns: {
+          business_id: string
+          created_at: string
+          dismissed_at: string | null
+          dismissed_by_user_id: string | null
+          expires_at: string
+          extended_at: string | null
+          id: string
+          kind: string
+          requested_by_user_id: string
+          revoked_at: string | null
+          revoked_by_role: string | null
+          revoked_by_user_id: string | null
+          starts_at: string
+          status: string
+          support_user_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "account_assistance_grants"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       submit_public_booking_information: {
         Args: {
