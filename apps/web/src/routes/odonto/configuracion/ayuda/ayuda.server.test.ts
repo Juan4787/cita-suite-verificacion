@@ -12,9 +12,11 @@ const mocks = vi.hoisted(() => ({
 	resolveActiveBusiness: vi.fn(),
 	demoBusinessContext: vi.fn(),
 	activateAccountAssistance: vi.fn(),
-	revokeAccountAssistance: vi.fn(),
+	extendAccountAssistance: vi.fn(),
+	endAccountAssistance: vi.fn(),
 	dismissAccountAssistanceNotice: vi.fn(),
 	loadAccountAssistanceView: vi.fn(),
+	loadAccountAssistanceHasPatients: vi.fn(),
 	buildAccountAssistanceView: vi.fn()
 }));
 
@@ -31,12 +33,15 @@ vi.mock('$lib/server/access/public/business', () => ({
 }));
 vi.mock('$lib/server/access/public/account-assistance', () => ({
 	activateAccountAssistance: mocks.activateAccountAssistance,
-	revokeAccountAssistance: mocks.revokeAccountAssistance,
+	extendAccountAssistance: mocks.extendAccountAssistance,
+	endAccountAssistance: mocks.endAccountAssistance,
 	dismissAccountAssistanceNotice: mocks.dismissAccountAssistanceNotice,
 	loadAccountAssistanceView: mocks.loadAccountAssistanceView,
+	loadAccountAssistanceHasPatients: mocks.loadAccountAssistanceHasPatients,
 	buildAccountAssistanceView: mocks.buildAccountAssistanceView,
 	accountAssistanceErrorMessage: (error: unknown) =>
 		error instanceof Error ? error.message : 'No pudimos actualizar la ayuda para configurar.',
+	accountAssistanceErrorStatus: () => 500,
 	safeAssistanceReturnTo: (value: FormDataEntryValue | null) =>
 		String(value ?? '').startsWith('/odonto') ? String(value) : '/odonto/configuracion/ayuda'
 }));
@@ -80,7 +85,17 @@ beforeEach(() => {
 		showBanner: true,
 		canActivate: true
 	});
+	mocks.loadAccountAssistanceHasPatients.mockResolvedValue(false);
 });
+
+// What the confirmation dialog sends: the action only runs after the person confirms it.
+const confirmed = (entries: Record<string, string> = {}) => ({ confirmed: '1', ...entries });
+const masterAssisting = () => {
+	mocks.isMasterEmail.mockReturnValue(true);
+	mocks.resolveActiveBusiness.mockResolvedValue(
+		context('admin', { assistance: { grantId: 'assist-1', supportUserId: 'master-1' } })
+	);
+};
 
 describe('configuracion ayuda server', () => {
 	it('loads for owner and reads the current help state', async () => {
@@ -99,7 +114,7 @@ describe('configuracion ayuda server', () => {
 		);
 	});
 
-	it('activates only for the owner and redirects back', async () => {
+	it('gives the duration the owner chose, after the confirmation, and redirects back', async () => {
 		const supabase = { rpc: vi.fn() };
 		const admin = { from: vi.fn(), auth: { admin: { listUsers: vi.fn() } } };
 		mocks.createSupabaseServerClient.mockResolvedValue(supabase);
@@ -108,22 +123,31 @@ describe('configuracion ayuda server', () => {
 		mocks.activateAccountAssistance.mockResolvedValue({ id: 'assist-1' });
 
 		await expect(
-			actions.activate(
-				makeEvent({ return_to: '/odonto/agenda' }) as never
-			)
+			actions.activate(makeEvent(confirmed({ return_to: '/odonto/agenda', kind: 'day' })) as never)
 		).rejects.toMatchObject({ status: 303, location: '/odonto/agenda' });
 
 		expect(mocks.activateAccountAssistance).toHaveBeenCalledWith({
 			supabase,
 			admin,
-			businessId: BUSINESS_ID
+			businessId: BUSINESS_ID,
+			kind: 'day'
 		});
+	});
+
+	it('gives nothing without the confirmation or without one of the three durations', async () => {
+		mocks.resolveActiveBusiness.mockResolvedValue(context('owner'));
+
+		for (const entries of [{ kind: 'day' }, confirmed({ kind: 'week' }), confirmed({})]) {
+			const result = (await actions.activate(makeEvent(entries) as never)) as { status: number };
+			expect(result.status).toBe(400);
+		}
+		expect(mocks.activateAccountAssistance).not.toHaveBeenCalled();
 	});
 
 	it('rejects activation from admins', async () => {
 		mocks.resolveActiveBusiness.mockResolvedValue(context('admin'));
 
-		const result = (await actions.activate(makeEvent({ return_to: '/odonto/agenda' }) as never)) as {
+		const result = (await actions.activate(makeEvent(confirmed({ return_to: '/odonto/agenda', kind: 'hour' })) as never)) as {
 			status: number;
 		};
 
@@ -157,30 +181,136 @@ describe('configuracion ayuda server', () => {
 		await expect(load(makeEvent() as never)).rejects.toMatchObject({ status: 503 });
 	});
 
-	it('blocks a direct master request to activate help', async () => {
+	it('reads the patients for the owner and passes them to the options', async () => {
+		mocks.resolveActiveBusiness.mockResolvedValue(context('owner'));
+		mocks.loadAccountAssistanceHasPatients.mockResolvedValue(true);
+
+		const result = (await load(makeEvent() as never)) as { serverNow: string };
+
+		expect(mocks.loadAccountAssistanceHasPatients).toHaveBeenCalledWith(
+			expect.objectContaining({ businessId: BUSINESS_ID })
+		);
+		expect(mocks.loadAccountAssistanceView).toHaveBeenCalledWith(expect.objectContaining({ hasPatients: true }));
+		expect(Number.isFinite(Date.parse(result.serverNow))).toBe(true);
+	});
+
+	it('does not list durations when it could not read the patients', async () => {
+		mocks.resolveActiveBusiness.mockResolvedValue(context('owner'));
+		mocks.loadAccountAssistanceHasPatients.mockRejectedValue(new Error('read failed'));
+
+		await expect(load(makeEvent() as never)).rejects.toMatchObject({ status: 503 });
+		expect(mocks.loadAccountAssistanceView).not.toHaveBeenCalled();
+	});
+
+	it('does not ask the patients of anyone but the owner', async () => {
+		masterAssisting();
+
+		await load(makeEvent() as never);
+
+		expect(mocks.loadAccountAssistanceHasPatients).not.toHaveBeenCalled();
+		expect(mocks.loadAccountAssistanceView).toHaveBeenCalledWith(
+			expect.objectContaining({ hasPatients: undefined, isAssisting: true })
+		);
+	});
+
+	it('blocks a direct master request to give or extend help', async () => {
 		mocks.isMasterEmail.mockReturnValue(true);
 
-		const result = (await actions.activate(makeEvent() as never)) as {
+		for (const action of [actions.activate, actions.extend]) {
+			const result = (await action(makeEvent(confirmed({ kind: 'day', grant_id: 'assist-1' })) as never)) as {
+				status: number;
+				data: { message: string };
+			};
+			expect(result.status).toBe(403);
+			expect(result.data.message).toContain('cuenta maestra no da ni extiende la ayuda');
+		}
+		expect(mocks.resolveActiveBusiness).not.toHaveBeenCalled();
+	});
+
+	it('extends exactly the grant shown, to the duration chosen, after the confirmation', async () => {
+		mocks.resolveActiveBusiness.mockResolvedValue(context('owner'));
+
+		await expect(
+			actions.extend(makeEvent(confirmed({ return_to: '/odonto/configuracion/ayuda', grant_id: 'assist-1', kind: 'initial_setup' })) as never)
+		).rejects.toMatchObject({ status: 303, location: '/odonto/configuracion/ayuda' });
+
+		expect(mocks.extendAccountAssistance).toHaveBeenCalledWith({
+			supabase: expect.anything(),
+			businessId: BUSINESS_ID,
+			grantId: 'assist-1',
+			kind: 'initial_setup'
+		});
+	});
+
+	it('extends nothing without the confirmation, the grant or a valid duration, nor for admins', async () => {
+		mocks.resolveActiveBusiness.mockResolvedValue(context('owner'));
+		for (const entries of [{ grant_id: 'assist-1', kind: 'day' }, confirmed({ kind: 'day' }), confirmed({ grant_id: 'assist-1', kind: 'week' })]) {
+			const result = (await actions.extend(makeEvent(entries) as never)) as { status: number };
+			expect(result.status).toBe(400);
+		}
+		mocks.resolveActiveBusiness.mockResolvedValue(context('admin'));
+		const admin = (await actions.extend(makeEvent(confirmed({ grant_id: 'assist-1', kind: 'day' })) as never)) as { status: number };
+		expect(admin.status).toBe(403);
+		expect(mocks.extendAccountAssistance).not.toHaveBeenCalled();
+	});
+
+	it('lets the owner end it after the confirmation', async () => {
+		mocks.resolveActiveBusiness.mockResolvedValue(context('owner'));
+		mocks.endAccountAssistance.mockResolvedValue({ id: 'assist-1' });
+
+		await expect(
+			actions.end(makeEvent(confirmed({ return_to: '/odonto/configuracion/ayuda', grant_id: 'assist-1' })) as never)
+		).rejects.toMatchObject({ status: 303, location: '/odonto/configuracion/ayuda' });
+
+		expect(mocks.endAccountAssistance).toHaveBeenCalledWith({
+			supabase: expect.anything(),
+			businessId: BUSINESS_ID,
+			grantId: 'assist-1'
+		});
+	});
+
+	it('lets the master end the assistance it is using and sends it back to the master panel', async () => {
+		masterAssisting();
+
+		await expect(
+			actions.end(makeEvent(confirmed({ return_to: '/odonto/agenda', grant_id: 'assist-1' })) as never)
+		).rejects.toMatchObject({ status: 303, location: '/odonto/maestro' });
+
+		expect(mocks.endAccountAssistance).toHaveBeenCalledWith(
+			expect.objectContaining({ businessId: BUSINESS_ID, grantId: 'assist-1' })
+		);
+	});
+
+	it('ends nothing without the confirmation, for admins, or for the master outside the assistance', async () => {
+		mocks.resolveActiveBusiness.mockResolvedValue(context('owner'));
+		const unconfirmed = (await actions.end(makeEvent({ grant_id: 'assist-1' }) as never)) as { status: number };
+		expect(unconfirmed.status).toBe(400);
+		const missing = (await actions.end(makeEvent(confirmed()) as never)) as { status: number };
+		expect(missing.status).toBe(400);
+
+		mocks.resolveActiveBusiness.mockResolvedValue(context('admin'));
+		const admin = (await actions.end(makeEvent(confirmed({ grant_id: 'assist-1' })) as never)) as { status: number };
+		expect(admin.status).toBe(403);
+
+		mocks.isMasterEmail.mockReturnValue(true);
+		mocks.resolveActiveBusiness.mockResolvedValue(context('owner'));
+		const master = (await actions.end(makeEvent(confirmed({ grant_id: 'assist-1' })) as never)) as { status: number };
+		expect(master.status).toBe(403);
+
+		expect(mocks.endAccountAssistance).not.toHaveBeenCalled();
+	});
+
+	it('says why the database refused instead of redirecting as if it ended', async () => {
+		mocks.resolveActiveBusiness.mockResolvedValue(context('owner'));
+		mocks.endAccountAssistance.mockRejectedValue(new Error('La ayuda ya no está activa.'));
+
+		const result = (await actions.end(makeEvent(confirmed({ grant_id: 'assist-1' })) as never)) as {
 			status: number;
 			data: { message: string };
 		};
 
-		expect(result.status).toBe(403);
-		expect(result.data.message).toContain('cuenta maestra no solicita ayuda');
-		expect(mocks.resolveActiveBusiness).not.toHaveBeenCalled();
-	});
-
-	it('revokes only for the owner', async () => {
-		mocks.resolveActiveBusiness.mockResolvedValue(context('owner'));
-		mocks.revokeAccountAssistance.mockResolvedValue({ id: 'assist-1' });
-
-		await expect(
-			actions.revoke(makeEvent({ return_to: '/odonto/configuracion/ayuda' }) as never)
-		).rejects.toMatchObject({ status: 303, location: '/odonto/configuracion/ayuda' });
-
-		expect(mocks.revokeAccountAssistance).toHaveBeenCalledWith(
-			expect.objectContaining({ businessId: BUSINESS_ID })
-		);
+		expect(result.status).toBe(500);
+		expect(result.data.message).toBe('La ayuda ya no está activa.');
 	});
 
 	it('dismisses a finished notice only for the owner', async () => {
