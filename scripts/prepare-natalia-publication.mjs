@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadBuildArtifact, nataliaSite } from './lib/staging-deploy.mjs';
-import { PRODUCTION_NATALIA_APP_BASE, PRODUCTION_NATALIA_INTEGRATION_KEY } from './lib/production-deploy.mjs';
+import { PRODUCTION_NATALIA_APP_BASE, PRODUCTION_NATALIA_INTEGRATION_KEY, PRODUCTION_NATALIA_SITE_URL } from './lib/production-deploy.mjs';
 import { assertLightVerificationResources } from './lib/verification-resources.mjs';
 
 // Local preparation only. No credentials, API calls, Git mutation or deployment.
@@ -19,7 +19,7 @@ if (metadata.id !== 'prj_ddhAhez9VNro373XWSykLkhU5vBS' || metadata.name !== 'nat
 	!/^dpl_[A-Za-z0-9]+$/.test(metadata.productionDeployment ?? ''))
 	throw new Error('The inspected project differs from the reviewed Natalia destination. Nothing was prepared.');
 const { revision, files } = loadBuildArtifact(resolve(artifact));
-const site = nataliaSite(files, 'natalia-production', { base: PRODUCTION_NATALIA_APP_BASE, key: PRODUCTION_NATALIA_INTEGRATION_KEY });
+const site = nataliaSite(files, 'natalia-production', { base: PRODUCTION_NATALIA_APP_BASE, key: PRODUCTION_NATALIA_INTEGRATION_KEY, siteURL: PRODUCTION_NATALIA_SITE_URL });
 const root = fileURLToPath(new URL('../', import.meta.url));
 const directory = join(root, '.verification', `natalia-publication-${revision.slice(0, 7)}`);
 // Fail on any previous preparation. Never replace its bytes or receipt.

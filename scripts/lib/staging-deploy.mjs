@@ -119,18 +119,35 @@ export function loadBuildArtifact(directory) {
 
 /**
  * One of Natalia's builds inside the release, by its path in the site: it must exist and
- * link to the expected booking and integration, never to another environment's.
+ * link to the expected booking and integration, never to another environment's. Its indexing
+ * matches `siteURL` (plan 12.16): without her own domain every page asks not to be indexed and
+ * there is no sitemap; with it every page names its canonical address there and robots.txt
+ * points to the sitemap.
  */
-export function nataliaSite(files, name, { base, key }) {
+export function nataliaSite(files, name, { base, key, siteURL = null }) {
 	const prefix = `.verification/${name}/`;
 	const site = new Map([...files].filter(([path]) => path.startsWith(prefix)).map(([path, contents]) => [path.slice(prefix.length), contents]));
 	const home = site.get('index.html')?.toString('utf8') ?? '';
-	const foreign = [...site].filter(([path]) => path.endsWith('.html')).some(([, contents]) => {
+	const pages = [...site].filter(([path]) => path.endsWith('.html'));
+	const foreign = pages.some(([, contents]) => {
 		const html = contents.toString('utf8');
 		return [...html.matchAll(/data-booking-base="([^"]*)"/g)].some(match => match[1] !== base) ||
 			[...html.matchAll(/data-booking-key="([^"]*)"/g)].some(match => match[1] !== key);
 	});
 	if (foreign || !home.includes(`data-booking-base="${base}"`) || !home.includes(`data-booking-key="${key}"`))
 		throw new Error(`The build of ${name} does not link to its own booking. Nothing was used.`);
+	const robots = site.get('robots.txt')?.toString('utf8') ?? '';
+	const indexing = pages.map(([path, contents]) => {
+		const html = contents.toString('utf8');
+		const head = html.slice(0, Math.max(0, html.indexOf('</head>')));
+		const page = '/' + path.replace(/index\.html$/, '');
+		return { page, noindex: /<meta name="robots" content="noindex"\/?>/.test(head), canonical: /<link rel="canonical" href="([^"]+)"\/?>/.exec(head)?.[1] ?? null };
+	});
+	const discoverable = siteURL === null
+		? indexing.every(item => item.noindex && item.canonical === null) && !site.has('sitemap.xml') && !/^Sitemap:/m.test(robots)
+		: indexing.every(item => !item.noindex && item.canonical === new URL(item.page, siteURL).href) && site.has('sitemap.xml') &&
+			robots.includes(`Sitemap: ${new URL('/sitemap.xml', siteURL).href}`);
+	if (!pages.length || !/^User-agent: \*$/m.test(robots) || !discoverable)
+		throw new Error(`The build of ${name} does not have the expected indexing. Nothing was used.`);
 	return site;
 }

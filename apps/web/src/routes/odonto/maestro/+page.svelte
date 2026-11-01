@@ -2,6 +2,15 @@
 	import type { PageProps } from './$types';
 
 	import Modal from '$lib/components/Modal.svelte';
+	import {
+		accessDetail as directoryAccessDetail,
+		accessSummary as directoryAccessSummary,
+		directoryCounts,
+		filterDirectory,
+		statusLabel,
+		statusTone,
+		type DirectoryView
+	} from '$lib/access/master-directory';
 	import { formatAccessRemaining, formatDateTime } from '$lib/utils/format';
 	import { formatMoneyInteger } from '$lib/utils/money-input';
 
@@ -62,7 +71,6 @@
 		expiresAt: string;
 	};
 
-	type MasterFilter = 'all' | 'active' | 'attention';
 	type DurationOption = { value: string; label: string; selectLabel: string };
 
 	const durationOptions: DurationOption[] = [
@@ -94,7 +102,7 @@
 		sessions_revoked: 'Sesiones cerradas'
 	};
 
-	let activeFilter = $state<MasterFilter>('all');
+	let activeFilter = $state<DirectoryView>('all');
 	let search = $state('');
 	let showCreatePanel = $state(false);
 	let showTools = $state(false);
@@ -139,33 +147,14 @@
 		return linked;
 	});
 
-	const needsAttention = (business: BusinessCard) =>
-		!business.access.commercialAccessEnabled ||
-		business.access.visualStatus === 'expiring' ||
-		business.access.commercialStatus !== 'active' ||
-		business.mpSubscription?.status === 'paused' ||
-		business.mpSubscription?.status === 'pending';
-
-	const activeBusinessesCount = $derived(businesses.filter((business) => !needsAttention(business)).length);
-	const attentionBusinessesCount = $derived(businesses.filter(needsAttention).length);
-
-	const filteredBusinesses = $derived.by(() => {
-		const normalized = search.trim().toLowerCase();
-		return businesses.filter((business) => {
-			if (activeFilter === 'active' && needsAttention(business)) return false;
-			if (activeFilter === 'attention' && !needsAttention(business)) return false;
-			if (!normalized) return true;
-			return [
-				business.name,
-				business.slug,
-				business.primaryOwnerEmail ?? '',
-				...business.members.map((member) => member.email ?? '')
-			]
-				.join(' ')
-				.toLowerCase()
-				.includes(normalized);
-		});
-	});
+	// Archived practices have their own view: the others, their counts and their search leave them out.
+	const counts = $derived(directoryCounts(businesses));
+	const showingArchived = $derived(activeFilter === 'archived');
+	const filteredBusinesses = $derived(filterDirectory(businesses, activeFilter, search));
+	const showView = (view: DirectoryView) => {
+		activeFilter = view;
+		expandedBusinessId = null;
+	};
 
 	const businessTimeZone = (business: BusinessCard) =>
 		business.timezone || 'America/Argentina/Buenos_Aires';
@@ -178,57 +167,14 @@
 		return parsed.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
 	};
 
-	const statusLabel = (business: BusinessCard) => {
-		if (!business.access.commercialAccessEnabled) return 'Pausado';
-		if (business.access.visualStatus === 'permanent') return 'Permanente';
-		if (business.access.visualStatus === 'expiring') return 'Por vencer';
-		if (business.access.commercialStatus === 'active') return 'Activo';
-		if (business.access.commercialStatus === 'grace') return 'Vencido';
-		if (business.access.commercialStatus === 'restricted') return 'Restringido';
-		return 'Archivado';
-	};
-
 	const statusClass = (business: BusinessCard) => {
-		if (!business.access.commercialAccessEnabled) return 'ux-badge ux-badge-danger';
-		if (business.access.visualStatus === 'permanent') return 'ux-badge ux-badge-success';
-		if (business.access.visualStatus === 'expiring') return 'ux-badge ux-badge-warning';
-		if (business.access.commercialStatus === 'active') return 'ux-badge ux-badge-success';
-		if (business.access.commercialStatus === 'grace') return 'ux-badge ux-badge-warning';
-		return 'ux-badge ux-badge-danger';
+		const tone = statusTone(business);
+		return tone === 'neutral' ? 'ux-badge' : `ux-badge ux-badge-${tone}`;
 	};
-
-	const accessSummary = (business: BusinessCard) => {
-		if (!business.access.commercialAccessEnabled) return 'Acceso pausado manualmente';
-		if (business.access.isPermanent) return 'Sin vencimiento';
-		if (business.access.commercialStatus === 'archived') return 'Cuenta archivada';
-		if (business.access.commercialStatus === 'restricted') return 'Sin acceso operativo';
-		if (business.access.commercialStatus === 'grace') return 'En período de gracia';
-		return formatAccessRemaining(business.access.paidUntil) ?? 'Activo';
-	};
-
-	const accessDetail = (business: BusinessCard) => {
-		const timeZone = businessTimeZone(business);
-		if (!business.access.commercialAccessEnabled) return 'Reanudalo desde las opciones avanzadas.';
-		if (business.access.isPermanent) return 'No requiere renovaciones.';
-		if (business.access.commercialStatus === 'archived') {
-			return business.access.archivedAt
-				? `Archivado el ${dateTime(business.access.archivedAt, timeZone)}`
-				: 'Requiere reactivación.';
-		}
-		if (business.access.commercialStatus === 'restricted') {
-			return business.access.restrictedUntil
-				? `Se archiva el ${dateTime(business.access.restrictedUntil, timeZone)}`
-				: 'Requiere un nuevo período de acceso.';
-		}
-		if (business.access.commercialStatus === 'grace') {
-			return business.access.graceUntil
-				? `Gracia hasta el ${dateTime(business.access.graceUntil, timeZone)}`
-				: 'Requiere regularización.';
-		}
-		return business.access.paidUntil
-			? `Vence el ${dateTime(business.access.paidUntil, timeZone)}`
-			: 'Sin vencimiento registrado.';
-	};
+	const accessSummary = (business: BusinessCard) =>
+		directoryAccessSummary(business, formatAccessRemaining(business.access.paidUntil));
+	const accessDetail = (business: BusinessCard) =>
+		directoryAccessDetail(business, (value) => dateTime(value, businessTimeZone(business)));
 
 	const durationFor = (businessId: string) => durationSelections[businessId] ?? 'hour_1';
 	const setDurationFor = (businessId: string, value: string) => {
@@ -374,15 +320,15 @@
 
 		<div class="master-stats" aria-label="Resumen del panel">
 			<div>
-				<strong>{businesses.length}</strong>
+				<strong>{counts.all}</strong>
 				<span>Total</span>
 			</div>
 			<div>
-				<strong>{activeBusinessesCount}</strong>
+				<strong>{counts.active}</strong>
 				<span>En orden</span>
 			</div>
-			<div class:has-attention={attentionBusinessesCount > 0}>
-				<strong>{attentionBusinessesCount}</strong>
+			<div class:has-attention={counts.attention > 0}>
+				<strong>{counts.attention}</strong>
 				<span>Por revisar</span>
 			</div>
 		</div>
@@ -567,34 +513,54 @@
 	<section class="ux-card master-directory" aria-labelledby="businesses-title">
 		<div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
 			<div>
-				<h2 id="businesses-title" class="text-xl font-bold text-white">Consultorios</h2>
-				<p class="mt-1 text-sm text-white/50">El acceso se administra por consultorio, no por dirección de email.</p>
+				<h2 id="businesses-title" class="text-xl font-bold text-white">{showingArchived ? 'Consultorios archivados' : 'Consultorios'}</h2>
+				<p class="mt-1 text-sm text-white/50">
+					{showingArchived
+						? 'No tienen acceso y no aparecen en la lista ni en el buscador de consultorios. Para volver a usar uno, abrí Gestionar y reactivalo.'
+						: 'El acceso se administra por consultorio, no por dirección de email.'}
+				</p>
 			</div>
-			<span class="text-sm font-bold text-white/45">{filteredBusinesses.length} resultados</span>
+			<span class="text-sm font-bold text-white/45">{filteredBusinesses.length} {filteredBusinesses.length === 1 ? 'resultado' : 'resultados'}</span>
 		</div>
 
 		<div class="mt-5 grid gap-3 lg:grid-cols-[1fr_auto]">
 			<label class="master-search">
-				<span class="sr-only">Buscar consultorio</span>
+				<span class="sr-only">{showingArchived ? 'Buscar consultorio archivado' : 'Buscar consultorio'}</span>
 				<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
 					<circle cx="11" cy="11" r="7" />
 					<path d="m20 20-3.5-3.5" />
 				</svg>
-				<input id="master-search" class="ux-input" placeholder="Buscar por consultorio o email…" bind:value={search} />
+				<input id="master-search" class="ux-input" placeholder={showingArchived ? 'Buscar en archivados…' : 'Buscar por consultorio o email…'} bind:value={search} />
 			</label>
-			<div class="master-filter" aria-label="Filtrar consultorios">
-				<button type="button" class:active={activeFilter === 'all'} onclick={() => (activeFilter = 'all')}>Todos <span>{businesses.length}</span></button>
-				<button type="button" class:active={activeFilter === 'active'} onclick={() => (activeFilter = 'active')}>En orden <span>{activeBusinessesCount}</span></button>
-				<button type="button" class:active={activeFilter === 'attention'} onclick={() => (activeFilter = 'attention')}>Revisar <span>{attentionBusinessesCount}</span></button>
-			</div>
+			{#if showingArchived}
+				<button type="button" class="ux-btn-secondary master-archive-back" onclick={() => showView('all')}>Volver a consultorios</button>
+			{:else}
+				<div class="master-filter" aria-label="Filtrar consultorios">
+					<button type="button" class:active={activeFilter === 'all'} onclick={() => showView('all')}>Todos <span>{counts.all}</span></button>
+					<button type="button" class:active={activeFilter === 'active'} onclick={() => showView('active')}>En orden <span>{counts.active}</span></button>
+					<button type="button" class:active={activeFilter === 'attention'} onclick={() => showView('attention')}>Revisar <span>{counts.attention}</span></button>
+				</div>
+			{/if}
 		</div>
+		{#if !showingArchived}
+			<div class="master-archive-entry">
+				<button type="button" class="master-archive-link" onclick={() => showView('archived')}>
+					Ver consultorios archivados <span>{counts.archived}</span>
+				</button>
+			</div>
+		{/if}
 	</section>
 
 	<div class="master-business-list">
 		{#if filteredBusinesses.length === 0}
 			<div class="ux-empty">
-				<p class="font-bold text-white">No encontramos consultorios</p>
-				<p class="text-sm">Probá otra búsqueda o cambiá el filtro.</p>
+				{#if showingArchived && counts.archived === 0}
+					<p class="font-bold text-white">No hay consultorios archivados</p>
+					<p class="text-sm">Cuando archives uno desde Gestionar, va a aparecer acá.</p>
+				{:else}
+					<p class="font-bold text-white">No encontramos consultorios</p>
+					<p class="text-sm">{showingArchived ? 'Probá otra búsqueda.' : 'Probá otra búsqueda o cambiá el filtro.'}</p>
+				{/if}
 			</div>
 		{/if}
 
@@ -1016,6 +982,44 @@
 
 	.master-filter button.active span {
 		color: rgba(255, 255, 255, 0.72);
+	}
+
+	/* Archived practices are opened on purpose, apart from the filters that work on the directory. */
+	.master-archive-entry {
+		display: flex;
+		justify-content: flex-end;
+		margin-top: 0.75rem;
+	}
+
+	.master-archive-link {
+		display: inline-flex;
+		min-height: var(--tap);
+		align-items: center;
+		gap: 0.4rem;
+		border-radius: 0.75rem;
+		padding: 0.5rem 0.75rem;
+		color: var(--text-muted);
+		font-size: 0.82rem;
+		font-weight: 700;
+		text-decoration: underline;
+		text-decoration-color: var(--border);
+		text-underline-offset: 0.25em;
+		transition: background 150ms ease, color 150ms ease;
+	}
+
+	.master-archive-link:hover,
+	.master-archive-link:focus-visible {
+		background: rgba(255, 255, 255, 0.05);
+		color: var(--text);
+	}
+
+	.master-archive-link span {
+		color: var(--text-subtle);
+		font-size: 0.72rem;
+	}
+
+	.master-archive-back {
+		white-space: nowrap;
 	}
 
 	.master-business-list {

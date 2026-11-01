@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-	STAGING_APP_WORKER, assertBuildArtifact, assertStagingAppConfig, assertStagingSchedulerConfig, loadBuildArtifact, stagingAppSecrets, stagingSupabaseKey
+	STAGING_APP_WORKER, assertBuildArtifact, assertStagingAppConfig, assertStagingSchedulerConfig, loadBuildArtifact, nataliaSite, stagingAppSecrets, stagingSupabaseKey
 } from './staging-deploy.mjs';
 
 const read = path => JSON.parse(readFileSync(fileURLToPath(new URL('../../' + path, import.meta.url)), 'utf8'));
@@ -110,4 +110,50 @@ test('a downloaded build is read whole from disk, and a link inside it is refuse
 		symlinkSync('/etc/hostname', join(directory, 'apps/web/.svelte-kit/cloudflare/linked'));
 		assert.throws(() => loadBuildArtifact(directory), /contains a link/);
 	} finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+// Plan 12.16: Natalia's site links to its own booking, and its indexing follows her own domain.
+const siteFiles = ({ base = 'https://app.cita-suite.com.ar', key = 'a'.repeat(32), siteURL = null, noindexOn = null, sitemap = Boolean(siteURL),
+	canonical = (path) => new URL(path, siteURL).href } = {}) => {
+	const page = (path) => {
+		const indexing = siteURL ? `<link rel="canonical" href="${canonical(path)}"/>` : '<meta name="robots" content="noindex"/>';
+		const head = noindexOn === path ? '<meta name="robots" content="noindex"/>' + indexing : indexing;
+		return Buffer.from(`<!doctype html><html><head>${head}<title>t</title></head><body data-booking-base="${base}" data-booking-key="${key}"></body></html>`);
+	};
+	const files = new Map([
+		['.verification/natalia-production/index.html', page('/')],
+		['.verification/natalia-production/turnos/index.html', page('/turnos/')],
+		['.verification/natalia-production/robots.txt', Buffer.from(`User-agent: *\nAllow: /\n${siteURL ? `\nSitemap: ${siteURL}/sitemap.xml\n` : ''}`)],
+		['.verification/natalia-staging/index.html', page('/')]
+	]);
+	if (sitemap) files.set('.verification/natalia-production/sitemap.xml', Buffer.from('<urlset/>'));
+	return files;
+};
+const link = { base: 'https://app.cita-suite.com.ar', key: 'a'.repeat(32) };
+
+test('Natalia\'s site without her own domain asks not to be indexed on every page and has no sitemap', () => {
+	assert.deepEqual([...nataliaSite(siteFiles(), 'natalia-production', link).keys()].sort(), ['index.html', 'robots.txt', 'turnos/index.html']);
+	assert.throws(() => nataliaSite(siteFiles({ sitemap: true }), 'natalia-production', link), /expected indexing/);
+	assert.throws(() => nataliaSite(siteFiles({ siteURL: 'https://natalia.example' }), 'natalia-production', link), /expected indexing/);
+	const withoutRobots = siteFiles();
+	withoutRobots.delete('.verification/natalia-production/robots.txt');
+	assert.throws(() => nataliaSite(withoutRobots, 'natalia-production', link), /expected indexing/);
+});
+
+test('with her own domain every page names its canonical address there and robots.txt points to the sitemap', () => {
+	const siteURL = 'https://natalia.example';
+	assert.ok(nataliaSite(siteFiles({ siteURL }), 'natalia-production', { ...link, siteURL }).has('sitemap.xml'));
+	assert.throws(() => nataliaSite(siteFiles({ siteURL, sitemap: false }), 'natalia-production', { ...link, siteURL }), /expected indexing/);
+	assert.throws(() => nataliaSite(siteFiles({ siteURL, noindexOn: '/turnos/' }), 'natalia-production', { ...link, siteURL }), /expected indexing/);
+	assert.throws(() => nataliaSite(siteFiles({ siteURL: 'https://other.example' }), 'natalia-production', { ...link, siteURL }), /expected indexing/);
+	// The canonical address alone, with robots.txt and the sitemap right: another domain, or every page claiming the home page.
+	assert.throws(() => nataliaSite(siteFiles({ siteURL, canonical: (path) => new URL(path, 'https://other.example').href }), 'natalia-production', { ...link, siteURL }), /expected indexing/);
+	assert.throws(() => nataliaSite(siteFiles({ siteURL, canonical: () => new URL('/', siteURL).href }), 'natalia-production', { ...link, siteURL }), /expected indexing/);
+	assert.throws(() => nataliaSite(siteFiles(), 'natalia-production', { ...link, siteURL }), /expected indexing/);
+});
+
+test('a site that books through another origin or integration is refused before its indexing', () => {
+	assert.throws(() => nataliaSite(siteFiles({ base: 'https://app.cita-suite.workers.dev' }), 'natalia-production', link), /own booking/);
+	assert.throws(() => nataliaSite(siteFiles({ key: 'b'.repeat(32) }), 'natalia-production', link), /own booking/);
+	assert.throws(() => nataliaSite(siteFiles(), 'natalia-missing', link), /own booking/);
 });

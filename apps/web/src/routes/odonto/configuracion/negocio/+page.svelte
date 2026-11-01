@@ -23,6 +23,7 @@
 		odontology: 'Odontología',
 		aesthetics: 'Estética',
 		kinesiology: 'Kinesiología',
+		medicine: 'Medicina',
 		nutrition: 'Nutrición',
 		therapy: 'Terapia',
 		other: 'Otro'
