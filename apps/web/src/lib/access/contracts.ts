@@ -7,6 +7,7 @@ export const BUSINESS_INDUSTRIES = [
 	'odontology',
 	'aesthetics',
 	'kinesiology',
+	'medicine',
 	'nutrition',
 	'therapy',
 	'other'

@@ -26,6 +26,8 @@ export type BookingIntakeField = {
 	patientField?: 'insurance' | 'insurance_plan' | 'birth_date' | 'age' | 'medication' | 'background' | 'allergies' | 'dni' | 'address' | 'custom';
 };
 export type BookingIntakeAnswers = Record<string, string | boolean>;
+/** A choice question's options. A practice's insurance list can exceed 20; the database checks the same bound. */
+export const BOOKING_CHOICE_OPTIONS_MAX = 40;
 export type BookingModalityWindow = {
 	modality: BookingModality;
 	professionalId?: string;
@@ -120,7 +122,7 @@ export function parseBookingIntakeFields(value: unknown): BookingIntakeField[] {
 		}
 		if (!text && field.maxLength !== undefined) throw new BookingIntegrationValidationError('BOOKING_INTAKE_SCHEMA_INVALID');
 		if (field.kind === 'choice') {
-			if (!Array.isArray(field.options) || field.options.length < 1 || field.options.length > 20 ||
+			if (!Array.isArray(field.options) || field.options.length < 1 || field.options.length > BOOKING_CHOICE_OPTIONS_MAX ||
 				field.options.some((option) => typeof option !== 'string' || !option.trim() || option.length > 120) ||
 				new Set(field.options).size !== field.options.length) {
 				throw new BookingIntegrationValidationError('BOOKING_INTAKE_SCHEMA_INVALID');

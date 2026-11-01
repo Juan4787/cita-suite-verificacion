@@ -24,8 +24,10 @@ begin
     select b,p,weekday,'09:00','19:00',30,0 from generate_series(0,6) weekday;
   perform set_config('request.jwt.claim.sub',actor::text,true);
   perform set_config('request.jwt.claim.role','authenticated',true);
-  policy:=jsonb_build_object('base_amount',10000,'currency','ARS','base_month',date_trunc('month',now())::date,
-    'first_adjustment_month',(date_trunc('month',now())+interval '1 month')::date,'monthly_percentage',0,'rounding_unit',1,'adjustments','[]'::jsonb);
+  -- The practice's month, as save_service_price_policy checks it: in UTC the month changes three hours
+  -- earlier than in Buenos Aires, and a UTC base month was refused as future at the end of every month.
+  policy:=jsonb_build_object('base_amount',10000,'currency','ARS','base_month',date_trunc('month',now() at time zone 'America/Argentina/Buenos_Aires')::date,
+    'first_adjustment_month',(date_trunc('month',now() at time zone 'America/Argentina/Buenos_Aires')+interval '1 month')::date,'monthly_percentage',0,'rounding_unit',1,'adjustments','[]'::jsonb);
   perform public.save_service_price_policy(b,s,p,0,policy);
   slot:=(((now() at time zone 'America/Argentina/Buenos_Aires')::date+5)::timestamp+interval '12 hours') at time zone 'America/Argentina/Buenos_Aires';
   original_quote:=public.get_public_service_price_quote(b,s,array[p],(slot at time zone 'America/Argentina/Buenos_Aires')::date);

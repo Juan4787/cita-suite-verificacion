@@ -33,6 +33,7 @@ vi.mock('$lib/server/platform/rate-limits', async () => {
 
 import {
 	DefaultBusinessSetupUnavailableError,
+	parseBusiness,
 	resolveActiveBusiness
 } from '$lib/server/access/public/business';
 import { RateLimitUnavailableError } from '$lib/server/platform/rate-limits';
@@ -84,6 +85,18 @@ const subscriptionRow = {
 	created_at: '2026-06-01T00:00:00.000Z',
 	updated_at: '2026-06-01T00:00:00.000Z'
 };
+
+describe('parseBusiness industry', () => {
+	it('reads a medical practice, the industry the database also accepts', () => {
+		expect(parseBusiness({ ...businessRow, industry: 'medicine' }).industry).toBe('medicine');
+	});
+
+	it('still refuses an industry neither the app nor the database knows', () => {
+		let failure: unknown;
+		try { parseBusiness({ ...businessRow, industry: 'veterinary' }); } catch (error) { failure = error; }
+		expect(failure).toMatchObject({ name: 'InvalidDataContractError', contract: 'business.industry' });
+	});
+});
 
 describe('resolveActiveBusiness', () => {
 	beforeEach(() => {

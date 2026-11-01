@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { probeAnonymousExposure } from './lib/api-exposure.mjs';
 import { PRODUCTION_API_ORIGIN, productionKeys, readEnvFile } from './lib/production-database.mjs';
 import {
-	PRODUCTION_APP_ORIGIN, PRODUCTION_NATALIA_APP_BASE, PRODUCTION_NATALIA_INTEGRATION_KEY, PRODUCTION_NATALIA_ORIGIN, PRODUCTION_WORKERS_DEV_ORIGIN
+	PRODUCTION_APP_ORIGIN, PRODUCTION_NATALIA_APP_BASE, PRODUCTION_NATALIA_INTEGRATION_KEY, PRODUCTION_NATALIA_ORIGIN, PRODUCTION_NATALIA_SITE_URL, PRODUCTION_WORKERS_DEV_ORIGIN
 } from './lib/production-deploy.mjs';
 import { assertAppEntry, assertSupabaseOrigin, clientEntries, compareServed, httpsRedirect, siteEntries } from './lib/served-release.mjs';
 import { loadBuildArtifact, nataliaSite } from './lib/staging-deploy.mjs';
@@ -30,7 +30,7 @@ const clientFiles = await compareServed(PRODUCTION_APP_ORIGIN, clientEntries(fil
 const transport = {};
 for (const origin of [PRODUCTION_APP_ORIGIN, PRODUCTION_WORKERS_DEV_ORIGIN]) transport[origin] = await httpsRedirect(origin);
 const nataliaFiles = option === '--natalia' ? await compareServed(PRODUCTION_NATALIA_ORIGIN, siteEntries(nataliaSite(files, 'natalia-production',
-	{ base: PRODUCTION_NATALIA_APP_BASE, key: PRODUCTION_NATALIA_INTEGRATION_KEY }))) : null;
+	{ base: PRODUCTION_NATALIA_APP_BASE, key: PRODUCTION_NATALIA_INTEGRATION_KEY, siteURL: PRODUCTION_NATALIA_SITE_URL }))) : null;
 const exposure = await probeAnonymousExposure({ api: PRODUCTION_API_ORIGIN, serviceKey, anonKey });
 const receipt = { at: new Date().toISOString(), revision, appOrigin: PRODUCTION_APP_ORIGIN, clientFiles, contentSecurity, transport,
 	natalia: nataliaFiles === null ? 'not checked' : { origin: PRODUCTION_NATALIA_ORIGIN, files: nataliaFiles },

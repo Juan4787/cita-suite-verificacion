@@ -64,6 +64,16 @@ describe('clinical intake contracts', () => {
     expect(() => parseBookingIntakeFields([schema[0], schema[0]])).toThrow();
     expect(() => parseBookingIntakeFields([{ id: 'choice', label: 'Opción', kind: 'choice', required: false, options: ['same', 'same'] }])).toThrow();
   });
+  it('accepts an insurance list of up to 40 choices, as a real practice needs, and refuses more', () => {
+    // A practice's insurance list: 22 plans plus «Particular» and «Otra obra social» is 24 choices.
+    const insurance = (count: number) => ({ id: 'insurance_list', label: 'Obra social', kind: 'choice', required: true, patientField: 'insurance',
+      options: Array.from({ length: count }, (_, index) => `Obra social ${index + 1}`) });
+    const [field] = parseBookingIntakeFields([insurance(24)]);
+    expect(field.options).toHaveLength(24);
+    expect(validateBookingIntakeAnswers([field], { insurance_list: 'Obra social 24' })).toEqual({ insurance_list: 'Obra social 24' });
+    expect(parseBookingIntakeFields([insurance(40)])[0].options).toHaveLength(40);
+    expect(() => parseBookingIntakeFields([insurance(41)])).toThrow('BOOKING_INTAKE_SCHEMA_INVALID');
+  });
   it('bounds UTF-8 bytes as well as individual character counts', () => {
     const many = parseBookingIntakeFields(Array.from({ length: 10 }, (_, i) => ({ id: 'field_' + i, label: 'Respuesta', kind: 'text', required: false, maxLength: 2000 })));
     expect(() => validateBookingIntakeAnswers(many, Object.fromEntries(many.map((field) => [field.id, 'é'.repeat(1000)])))).toThrow('TOO_LONG');

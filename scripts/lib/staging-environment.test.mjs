@@ -12,7 +12,8 @@ import { PRODUCTION_APP_ORIGIN, PRODUCTION_NATALIA_APP_BASE, PRODUCTION_NATALIA_
 
 const revision = 'a'.repeat(40);
 const key = (ref, role) => ['e30', Buffer.from(JSON.stringify({ ref, role })).toString('base64url'), 'signature'].join('.');
-const natalia = `<a data-booking data-booking-base="${STAGING_APP_ORIGIN}" data-booking-key="${STAGING_RELEASE_PRACTICE.integrationKey}">Reservar</a>`;
+// Natalia's staging build as the release carries it: its page asks not to be indexed and robots.txt is there (plan 12.16).
+const natalia = `<head><meta name="robots" content="noindex"/></head><a data-booking data-booking-base="${STAGING_APP_ORIGIN}" data-booking-key="${STAGING_RELEASE_PRACTICE.integrationKey}">Reservar</a>`;
 
 function fixture(run) {
 	const root = mkdtempSync(join(tmpdir(), 'cita-staging-guard-'));
@@ -21,7 +22,8 @@ function fixture(run) {
 		'.verification/cloudflare-bundle/_worker.js': 'export default {}',
 		'apps/web/.svelte-kit/cloudflare/.assetsignore': '_worker.js\n',
 		'apps/web/.svelte-kit/cloudflare/_app/version.json': JSON.stringify({ version: revision }),
-		'.verification/natalia-staging/index.html': natalia
+		'.verification/natalia-staging/index.html': natalia,
+		'.verification/natalia-staging/robots.txt': 'User-agent: *\nAllow: /\n'
 	};
 	const write = (revisionOfBuild = revision) => {
 		rmSync(release, { recursive: true, force: true });

@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro check && astro build && node scripts/check-build.mjs && node scripts/check-public.mjs",
+    "build": "astro check && astro build && node scripts/write-discovery.mjs && node scripts/check-build.mjs && node scripts/check-public.mjs",
     "check": "astro check",
     "preview": "astro preview",
     "check:assets": "node scripts/check-build.mjs",
