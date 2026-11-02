@@ -98,9 +98,9 @@
 		<input bind:value={query} placeholder="Buscar paciente" class="ux-input" />
 	</label>
 	{#if searching}
-		<p class="mt-3 text-base font-semibold text-white/55" role="status">Buscando pacientes…</p>
+		<p class="mt-3 text-base font-semibold text-fg-55" role="status">Buscando pacientes…</p>
 	{:else if loading && !searchingQuery}
-		<p class="mt-3 text-base font-semibold text-white/55" role="status">Cargando fichas recientes…</p>
+		<p class="mt-3 text-base font-semibold text-fg-55" role="status">Cargando fichas recientes…</p>
 	{/if}
 	{#if searchError}
 		<div class="ux-alert mt-3" role="alert">
@@ -117,8 +117,8 @@
 		{#each visible as patient (patient.id)}
 			<button type="button" onclick={() => onSelect(patient)} class="ux-choice min-w-0 break-words px-4 py-3 text-left"
 				class:ux-choice-active={selectedId === patient.id} aria-pressed={selectedId === patient.id}>
-				<span class="block text-base font-bold text-white">{patient.full_name}</span>
-				{#if disambiguation(patient)}<span class="mt-1 block text-sm text-white/55">{disambiguation(patient)}</span>{/if}
+				<span class="block text-base font-bold text-fg">{patient.full_name}</span>
+				{#if disambiguation(patient)}<span class="mt-1 block text-sm text-fg-55">{disambiguation(patient)}</span>{/if}
 			</button>
 		{/each}
 		{#if visible.length === 0 && !loading && !searching && !searchError && !(error && !searchingQuery)}

@@ -105,39 +105,39 @@
 		<div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
 			<div>
 				<span class={statusClass}>{statusLabel}</span>
-				<h2 class="mt-4 text-3xl font-bold text-white">{data.context.business.name}</h2>
-				<p class="mt-2 text-sm text-white/55">
+				<h2 class="mt-4 text-3xl font-bold text-fg">{data.context.business.name}</h2>
+				<p class="mt-2 text-sm text-fg-55">
 					{access.isPermanent ? 'Tu cuenta no tiene vencimiento.' : 'Estado de acceso del consultorio.'}
 				</p>
 			</div>
 			<div class="grid gap-3 sm:grid-cols-2 lg:min-w-[34rem]">
 				<div class="ux-soft-card p-4">
-					<p class="text-sm font-bold text-white/45">Vencimiento</p>
-					<p class="mt-2 font-bold text-white">{access.isPermanent ? 'No vence' : formatDateTime(access.paidUntil)}</p>
+					<p class="text-sm font-bold text-copy-subtle">Vencimiento</p>
+					<p class="mt-2 font-bold text-fg">{access.isPermanent ? 'No vence' : formatDateTime(access.paidUntil)}</p>
 				</div>
 				<div class="ux-soft-card p-4">
-					<p class="text-sm font-bold text-white/45">Límite antes de suspensión</p>
-					<p class="mt-2 font-bold text-white">{access.isPermanent ? 'No vence' : formatDateTime(access.graceUntil)}</p>
+					<p class="text-sm font-bold text-copy-subtle">Límite antes de suspensión</p>
+					<p class="mt-2 font-bold text-fg">{access.isPermanent ? 'No vence' : formatDateTime(access.graceUntil)}</p>
 				</div>
 				<div class="ux-soft-card p-4">
-					<p class="text-sm font-bold text-white/45">Límite antes de archivo</p>
-					<p class="mt-2 font-bold text-white">{access.isPermanent ? 'No vence' : formatDateTime(access.restrictedUntil)}</p>
+					<p class="text-sm font-bold text-copy-subtle">Límite antes de archivo</p>
+					<p class="mt-2 font-bold text-fg">{access.isPermanent ? 'No vence' : formatDateTime(access.restrictedUntil)}</p>
 				</div>
 				<div class="ux-soft-card p-4">
-					<p class="text-sm font-bold text-white/45">Último pago</p>
-					<p class="mt-2 font-bold text-white">{money(subscription.last_payment_amount)}</p>
+					<p class="text-sm font-bold text-copy-subtle">Último pago</p>
+					<p class="mt-2 font-bold text-fg">{money(subscription.last_payment_amount)}</p>
 				</div>
 			</div>
 		</div>
 
 		<div class="mt-6 grid gap-3 md:grid-cols-2">
 			<div class="ux-soft-card p-4">
-				<p class="text-sm font-bold text-white/45">Última actualización</p>
-				<p class="mt-2 font-bold text-white">{formatDateTime(subscription.updated_at, 'Sin registrar')}</p>
+				<p class="text-sm font-bold text-copy-subtle">Última actualización</p>
+				<p class="mt-2 font-bold text-fg">{formatDateTime(subscription.updated_at, 'Sin registrar')}</p>
 			</div>
 			<div class="ux-soft-card p-4">
-				<p class="text-sm font-bold text-white/45">Cómo continuar</p>
-				<p class="mt-2 font-bold text-white">
+				<p class="text-sm font-bold text-copy-subtle">Cómo continuar</p>
+				<p class="mt-2 font-bold text-fg">
 					{access.isPermanent ? 'Contactá soporte del sistema.' : isManualBlock ? 'Contactá soporte.' : 'Activá la suscripción con Mercado Pago más abajo.'}
 				</p>
 			</div>
@@ -153,8 +153,8 @@
 	{#if !access.isPermanent}
 		<div class="ux-card">
 			<h2 class="ux-section-title">Suscripción con Mercado Pago</h2>
-			<p class="mt-2 text-sm text-white/55">
-				Plan Cita Suite: <span class="font-bold text-white">{money(data.mpAmount)}</span> por mes.
+			<p class="mt-2 text-sm text-fg-55">
+				Plan Cita Suite: <span class="font-bold text-fg">{money(data.mpAmount)}</span> por mes.
 				Serás redirigido a Mercado Pago para completar el pago de forma segura. Los medios
 				de pago disponibles los muestra Mercado Pago al momento de autorizar.
 			</p>
@@ -220,7 +220,7 @@
 					El acceso fue suspendido por el administrador del sistema. No inicies un pago desde
 					acá: contactá soporte para regularizar la cuenta.
 				</p>
-				<p class="mt-4 text-sm font-semibold text-white/55">¿Necesitás ayuda? Contactar soporte</p>
+				<p class="mt-4 text-sm font-semibold text-fg-55">¿Necesitás ayuda? Contactar soporte</p>
 			{:else if data.mpSubscriptionUnavailable}
 				<p class="ux-alert ux-alert-warning mt-5">
 					No pudimos comprobar el estado de tu suscripción en Mercado Pago. Volvé a intentar en
@@ -229,20 +229,20 @@
 			{:else if mpSub?.status === 'authorized' || mpSub?.status === 'paused'}
 				<div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 					<div class="ux-soft-card p-4">
-						<p class="text-sm font-bold text-white/45">Estado</p>
-						<p class="mt-2 font-bold text-white">{mpSub.status === 'authorized' ? 'Activa' : 'Pausada'}</p>
+						<p class="text-sm font-bold text-copy-subtle">Estado</p>
+						<p class="mt-2 font-bold text-fg">{mpSub.status === 'authorized' ? 'Activa' : 'Pausada'}</p>
 					</div>
 					<div class="ux-soft-card p-4">
-						<p class="text-sm font-bold text-white/45">Monto mensual</p>
-						<p class="mt-2 font-bold text-white">{money(mpSub.transaction_amount)}</p>
+						<p class="text-sm font-bold text-copy-subtle">Monto mensual</p>
+						<p class="mt-2 font-bold text-fg">{money(mpSub.transaction_amount)}</p>
 					</div>
 					<div class="ux-soft-card p-4">
-						<p class="text-sm font-bold text-white/45">Próximo cobro</p>
-						<p class="mt-2 font-bold text-white">{formatDateTime(mpSub.next_charge_at, 'Programado por MP')}</p>
+						<p class="text-sm font-bold text-copy-subtle">Próximo cobro</p>
+						<p class="mt-2 font-bold text-fg">{formatDateTime(mpSub.next_charge_at, 'Programado por MP')}</p>
 					</div>
 					<div class="ux-soft-card p-4">
-						<p class="text-sm font-bold text-white/45">Pagador</p>
-						<p class="mt-2 break-all font-bold text-white">{mpSub.payer_email ?? 'Sin registrar'}</p>
+						<p class="text-sm font-bold text-copy-subtle">Pagador</p>
+						<p class="mt-2 break-all font-bold text-fg">{mpSub.payer_email ?? 'Sin registrar'}</p>
 					</div>
 				</div>
 				{#if mpSub.status === 'paused'}
@@ -257,19 +257,19 @@
 					<button type="submit" disabled={mpSubmitting} class="ux-btn-secondary">
 						{mpSubmitting ? 'Cancelando…' : 'Cancelar suscripción'}
 					</button>
-					<p class="mt-2 text-sm text-white/45">
+					<p class="mt-2 text-sm text-copy-subtle">
 						Al cancelar no se generan más cobros; el tiempo ya pagado sigue vigente hasta su
 						vencimiento.
 					</p>
 				</form>
 			{:else if canActivateWithMp}
 				{#if mpSub?.status === 'pending'}
-					<p class="mt-4 text-sm text-white/55">
+					<p class="mt-4 text-sm text-fg-55">
 						Hay una autorización pendiente sin completar. Podés retomarla iniciando la
 						suscripción de nuevo.
 					</p>
 				{:else if mpSub?.status === 'cancelled'}
-					<p class="mt-4 text-sm text-white/55">
+					<p class="mt-4 text-sm text-fg-55">
 						Tu suscripción anterior fue cancelada. Podés suscribirte de nuevo cuando quieras.
 					</p>
 				{/if}
@@ -278,11 +278,11 @@
 						{mpSubmitting ? 'Creando enlace seguro en Mercado Pago…' : 'Activar suscripción con Mercado Pago'}
 					</button>
 					{#if mpSubmitting}
-						<p class="mt-2 text-sm font-semibold text-white/60">
+						<p class="mt-2 text-sm font-semibold text-fg-60">
 							Esto puede tardar unos segundos. No cierres esta ventana ni vuelvas a tocar el botón.
 						</p>
 					{:else}
-						<p class="mt-2 text-sm text-white/45">
+						<p class="mt-2 text-sm text-copy-subtle">
 							Te redirigimos a Mercado Pago para autorizar el débito mensual de forma segura.
 						</p>
 					{/if}
@@ -295,7 +295,7 @@
 		<div class="flex items-center justify-between gap-4">
 			<div>
 				<h2 class="ux-section-title">Historial</h2>
-				<p class="mt-2 text-sm text-white/55">Cambios de acceso registrados.</p>
+				<p class="mt-2 text-sm text-fg-55">Cambios de acceso registrados.</p>
 			</div>
 		</div>
 
@@ -309,21 +309,21 @@
 					<div class="ux-soft-card p-4">
 						<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 							<div>
-								<p class="font-bold text-white">
+								<p class="font-bold text-fg">
 									{grant.operation === 'set_permanent' ? 'Acceso permanente' : grant.operation === 'grant_access' || grant.operation === 'extend_access' ? 'Acceso actualizado' : 'Cambio registrado'}
 								</p>
-								<p class="mt-1 text-sm text-white/55">
+								<p class="mt-1 text-sm text-fg-55">
 									{money(grant.amount)}
 								</p>
 							</div>
-							<time class="text-sm font-bold text-white/45">{formatDateTime(grant.created_at)}</time>
+							<time class="text-sm font-bold text-copy-subtle">{formatDateTime(grant.created_at)}</time>
 						</div>
 						<div class="mt-3 grid gap-3 text-sm md:grid-cols-2">
-							<p class="text-white/55">Antes: <span class="font-bold text-white">{formatDateTime(grant.paid_until_before)}</span></p>
-							<p class="text-white/55">Después: <span class="font-bold text-white">{formatDateTime(grant.paid_until_after)}</span></p>
+							<p class="text-fg-55">Antes: <span class="font-bold text-fg">{formatDateTime(grant.paid_until_before)}</span></p>
+							<p class="text-fg-55">Después: <span class="font-bold text-fg">{formatDateTime(grant.paid_until_after)}</span></p>
 						</div>
 						{#if grant.note}
-							<p class="mt-3 text-sm text-white/70">{grant.note}</p>
+							<p class="mt-3 text-sm text-fg-70">{grant.note}</p>
 						{/if}
 					</div>
 				{/each}

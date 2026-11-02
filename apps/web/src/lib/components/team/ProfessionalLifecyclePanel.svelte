@@ -76,10 +76,10 @@
 	};
 </script>
 		{#if canManage}
-			<div class="ux-card flex flex-col gap-4 border-red-400/15 sm:flex-row sm:items-center sm:justify-between">
+			<div class="ux-card flex flex-col gap-4 border-danger-400-15 sm:flex-row sm:items-center sm:justify-between">
 				<div class="min-w-0 flex-1">
-					<p class="font-bold text-white">{professional?.is_active ? 'Archivar profesional' : 'Restaurar profesional'}</p>
-					<p class="mt-1 text-sm text-white/55">
+					<p class="font-bold text-fg">{professional?.is_active ? 'Archivar profesional' : 'Restaurar profesional'}</p>
+					<p class="mt-1 text-sm text-fg-55">
 						{professional?.is_active
 							? 'Se oculta de la agenda y de las reservas. Reversible.'
 							: 'Vuelve a estar disponible para asignar turnos.'}
@@ -145,17 +145,17 @@
 				on:close={() => (showDeleteConfirm = false)}
 			>
 				{#if dependencyCountsLoading}
-					<p class="text-sm font-semibold text-white/70" aria-live="polite">
+					<p class="text-sm font-semibold text-fg-70" aria-live="polite">
 						Revisando turnos, consultas y seguimientos…
 					</p>
 				{:else if dependencyCountsError}
-					<p class="text-sm text-red-100">{dependencyCountsError}</p>
+					<p class="text-sm text-danger-100">{dependencyCountsError}</p>
 					<div class="mt-5 flex justify-end">
 						<button type="button" class="ux-btn-secondary" onclick={loadDependencyCounts}>Reintentar</button>
 					</div>
 				{:else if canDelete}
-					<p class="text-sm text-white/70">
-						¿Eliminar a <span class="font-bold text-white">{professional?.name}</span> de forma permanente? Esta acción no se puede deshacer.
+					<p class="text-sm text-fg-70">
+						¿Eliminar a <span class="font-bold text-fg">{professional?.name}</span> de forma permanente? Esta acción no se puede deshacer.
 					</p>
 					<div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
 						<button type="button" class="ux-btn-secondary" onclick={() => (showDeleteConfirm = false)}>Cancelar</button>
@@ -182,8 +182,8 @@
 						</form>
 					</div>
 				{:else}
-					<p class="text-sm text-white/70">
-						No se puede eliminar a <span class="font-bold text-white">{professional?.name}</span> porque tiene historial cargado{#if clinicalEntryCount && clinicalEntryCount > 0} ({clinicalEntryCount} consulta{clinicalEntryCount === 1 ? '' : 's'}){/if}{#if appointmentCount && appointmentCount > 0}{clinicalEntryCount && clinicalEntryCount > 0 ? ' y' : ''} {appointmentCount} turno{appointmentCount === 1 ? '' : 's'}{/if}{#if followUpCount && followUpCount > 0}{(clinicalEntryCount ?? 0) + (appointmentCount ?? 0) > 0 ? ' y' : ''} {followUpCount} seguimiento{followUpCount === 1 ? '' : 's'}{/if}. Esos registros pertenecen a los pacientes y se conservan.
+					<p class="text-sm text-fg-70">
+						No se puede eliminar a <span class="font-bold text-fg">{professional?.name}</span> porque tiene historial cargado{#if clinicalEntryCount && clinicalEntryCount > 0} ({clinicalEntryCount} consulta{clinicalEntryCount === 1 ? '' : 's'}){/if}{#if appointmentCount && appointmentCount > 0}{clinicalEntryCount && clinicalEntryCount > 0 ? ' y' : ''} {appointmentCount} turno{appointmentCount === 1 ? '' : 's'}{/if}{#if followUpCount && followUpCount > 0}{(clinicalEntryCount ?? 0) + (appointmentCount ?? 0) > 0 ? ' y' : ''} {followUpCount} seguimiento{followUpCount === 1 ? '' : 's'}{/if}. Esos registros pertenecen a los pacientes y se conservan.
 					</p>
 					<div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
 						<button type="button" class="ux-btn-secondary" onclick={() => (showDeleteConfirm = false)}>Cerrar</button>

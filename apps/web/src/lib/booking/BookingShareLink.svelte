@@ -28,7 +28,7 @@
     rel="noreferrer">Ver como paciente</a
   >
 </div>
-<p class="min-h-5 mt-2 text-sm text-white/80" role="status">{message}</p>
+<p class="min-h-5 mt-2 text-sm text-fg-80" role="status">{message}</p>
 
 <style>
   .share-link {

@@ -161,14 +161,14 @@
 			Boolean(
 				scheduleBlockIntervalStatus(block) && scheduleBlockIntervalStatus(block) !== 'Sin guardar'
 			);
-		if (hasProblem) return 'border-red-400/35';
+		if (hasProblem) return 'border-danger-400-35';
 		if (
 			scheduleBlockDaysDirty(block) ||
 			scheduleBlockTimeDirty(block) ||
 			scheduleBlockIntervalDirty(block) ||
 			!baselineBlockFor(block)
 		) {
-			return 'border-amber-300/35';
+			return 'border-warning-300-35';
 		}
 		return '';
 	};
@@ -315,7 +315,7 @@
 			<form method="POST" action="?/save_weekly_rules" class={`ux-card ${sectionStateClass(dirtyFields.schedule, missingItems.includes('Horarios de atención'))}`} onsubmit={normalizeScheduleBeforeSubmit} use:enhance={sectionEnhance('schedule')}>
 				<div>
 					<h2 class="ux-section-title">Horarios de atención</h2>
-					<p class="mt-2 text-sm text-white/55">Marcá los días y escribí los bloques horarios.</p>
+					<p class="mt-2 text-sm text-fg-55">Marcá los días y escribí los bloques horarios.</p>
 					{#if missingItems.includes('Horarios de atención')}
 						<p class="ux-section-meta ux-section-meta-danger">Necesario para recibir turnos</p>
 					{:else if dirtyFields.schedule}
@@ -333,8 +333,8 @@
 						<div class={`ux-soft-card p-4 ${scheduleBlockCardClass(block)}`}>
 							<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 								<div class="min-w-0 flex-1">
-									<h3 class="text-base font-bold text-white">Bloque {blockIndex + 1}</h3>
-									<p class="mt-1 text-sm text-white/55">Días que comparten la misma franja habitual.</p><div class="mt-4"><label class="ux-label">Prestaciones de esta franja<select use:styledSelect={block.serviceScope??'all'} class="ux-input mt-2" value={block.serviceScope??'all'} onchange={event=>updateScheduleBlock(block.id,{serviceScope:event.currentTarget.value as 'all'|'restricted',allowedServiceIds:block.allowedServiceIds??[]})}><option value="all">Todas las habilitadas</option><option value="restricted">Sólo las seleccionadas</option></select></label>{#if block.serviceScope==='restricted'}<fieldset class="mt-3"><legend class="ux-label">Prestaciones permitidas</legend>{#if dirtyFields.services}<p class="mt-2 text-sm text-white/75">Usá Guardar todo para aplicar juntos los cambios de prestaciones y horarios.</p>{/if}{#each data.services.filter((service:Service)=>draft.serviceIds.includes(service.id)||defaultServiceIdSet.has(service.id)) as service}<label class="mt-2 flex min-h-11 items-center gap-3 text-sm text-white/80"><input type="checkbox" checked={block.allowedServiceIds?.includes(service.id)??false} onchange={event=>updateScheduleBlock(block.id,{allowedServiceIds:event.currentTarget.checked?[...(block.allowedServiceIds??[]),service.id]:(block.allowedServiceIds??[]).filter(id=>id!==service.id)})}/>{service.name}</label>{/each}{#if !block.allowedServiceIds?.length}<p class="mt-2 text-sm text-white/80">La franja está cerrada hasta que elijas una prestación.</p>{/if}</fieldset>{/if}</div>
+									<h3 class="text-base font-bold text-fg">Bloque {blockIndex + 1}</h3>
+									<p class="mt-1 text-sm text-fg-55">Días que comparten la misma franja habitual.</p><div class="mt-4"><label class="ux-label">Prestaciones de esta franja<select use:styledSelect={block.serviceScope??'all'} class="ux-input mt-2" value={block.serviceScope??'all'} onchange={event=>updateScheduleBlock(block.id,{serviceScope:event.currentTarget.value as 'all'|'restricted',allowedServiceIds:block.allowedServiceIds??[]})}><option value="all">Todas las habilitadas</option><option value="restricted">Sólo las seleccionadas</option></select></label>{#if block.serviceScope==='restricted'}<fieldset class="mt-3"><legend class="ux-label">Prestaciones permitidas</legend>{#if dirtyFields.services}<p class="mt-2 text-sm text-fg-75">Usá Guardar todo para aplicar juntos los cambios de prestaciones y horarios.</p>{/if}{#each data.services.filter((service:Service)=>draft.serviceIds.includes(service.id)||defaultServiceIdSet.has(service.id)) as service}<label class="mt-2 flex min-h-11 items-center gap-3 text-sm text-fg-80"><input type="checkbox" checked={block.allowedServiceIds?.includes(service.id)??false} onchange={event=>updateScheduleBlock(block.id,{allowedServiceIds:event.currentTarget.checked?[...(block.allowedServiceIds??[]),service.id]:(block.allowedServiceIds??[]).filter(id=>id!==service.id)})}/>{service.name}</label>{/each}{#if !block.allowedServiceIds?.length}<p class="mt-2 text-sm text-fg-80">La franja está cerrada hasta que elijas una prestación.</p>{/if}</fieldset>{/if}</div>
 								</div>
 								<button type="button" class="ux-btn-secondary shrink-0 text-sm" disabled={!canOperate} onclick={() => removeScheduleBlock(block.id)}>
 									Quitar bloque
@@ -357,10 +357,10 @@
 											disabled={!canOperate}
 											class={`min-h-14 min-w-0 rounded-2xl border px-3 py-3 text-center text-sm font-bold leading-tight whitespace-normal transition disabled:cursor-not-allowed disabled:opacity-50 ${
 												block.weekdays.includes(index)
-													? 'border-[#8b5cf6] bg-[#7c3aed] text-white shadow-lg shadow-[#7c3aed]/20'
+													? 'border-accent bg-accent-strong text-on-accent shadow-lg shadow-shade-accent-600-20'
 													: false /* Another block on this weekday is valid when the time ranges do not overlap. */
-														? 'border-white/5 bg-white/[0.015] text-white/30'
-														: 'border-white/10 bg-white/[0.03] text-white/65 hover:border-[#8b5cf6]/60 hover:bg-white/[0.06]'
+														? 'border-line-05 bg-fill-13243d-70 text-copy-subtle'
+														: 'border-line bg-fill-04 text-fg-65 hover:border-accent-500-60 hover:bg-fill-04'
 											}`}
 											onclick={() => toggleBlockWeekday(block.id, index)}
 										>
@@ -369,9 +369,9 @@
 									{/each}
 								</div>
 								<div class="mt-3 flex flex-wrap gap-2">
-									<button type="button" class="rounded-full border border-white/10 px-4 py-2 text-xs font-bold text-white/65 hover:bg-white/[0.06]" onclick={() => setBlockWeekdays(block.id, [1, 2, 3, 4, 5])}>Lunes a viernes</button>
-									<button type="button" class="rounded-full border border-white/10 px-4 py-2 text-xs font-bold text-white/65 hover:bg-white/[0.06]" onclick={() => setBlockWeekdays(block.id, [6])}>Sólo sábado</button>
-									<button type="button" class="rounded-full border border-white/10 px-4 py-2 text-xs font-bold text-white/65 hover:bg-white/[0.06]" onclick={() => setBlockWeekdays(block.id, [])}>Limpiar</button>
+									<button type="button" class="rounded-full border border-line px-4 py-2 text-xs font-bold text-fg-65 hover:bg-fill-04" onclick={() => setBlockWeekdays(block.id, [1, 2, 3, 4, 5])}>Lunes a viernes</button>
+									<button type="button" class="rounded-full border border-line px-4 py-2 text-xs font-bold text-fg-65 hover:bg-fill-04" onclick={() => setBlockWeekdays(block.id, [6])}>Sólo sábado</button>
+									<button type="button" class="rounded-full border border-line px-4 py-2 text-xs font-bold text-fg-65 hover:bg-fill-04" onclick={() => setBlockWeekdays(block.id, [])}>Limpiar</button>
 								</div>
 							</div>
 
@@ -402,7 +402,7 @@
 									{#if preview.length > 0}
 										<div class="mt-3 flex flex-wrap gap-2">
 											{#each preview as range}
-												<span class="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-xs font-bold text-emerald-100">
+												<span class="rounded-full border border-success-300-25 bg-success-400-10 px-3 py-2 text-xs font-bold text-success-100">
 													{range.start} - {range.end}
 												</span>
 											{/each}
@@ -431,7 +431,7 @@
 										)}`}
 										oninput={(event) => updateScheduleBlock(block.id, { slotInterval: (event.currentTarget as HTMLInputElement).value })}
 									/>
-									<span class="mt-2 block text-xs font-semibold leading-relaxed text-white/45">
+									<span class="mt-2 block text-xs font-semibold leading-relaxed text-copy-subtle">
 										0 permite otro turno inmediatamente. También podés usar cualquier entero, por ejemplo 2, 23 o 60.
 									</span>
 								</label>
@@ -458,7 +458,7 @@
 				use:enhance={sectionEnhance('exception')}
 			>
 				<h2 class="ux-section-title">Ausencia o cambio de horario</h2>{#if form?.exceptionConflict}<label class="ux-alert mt-3 flex items-start gap-3"><input type="checkbox" name="ack_existing_appointments" value="true" bind:checked={acknowledgedAppointments} required/><span>Revisé los turnos existentes. Confirmo el bloqueo de nuevos turnos; los anteriores se conservan.</span></label>{/if}
-				<p class="mt-2 text-sm text-white/55">Bloqueá un horario puntual o varios días completos.</p><label class="mt-4 flex min-h-11 items-center gap-3 text-sm text-white/80"><input type="radio" name="type" value="restricted" bind:group={draft.exception.type} onclick={()=>draft.exception.periodMode='single'}/>Reservar esta franja para prestaciones específicas</label>{#if draft.exception.type==='restricted'}<fieldset class="mt-3"><legend class="ux-label">Prestaciones permitidas en esta fecha</legend>{#each data.services.filter((service:Service)=>draft.exception.appliesTo==='business'||draft.serviceIds.includes(service.id)||defaultServiceIdSet.has(service.id)) as service}<label class="mt-2 flex min-h-11 items-center gap-3 text-sm text-white/80"><input type="checkbox" name="exception_service_ids" value={service.id} bind:group={draft.exception.allowedServiceIds}/>{service.name}</label>{/each}</fieldset>{/if}
+				<p class="mt-2 text-sm text-fg-55">Bloqueá un horario puntual o varios días completos.</p><label class="mt-4 flex min-h-11 items-center gap-3 text-sm text-fg-80"><input type="radio" name="type" value="restricted" bind:group={draft.exception.type} onclick={()=>draft.exception.periodMode='single'}/>Reservar esta franja para prestaciones específicas</label>{#if draft.exception.type==='restricted'}<fieldset class="mt-3"><legend class="ux-label">Prestaciones permitidas en esta fecha</legend>{#each data.services.filter((service:Service)=>draft.exception.appliesTo==='business'||draft.serviceIds.includes(service.id)||defaultServiceIdSet.has(service.id)) as service}<label class="mt-2 flex min-h-11 items-center gap-3 text-sm text-fg-80"><input type="checkbox" name="exception_service_ids" value={service.id} bind:group={draft.exception.allowedServiceIds}/>{service.name}</label>{/each}</fieldset>{/if}
 				{#if dirtyFields.exception}
 					<p class="ux-section-meta ux-section-meta-warning">Cambios sin guardar</p>
 				{/if}
@@ -468,11 +468,11 @@
 						<span class="ux-label">Afecta a</span>
 						<div class="mt-3 grid gap-2 sm:grid-cols-2">
 							<label class={`ux-choice px-4 py-3 text-sm font-bold ${draft.exception.appliesTo === 'professional' ? 'ux-choice-active' : ''}`}>
-								<input type="radio" name="applies_to" value="professional" bind:group={draft.exception.appliesTo} class="mr-2 accent-[#7c3aed]" />
+								<input type="radio" name="applies_to" value="professional" bind:group={draft.exception.appliesTo} class="mr-2 accent-check-accent-600" />
 								{professional?.name ?? 'Profesional'}
 							</label>
 							<label class={`ux-choice px-4 py-3 text-sm font-bold ${draft.exception.appliesTo === 'business' ? 'ux-choice-active' : ''}`}>
-								<input type="radio" name="applies_to" value="business" bind:group={draft.exception.appliesTo} class="mr-2 accent-[#7c3aed]" />
+								<input type="radio" name="applies_to" value="business" bind:group={draft.exception.appliesTo} class="mr-2 accent-check-accent-600" />
 								Todo el consultorio
 							</label>
 						</div>
@@ -481,11 +481,11 @@
 						<span class="ux-label">Tipo</span>
 						<div class="mt-3 grid gap-2 sm:grid-cols-2">
 							<label class={`ux-choice px-4 py-3 text-sm font-bold ${draft.exception.type === 'blocked' ? 'ux-choice-active' : ''}`}>
-								<input type="radio" name="type" value="blocked" bind:group={draft.exception.type} class="mr-2 accent-[#7c3aed]" />
+								<input type="radio" name="type" value="blocked" bind:group={draft.exception.type} class="mr-2 accent-check-accent-600" />
 								Bloquear
 							</label>
 							<label class={`ux-choice px-4 py-3 text-sm font-bold ${draft.exception.type === 'extra_available' ? 'ux-choice-active' : ''}`}>
-								<input type="radio" name="type" value="extra_available" bind:group={draft.exception.type} class="mr-2 accent-[#7c3aed]" />
+								<input type="radio" name="type" value="extra_available" bind:group={draft.exception.type} class="mr-2 accent-check-accent-600" />
 								Sumar horario
 							</label>
 						</div>
@@ -504,8 +504,8 @@
 									class={`ux-choice p-4 text-left ${draft.exception.periodMode === 'single' ? 'ux-choice-active' : ''}`}
 									onclick={() => (draft.exception.periodMode = 'single')}
 								>
-									<span class="block font-bold text-white">Un día</span>
-									<span class="mt-1 block text-xs text-white/50">Elegís fecha y horario.</span>
+									<span class="block font-bold text-fg">Un día</span>
+									<span class="mt-1 block text-xs text-fg-50">Elegís fecha y horario.</span>
 								</button>
 								<button
 									type="button"
@@ -514,9 +514,9 @@
 									class={`ux-choice p-4 text-left ${draft.exception.periodMode === 'range' ? 'ux-choice-active' : ''}`}
 									onclick={() => (draft.exception.periodMode = 'range')}
 								>
-									<span class="block font-bold text-white">Rango de días</span>
-									<span class="mt-1 block text-xs text-white/50">Desde y hasta, días completos.</span>
-								</button><button type="button" class="ux-choice p-4 text-left" aria-pressed={draft.exception.periodMode==='multiple'} onclick={()=>draft.exception.periodMode='multiple'}><span class="block font-bold">Fechas separadas</span><span class="mt-1 block text-xs text-white/70">Elegí varios días completos.</span></button>
+									<span class="block font-bold text-fg">Rango de días</span>
+									<span class="mt-1 block text-xs text-fg-50">Desde y hasta, días completos.</span>
+								</button><button type="button" class="ux-choice p-4 text-left" aria-pressed={draft.exception.periodMode==='multiple'} onclick={()=>draft.exception.periodMode='multiple'}><span class="block font-bold">Fechas separadas</span><span class="mt-1 block text-xs text-fg-70">Elegí varios días completos.</span></button>
 							</div>
 						</div>
 					{/if}
@@ -542,7 +542,7 @@
 								<input use:styledDate={draft.exception.dateTo} name="date_to" type="date" min={draft.exception.dateFrom} bind:value={draft.exception.dateTo} required disabled={!canOperate} class={`ux-input ${fieldStateClass(dirtyFields.exception)}`} />
 							</label>
 						</div>
-						<p class="rounded-2xl border border-violet-300/20 bg-violet-400/10 px-4 py-3 text-sm font-bold text-violet-100">
+						<p class="rounded-2xl border border-accent-300-20 bg-accent-400-10 px-4 py-3 text-sm font-bold text-accent-100">
 							Incluye ambos días completos. Los turnos ya agendados no se cancelan.
 						</p>
 					{/if}
@@ -564,7 +564,7 @@
 			<div class="ux-card">
 				<div class="flex items-center justify-between gap-4">
 					<h2 class="ux-section-title">Semana habitual</h2>
-					<span class="rounded-full border border-white/10 px-4 py-2 text-xs font-bold text-white/55">
+					<span class="rounded-full border border-line px-4 py-2 text-xs font-bold text-fg-55">
 						{data.rules.length} bloques
 					</span>
 				</div>
@@ -572,19 +572,19 @@
 					{#each rulesByWeekday as day}
 						<div class="ux-soft-card p-4">
 							<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-								<p class="min-w-28 text-sm font-bold text-white">{day.day}</p>
+								<p class="min-w-28 text-sm font-bold text-fg">{day.day}</p>
 								<div class="flex flex-1 flex-wrap gap-2">
 									{#if day.rules.length > 0}
 										{#each day.rules as rule}
-											<form method="POST" action="?/delete_rule" class="flex w-full flex-col items-start gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2" use:enhance={refreshEnhance}>
+											<form method="POST" action="?/delete_rule" class="flex w-full flex-col items-start gap-2 rounded-xl border border-line bg-fill-04 px-3 py-2" use:enhance={refreshEnhance}>
 												<input type="hidden" name="rule_id" value={rule.id}/><input type="hidden" name="availability_revision" value={data.availabilityRevision??0} />
-												<span class="whitespace-nowrap text-sm font-bold text-white">{rule.start_time.slice(0, 5)} - {rule.end_time.slice(0, 5)}</span>
-												<span class="text-xs font-bold text-white/50">Descanso entre consultas: {rule.break_minutes} min</span>{#if rule.service_scope==='restricted'}<span class="text-xs text-white/75">{restrictionLabel((rule.rule_services??[]).map(item=>item.service_id))}</span>{/if}
-												<button type="submit" disabled={!canOperate} class="min-h-11 whitespace-nowrap font-bold text-red-200 disabled:opacity-50">Quitar</button>
+												<span class="whitespace-nowrap text-sm font-bold text-fg">{rule.start_time.slice(0, 5)} - {rule.end_time.slice(0, 5)}</span>
+												<span class="text-xs font-bold text-fg-50">Descanso entre consultas: {rule.break_minutes} min</span>{#if rule.service_scope==='restricted'}<span class="text-xs text-fg-75">{restrictionLabel((rule.rule_services??[]).map(item=>item.service_id))}</span>{/if}
+												<button type="submit" disabled={!canOperate} class="min-h-11 whitespace-nowrap font-bold text-danger disabled:opacity-50">Quitar</button>
 											</form>
 										{/each}
 									{:else}
-										<span class="rounded-full border border-dashed border-white/10 px-3 py-2 text-sm font-bold text-white/35">Sin atención</span>
+										<span class="rounded-full border border-dashed border-line px-3 py-2 text-sm font-bold text-copy-subtle">Sin atención</span>
 									{/if}
 								</div>
 							</div>
@@ -601,11 +601,11 @@
 							<input type="hidden" name="exception_id" value={item.id} />
 							<div class="flex items-start justify-between gap-3">
 								<div class="text-sm">
-									<p class="font-bold text-white">{item.type === 'blocked' ? 'Bloqueo' : item.type==='restricted'?'Franja reservada':'Horario extra'} · {exceptionTarget(item)}</p>
-									<p class="mt-1 text-white/55">{exceptionPeriodLabel(item)}</p>{#if item.type==='restricted'}<p class="mt-1 text-xs text-white/75">{restrictionLabel((item.exception_services??[]).map((row:{service_id:string})=>row.service_id))}</p>{/if}
-									{#if item.reason}<p class="mt-1 text-xs text-white/42">{item.reason}</p>{/if}
+									<p class="font-bold text-fg">{item.type === 'blocked' ? 'Bloqueo' : item.type==='restricted'?'Franja reservada':'Horario extra'} · {exceptionTarget(item)}</p>
+									<p class="mt-1 text-fg-55">{exceptionPeriodLabel(item)}</p>{#if item.type==='restricted'}<p class="mt-1 text-xs text-fg-75">{restrictionLabel((item.exception_services??[]).map((row:{service_id:string})=>row.service_id))}</p>{/if}
+									{#if item.reason}<p class="mt-1 text-xs text-copy-subtle">{item.reason}</p>{/if}
 								</div>
-								<button type="submit" disabled={!canOperate} class="min-h-11 shrink-0 whitespace-nowrap text-sm font-bold text-red-200 disabled:opacity-50">Eliminar</button>
+								<button type="submit" disabled={!canOperate} class="min-h-11 shrink-0 whitespace-nowrap text-sm font-bold text-danger disabled:opacity-50">Eliminar</button>
 							</div>
 						</form>
 					{/each}

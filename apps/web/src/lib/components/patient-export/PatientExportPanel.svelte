@@ -218,11 +218,11 @@
 	});
 </script>
 
-<div class="rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-[#1f3554] dark:bg-[#0f1f36] sm:p-7">
+<div class="rounded-3xl border p-5 shadow-sm border-line-strong bg-surface sm:p-7">
 	{#if scope === 'patient'}
-		<div class="rounded-2xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-400/25 dark:bg-violet-400/10">
-			<p class="text-xs font-bold uppercase tracking-[0.18em] text-violet-700 dark:text-violet-200">Paciente seleccionado</p>
-			<p class="mt-2 break-words text-lg font-bold text-neutral-950 dark:text-white">
+		<div class="rounded-2xl border p-4 border-accent-400-25 bg-accent-400-10">
+			<p class="text-xs font-bold uppercase tracking-[0.18em] text-accent-200">Paciente seleccionado</p>
+			<p class="mt-2 break-words text-lg font-bold text-fg">
 				{patientName || 'Paciente'}
 			</p>
 		</div>
@@ -230,12 +230,12 @@
 
 	{#if panelState === 'idle'}
 		<div class={scope === 'patient' ? 'mt-5' : ''}>
-			<p class="text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+			<p class="text-sm leading-6 text-fg-n300">
 				La preparación puede tardar si hay muchos registros. Mantené esta pestaña abierta hasta que aparezca el archivo.
 			</p>
 			<button
 				type="button"
-				class="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#6d28d9] px-5 py-3 text-base font-bold text-white shadow-lg shadow-violet-900/15 transition hover:-translate-y-0.5 hover:bg-[#5b21b6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] sm:w-auto"
+				class="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-accent-press px-5 py-3 text-base font-bold text-on-accent shadow-lg shadow-shade-accent-900-15 transition hover:-translate-y-0.5 hover:bg-accent-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-accent-600 sm:w-auto"
 				onclick={startExport}
 			>
 				<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-5 w-5">
@@ -246,23 +246,23 @@
 		</div>
 	{:else if panelState === 'running'}
 		<div class={scope === 'patient' ? 'mt-5' : ''} aria-live="polite" aria-atomic="true">
-			<div class="flex items-start gap-3 rounded-2xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-400/25 dark:bg-violet-400/10">
-				<span class="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700 dark:bg-violet-300/15 dark:text-violet-200">
+			<div class="flex items-start gap-3 rounded-2xl border p-4 border-accent-400-25 bg-accent-400-10">
+				<span class="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-300-15 text-accent-200">
 					<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-5 w-5 motion-safe:animate-spin">
 						<path d="M21 12a9 9 0 1 1-6.2-8.56" stroke-linecap="round" />
 					</svg>
 				</span>
 				<div class="min-w-0">
-					<p class="font-bold text-neutral-950 dark:text-white">Preparando el archivo</p>
-					<p class="mt-1 break-words text-sm leading-6 text-neutral-600 dark:text-neutral-300">{progressMessage}</p>
+					<p class="font-bold text-fg">Preparando el archivo</p>
+					<p class="mt-1 break-words text-sm leading-6 text-fg-n300">{progressMessage}</p>
 				</div>
 			</div>
-			<p class="mt-3 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
+			<p class="mt-3 text-xs leading-5 text-fg-n400">
 				No cierres esta pestaña. Tus datos no se modifican durante la exportación.
 			</p>
 			<button
 				type="button"
-				class="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm font-bold text-neutral-800 transition hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] disabled:cursor-wait disabled:opacity-60 dark:border-[#315078] dark:bg-[#13243d] dark:text-white dark:hover:bg-[#182d4b] sm:w-auto"
+				class="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-accent-600 disabled:cursor-wait disabled:opacity-60 border-line-315078 bg-surface-2 text-fg hover:bg-fill-1b2d4b sm:w-auto"
 				onclick={cancelExport}
 				disabled={cancelling}
 			>
@@ -277,16 +277,16 @@
 			tabindex="-1"
 			bind:this={terminalSummary}
 		>
-			<div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-emerald-400/25 dark:bg-emerald-400/10">
+			<div class="rounded-2xl border p-4 outline-none focus-visible:ring-2 focus-visible:ring-focus-success-500 border-success-400-25 bg-success-400-10">
 				<div class="flex items-start gap-3">
-					<span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-300/15 dark:text-emerald-200">
+					<span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-success-soft text-success">
 						<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" class="h-5 w-5">
 							<path d="m5 12 4 4L19 6" stroke-linecap="round" stroke-linejoin="round" />
 						</svg>
 					</span>
 					<div class="min-w-0">
-						<p class="font-bold text-emerald-950 dark:text-emerald-100">Archivo listo</p>
-						<p class="mt-1 break-words text-sm leading-6 text-emerald-900/80 dark:text-emerald-50/75">
+						<p class="font-bold text-success-100">Archivo listo</p>
+						<p class="mt-1 break-words text-sm leading-6 text-success-50-75">
 							{prepared.filename} · {formatBytes(prepared.byteLength)}
 						</p>
 					</div>
@@ -295,21 +295,21 @@
 
 			<div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
 				{#each datasets as dataset}
-					<div class="min-w-0 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3 dark:border-[#294568] dark:bg-[#13243d]">
-						<p class="break-words text-micro font-bold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+					<div class="min-w-0 rounded-xl border px-3 py-3 border-line-strong bg-surface-2">
+						<p class="break-words text-micro font-bold uppercase tracking-wide text-fg-n400">
 							{datasetLabels[dataset]}
 						</p>
-						<p class="mt-1 text-lg font-bold text-neutral-950 dark:text-white">{prepared.counts[dataset].toLocaleString('es-AR')}</p>
+						<p class="mt-1 text-lg font-bold text-fg">{prepared.counts[dataset].toLocaleString('es-AR')}</p>
 					</div>
 				{/each}
 			</div>
 
-			<p class="mt-4 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+			<p class="mt-4 text-sm leading-6 text-fg-n300">
 				El archivo se intentó descargar automáticamente. Si no apareció, podés iniciarlo de nuevo.
 			</p>
 			<button
 				type="button"
-				class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#6d28d9] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#5b21b6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] sm:w-auto"
+				class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-accent-press px-4 py-2.5 text-sm font-bold text-on-accent transition hover:bg-accent-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-accent-600 sm:w-auto"
 				onclick={downloadPreparedFile}
 			>
 				Descargar otra vez
@@ -323,15 +323,15 @@
 			tabindex="-1"
 			bind:this={terminalSummary}
 		>
-			<div class="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:border-[#294568] dark:bg-[#13243d]">
-				<p class="font-bold text-neutral-950 dark:text-white">Exportación cancelada</p>
-				<p class="mt-1 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+			<div class="rounded-2xl border p-4 outline-none focus-visible:ring-2 focus-visible:ring-focus-accent-500 border-line-strong bg-surface-2">
+				<p class="font-bold text-fg">Exportación cancelada</p>
+				<p class="mt-1 text-sm leading-6 text-fg-n300">
 					No se guardó ningún archivo y los datos del consultorio no se modificaron.
 				</p>
 			</div>
 			<button
 				type="button"
-				class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#6d28d9] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#5b21b6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] sm:w-auto"
+				class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-accent-press px-4 py-2.5 text-sm font-bold text-on-accent transition hover:bg-accent-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-accent-600 sm:w-auto"
 				onclick={startExport}
 			>
 				Preparar de nuevo
@@ -344,14 +344,14 @@
 			tabindex="-1"
 			bind:this={terminalSummary}
 		>
-			<div class="rounded-2xl border border-red-200 bg-red-50 p-4 outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-red-400/30 dark:bg-red-400/10">
-				<p class="font-bold text-red-950 dark:text-red-100">No pudimos preparar el archivo</p>
-				<p class="mt-1 break-words text-sm leading-6 text-red-900/80 dark:text-red-50/80">{errorMessage}</p>
+			<div class="rounded-2xl border p-4 outline-none focus-visible:ring-2 focus-visible:ring-focus-danger-500 border-danger-400-30 bg-danger-400-10">
+				<p class="font-bold text-danger-100">No pudimos preparar el archivo</p>
+				<p class="mt-1 break-words text-sm leading-6 text-danger-50-80">{errorMessage}</p>
 			</div>
 			{#if retryable}
 				<button
 					type="button"
-					class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#6d28d9] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#5b21b6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] sm:w-auto"
+					class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-accent-press px-4 py-2.5 text-sm font-bold text-on-accent transition hover:bg-accent-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-accent-600 sm:w-auto"
 					onclick={startExport}
 				>
 					Intentar nuevamente
@@ -359,7 +359,7 @@
 			{:else if errorCode === 'EXPORT_NOT_AUTHENTICATED'}
 				<a
 					href="/login"
-					class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#6d28d9] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#5b21b6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] sm:w-auto"
+					class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-accent-press px-4 py-2.5 text-sm font-bold text-on-accent transition hover:bg-accent-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-accent-600 sm:w-auto"
 				>
 					Volver a ingresar
 				</a>

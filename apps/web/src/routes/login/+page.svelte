@@ -62,30 +62,30 @@
 	});
 </script>
 
-<div class="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0b1626] via-[#0f1f36] to-[#0a1222] px-4 py-10">
-	<div class="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur sm:p-8">
+<div class="flex min-h-screen items-center justify-center bg-gradient-to-br from-canvas via-surface to-canvas px-4 py-10">
+	<div class="w-full max-w-md rounded-3xl border border-line bg-fill-04 p-6 shadow-2xl backdrop-blur sm:p-8">
 		<div class="mb-7 flex flex-col items-center text-center">
 			<picture>
 				<img src="/logo-cita-suite.png" alt="Cita Suite" class="h-16 w-16 rounded-2xl shadow-lg" width="64" height="64" decoding="async" />
 			</picture>
-			<h1 class="mt-4 text-2xl font-bold text-white">Cita Suite</h1>
-			<p class="mt-1 text-sm text-white/55">
+			<h1 class="mt-4 text-2xl font-bold text-fg">Cita Suite</h1>
+			<p class="mt-1 text-sm text-fg-55">
 				{mode === 'register' ? 'Creá tu cuenta para empezar.' : 'Ingresá a tu consultorio.'}
 			</p>
 		</div>
 
 		<div class="mb-6 flex justify-center">
-			<div class="ux-pill-nav text-xs font-bold text-white/65">
+			<div class="ux-pill-nav text-xs font-bold text-fg-65">
 				<button
 					type="button"
-					class={`rounded-full px-5 py-2 transition ${mode === 'login' ? 'bg-[#7c3aed] text-white' : 'hover:text-white'}`}
+					class={`rounded-full px-5 py-2 transition ${mode === 'login' ? 'bg-accent-strong text-on-accent' : 'hover:text-fg'}`}
 					onclick={() => setMode('login')}
 				>
 					Ingresar
 				</button>
 				<button
 					type="button"
-					class={`rounded-full px-5 py-2 transition ${mode === 'register' ? 'bg-[#7c3aed] text-white' : 'hover:text-white'}`}
+					class={`rounded-full px-5 py-2 transition ${mode === 'register' ? 'bg-accent-strong text-on-accent' : 'hover:text-fg'}`}
 					onclick={() => setMode('register')}
 				>
 					Crear cuenta
@@ -125,7 +125,7 @@
 					/>
 					<button
 						type="button"
-						class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-3 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/10"
+						class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-3 py-2 text-xs font-semibold text-fg-70 transition hover:bg-fill-10"
 						onclick={() => (showPassword = !showPassword)}
 					>
 						{showPassword ? 'Ocultar' : 'Ver'}
@@ -150,7 +150,7 @@
 						/>
 						<button
 							type="button"
-							class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-3 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/10"
+							class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-3 py-2 text-xs font-semibold text-fg-70 transition hover:bg-fill-10"
 							onclick={() => (showConfirmPassword = !showConfirmPassword)}
 						>
 							{showConfirmPassword ? 'Ocultar' : 'Ver'}
@@ -169,20 +169,20 @@
 			{/if}
 
 			{#if mode === 'register'}
-				<label class="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left text-sm leading-5 text-white/70">
+				<label class="flex items-start gap-3 rounded-2xl border border-line bg-fill-04 p-4 text-left text-sm leading-5 text-fg-70">
 					<input
 						name="accepted_terms"
 						type="checkbox"
 						value="true"
 						required
 						bind:checked={acceptedTerms}
-						class="mt-1 h-4 w-4 rounded border-white/20 bg-white/10 text-[#7c3aed] focus:ring-[#8b5cf6]"
+						class="mt-1 h-4 w-4 rounded border-line-20 bg-fill-10 text-accent focus:ring-focus-accent-500"
 					/>
 					<span>
 						Leí y acepto los
-						<a href="/terminos" class="font-bold text-[#c4b5fd] hover:underline" target="_blank" rel="noreferrer">Términos y condiciones</a>
+						<a href="/terminos" class="font-bold text-accent hover:underline" target="_blank" rel="noreferrer">Términos y condiciones</a>
 						y la
-						<a href="/privacidad" class="font-bold text-[#c4b5fd] hover:underline" target="_blank" rel="noreferrer">Política de privacidad</a>.
+						<a href="/privacidad" class="font-bold text-accent hover:underline" target="_blank" rel="noreferrer">Política de privacidad</a>.
 					</span>
 				</label>
 			{/if}
@@ -192,22 +192,22 @@
 			</button>
 
 			{#if mode === 'login'}
-				<div class="text-center text-sm text-white/55">
-					<a href="/reset" class="font-semibold text-[#c4b5fd] hover:underline">¿Olvidaste tu contraseña?</a>
+				<div class="text-center text-sm text-fg-55">
+					<a href="/reset" class="font-semibold text-accent hover:underline">¿Olvidaste tu contraseña?</a>
 				</div>
 			{:else}
-				<div class="text-center text-sm text-white/55">
-					<button type="button" class="font-semibold text-[#c4b5fd] hover:underline" onclick={() => setMode('login')}>
+				<div class="text-center text-sm text-fg-55">
+					<button type="button" class="font-semibold text-accent hover:underline" onclick={() => setMode('login')}>
 						¿Ya tenés cuenta? Ingresá
 					</button>
 				</div>
 			{/if}
 		</form>
 
-		<div class="my-6 flex items-center gap-3 text-xs font-bold uppercase tracking-wide text-white/35">
-			<div class="h-px flex-1 bg-white/10"></div>
+		<div class="my-6 flex items-center gap-3 text-xs font-bold uppercase tracking-wide text-copy-subtle">
+			<div class="h-px flex-1 bg-fill-10"></div>
 			<span>o</span>
-			<div class="h-px flex-1 bg-white/10"></div>
+			<div class="h-px flex-1 bg-fill-10"></div>
 		</div>
 
 		<form method="GET" action="/auth/google" class="space-y-3" onsubmit={() => (googleSubmitting = true)}>
@@ -215,7 +215,7 @@
 			<input type="hidden" name="accepted_terms" value={acceptedTerms ? 'true' : 'false'} />
 			<button
 				type="submit"
-				class="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/15 bg-white px-4 py-3 text-sm font-bold text-neutral-950 shadow-lg transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+				class="flex w-full items-center justify-center gap-3 rounded-2xl border border-line-15 bg-chip-white px-4 py-3 text-sm font-bold text-ink-n950 shadow-lg transition hover:bg-fill-90 disabled:cursor-not-allowed disabled:opacity-50"
 				disabled={googleSubmitting || (mode === 'register' && !acceptedTerms)}
 				aria-busy={googleSubmitting}
 			>
@@ -226,7 +226,7 @@
 					{mode === 'register' ? 'Crear cuenta con Google' : 'Ingresar con Google'}
 				{/if}
 			</button>
-			<p class="text-center text-xs font-semibold text-white/45">
+			<p class="text-center text-xs font-semibold text-copy-subtle">
 				{mode === 'register'
 					? acceptedTerms
 						? 'Al continuar con Google confirmás que aceptaste los términos y condiciones.'

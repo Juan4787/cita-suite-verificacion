@@ -86,12 +86,12 @@
 	</div>
 
 	{#if snoozeOpen}
-		<div class="flex flex-wrap items-center gap-2 rounded-xl bg-white/5 px-3 py-2">
-			<span class="text-xs font-bold uppercase tracking-wide text-white/40">Recordar:</span>
-			<button type="button" onclick={() => snooze({ preset: 'manana' })} disabled={busy} class="rounded-full bg-white/5 px-3 py-1 text-sm font-bold text-white/80 transition hover:bg-white/10 disabled:opacity-50">Mañana</button>
-			<button type="button" onclick={() => snooze({ preset: 'tres_dias' })} disabled={busy} class="rounded-full bg-white/5 px-3 py-1 text-sm font-bold text-white/80 transition hover:bg-white/10 disabled:opacity-50">En 3 días</button>
-			<button type="button" onclick={() => snooze({ preset: 'semana' })} disabled={busy} class="rounded-full bg-white/5 px-3 py-1 text-sm font-bold text-white/80 transition hover:bg-white/10 disabled:opacity-50">La semana que viene</button>
-			<button type="button" onclick={() => { customDate = ''; showDateModal = true; }} disabled={busy} class="rounded-full bg-white/5 px-3 py-1 text-sm font-bold text-white/80 transition hover:bg-white/10 disabled:opacity-50">Elegir fecha</button>
+		<div class="flex flex-wrap items-center gap-2 rounded-xl bg-fill-04 px-3 py-2">
+			<span class="text-xs font-bold uppercase tracking-wide text-copy-subtle">Recordar:</span>
+			<button type="button" onclick={() => snooze({ preset: 'manana' })} disabled={busy} class="rounded-full bg-fill-04 px-3 py-1 text-sm font-bold text-fg-80 transition hover:bg-fill-10 disabled:opacity-50">Mañana</button>
+			<button type="button" onclick={() => snooze({ preset: 'tres_dias' })} disabled={busy} class="rounded-full bg-fill-04 px-3 py-1 text-sm font-bold text-fg-80 transition hover:bg-fill-10 disabled:opacity-50">En 3 días</button>
+			<button type="button" onclick={() => snooze({ preset: 'semana' })} disabled={busy} class="rounded-full bg-fill-04 px-3 py-1 text-sm font-bold text-fg-80 transition hover:bg-fill-10 disabled:opacity-50">La semana que viene</button>
+			<button type="button" onclick={() => { customDate = ''; showDateModal = true; }} disabled={busy} class="rounded-full bg-fill-04 px-3 py-1 text-sm font-bold text-fg-80 transition hover:bg-fill-10 disabled:opacity-50">Elegir fecha</button>
 		</div>
 	{/if}
 
@@ -99,7 +99,7 @@
 </div>
 
 <Modal open={showDateModal} title="Recordar más tarde" closable on:close={() => (showDateModal = false)}>
-	<div class="space-y-5 text-white">
+	<div class="space-y-5 text-fg">
 		<FollowUpDatePicker bind:value={customDate} todayISO={tomorrow(todayISO)} />
 		<div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
 			<button type="button" onclick={() => (showDateModal = false)} class="ux-btn-secondary">Cancelar</button>

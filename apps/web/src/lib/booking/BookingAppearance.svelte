@@ -62,12 +62,14 @@
     :global(.booking-natalia h1), :global(.booking-natalia .ux-section-title), :global(.booking-natalia .ux-title) {
         font-family: 'Newsreader', Georgia, serif; color: var(--text); font-weight: 500;
     }
-    :global(.booking-natalia .text-white) { color: var(--text) !important; }
-    :global(.booking-natalia [class*='text-white/']) { color: var(--text-muted) !important; }
-    :global(.booking-natalia [class*='text-[#a78bfa]']), :global(.booking-natalia [class*='text-[#c4b5fd]']) { color: var(--accent-strong) !important; }
-    :global(.booking-natalia [class*='bg-[#7c3aed]']) { background: var(--accent) !important; color: var(--on-accent) !important; }
-    :global(.booking-natalia [class*='border-white/']) { border-color: var(--border) !important; }
-    :global(.booking-natalia [class*='bg-white/']) { background: var(--accent-soft) !important; }
+    /* Roles marked in the booking components (bk-*): each marks exactly the class strings that this
+       appearance repainted before the light mode, when it matched fragments of Tailwind class names. */
+    :global(.booking-natalia .bk-text) { color: var(--text) !important; }
+    :global(.booking-natalia .bk-muted) { color: var(--text-muted) !important; }
+    :global(.booking-natalia .bk-accent-text) { color: var(--accent-strong) !important; }
+    :global(.booking-natalia .bk-accent-fill) { background: var(--accent) !important; color: var(--on-accent) !important; }
+    :global(.booking-natalia .bk-line) { border-color: var(--border) !important; }
+    :global(.booking-natalia .bk-soft) { background: var(--accent-soft) !important; }
     :global(.booking-natalia .ux-label), :global(.booking-natalia .ux-subtitle), :global(.booking-natalia .ux-muted) { color: var(--text-muted); }
     :global(.booking-natalia .ux-input), :global(.booking-natalia .ux-textarea), :global(.booking-natalia .ux-select) {
         background: var(--paper); color: var(--text); border-color: var(--border); color-scheme: inherit;
@@ -78,18 +80,18 @@
     :global(.booking-natalia .ux-btn-secondary) { background: transparent; color: var(--text); border-color: var(--border-strong); }
     :global(.booking-natalia .ux-badge) { background: var(--accent-soft); color: var(--accent-strong); border-color: var(--border); }
     :global(.booking-natalia .ux-alert) { color: var(--text); background: var(--accent-soft); border-color: var(--border-strong); }
-	:global(.booking-natalia [class*='text-red-']) { color: var(--error-text) !important; }
-	:global(.booking-natalia [class*='bg-red-']) { background: var(--error-bg) !important; }
-	:global(.booking-natalia [class*='border-red-']) { border-color: var(--error-border) !important; }
-	:global(.booking-natalia [class*='text-emerald-']) { color: var(--success-text) !important; }
-	:global(.booking-natalia [class*='bg-emerald-']) { background: var(--success-bg) !important; }
-	:global(.booking-natalia [class*='border-emerald-']) { border-color: var(--success-border) !important; }
-	:global(.booking-natalia [class*='text-violet-']) { color: var(--notice-text) !important; }
-	:global(.booking-natalia [class*='bg-violet-']) { background: var(--notice-bg) !important; }
-	:global(.booking-natalia [class*='border-violet-']) { border-color: var(--notice-border) !important; }
-	:global(.booking-natalia [class*='text-amber-']) { color: var(--warning-text) !important; }
-	:global(.booking-natalia [class*='bg-amber-']) { background: var(--warning-bg) !important; }
-	:global(.booking-natalia [class*='border-amber-']) { border-color: var(--warning-border) !important; }
+	:global(.booking-natalia .bk-error-text) { color: var(--error-text) !important; }
+	:global(.booking-natalia .bk-error-fill) { background: var(--error-bg) !important; }
+	:global(.booking-natalia .bk-error-line) { border-color: var(--error-border) !important; }
+	:global(.booking-natalia .bk-success-text) { color: var(--success-text) !important; }
+	:global(.booking-natalia .bk-success-fill) { background: var(--success-bg) !important; }
+	:global(.booking-natalia .bk-success-line) { border-color: var(--success-border) !important; }
+	:global(.booking-natalia .bk-notice-text) { color: var(--notice-text) !important; }
+	:global(.booking-natalia .bk-notice-fill) { background: var(--notice-bg) !important; }
+	:global(.booking-natalia .bk-notice-line) { border-color: var(--notice-border) !important; }
+	:global(.booking-natalia .bk-warning-text) { color: var(--warning-text) !important; }
+	:global(.booking-natalia .bk-warning-fill) { background: var(--warning-bg) !important; }
+	:global(.booking-natalia .bk-warning-line) { border-color: var(--warning-border) !important; }
     :global(.booking-natalia a:focus-visible), :global(.booking-natalia button:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
     :global(.booking-natalia ::selection) { background: var(--accent-soft); color: var(--text); }
     :global(.booking-natalia *) { scrollbar-color: var(--accent) var(--paper); }

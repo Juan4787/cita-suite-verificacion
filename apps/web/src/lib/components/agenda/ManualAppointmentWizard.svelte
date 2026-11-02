@@ -752,22 +752,22 @@
 
 	<section class="ux-card min-w-0 w-full px-5 py-4 sm:px-6">
 		<div class="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-			<p class="min-w-0 text-base font-bold text-white/75 sm:text-lg">
+			<p class="min-w-0 text-base font-bold text-fg-75 sm:text-lg">
 				{formatStepCounter(step, 5)} ·&nbsp;{stepLabels[step - 1]}
 			</p>
 			{#if step > 1}
 				<button
 					type="button"
 					onclick={restart}
-					class="shrink-0 text-sm font-bold text-white/55 transition hover:text-white sm:text-base"
+					class="shrink-0 text-sm font-bold text-fg-55 transition hover:text-fg sm:text-base"
 				>
 					Empezar de nuevo
 				</button>
 			{/if}
 		</div>
-		<div class="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
+		<div class="mt-3 h-1.5 overflow-hidden rounded-full bg-fill-10" aria-hidden="true">
 			<div
-				class="h-full rounded-full bg-[#7c3aed] transition-all duration-300"
+				class="h-full rounded-full bg-accent-strong transition-all duration-300"
 				style={'width:' + ((step / 5) * 100) + '%'}
 			></div>
 		</div>
@@ -775,8 +775,8 @@
 
 	{#if step === 1}
 		<section class="ux-card min-w-0 w-full p-5 sm:p-7">
-			<h2 class="text-xl font-bold tracking-tight text-white sm:text-2xl">¿Qué necesita el paciente?</h2>
-			<p class="mt-2 text-base text-white/60">Elegí un procedimiento.</p>
+			<h2 class="text-xl font-bold tracking-tight text-fg sm:text-2xl">¿Qué necesita el paciente?</h2>
+			<p class="mt-2 text-base text-fg-60">Elegí un procedimiento.</p>
 
 			<div class="mt-6 grid gap-3 sm:grid-cols-2">
 				{#each services as service}
@@ -788,7 +788,7 @@
 						class:ux-choice-active={selectedServiceId === service.id}
 					>
 						<span class="min-w-0">
-							<span class="block text-lg font-bold leading-tight text-white">{service.name}</span>
+							<span class="block text-lg font-bold leading-tight text-fg">{service.name}</span>
 						</span>
 						<span class="ux-badge shrink-0 text-sm">{formatDuration(service.duration_minutes)}</span>
 					</button>
@@ -801,9 +801,9 @@
 		</section>
 	{:else if step === 2}
 		<section class="ux-card min-w-0 w-full p-5 sm:p-7">
-			<h2 class="text-xl font-bold tracking-tight text-white sm:text-2xl">¿Con quién?</h2>
+			<h2 class="text-xl font-bold tracking-tight text-fg sm:text-2xl">¿Con quién?</h2>
 			{#if selectedService}
-				<p class="mt-2 text-base text-white/60">
+				<p class="mt-2 text-base text-fg-60">
 					{selectedService.name} ·&nbsp;{formatDuration(selectedService.duration_minutes)}
 				</p>
 			{/if}
@@ -814,8 +814,8 @@
 					onclick={() => selectBookingMode('individual')}
 					aria-pressed={bookingMode === 'individual'}
 					class={bookingMode === 'individual'
-						? 'min-h-12 rounded-xl bg-[#7c3aed] px-4 py-3 text-base font-bold text-white shadow-lg shadow-[#7c3aed]/25'
-						: 'min-h-12 rounded-xl px-4 py-3 text-base font-bold text-white/60 transition hover:bg-white/[0.06] hover:text-white'}
+						? 'min-h-12 rounded-xl bg-accent-strong px-4 py-3 text-base font-bold text-on-accent shadow-lg shadow-shade-accent-600-30'
+						: 'min-h-12 rounded-xl px-4 py-3 text-base font-bold text-fg-60 transition hover:bg-fill-04 hover:text-fg'}
 				>
 					Un profesional
 				</button>
@@ -824,17 +824,17 @@
 					onclick={() => selectBookingMode('joint')}
 					aria-pressed={bookingMode === 'joint'}
 					class={bookingMode === 'joint'
-						? 'min-h-12 rounded-xl bg-[#7c3aed] px-4 py-3 text-base font-bold text-white shadow-lg shadow-[#7c3aed]/25'
-						: 'min-h-12 rounded-xl px-4 py-3 text-base font-bold text-white/60 transition hover:bg-white/[0.06] hover:text-white'}
+						? 'min-h-12 rounded-xl bg-accent-strong px-4 py-3 text-base font-bold text-on-accent shadow-lg shadow-shade-accent-600-30'
+						: 'min-h-12 rounded-xl px-4 py-3 text-base font-bold text-fg-60 transition hover:bg-fill-04 hover:text-fg'}
 				>
 					Equipo de profesionales
 				</button>
 			</div>
 
 			{#if bookingMode === 'joint'}
-				<p class="mt-5 text-base text-white/60">Elegí dos o más profesionales.</p>
+				<p class="mt-5 text-base text-fg-60">Elegí dos o más profesionales.</p>
 			{:else}
-				<p class="mt-5 text-base text-white/60">Elegí quién realizará el procedimiento.</p>
+				<p class="mt-5 text-base text-fg-60">Elegí quién realizará el procedimiento.</p>
 			{/if}
 
 			<div class="mt-5 grid gap-3 sm:grid-cols-2">
@@ -847,16 +847,16 @@
 							class="ux-choice flex min-h-28 min-w-0 w-full items-start gap-4 p-5 text-left disabled:cursor-not-allowed disabled:opacity-50"
 							class:ux-choice-active={selectedProfessionalId === professional.id}
 						>
-							<span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/10 text-base font-bold text-white/80">
+							<span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-fill-10 text-base font-bold text-fg-80">
 								{initialsFor(professional.name)}
 							</span>
 							<span class="min-w-0 flex-1">
-								<span class="block break-words text-lg font-bold text-white">{professional.name}</span>
-								<span class="mt-1 block break-words text-base text-white/55">
+								<span class="block break-words text-lg font-bold text-fg">{professional.name}</span>
+								<span class="mt-1 block break-words text-base text-fg-55">
 									{professional.specialty ?? 'Profesional'}
 								</span>
 							</span>
-							<svg class="mt-1 h-5 w-5 shrink-0 text-white/35" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+							<svg class="mt-1 h-5 w-5 shrink-0 text-fg-35" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
 						</button>
 					{/each}
 				{:else}
@@ -870,20 +870,20 @@
 							class="ux-choice flex min-h-28 min-w-0 w-full items-start gap-4 p-5 text-left disabled:cursor-not-allowed disabled:opacity-50"
 							class:ux-choice-active={selected}
 						>
-							<span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/10 text-base font-bold text-white/80">
+							<span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-fill-10 text-base font-bold text-fg-80">
 								{initialsFor(professional.name)}
 							</span>
 							<span class="min-w-0 flex-1">
-								<span class="block break-words text-lg font-bold text-white">{professional.name}</span>
-								<span class="mt-1 block break-words text-base text-white/55">
+								<span class="block break-words text-lg font-bold text-fg">{professional.name}</span>
+								<span class="mt-1 block break-words text-base text-fg-55">
 									{professional.specialty ?? 'Profesional'}
 								</span>
 							</span>
 							<span
 								aria-hidden="true"
 								class={selected
-									? 'grid h-7 w-7 shrink-0 place-items-center rounded-full border border-[#a78bfa] bg-[#7c3aed] text-sm font-bold text-white'
-									: 'grid h-7 w-7 shrink-0 place-items-center rounded-full border border-white/20 text-sm font-bold text-transparent'}
+									? 'grid h-7 w-7 shrink-0 place-items-center rounded-full border border-accent-400 bg-accent-strong text-sm font-bold text-on-accent'
+									: 'grid h-7 w-7 shrink-0 place-items-center rounded-full border border-line-20 text-sm font-bold text-transparent'}
 							>
 								<Icon name="check" class="h-4 w-4" />
 							</span>
@@ -903,7 +903,7 @@
 			{/if}
 
 			{#if bookingMode === 'joint' && selectedProfessionalIds.length >= 2}
-				<p class="mt-5 text-base font-semibold text-white/70" aria-live="polite">
+				<p class="mt-5 text-base font-semibold text-fg-70" aria-live="polite">
 					{loadingSlots
 						? 'Comparando la disponibilidad de todo el equipo…'
 						: selectedTeam.length + ' integrantes seleccionados.'}
@@ -921,7 +921,7 @@
 						type="button"
 						disabled={selectedTeam.length < 2 || loadingSlots || slots.length === 0}
 						onclick={continueWithTeam}
-						class="ux-btn-primary group min-h-16 min-w-0 w-full justify-between rounded-2xl px-6 py-4 text-left shadow-xl shadow-violet-950/40 sm:w-auto sm:min-w-80"
+						class="ux-btn-primary group min-h-16 min-w-0 w-full justify-between rounded-2xl px-6 py-4 text-left shadow-xl shadow-shade-accent-950-30 sm:w-auto sm:min-w-80"
 					>
 						<span class="min-w-0">
 							<span class="block text-lg font-bold leading-tight tracking-tight">
@@ -935,7 +935,7 @@
 							</span>
 						</span>
 						<span
-							class="ml-4 grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/15 ring-1 ring-white/20 transition-transform duration-150 group-hover:translate-x-0.5"
+							class="ml-4 grid h-11 w-11 shrink-0 place-items-center rounded-full bg-fill-15 ring-1 ring-focus-20 transition-transform duration-150 group-hover:translate-x-0.5"
 							aria-hidden="true"
 						>
 							<svg
@@ -959,9 +959,9 @@
 		<section class="ux-card min-w-0 w-full p-5 sm:p-7">
 			<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div>
-					<h2 class="text-xl font-bold tracking-tight text-white sm:text-2xl">Elegí un día</h2>
+					<h2 class="text-xl font-bold tracking-tight text-fg sm:text-2xl">Elegí un día</h2>
 					{#if selectedService}
-						<p class="mt-2 text-base text-white/60">
+						<p class="mt-2 text-base text-fg-60">
 							{selectedService.name} ·&nbsp;{formatDuration(selectedService.duration_minutes)}
 						</p>
 					{/if}
@@ -971,31 +971,31 @@
 
 			{#if bookingMode === 'joint'}
 				<div class="ux-soft-card mt-6 p-4">
-					<p class="text-sm font-bold uppercase tracking-wide text-[#c4b5fd]">Equipo seleccionado</p>
-					<p class="mt-2 text-base text-white/70">{selectedTeam.map((professional) => professional.name).join(' · ')}</p>
+					<p class="text-sm font-bold uppercase tracking-wide text-accent">Equipo seleccionado</p>
+					<p class="mt-2 text-base text-fg-70">{selectedTeam.map((professional) => professional.name).join(' · ')}</p>
 				</div>
 			{/if}
 
-			<label class="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-amber-300/20 bg-amber-400/[0.07] p-4">
+			<label class="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-warning-300-20 bg-warning-400-07 p-4">
 				<input
 					type="checkbox"
 					checked={ignoreBreak}
 					onchange={updateIgnoreBreak}
 					disabled={!canOperate}
-					class="mt-1 h-5 w-5 shrink-0 accent-amber-400"
+					class="mt-1 h-5 w-5 shrink-0 accent-check-warning-400"
 				/>
 				<span>
-					<span class="block text-base font-bold text-amber-100">Permitir turno sin descanso</span>
-					<span class="mt-1 block text-sm text-amber-100/70">Solo para esta reserva.</span>
+					<span class="block text-base font-bold text-warning-100">Permitir turno sin descanso</span>
+					<span class="mt-1 block text-sm text-warning-100-70">Solo para esta reserva.</span>
 				</span>
 			</label>
 
 			{#if loadingSlots}
 				<div class="mt-6 grid gap-3 sm:grid-cols-2" aria-live="polite">
 					{#each [0, 1, 2, 3] as placeholder (placeholder)}
-						<div class="skeleton-shimmer relative h-28 overflow-hidden rounded-2xl border border-white/5 bg-white/[0.05]"></div>
+						<div class="skeleton-shimmer relative h-28 overflow-hidden rounded-2xl border border-line-05 bg-fill-04"></div>
 					{/each}
-					<p class="text-base text-white/55">Buscando días disponibles…</p>
+					<p class="text-base text-fg-55">Buscando días disponibles…</p>
 				</div>
 			{:else if slotsByDay.length > 0}
 				<div class="mt-6 grid gap-3 sm:grid-cols-2">
@@ -1006,21 +1006,21 @@
 							class="ux-choice flex min-h-28 min-w-0 w-full items-center justify-between gap-4 p-5 text-left"
 						>
 							<span>
-								<span class="block capitalize text-lg font-bold text-white">{formatDayName(dayGroup.day)}</span>
-								<span class="mt-1.5 block text-base text-white/55">{formatDayNumber(dayGroup.day)}</span>
+								<span class="block capitalize text-lg font-bold text-fg">{formatDayName(dayGroup.day)}</span>
+								<span class="mt-1.5 block text-base text-fg-55">{formatDayNumber(dayGroup.day)}</span>
 							</span>
-							<svg class="h-5 w-5 shrink-0 text-white/35" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+							<svg class="h-5 w-5 shrink-0 text-fg-35" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
 						</button>
 					{/each}
 				</div>
 			{:else if !slotsError}
 				<div class="ux-empty mt-6">
-					<p class="text-lg font-bold text-white/85">
+					<p class="text-lg font-bold text-fg-85">
 						{bookingMode === 'joint'
 							? 'No hay un día en común para todo el equipo esta semana.'
 							: 'No hay días disponibles esta semana.'}
 					</p>
-					<p class="mt-2 text-base text-white/55">
+					<p class="mt-2 text-base text-fg-55">
 						Probá la semana siguiente o volvé para cambiar la selección.
 					</p>
 				</div>
@@ -1039,8 +1039,8 @@
 		<section class="ux-card min-w-0 w-full p-5 sm:p-7">
 			<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div>
-					<h2 class="text-xl font-bold tracking-tight text-white sm:text-2xl">Elegí un horario</h2>
-					<p class="mt-2 capitalize text-base text-white/60">{formatLongDate(selectedSlotDate)}</p>
+					<h2 class="text-xl font-bold tracking-tight text-fg sm:text-2xl">Elegí un horario</h2>
+					<p class="mt-2 capitalize text-base text-fg-60">{formatLongDate(selectedSlotDate)}</p>
 				</div>
 				<button type="button" onclick={changeDay} class="ux-btn-secondary w-fit">Cambiar día</button>
 			</div>
@@ -1048,19 +1048,19 @@
 			{#if loadingSlots}
 				<div class="mt-6 grid grid-cols-3 gap-2 sm:grid-cols-5" aria-live="polite">
 					{#each [0, 1, 2, 3, 4] as placeholder (placeholder)}
-						<div class="skeleton-shimmer relative h-12 overflow-hidden rounded-xl border border-white/5 bg-white/[0.05]"></div>
+						<div class="skeleton-shimmer relative h-12 overflow-hidden rounded-xl border border-line-05 bg-fill-04"></div>
 					{/each}
-					<p class="col-span-full text-base text-white/55">Buscando horarios libres…</p>
+					<p class="col-span-full text-base text-fg-55">Buscando horarios libres…</p>
 				</div>
 			{:else}
 				{#if morningSlots.length > 0}
-					<p class="mt-6 text-sm font-bold uppercase tracking-wider text-white/45">Mañana</p>
+					<p class="mt-6 text-sm font-bold uppercase tracking-wider text-copy-subtle">Mañana</p>
 					<div class="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
 						{#each morningSlots as slot (slot.starts_at)}
 							<button
 								type="button"
 								onclick={() => selectSlot(slot)}
-								class="ux-choice min-h-12 px-3 py-3 text-center text-base font-bold text-white"
+								class="ux-choice min-h-12 px-3 py-3 text-center text-base font-bold text-fg"
 							>
 								{slot.time}
 							</button>
@@ -1068,13 +1068,13 @@
 					</div>
 				{/if}
 				{#if afternoonSlots.length > 0}
-					<p class="mt-6 text-sm font-bold uppercase tracking-wider text-white/45">Tarde</p>
+					<p class="mt-6 text-sm font-bold uppercase tracking-wider text-copy-subtle">Tarde</p>
 					<div class="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
 						{#each afternoonSlots as slot (slot.starts_at)}
 							<button
 								type="button"
 								onclick={() => selectSlot(slot)}
-								class="ux-choice min-h-12 px-3 py-3 text-center text-base font-bold text-white"
+								class="ux-choice min-h-12 px-3 py-3 text-center text-base font-bold text-fg"
 							>
 								{slot.time}
 							</button>
@@ -1096,8 +1096,8 @@
 				<button type="button" onclick={() => (step = 4)} class="ux-btn-secondary">Volver</button>
 
 				<div class="mt-6">
-					<h2 class="text-xl font-bold tracking-tight text-white sm:text-2xl">¿Para quién es el turno?</h2>
-					<p class="mt-2 text-base text-white/60">Buscá una ficha existente o cargá un paciente nuevo.</p>
+					<h2 class="text-xl font-bold tracking-tight text-fg sm:text-2xl">¿Para quién es el turno?</h2>
+					<p class="mt-2 text-base text-fg-60">Buscá una ficha existente o cargá un paciente nuevo.</p>
 				</div>
 
 				<div class="mt-6 grid gap-3 sm:grid-cols-2">
@@ -1107,7 +1107,7 @@
 						class="ux-choice flex min-h-28 min-w-0 w-full items-center gap-4 p-5 text-left"
 						class:ux-choice-active={patientMode === 'existing'}
 					>
-						<span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#7c3aed]/25 text-white ring-1 ring-[#8b5cf6]/35">
+						<span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-accent-600-25 text-fg ring-1 ring-focus-accent-500-35">
 							<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M21 21a7 7 0 0 0-14 0" />
 								<circle cx="14" cy="8" r="4" />
@@ -1115,8 +1115,8 @@
 							</svg>
 						</span>
 						<span>
-							<span class="block text-lg font-bold text-white">Buscar paciente</span>
-							<span class="mt-1 block text-base text-white/55">Usar una ficha existente</span>
+							<span class="block text-lg font-bold text-fg">Buscar paciente</span>
+							<span class="mt-1 block text-base text-fg-55">Usar una ficha existente</span>
 						</span>
 					</button>
 					<button
@@ -1125,7 +1125,7 @@
 						class="ux-choice flex min-h-28 min-w-0 w-full items-center gap-4 p-5 text-left"
 						class:ux-choice-active={patientMode === 'new'}
 					>
-						<span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-white ring-1 ring-white/10">
+						<span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-fill-10 text-fg ring-1 ring-focus-10">
 							<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M20 21a8 8 0 0 0-16 0" />
 								<circle cx="12" cy="8" r="4" />
@@ -1133,8 +1133,8 @@
 							</svg>
 						</span>
 						<span>
-							<span class="block text-lg font-bold text-white">Nuevo paciente</span>
-							<span class="mt-1 block text-base text-white/55">Crear una ficha al agendar</span>
+							<span class="block text-lg font-bold text-fg">Nuevo paciente</span>
+							<span class="mt-1 block text-base text-fg-55">Crear una ficha al agendar</span>
 						</span>
 					</button>
 				</div>
@@ -1158,7 +1158,7 @@
 								oninput={handlePhoneInput}
 								aria-invalid={phoneNeedsAttention || phoneWarning ? 'true' : undefined}
 								aria-describedby={phoneWarning ? 'phone-warning' : undefined}
-								class={`ux-input ${phoneNeedsAttention || phoneWarning ? 'border-amber-300 ring-2 ring-amber-300/25' : ''}`}
+								class={`ux-input ${phoneNeedsAttention || phoneWarning ? 'border-warning-300 ring-2 ring-focus-warning-300-25' : ''}`}
 							/>
 						</label>
 					{:else}
@@ -1190,7 +1190,7 @@
 								disabled={!canOperate}
 								aria-invalid={phoneNeedsAttention || phoneWarning ? 'true' : undefined}
 								aria-describedby={phoneWarning ? 'phone-warning' : undefined}
-								class={`ux-input ${phoneNeedsAttention || phoneWarning ? 'border-amber-300 ring-2 ring-amber-300/25' : ''}`}
+								class={`ux-input ${phoneNeedsAttention || phoneWarning ? 'border-warning-300 ring-2 ring-focus-warning-300-25' : ''}`}
 							/>
 						</label>
 						<label>
@@ -1207,13 +1207,13 @@
 				{/if}
 
 				{#if phoneWarning}
-					<div id="phone-warning" class="mt-5 rounded-2xl border border-amber-300/35 bg-amber-300/[0.09] p-4 text-amber-50" role="alert">
+					<div id="phone-warning" class="mt-5 rounded-2xl border border-warning-300-35 bg-warning-400-07 p-4 text-warning-50" role="alert">
 						<p class="text-base font-bold">
 							{phoneWarning === 'missing'
 								? 'Falta el número de teléfono'
 								: 'El número de teléfono no es válido'}
 						</p>
-						<p class="mt-1 text-sm text-amber-50/75">
+						<p class="mt-1 text-sm text-warning-50-75">
 							{phoneWarning === 'missing'
 								? 'Agregalo para que el paciente pueda recibir recordatorios automáticos.'
 								: 'Corregilo para que el paciente pueda recibir recordatorios automáticos.'}
@@ -1231,48 +1231,48 @@
 			</div>
 
 			<aside class="ux-soft-card p-5">
-				<p class="text-lg font-bold text-white">Resumen del turno</p>
+				<p class="text-lg font-bold text-fg">Resumen del turno</p>
 				<div class="mt-5 space-y-4">
 					<div>
-						<p class="text-xs font-semibold uppercase tracking-wide text-white/40">Servicio</p>
-						<p class="mt-1 text-base font-semibold text-white">{selectedService?.name ?? '-'}</p>
+						<p class="text-xs font-semibold uppercase tracking-wide text-copy-subtle">Servicio</p>
+						<p class="mt-1 text-base font-semibold text-fg">{selectedService?.name ?? '-'}</p>
 					</div>
 					<div>
-						<p class="text-xs font-semibold uppercase tracking-wide text-white/40">
+						<p class="text-xs font-semibold uppercase tracking-wide text-copy-subtle">
 							{bookingMode === 'joint' ? 'Equipo' : 'Profesional'}
 						</p>
 						{#if bookingMode === 'joint'}
 							<ul class="mt-2 grid gap-1.5">
 								{#each selectedTeam as professional}
-									<li class="flex items-center gap-2 text-sm font-semibold text-white">
-										<span class="h-1.5 w-1.5 rounded-full bg-[#a78bfa]"></span>
+									<li class="flex items-center gap-2 text-sm font-semibold text-fg">
+										<span class="h-1.5 w-1.5 rounded-full bg-accent-400"></span>
 										{professional.name}
 									</li>
 								{/each}
 							</ul>
 						{:else}
-							<p class="mt-1 text-base font-semibold text-white">{selectedProfessional?.name ?? '-'}</p>
+							<p class="mt-1 text-base font-semibold text-fg">{selectedProfessional?.name ?? '-'}</p>
 						{/if}
 					</div>
 					<div>
-						<p class="text-xs font-semibold uppercase tracking-wide text-white/40">Fecha</p>
-						<p class="mt-1 capitalize text-base font-semibold text-white">
+						<p class="text-xs font-semibold uppercase tracking-wide text-copy-subtle">Fecha</p>
+						<p class="mt-1 capitalize text-base font-semibold text-fg">
 							{selectedSlot ? formatLongDate(selectedSlot.date) : '-'}
 						</p>
 					</div>
 					<div>
-						<p class="text-xs font-semibold uppercase tracking-wide text-white/40">Hora</p>
-						<p class="mt-1 text-base font-semibold text-white">{selectedSlot?.time ?? '-'}</p>
+						<p class="text-xs font-semibold uppercase tracking-wide text-copy-subtle">Hora</p>
+						<p class="mt-1 text-base font-semibold text-fg">{selectedSlot?.time ?? '-'}</p>
 					</div>
 					{#if ignoreBreak}
 						<div>
-							<p class="text-xs font-semibold uppercase tracking-wide text-white/40">Descanso</p>
-							<p class="mt-1 text-sm font-semibold text-amber-100">Sin descanso</p>
+							<p class="text-xs font-semibold uppercase tracking-wide text-copy-subtle">Descanso</p>
+							<p class="mt-1 text-sm font-semibold text-warning-100">Sin descanso</p>
 						</div>
 					{/if}
 					<div>
-						<p class="text-xs font-semibold uppercase tracking-wide text-white/40">Paciente</p>
-						<p class="mt-1 text-base font-semibold text-white">
+						<p class="text-xs font-semibold uppercase tracking-wide text-copy-subtle">Paciente</p>
+						<p class="mt-1 text-base font-semibold text-fg">
 							{patientMode === 'existing' ? selectedPatient?.full_name ?? '-' : patientName || '-'}
 						</p>
 					</div>

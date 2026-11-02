@@ -1,39 +1,88 @@
 ---
 name: Cita Suite
-description: Sistema oscuro de trabajo para consultorios.
+description: Sistema de trabajo para consultorios, con modo claro predeterminado y modo oscuro.
 colors:
+  bg: "#f5f6f8"
+  surface: "#ffffff"
+  surface-2: "#f2f4f7"
+  surface-raised: "#ffffff"
+  border: "#e4e7ec"
+  border-strong: "#d0d5dd"
+  field-border: "#7e889b"
+  text: "#0f1b2d"
+  text-muted: "#475467"
+  text-subtle: "#5d6b82"
+  accent: "#7640cf"
+  accent-strong: "#6633c2"
+  accent-press: "#5627a8"
+  accent-soft: "#f3eefc"
+  accent-text: "#5627a8"
+  ring: "#7640cf"
+  success: "#15803d"
+  success-soft: "#ecfdf3"
+  success-text: "#166534"
+  warning: "#b45309"
+  warning-soft: "#fff7e6"
+  warning-text: "#8a3c0c"
+  danger: "#d92d20"
+  danger-strong: "#c4221a"
+  danger-press: "#9f1c15"
+  danger-soft: "#fef3f2"
+  danger-text: "#b42318"
+  info: "#175cd3"
+  info-soft: "#eff6ff"
+  info-text: "#1849a9"
+  on-accent: "#ffffff"
+  inverse: "#0f1b2d"
+  on-inverse: "#ffffff"
+  field: "#ffffff"
+  secondary-bg: "#ffffff"
+  patient-muted: "#475467"
+  patient-field: "#ffffff"
+  patient-field-border: "#7e889b"
+  patient-summary: "#f8f5fe"
+  patient-summary-border: "#b39ae6"
+# Modo oscuro: mismas funciones, elegido en el selector o por el dispositivo (Automático).
+colors-dark:
   bg: "#0b1626"
   surface: "#0b1d32"
   surface-2: "#0f2238"
   surface-raised: "#102842"
-  border: "rgba(255, 255, 255, 0.1)"
+  border: "rgb(255 255 255 / 0.1)"
   border-strong: "#244062"
+  field-border: "#647899"
   text: "#eaf1ff"
-  text-muted: "rgba(234, 241, 255, 0.64)"
-  text-subtle: "rgba(234, 241, 255, 0.42)"
+  text-muted: "rgb(234 241 255 / 0.64)"
+  text-subtle: "#8a97ab"
   accent: "#8b5cf6"
   accent-strong: "#7c3aed"
   accent-press: "#6d28d9"
-  accent-soft: "rgba(124, 58, 237, 0.18)"
+  accent-soft: "rgb(124 58 237 / 0.18)"
   accent-text: "#c4b5fd"
-  ring: "rgba(139, 92, 246, 0.65)"
+  ring: "#a78bfa"
   success: "#34d399"
-  success-soft: "rgba(52, 211, 153, 0.14)"
+  success-soft: "rgb(52 211 153 / 0.14)"
   success-text: "#a7f3d0"
   warning: "#fbbf24"
-  warning-soft: "rgba(251, 191, 36, 0.14)"
+  warning-soft: "rgb(251 191 36 / 0.14)"
   warning-text: "#fde68a"
   danger: "#f87171"
   danger-strong: "#dc2626"
   danger-press: "#b91c1c"
-  danger-soft: "rgba(248, 113, 113, 0.13)"
+  danger-soft: "rgb(248 113 113 / 0.13)"
   danger-text: "#fecaca"
+  info: "#38bdf8"
+  info-soft: "rgb(56 189 248 / 0.14)"
+  info-text: "#bae6fd"
   on-accent: "#ffffff"
-  field: "rgba(255, 255, 255, 0.045)"
+  inverse: "#ffffff"
+  on-inverse: "#1a1f2b"
+  field: "rgb(255 255 255 / 0.045)"
+  secondary-bg: "rgb(255 255 255 / 0.05)"
   patient-muted: "#b5c2d7"
-  patient-field: "rgba(234, 241, 255, 0.045)"
-  patient-field-border: "#52637b"
-  patient-summary: "rgba(139, 92, 246, 0.06)"
+  patient-field: "rgb(234 241 255 / 0.045)"
+  patient-field-border: "#647899"
+  patient-summary: "rgb(139 92 246 / 0.06)"
   patient-summary-border: "#8056c9"
 typography:
   headline:
@@ -121,7 +170,7 @@ components:
   button-primary-hover:
     backgroundColor: "{colors.accent-press}"
   button-secondary:
-    backgroundColor: "rgba(255, 255, 255, 0.05)"
+    backgroundColor: "{colors.secondary-bg}"
     textColor: "{colors.text}"
     typography: "{typography.button}"
     rounded: "{rounded.md}"
@@ -190,14 +239,14 @@ components:
 
 **Creative North Star: "Cita Suite: claridad para trabajar"**
 
-Se conserva la identidad existente: Inter, fondos azul oscuro y acento violeta. La precisión de los controles, la jerarquía de texto y los estados hacen reconocible el sistema. Esta frase describe el trabajo del producto; no introduce una identidad comercial nueva.
+Se conserva la identidad existente: Inter, el violeta del logo como acento y el azul marino de la marca, que es el fondo en el modo oscuro y la tinta del texto en el claro. La precisión de los controles, la jerarquía de texto y los estados hacen reconocible el sistema. Esta frase describe el trabajo del producto; no introduce una identidad comercial nueva.
 
 La interfaz permite encontrar una tarea y completarla con campos visibles, agrupaciones cortas y opciones secundarias progresivas. Este documento registra los estilos compartidos, los patrones implementados en configuración de reservas y confirmación del paciente, y las reglas de texto y composición verificadas también en la ficha clínica, Equipo y la reserva manual; no certifica una renovación de todas las páginas de la aplicación.
 
 **Key Characteristics:**
 
 - Una familia tipográfica para títulos, datos y controles.
-- Superficies oscuras con diferencias de tono, bordes y elevación suave.
+- Dos modos: claro por defecto (tarjetas blancas sobre un gris casi neutro) y oscuro (azules con diferencias de tono); los dos con bordes y elevación suave.
 - Violeta para acciones principales, foco y selección; estados con texto propio.
 - Controles consistentes, nombres cotidianos y adaptación estructural al celular.
 - Texto completo: nombres, valores y mensajes se ajustan en más líneas en vez de cortarse con «…» o ensanchar la pantalla.
@@ -206,7 +255,7 @@ La interfaz permite encontrar una tarea y completarla con campos visibles, agrup
 
 ### Primary
 
-El violeta de `accent` identifica foco y selección. `accent-strong` sostiene la acción principal; `accent-press` acompaña la interacción. `accent-soft` y `accent-text` permiten estados suaves legibles sobre las superficies oscuras.
+El violeta de `accent` identifica foco y selección. `accent-strong` sostiene la acción principal; `accent-press` acompaña la interacción. `accent-soft` y `accent-text` permiten estados suaves legibles sobre las superficies de los dos modos.
 
 La variante de confirmación del paciente conserva esos acentos y añade los tokens `patient-*` para texto de ayuda, campos y resumen con bordes más visibles. Su alcance es ese formulario, sin sustituir la paleta administrativa. En la integración Natalia, el formulario y sus menús conservan los tokens propios de `BookingAppearance.svelte`: papel, superficie cálida y acento terracota en claro y oscuro. Esta extensión no redefine esa identidad existente.
 
@@ -218,7 +267,23 @@ Verde comunica éxito; ámbar, advertencia o cambios pendientes; rojo, error o a
 
 **The Estado legible Rule.** La persona debe poder reconocer un estado por su texto, sin depender sólo del color.
 
-**The Tema único Rule.** Cita Suite tiene un solo tema oscuro (`color-scheme: dark`, con la variante `dark` siempre activa), también cuando el navegador prefiere el modo claro. Sólo la apariencia Natalia de la reserva pública alterna claro y oscuro, según el modo que indica su sitio (`color_mode` o el puente de la integración) y no según la preferencia del navegador.
+**The Dos modos Rule.** Cita Suite es clara por defecto, también cuando el dispositivo prefiere oscuro, y ofrece el modo oscuro de siempre (docs/plans/modo-claro-20261102.md).
+- La persona elige Claro, Oscuro o Automático en el menú de su cuenta (`ThemeSelector`). La elección es del dispositivo: se guarda un año en la cookie `cita-theme`.
+- El servidor arma cada página ya en el modo elegido: pone `dark` o `theme-system` en `<html>` y el color de la barra del navegador (`hooks.server.ts`, `src/lib/theme/preference.ts`). No hay parpadeo y no hace falta JavaScript.
+- Automático sigue al dispositivo sólo con CSS, también si cambia con la página abierta.
+- El cambio se aplica al instante y todos los elementos cambian a la vez: la clase `theme-switching` apaga las transiciones durante el cambio.
+- La apariencia Natalia de la reserva pública no depende de este modo: alterna claro y oscuro según el modo que indica su sitio (`color_mode` o el puente de la integración). Dentro de su ámbito, las variables de la app que ella no redefine quedan fijas en su valor oscuro, así su reserva se ve como antes del modo claro. Sus reglas apuntan a las marcas `bk-*` de los componentes de reserva.
+- El visor de radiografías e imágenes clínicas es siempre oscuro, en los dos modos, para conservar el contraste de las zonas oscuras de la imagen.
+
+**The Variable única Rule.** Todo color sale de `src/lib/theme/palette.js`, que define cada variable con su valor claro y su valor oscuro. Tailwind toma de allí sus clases de color y sus variables (`tailwind.config.js`).
+- Un color escrito a mano no seguiría el modo elegido. No se escriben hexadecimales, `rgb()`, clases de la paleta de Tailwind (`text-white`, `bg-neutral-100`…), clases arbitrarias con color (`bg-[#…]`) ni variantes `dark:`.
+- Lo controlan `scripts/lib/theme-colors.test.mjs` (colores escritos a mano, clases que no existen en la paleta, variables leídas que nadie define y variables sin uso) y `scripts/lib/theme-palette.test.mjs` (contraste WCAG 2.2 de los dos modos sobre los valores reales).
+- Las excepciones revisadas, con su motivo, están en `scripts/lib/theme-colors.mjs`: el visor clínico, el Excel exportado y las tildes blancas de las casillas.
+
+**The Equivalencias Rule.** Las variables `--c-*` son la capa de equivalencias del oscuro anterior. Cada color que se veía en oscuro tiene su variable, que conserva ese color con una diferencia perceptual ΔE2000 de 2 o menos, salvo las correcciones de accesibilidad aprobadas.
+- Su nombre dice la función, el tono y el nivel: `text-fg-55` es la tinta al 55 % (blanco en oscuro); `bg-danger-500-15` es rojo 500 al 15 %; `border-line-strong` es el borde fuerte.
+- Su valor claro sale de la paleta aprobada según la función: tinta azul marino por niveles de énfasis, estados con sus colores de texto y fondo suave, bordes y superficies claras.
+- Para un color nuevo se prefiere una variable de función (`--text`, `--surface`, `--accent`…) antes que una equivalencia nueva.
 
 ## Typography
 
@@ -246,7 +311,7 @@ El formulario final del paciente usa una columna, con los grupos separados del r
 
 ## Elevation & Depth
 
-El sistema combina capas tonales y sombras difusas. Los contenedores existentes conservan un fondo con gradientes discretos; los menús y diálogos usan una superficie sólida elevada. La sidecar registra las sombras reales y su propósito. Los menús se muestran en la capa superior cuando existe la API de popover, con posicionamiento fijo como alternativa, para evitar recortes en formularios y diálogos.
+El sistema combina capas tonales y sombras difusas. En claro, las tarjetas blancas se separan del fondo gris casi neutro con bordes finos y sombras suaves; en oscuro, con diferencias de tono. Los contenedores existentes conservan un fondo con gradientes discretos; los menús y diálogos usan una superficie sólida elevada. La sidecar registra las sombras reales y su propósito. Los menús se muestran en la capa superior cuando existe la API de popover, con posicionamiento fijo como alternativa, para evitar recortes en formularios y diálogos.
 
 La confirmación final del paciente utiliza un fondo plano y ningún sombreado en su contenedor. El borde y el tono del resumen establecen su jerarquía. Su acción principal conserva la elevación compartida; el selector continúa usando el menú elevado existente.
 
@@ -268,7 +333,7 @@ Tarjetas para un grupo de trabajo completo; filas y separadores para listas de t
 
 ### Inputs / Fields
 
-Campos oscuros, etiquetas encima y foco visible. Error y cambios sin guardar tienen borde y mensajes propios. Selectores y fechas/meses mejoran progresivamente sus controles originales: el menú, calendario y trigger tienen acabado propio mientras la fuente conserva nombre, valor, validación y bindings. El trigger muestra el valor elegido completo y lo ajusta en varias líneas en vez de truncarlo. Las horas usan un campo de texto con entrada numérica y normalización al formato HH:mm, sin menú. Casillas y radios conservan su semántica nativa con dibujo propio. No ocultar la fuente hasta que su mejora esté montada.
+Campos con fondo propio y borde de 3:1 (`field-border`) en los dos modos, etiquetas encima y foco visible. Error y cambios sin guardar tienen borde y mensajes propios. Selectores y fechas/meses mejoran progresivamente sus controles originales: el menú, calendario y trigger tienen acabado propio mientras la fuente conserva nombre, valor, validación y bindings. El trigger muestra el valor elegido completo y lo ajusta en varias líneas en vez de truncarlo. Las horas usan un campo de texto con entrada numérica y normalización al formato HH:mm, sin menú. Casillas y radios conservan su semántica nativa con dibujo propio. No ocultar la fuente hasta que su mejora esté montada.
 
 ### Navigation
 
@@ -300,7 +365,7 @@ El diálogo del SDK v1 define su propio centrado y límite de ancho, sin depende
 
 ### Do:
 
-- **Do** conservar Inter y los tokens compartidos del sistema oscuro existente.
+- **Do** conservar Inter y tomar todo color de `src/lib/theme/palette.js`; un color nuevo se agrega allí con su valor claro y su valor oscuro.
 - **Do** usar etiquetas visibles, foco reconocible y texto para comunicar cada estado.
 - **Do** agrupar por tarea y plegar opciones secundarias después de los campos principales.
 - **Do** conservar la semántica, validación y datos del formulario al mejorar sus controles.
@@ -309,6 +374,8 @@ El diálogo del SDK v1 define su propio centrado y límite de ancho, sin depende
 
 ### Don't:
 
+- **Don't** escribir colores a mano ni variantes `dark:`: no seguirían el modo elegido (The Variable única Rule).
+- **Don't** cambiar la apariencia de Natalia desde la paleta de la app: su reserva tiene su propio modo y sus propios colores.
 - **Don't** inventar datos reales, tarifas, contactos ni promesas de marca.
 - **Don't** compensar una estructura confusa con párrafos de instrucciones.
 - **Don't** dejar menús, calendarios o confirmaciones interiores con acabado nativo cuando están mejorados con JavaScript.

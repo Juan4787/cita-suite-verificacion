@@ -53,7 +53,7 @@
 		<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 			<div class="max-w-2xl">
 				<h2 class="ux-section-title">Solicitud automática</h2>
-				<p class="mt-2 text-sm text-white/55">
+				<p class="mt-2 text-sm text-fg-55">
 					Se envía 2 horas después de que termina el turno y como máximo una vez cada 180 días por paciente.
 				</p>
 			</div>
@@ -67,9 +67,9 @@
 				value="true"
 				bind:checked={enabled}
 				disabled={!canManage}
-				class="accent-[#7c3aed]"
+				class="accent-check-accent-600"
 			/>
-			<span class="font-bold text-white">Solicitar reseñas automáticamente</span>
+			<span class="font-bold text-fg">Solicitar reseñas automáticamente</span>
 		</label>
 
 		<div class="mt-6 grid gap-5">
@@ -85,16 +85,16 @@
 					placeholder="https://g.page/r/.../review"
 					class="ux-input"
 				/>
-				<span class="mt-1 block text-xs text-white/45">
+				<span class="mt-1 block text-xs text-copy-subtle">
 					Copialo desde tu Perfil de Empresa de Google, en “Leer reseñas” → “Conseguir más reseñas”.
 				</span>
 			</label>
 
-			<div class="border-t border-white/10 pt-5">
+			<div class="border-t border-line pt-5">
 				<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<div>
 						<h2 class="ux-section-title">Mensaje</h2>
-						<p class="mt-1 text-sm text-white/55">Podés adaptar el texto al tono de tu consultorio.</p>
+						<p class="mt-1 text-sm text-fg-55">Podés adaptar el texto al tono de tu consultorio.</p>
 					</div>
 					<button
 						type="button"
@@ -145,12 +145,12 @@
 		</div>
 
 		<div class="ux-soft-card mt-6 p-5" aria-label="Vista previa de la notificación">
-			<p class="text-xs font-bold uppercase tracking-[0.16em] text-white/45">Vista previa</p>
-			<p class="mt-3 font-bold text-white">{title || 'Título de la notificación'}</p>
-			<p class="mt-2 whitespace-pre-line text-sm leading-6 text-white/65">
+			<p class="text-xs font-bold uppercase tracking-[0.16em] text-copy-subtle">Vista previa</p>
+			<p class="mt-3 font-bold text-fg">{title || 'Título de la notificación'}</p>
+			<p class="mt-2 whitespace-pre-line text-sm leading-6 text-fg-65">
 				{body || 'Texto de la notificación'}
 			</p>
-			<span class="mt-4 inline-flex rounded-xl bg-violet-500/15 px-3 py-2 text-sm font-bold text-violet-200">
+			<span class="mt-4 inline-flex rounded-xl bg-accent-500-15 px-3 py-2 text-sm font-bold text-accent-200">
 				{actionLabel || 'Compartir mi opinión'}
 			</span>
 		</div>

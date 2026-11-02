@@ -381,24 +381,24 @@ n. que acepta que la eliminación estará sujeta a verificación, disponibilidad
 	<title>Términos y condiciones | Cita Suite</title>
 </svelte:head>
 
-<div class="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-[#0b1626] dark:text-[#eaf1ff]">
+<div class="min-h-screen bg-canvas text-copy">
 	<main class="mx-auto max-w-4xl px-4 py-10">
-		<article class="rounded-2xl border border-neutral-100 bg-white/90 p-6 shadow-card dark:border-[#1f3554] dark:bg-[#152642] sm:p-8">
+		<article class="rounded-2xl border p-6 shadow-card border-line-strong bg-raised sm:p-8">
 			<BackLink href="/login" label="Volver al ingreso" />
 			<h1 class="mt-3 text-2xl font-semibold">Términos y condiciones</h1>
-			<p class="mt-1 text-xs text-neutral-500 dark:text-neutral-300">
+			<p class="mt-1 text-xs text-fg-n300">
 				Última actualización: 2026-08-28
 			</p>
 
-			<div class="mt-6 space-y-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-200">
+			<div class="mt-6 space-y-3 text-sm leading-relaxed text-fg-n200">
 				{#each lines as line}
 					{#if isMainTitle(line)}
-						<p class="text-base font-bold uppercase tracking-wide text-neutral-950 dark:text-white">{line}</p>
+						<p class="text-base font-bold uppercase tracking-wide text-fg">{line}</p>
 					{:else if isHeading(line)}
-						<h2 class="pt-5 text-lg font-bold text-neutral-950 dark:text-white">{line}</h2>
+						<h2 class="pt-5 text-lg font-bold text-fg">{line}</h2>
 					{:else if isListItem(line)}
 						<p class="pl-4">
-							<span class="font-bold text-neutral-950 dark:text-white">{line.slice(0, 2)}</span>{line.slice(2)}
+							<span class="font-bold text-fg">{line.slice(0, 2)}</span>{line.slice(2)}
 						</p>
 					{:else}
 						<p>{line}</p>

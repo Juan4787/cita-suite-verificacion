@@ -406,10 +406,10 @@
 					<h1 class="ux-title">{visibleName}</h1>
 					<p class="ux-subtitle">{visibleSubtitle}</p>
 					{#if hasMissingMinimum}
-						<p class="mt-3 text-sm font-bold text-red-100">Falta completar: {missingSummary}</p>
+						<p class="mt-3 text-sm font-bold text-danger-100">Falta completar: {missingSummary}</p>
 					{/if}
 					{#if hasUnsavedChanges}
-						<p class="mt-2 text-sm font-bold text-amber-100">Cambios sin guardar</p>
+						<p class="mt-2 text-sm font-bold text-warning-100">Cambios sin guardar</p>
 					{/if}
 				</div>
 				<div class="flex shrink-0 flex-wrap items-center gap-2">
@@ -424,9 +424,9 @@
 		</div>
 
 		{#if accountLinkPending}
-			<div class="rounded-2xl border border-amber-300/25 bg-amber-300/10 px-5 py-4" role="status">
-				<p class="font-bold text-amber-100">Cuenta profesional pendiente</p>
-				<p class="mt-1 text-sm text-amber-50/80">
+			<div class="rounded-2xl border border-warning-300-25 bg-warning-400-10 px-5 py-4" role="status">
+				<p class="font-bold text-warning-100">Cuenta profesional pendiente</p>
+				<p class="mt-1 text-sm text-warning-50-80">
 					Este profesional no aparecerá en las reservas online hasta que cree su cuenta con
 					<strong>{data.pendingAccountEmail}</strong>. Cuando se registre, accederá automáticamente a este
 					perfil con los servicios y horarios ya configurados.
@@ -512,13 +512,13 @@
  bind:acknowledgedAppointments bind:scheduleTimeEditing {sectionEnhance} {refreshEnhance} form={form ?? undefined} bind:this={schedulePanel} />
 
 		<Modal open={showExitGuard} title={guardTitle}>
-			<div class="space-y-5 text-sm text-white/72">
+			<div class="space-y-5 text-sm text-fg-70">
 				{#if hasUnsavedChanges}
 					<div>
-						<p class="font-bold text-white">Hay cambios sin guardar en:</p>
+						<p class="font-bold text-fg">Hay cambios sin guardar en:</p>
 						<ul class="mt-3 grid gap-2">
 							{#each dirtyItems as item}
-								<li class="rounded-xl border border-amber-300/25 bg-amber-400/10 px-3 py-2 font-bold text-amber-100">
+								<li class="rounded-xl border border-warning-300-25 bg-warning-400-10 px-3 py-2 font-bold text-warning-100">
 									{item}
 								</li>
 							{/each}
@@ -528,10 +528,10 @@
 
 				{#if hasMissingMinimum}
 					<div>
-						<p class="font-bold text-white">{hasUnsavedChanges ? 'Además faltan datos necesarios:' : 'Este profesional todavía no tiene:'}</p>
+						<p class="font-bold text-fg">{hasUnsavedChanges ? 'Además faltan datos necesarios:' : 'Este profesional todavía no tiene:'}</p>
 						<ul class="mt-3 grid gap-2">
 							{#each missingItems as item}
-								<li class="rounded-xl border border-red-300/25 bg-red-400/10 px-3 py-2 font-bold text-red-100">
+								<li class="rounded-xl border border-danger-300-25 bg-danger-400-10 px-3 py-2 font-bold text-danger-100">
 									{item}
 								</li>
 							{/each}
@@ -550,7 +550,7 @@
 
 				<div class="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
 					{#if showSaveAllAction}
-						<button type="button" class="ux-btn-secondary border-red-400/35 text-red-100" onclick={discardAndLeave}>
+						<button type="button" class="ux-btn-secondary border-danger-400-35 text-danger-100" onclick={discardAndLeave}>
 							Salir sin guardar
 						</button>
 						<button type="button" class="ux-btn-secondary" onclick={stayEditing}>Seguir editando</button>
@@ -558,7 +558,7 @@
 							{saving === 'all' ? 'Guardando...' : 'Guardar todo'}
 						</button>
 					{:else}
-						<button type="button" class="ux-btn-secondary border-red-400/35 text-red-100" onclick={continuePendingNavigation}>
+						<button type="button" class="ux-btn-secondary border-danger-400-35 text-danger-100" onclick={continuePendingNavigation}>
 							Salir sin completar
 						</button>
 						<button type="button" class="ux-btn-primary" onclick={stayEditing}>Completar ahora</button>
