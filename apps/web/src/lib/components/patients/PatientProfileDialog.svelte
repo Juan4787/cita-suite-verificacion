@@ -151,50 +151,50 @@
 		/>
 		<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
 			<div class="space-y-1">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="full_name">Nombre del paciente *</label>
+				<label class="text-sm font-semibold text-fg" for="full_name">Nombre del paciente *</label>
 				<input
 					id="full_name"
 					name="full_name"
 					required
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
+					class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm outline-none transition focus:border-info-primary-500 focus:ring-2 focus:ring-focus-info-primary-100 border-line-strong bg-surface text-fg placeholder:text-copy-subtle"
 					value={editorPatient.full_name ?? ''}
 				/>
 			</div>
 			<div class="space-y-1">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="email">Correo electrónico (opcional)</label>
+				<label class="text-sm font-semibold text-fg" for="email">Correo electrónico (opcional)</label>
 				<input
 					id="email"
 					name="email"
 					type="email"
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
+					class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm outline-none transition focus:border-info-primary-500 focus:ring-2 focus:ring-focus-info-primary-100 border-line-strong bg-surface text-fg placeholder:text-copy-subtle"
 					value={editorPatient.email ?? ''}
 				/>
 			</div>
 		</div>
 		<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
 			<div class="space-y-1">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="phone">Teléfono (opcional)</label>
+				<label class="text-sm font-semibold text-fg" for="phone">Teléfono (opcional)</label>
 				<input
 					id="phone"
 					name="phone"
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
+					class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm outline-none transition focus:border-info-primary-500 focus:ring-2 focus:ring-focus-info-primary-100 border-line-strong bg-surface text-fg placeholder:text-copy-subtle"
 					value={editorPatient.phone ?? ''}
 				/>
 			</div>
 			<div class="space-y-1">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="dni">DNI (opcional)</label>
+				<label class="text-sm font-semibold text-fg" for="dni">DNI (opcional)</label>
 				<input
 					id="dni"
 					name="dni"
 					inputmode="numeric"
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
+					class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm outline-none transition focus:border-info-primary-500 focus:ring-2 focus:ring-focus-info-primary-100 border-line-strong bg-surface text-fg placeholder:text-copy-subtle"
 					value={editorPatient.dni ?? ''}
 				/>
 			</div>
 		</div>
 		<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
 			<div class="space-y-1">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="birth_date-year">Fecha de nacimiento (opcional)</label>
+				<label class="text-sm font-semibold text-fg" for="birth_date-year">Fecha de nacimiento (opcional)</label>
 				<DatePartsInput
 					name="birth_date"
 					initialValue={editorPatient.birth_date ?? null}
@@ -204,11 +204,11 @@
 				/>
 			</div>
 			<div class="space-y-1">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="address">Dirección (opcional)</label>
+				<label class="text-sm font-semibold text-fg" for="address">Dirección (opcional)</label>
 				<input
 					id="address"
 					name="address"
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
+					class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm outline-none transition focus:border-info-primary-500 focus:ring-2 focus:ring-focus-info-primary-100 border-line-strong bg-surface text-fg placeholder:text-copy-subtle"
 					value={editorPatient.address ?? ''}
 				/>
 			</div>
@@ -216,33 +216,33 @@
 		<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
 			<div class="space-y-3">
 				<div class="space-y-1">
-					<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="insurance">Obra social (opcional)</label>
+					<label class="text-sm font-semibold text-fg" for="insurance">Obra social (opcional)</label>
 					<input
 						id="insurance"
 						name="insurance"
-						class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
+						class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm outline-none transition focus:border-info-primary-500 focus:ring-2 focus:ring-focus-info-primary-100 border-line-strong bg-surface text-fg placeholder:text-copy-subtle"
 						value={editorPatient.insurance ?? ''}
 					/>
 				</div>
 				<div class="space-y-1">
-					<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="insurance_plan">
+					<label class="text-sm font-semibold text-fg" for="insurance_plan">
 						Plan de la obra social (opcional)
 					</label>
 					<input
 						id="insurance_plan"
 						name="insurance_plan"
-						class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
+						class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm outline-none transition focus:border-info-primary-500 focus:ring-2 focus:ring-focus-info-primary-100 border-line-strong bg-surface text-fg placeholder:text-copy-subtle"
 						value={editorPatient.insurance_plan ?? ''}
 					/>
 				</div>
 			</div>
 			{#if permissions.canEditClinicalProfile}
 				<div class="space-y-1">
-					<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="allergies">Alergias (opcional)</label>
+					<label class="text-sm font-semibold text-fg" for="allergies">Alergias (opcional)</label>
 					<input
 						id="allergies"
 						name="allergies"
-						class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
+						class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm outline-none transition focus:border-info-primary-500 focus:ring-2 focus:ring-focus-info-primary-100 border-line-strong bg-surface text-fg placeholder:text-copy-subtle"
 						value={editorPatient.allergies ?? ''}
 					/>
 				</div>
@@ -251,31 +251,31 @@
 		{#if permissions.canEditClinicalProfile}
 			<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
 				<div class="space-y-1">
-					<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="medication">Medicación (opcional)</label>
+					<label class="text-sm font-semibold text-fg" for="medication">Medicación (opcional)</label>
 					<textarea
 						id="medication"
 						name="medication"
 						rows="2"
-						class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
+						class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm outline-none transition focus:border-info-primary-500 focus:ring-2 focus:ring-focus-info-primary-100 border-line-strong bg-surface text-fg placeholder:text-copy-subtle"
 					>{editorPatient.medication ?? ''}</textarea>
 				</div>
 				<div class="space-y-1">
-					<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="background">Antecedentes (opcional)</label>
+					<label class="text-sm font-semibold text-fg" for="background">Antecedentes (opcional)</label>
 					<textarea
 						id="background"
 						name="background"
 						rows="2"
-						class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
+						class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm outline-none transition focus:border-info-primary-500 focus:ring-2 focus:ring-focus-info-primary-100 border-line-strong bg-surface text-fg placeholder:text-copy-subtle"
 					>{editorPatient.background ?? ''}</textarea>
 				</div>
 			</div>
 		{/if}
 		{#if form?.message}
-			<div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-400/50 dark:bg-red-500/15 dark:text-red-100">
+			<div class="rounded-xl border px-4 py-3 text-sm font-semibold border-danger-400-50 bg-danger-500-15 text-danger-100">
 				<p>{form.message}</p>
 				{#if form.duplicate && form.existingId}
 					<a
-						class="mt-3 inline-flex rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-amber-400"
+						class="mt-3 inline-flex rounded-xl bg-chip-amber-500 px-4 py-2 text-sm font-bold text-ink-s950 transition hover:bg-chip-amber-400"
 						href={`/odonto/pacientes/${form.existingId}`}
 						data-sveltekit-preload-data="tap"
 					>
@@ -286,17 +286,17 @@
 		{/if}
 		{#if patientUpdateError}
 			<div
-				class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-400/50 dark:bg-red-500/15 dark:text-red-100"
+				class="rounded-xl border px-4 py-3 text-sm font-semibold border-danger-400-50 bg-danger-500-15 text-danger-100"
 				role="alert"
 			>
 				{patientUpdateError}
 			</div>
 		{/if}
-		{#if revisionConflict}<a href={`/odonto/pacientes/${patient.id}?tab=datos`} data-sveltekit-reload class="inline-flex rounded-xl border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-800 dark:border-[#1f3554] dark:text-neutral-100">Recargar ficha</a>{/if}
+		{#if revisionConflict}<a href={`/odonto/pacientes/${patient.id}?tab=datos`} data-sveltekit-reload class="inline-flex rounded-xl border px-4 py-2 text-sm font-semibold border-line-strong text-fg-n100">Recargar ficha</a>{/if}
 		<div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
 			<button
 				type="button"
-				class="w-full rounded-xl px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:text-white dark:hover:bg-[#1b2d4b] sm:w-auto"
+				class="w-full rounded-xl px-4 py-2 text-sm font-semibold text-fg hover:bg-fill-1b2d4b sm:w-auto"
 				onclick={close}
 				disabled={savingPatient}
 			>
@@ -305,7 +305,7 @@
 			<button
 				type="submit"
 				disabled={savingPatient || revisionConflict}
-				class="w-full rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 sm:w-auto"
+				class="w-full rounded-xl bg-info-primary-600 px-4 py-2 text-sm font-semibold text-on-accent shadow-sm transition hover:bg-info-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-info-primary-500 sm:w-auto"
 			>
 				{savingPatient ? 'Guardando…' : 'Guardar cambios'}
 			</button>

@@ -39,7 +39,7 @@
       <h2 id="install-title" class="ux-section-title">
         Instalar el turnero en {profile.name}
       </h2>
-      <p class="mt-2 text-sm text-white/75">
+      <p class="mt-2 text-sm text-fg-75">
         El dominio autoriza tu web. Para mostrar la agenda, también tenés que
         instalarla allí.
       </p>
@@ -94,7 +94,7 @@
   </details>
   <div class="install-test">
     <h3 class="ux-label">Probá la instalación</h3>
-    <p class="mt-2 text-sm text-white/75">
+    <p class="mt-2 text-sm text-fg-75">
       Abrí tu web y comprobá que podés elegir un servicio, un día y un horario.
     </p>
     <div class="install-actions">

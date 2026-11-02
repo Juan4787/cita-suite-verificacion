@@ -77,16 +77,16 @@
 	const quickPickClass = (active: boolean) =>
 		`rounded-xl border px-2 py-2.5 text-xs font-bold transition ${
 			active
-				? 'border-[#8b5cf6] bg-[#7c3aed]/25 text-white'
-				: 'border-white/10 bg-white/[0.04] text-white/75 hover:bg-white/10'
+				? 'border-accent bg-accent-600-25 text-fg'
+				: 'border-line bg-fill-04 text-fg-75 hover:bg-fill-10'
 		}`;
 	const dayClass = (key: string) =>
 		`grid h-9 w-9 place-items-center justify-self-center rounded-lg text-sm font-semibold transition ${
 			selected === key
-				? 'bg-[#7c3aed] text-white shadow-lg shadow-[#7c3aed]/30'
+				? 'bg-accent-strong text-on-accent shadow-lg shadow-shade-accent-600-30'
 				: key === todayKey
-					? 'text-[#c4b5fd] ring-1 ring-inset ring-[#8b5cf6]/50 hover:bg-white/10'
-					: 'text-white/75 hover:bg-white/10'
+					? 'text-accent ring-1 ring-inset ring-focus-accent-500-50 hover:bg-fill-10'
+					: 'text-fg-75 hover:bg-fill-10'
 		}`;
 </script>
 
@@ -107,13 +107,13 @@
 		onclick={toggleOpen}
 	>
 		<span class="flex min-w-0 items-center gap-2.5">
-			<svg class="h-5 w-5 shrink-0 text-[#c4b5fd]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<svg class="h-5 w-5 shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 				<rect x="3" y="4.5" width="18" height="17" rx="3" />
 				<path d="M3 9.5h18M8 2.5v4M16 2.5v4" />
 			</svg>
 			<span class="min-w-0 break-words font-semibold">{triggerLabel}</span>
 		</span>
-		<svg class={`h-4 w-4 shrink-0 text-white/50 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+		<svg class={`h-4 w-4 shrink-0 text-fg-50 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 			<path d="m6 9 6 6 6-6" />
 		</svg>
 	</button>
@@ -127,7 +127,7 @@
 			onclick={() => (open = false)}
 		></button>
 		<div
-			class="absolute left-0 top-full z-30 mt-2 w-[19.5rem] max-w-[calc(100vw-2.5rem)] rounded-2xl border border-[#244062] bg-[#0b1d32] p-4 shadow-2xl shadow-black/50"
+			class="absolute left-0 top-full z-30 mt-2 w-[19.5rem] max-w-[calc(100vw-2.5rem)] rounded-2xl border border-line-strong bg-surface p-4 shadow-2xl shadow-shade-black-40"
 			role="dialog"
 			aria-label="Elegir día"
 		>
@@ -143,16 +143,16 @@
 				<button
 					type="button"
 					aria-label="Mes anterior"
-					class="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-white/75 transition hover:bg-white/10"
+					class="grid h-9 w-9 place-items-center rounded-lg border border-line bg-fill-04 text-fg-75 transition hover:bg-fill-10"
 					onclick={() => moveMonth(-1)}
 				>
 					<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6" /></svg>
 				</button>
-				<p class="text-sm font-bold text-white">{monthTitle}</p>
+				<p class="text-sm font-bold text-fg">{monthTitle}</p>
 				<button
 					type="button"
 					aria-label="Mes siguiente"
-					class="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-white/75 transition hover:bg-white/10"
+					class="grid h-9 w-9 place-items-center rounded-lg border border-line bg-fill-04 text-fg-75 transition hover:bg-fill-10"
 					onclick={() => moveMonth(1)}
 				>
 					<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 6 6 6-6 6" /></svg>
@@ -161,7 +161,7 @@
 
 			<div class="mt-3 grid grid-cols-7 gap-1 text-center">
 				{#each weekdays as weekday}
-					<span class="text-micro font-bold uppercase text-white/35">{weekday}</span>
+					<span class="text-micro font-bold uppercase text-copy-subtle">{weekday}</span>
 				{/each}
 				{#each cells as cell, index (index)}
 					{#if cell === null}

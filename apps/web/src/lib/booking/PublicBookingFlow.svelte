@@ -220,10 +220,10 @@
 {#snippet doneStep(label: string, value: string, changeHref: string)}
 	<div class="ux-soft-card flex items-center justify-between gap-3 px-4 py-3">
 		<div class="min-w-0">
-			<p class="text-micro font-bold uppercase tracking-wider text-white/40">{label}</p>
-			<p class="break-words text-base font-bold text-white">{value}</p>
+			<p class="text-micro font-bold uppercase tracking-wider text-copy-subtle bk-muted">{label}</p>
+			<p class="break-words text-base font-bold text-fg bk-text">{value}</p>
 		</div>
-		<a data-sveltekit-noscroll href={changeHref} class="shrink-0 text-sm font-bold text-[#a78bfa] hover:underline">
+		<a data-sveltekit-noscroll href={changeHref} class="shrink-0 text-sm font-bold text-accent-400 hover:underline bk-accent-text">
 			Cambiar
 		</a>
 	</div>
@@ -234,10 +234,10 @@
 		<h2 class="ux-section-title">{title}</h2>
 		<div class="mt-5 grid gap-3 sm:grid-cols-2" aria-hidden="true">
 			{#each [0, 1, 2, 3] as placeholder (placeholder)}
-				<div class="skeleton-shimmer relative h-16 overflow-hidden rounded-2xl border border-white/5 bg-white/[0.05]"></div>
+				<div class="skeleton-shimmer relative h-16 overflow-hidden rounded-2xl border border-line-05 bg-fill-04 bk-line bk-soft"></div>
 			{/each}
 		</div>
-		<p class="mt-4 text-sm text-white/45" role="status">{hint}</p>
+		<p class="mt-4 text-sm text-copy-subtle bk-muted" role="status">{hint}</p>
 	</section>
 {/snippet}
 
@@ -250,24 +250,24 @@
 
 <BookingAppearance theme={data.presentation?.theme ?? 'cita-suite'}>
 {#if data.embed}<BookingFrameBridge context={data.embed} requestId={data.bookingRequestId} />{/if}
-<main class="min-h-screen bg-[#06111f] px-4 py-5 text-white sm:py-8">
+<main class="min-h-screen bg-fill-06111f px-4 py-5 text-fg sm:py-8 bk-text">
 	<div class="mx-auto flex w-full max-w-3xl flex-col gap-4">
 		<header class="ux-hero">
 			<div class="flex items-start gap-4">
 				{#if business?.logo_url}
 					<img src={business.logo_url} alt={business.name} class="h-16 w-16 shrink-0 rounded-2xl object-cover" />
 				{:else}
-					<div class="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-[#7c3aed] text-lg font-bold text-white">
+					<div class="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-accent-strong text-lg font-bold text-on-accent bk-text bk-accent-fill">
 						{business?.name?.slice(0, 2).toUpperCase() ?? 'RS'}
 					</div>
 				{/if}
 				<div class="min-w-0">
-					<h1 class="text-2xl font-bold text-white sm:text-3xl">{business?.name ?? 'Reserva online'}</h1>
+					<h1 class="text-2xl font-bold text-fg sm:text-3xl bk-text">{business?.name ?? 'Reserva online'}</h1>
 					{#if (modality !== 'video' && business?.address) || business?.phone}
-						<p class="mt-2 text-sm text-white/55">
+						<p class="mt-2 text-sm text-fg-55 bk-muted">
 							{modality !== 'video' ? business.address ?? '' : ''}{modality !== 'video' && business.address && business.phone ? ' · ' : ''}{business.phone ?? ''}
 							{#if modality !== 'video' && data.mapsLink && business.address}
-								· <a href={data.mapsLink} target="_blank" rel="noreferrer" class="font-bold text-white/80 underline">Cómo llegar</a>
+								· <a href={data.mapsLink} target="_blank" rel="noreferrer" class="font-bold text-fg-80 underline bk-muted">Cómo llegar</a>
 							{/if}
 						</p>
 					{/if}
@@ -277,9 +277,9 @@
 
 		{#if fatalIssue}
 			<section class="ux-card">
-				<p class="text-lg font-bold text-white">{issueMessages[fatalIssue] ?? 'No se pudo cargar la reserva online.'}</p>
+				<p class="text-lg font-bold text-fg bk-text">{issueMessages[fatalIssue] ?? 'No se pudo cargar la reserva online.'}</p>
 				{#if business?.phone}
-					<p class="mt-2 text-sm text-white/55">Contactá al consultorio: {business.phone}</p>
+					<p class="mt-2 text-sm text-fg-55 bk-muted">Contactá al consultorio: {business.phone}</p>
 				{/if}
 				<a href={data.integration ? queryFor({ service_id: '', professional_id: '', professional_ids: '', booking_mode: 'individual', date: '', slot: '' }) : bookingPath} class="ux-btn-secondary mt-5 inline-flex">Volver a empezar</a>
 			</section>
@@ -292,15 +292,15 @@
 			{/if}
 			<section class="ux-card py-4">
 				<div class="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-					<p class="min-w-0 text-sm font-bold text-white/70">{formatStepCounter(displayStep, displayStepCount)} ·&nbsp;{compact ? ['Servicio', 'Día y horario', 'Tus datos'][displayStep - 1] : stepNames[step - 1]}</p>
+					<p class="min-w-0 text-sm font-bold text-fg-70 bk-muted">{formatStepCounter(displayStep, displayStepCount)} ·&nbsp;{compact ? ['Servicio', 'Día y horario', 'Tus datos'][displayStep - 1] : stepNames[step - 1]}</p>
 					{#if step > 1}
-						<a data-sveltekit-noscroll href={data.integration ? queryFor({ service_id: '', professional_id: '', professional_ids: '', booking_mode: 'individual', date: '', slot: '' }) : bookingPath} class="text-xs font-bold text-white/45 hover:text-white/70">
+						<a data-sveltekit-noscroll href={data.integration ? queryFor({ service_id: '', professional_id: '', professional_ids: '', booking_mode: 'individual', date: '', slot: '' }) : bookingPath} class="text-xs font-bold text-copy-subtle hover:text-fg-70 bk-muted">
 							Empezar de nuevo
 						</a>
 					{/if}
 				</div>
-				<div class="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
-					<div class="h-full rounded-full bg-[#7c3aed] transition-all duration-300" style={`width:${(displayStep / displayStepCount) * 100}%`}></div>
+				<div class="mt-3 h-1.5 overflow-hidden rounded-full bg-fill-10 bk-soft">
+					<div class="h-full rounded-full bg-accent-strong transition-all duration-300 bk-accent-fill" style={`width:${(displayStep / displayStepCount) * 100}%`}></div>
 				</div>
 			</section>
 
@@ -333,11 +333,11 @@
 								})}
 								class="ux-choice p-5"
 							>
-								<p class="text-lg font-bold text-white">{service.name}</p>
+								<p class="text-lg font-bold text-fg bk-text">{service.name}</p>
 								{#if service.description}
-									<p class="mt-1 text-sm text-white/55">{service.description}</p>
+									<p class="mt-1 text-sm text-fg-55 bk-muted">{service.description}</p>
 								{/if}
-								<p class="mt-2 text-sm font-semibold text-white/55">
+								<p class="mt-2 text-sm font-semibold text-fg-55 bk-muted">
 									{formatDuration(service.duration_minutes)}{service.price_label ? ` ·\u00a0${service.price_label}` : ''}
 								</p>
 							</a>
@@ -397,7 +397,7 @@
                 <section class="ux-card" aria-live="polite" aria-atomic="true">
                     <h2 class="ux-section-title">Arancel para la fecha elegida</h2>
                     <p class="mt-3 text-xl font-bold tabular-nums">{formatQuotedPrice(data.priceQuote)}</p>
-                    {#if data.priceQuote.adjusted}<p class="mt-2 text-sm text-white/75">Este importe incluye los ajustes mensuales configurados por el consultorio para tu fecha. Podés cambiar el día antes de confirmar.</p>{/if}
+                    {#if data.priceQuote.adjusted}<p class="mt-2 text-sm text-fg-75 bk-muted">Este importe incluye los ajustes mensuales configurados por el consultorio para tu fecha. Podés cambiar el día antes de confirmar.</p>{/if}
                 </section>
             {/if}
 
@@ -409,13 +409,13 @@
 					<section class="ux-card scroll-mt-5" bind:this={activeStepCard}>
 						<h2 class="ux-section-title">Elegí un horario</h2>
 						{#if morningSlots.length > 0}
-							<p class="mt-5 text-micro font-bold uppercase tracking-wider text-white/40">Mañana</p>
+							<p class="mt-5 text-micro font-bold uppercase tracking-wider text-copy-subtle bk-muted">Mañana</p>
 							<div class="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
 								{#each morningSlots as slot (slot.starts_at)}
 									<a
 										data-sveltekit-noscroll
 										href={queryFor({ slot: slot.starts_at })}
-										class="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center text-sm font-bold text-white transition hover:border-[#8b5cf6]/70 hover:bg-white/[0.08]"
+										class="rounded-2xl border border-line bg-fill-04 px-3 py-3 text-center text-sm font-bold text-fg transition hover:border-accent-500-70 hover:bg-fill-10 bk-text bk-line bk-soft"
 									>
 										{slot.time}
 									</a>
@@ -423,13 +423,13 @@
 							</div>
 						{/if}
 						{#if afternoonSlots.length > 0}
-							<p class="mt-5 text-micro font-bold uppercase tracking-wider text-white/40">Tarde</p>
+							<p class="mt-5 text-micro font-bold uppercase tracking-wider text-copy-subtle bk-muted">Tarde</p>
 							<div class="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
 								{#each afternoonSlots as slot (slot.starts_at)}
 									<a
 										data-sveltekit-noscroll
 										href={queryFor({ slot: slot.starts_at })}
-										class="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center text-sm font-bold text-white transition hover:border-[#8b5cf6]/70 hover:bg-white/[0.08]"
+										class="rounded-2xl border border-line bg-fill-04 px-3 py-3 text-center text-sm font-bold text-fg transition hover:border-accent-500-70 hover:bg-fill-10 bk-text bk-line bk-soft"
 									>
 										{slot.time}
 									</a>

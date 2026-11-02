@@ -1135,11 +1135,11 @@
 </script>
 
 {#snippet instructionList(guide: NotificationGuide)}
-	<h3 class="text-lg font-bold leading-snug text-white">{guide.title}</h3>
-	<ol class="mt-4 space-y-3 text-sm leading-relaxed text-white/80">
+	<h3 class="text-lg font-bold leading-snug text-fg bk-text">{guide.title}</h3>
+	<ol class="mt-4 space-y-3 text-sm leading-relaxed text-fg-80 bk-muted">
 		{#each guide.steps as step, index}
 			<li class="flex gap-3">
-				<span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-400/15 text-xs font-bold text-violet-200">
+				<span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-400-15 text-xs font-bold text-accent-200 bk-notice-text bk-notice-fill">
 					{index + 1}
 				</span>
 				<span class="pt-0.5">{step}</span>
@@ -1153,7 +1153,7 @@
 		<div class="mt-5">
 			{#if renderedPushState === 'subscribed'}
 				<div
-					class="inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-300/[0.08] px-4 py-2 text-sm font-bold text-emerald-100"
+					class="inline-flex items-center gap-2 rounded-full border border-success-300-25 bg-success-300-08 px-4 py-2 text-sm font-bold text-success-100 bk-success-text bk-success-fill bk-success-line"
 					aria-live="polite"
 				>
 					<svg viewBox="0 0 20 20" aria-hidden="true" class="h-4 w-4 shrink-0">
@@ -1164,12 +1164,12 @@
 			{:else if renderedPushState === 'working'}
 				<div class="ux-alert" aria-live="polite">
 					<div class="flex items-start gap-3">
-						<svg viewBox="0 0 24 24" aria-hidden="true" class="mt-0.5 h-5 w-5 shrink-0 animate-spin text-[#a78bfa]">
+						<svg viewBox="0 0 24 24" aria-hidden="true" class="mt-0.5 h-5 w-5 shrink-0 animate-spin text-accent-400 bk-accent-text">
 							<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.25" />
 							<path d="M21 12a9 9 0 0 0-9-9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
 						</svg>
 						<div>
-							<p class="font-bold text-white">
+							<p class="font-bold text-fg bk-text">
 								{pendingTestPhase === 'recovery' ? 'Enviando otra prueba' : 'Activando el recordatorio'}
 							</p>
 							<p class="mt-1">
@@ -1182,12 +1182,12 @@
 				</div>
 			{:else if renderedPushState === 'test_waiting'}
 				<div class="ux-alert" aria-live="polite">
-					<p class="font-bold text-white">Notificación de prueba enviada</p>
+					<p class="font-bold text-fg bk-text">Notificación de prueba enviada</p>
 					<p class="mt-1">Estamos comprobando que este teléfono pueda mostrarla…</p>
 				</div>
 			{:else if renderedPushState === 'test_question'}
 				<div class="ux-alert ux-alert-success" aria-live="polite">
-					<p class="font-bold text-white">¿Recibiste la notificación de prueba?</p>
+					<p class="font-bold text-fg bk-text">¿Recibiste la notificación de prueba?</p>
 					<p class="mt-1">Revisá las notificaciones del teléfono y confirmalo acá.</p>
 				</div>
 				<div class="mt-3 grid grid-cols-2 gap-3">
@@ -1199,10 +1199,10 @@
 					</button>
 				</div>
 			{:else if renderedPushState === 'denied' && deniedPermissionGuide}
-				<div class="rounded-2xl border border-amber-300/20 bg-amber-300/[0.055] p-5" aria-live="polite">
+				<div class="rounded-2xl border border-warning-300-20 bg-warning-300-06 p-5 bk-warning-fill bk-warning-line" aria-live="polite">
 					{@render instructionList(deniedPermissionGuide)}
 					{#if permissionRecoveryTarget === 'phone' && sitePermissionGuide}
-						<p class="mt-4 text-sm leading-relaxed text-white/65">
+						<p class="mt-4 text-sm leading-relaxed text-fg-65 bk-muted">
 							Si “Permitir notificaciones” ya estaba activado, falta revisar el permiso de este turno.
 						</p>
 						<button
@@ -1216,7 +1216,7 @@
 						<button type="button" class="ux-btn-secondary mt-5 w-full" onclick={enablePush}>
 							Ya lo permití
 						</button>
-						<p class="mt-3 text-center text-xs leading-relaxed text-white/50">
+						<p class="mt-3 text-center text-xs leading-relaxed text-fg-50 bk-muted">
 							Al volver, lo comprobamos automáticamente. El botón queda disponible por si la pantalla no se actualiza sola.
 						</p>
 					{/if}
@@ -1229,7 +1229,7 @@
 				>
 					<Icon name="bell" />Activar recordatorio
 				</button>
-				<p class="mt-3 text-center text-xs leading-relaxed text-white/55">
+				<p class="mt-3 text-center text-xs leading-relaxed text-fg-55 bk-muted">
 					Cuando aparezca la pregunta, elegí “{permissionChoiceLabel}”.
 				</p>
 			{:else if renderedPushState === 'error'}
@@ -1251,7 +1251,7 @@
 				>
 					<Icon name="bell" />Activar recordatorio
 				</button>
-				<p class="mt-3 text-center text-xs leading-relaxed text-white/45">
+				<p class="mt-3 text-center text-xs leading-relaxed text-copy-subtle bk-muted">
 					Primero te pedimos permiso y después enviamos una prueba real.
 				</p>
 			{/if}
@@ -1265,33 +1265,33 @@
 			{#if data.googleCalendar.state === 'active'}
 				<div class="ux-alert ux-alert-success">
 					<div class="flex items-start gap-3">
-						<svg viewBox="0 0 24 24" aria-hidden="true" class="mt-0.5 h-5 w-5 shrink-0 text-emerald-300">
+						<svg viewBox="0 0 24 24" aria-hidden="true" class="mt-0.5 h-5 w-5 shrink-0 text-success-300 bk-success-text">
 							<rect x="3.5" y="5" width="17" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="1.8" />
 							<path d="M7.5 3.5v3M16.5 3.5v3M4 9h16M8 14l2.2 2.2L16 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
 						</svg>
 						<div>
-							<p class="font-bold text-white">Recordatorio guardado en tu calendario</p>
+							<p class="font-bold text-fg bk-text">Recordatorio guardado en tu calendario</p>
 							<p class="mt-1">Avisos {data.googleCalendar.reminderLabel}. Si cambia el horario, actualizamos el mismo evento automáticamente.</p>
 						</div>
 					</div>
 				</div>
-				<details class="mt-2 rounded-2xl border border-white/10 bg-white/[0.02]">
-					<summary class="cursor-pointer list-none px-4 py-3 text-center text-xs font-bold text-white/55">
+				<details class="mt-2 rounded-2xl border border-line bg-fill-04 bk-line bk-soft">
+					<summary class="cursor-pointer list-none px-4 py-3 text-center text-xs font-bold text-fg-55 bk-muted">
 						Administrar calendario
 					</summary>
-					<form method="POST" action="?/remove_google_calendar" class="border-t border-white/10 p-3">
+					<form method="POST" action="?/remove_google_calendar" class="border-t border-line p-3 bk-line">
 						<button class="ux-btn-secondary w-full text-sm">Quitar de mi cuenta Google</button>
 					</form>
 				</details>
 			{:else if data.googleCalendar.state === 'preparing' || data.googleCalendar.state === 'updating' || data.googleCalendar.state === 'removing'}
 				<div class="ux-alert">
 					<div class="flex items-start gap-3">
-						<svg viewBox="0 0 24 24" aria-hidden="true" class="mt-0.5 h-5 w-5 shrink-0 animate-spin text-[#a78bfa]">
+						<svg viewBox="0 0 24 24" aria-hidden="true" class="mt-0.5 h-5 w-5 shrink-0 animate-spin text-accent-400 bk-accent-text">
 							<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.25" />
 							<path d="M21 12a9 9 0 0 0-9-9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
 						</svg>
 						<div>
-							<p class="font-bold text-white">
+							<p class="font-bold text-fg bk-text">
 								{data.googleCalendar.state === 'updating'
 									? 'Actualizando fecha y hora'
 									: data.googleCalendar.state === 'removing'
@@ -1312,24 +1312,24 @@
 		<div class="mt-5 space-y-4" aria-live="polite">
 			{#if renderedPushState === 'needs_device_check' && phoneNotificationGuide}
 				<details
-					class="group overflow-hidden rounded-2xl border border-violet-300/30 bg-violet-400/[0.07] shadow-[0_12px_30px_rgba(76,29,149,0.12)]"
+					class="group overflow-hidden rounded-2xl border border-accent-300-30 bg-accent-400-10 shadow-[0_12px_30px_rgba(76,29,149,0.12)] bk-notice-fill bk-notice-line"
 					bind:open={showSamsungPhoneGuide}
 				>
 					<summary class="flex min-h-[5.75rem] cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
 						<span>
-							<span class="block text-base font-bold leading-snug text-white">¿Tu teléfono es Samsung?</span>
-							<span class="mt-1.5 block text-sm font-bold text-violet-200">Configurar el recordatorio</span>
+							<span class="block text-base font-bold leading-snug text-fg bk-text">¿Tu teléfono es Samsung?</span>
+							<span class="mt-1.5 block text-sm font-bold text-accent-200 bk-notice-text">Configurar el recordatorio</span>
 						</span>
-						<svg viewBox="0 0 20 20" aria-hidden="true" class="h-5 w-5 shrink-0 text-violet-200/75 transition-transform group-open:rotate-180">
+						<svg viewBox="0 0 20 20" aria-hidden="true" class="h-5 w-5 shrink-0 text-accent-200-75 transition-transform group-open:rotate-180 bk-notice-text">
 							<path d="m5.75 7.75 4.25 4.25 4.25-4.25" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
 						</svg>
 					</summary>
-					<div class="border-t border-violet-200/15 px-5 pb-5 pt-5">
+					<div class="border-t border-accent-200-15 px-5 pb-5 pt-5 bk-notice-line">
 						{#if deviceCheckReason === 'test_missing'}
 							<button
 								type="button"
 								aria-label="Enviar otra notificación de prueba"
-								class="ux-btn-primary ux-btn-cta mb-5 min-h-[4.25rem] w-full px-5 py-4 text-center text-cta font-bold leading-snug ring-2 ring-violet-300/30"
+								class="ux-btn-primary ux-btn-cta mb-5 min-h-[4.25rem] w-full px-5 py-4 text-center text-cta font-bold leading-snug ring-2 ring-focus-accent-300-30"
 								disabled={syncing}
 								onclick={enablePush}
 							>
@@ -1339,7 +1339,7 @@
 						{/if}
 						{@render instructionList(phoneNotificationGuide)}
 						{#if deviceCheckReason === 'permission_not_granted'}
-							<p class="mt-4 text-xs leading-relaxed text-white/60">
+							<p class="mt-4 text-xs leading-relaxed text-fg-60 bk-muted">
 								Después de activar ese ajuste, usá el botón de abajo y elegí “Permitir”.
 							</p>
 							<button
@@ -1359,13 +1359,13 @@
 				<a
 					href={`${base}/ir/google`}
 					onclick={() => beginCalendarHandoff('google')}
-					class="flex min-h-[5.75rem] items-center justify-between gap-4 rounded-2xl border border-violet-300/30 bg-violet-400/[0.07] px-5 py-4 shadow-[0_12px_30px_rgba(76,29,149,0.12)] transition hover:border-violet-300/45 hover:bg-violet-400/[0.1]"
+					class="flex min-h-[5.75rem] items-center justify-between gap-4 rounded-2xl border border-accent-300-30 bg-accent-400-10 px-5 py-4 shadow-[0_12px_30px_rgba(76,29,149,0.12)] transition hover:border-accent-300-45 hover:bg-accent-400-10 bk-notice-fill bk-notice-line"
 				>
 					<span>
-						<span class="block text-base font-bold leading-snug text-white">¿Tu teléfono es de otra marca?</span>
-						<span class="mt-1.5 block text-sm font-bold text-violet-200">Agregar a Google Calendar</span>
+						<span class="block text-base font-bold leading-snug text-fg bk-text">¿Tu teléfono es de otra marca?</span>
+						<span class="mt-1.5 block text-sm font-bold text-accent-200 bk-notice-text">Agregar a Google Calendar</span>
 					</span>
-					<svg viewBox="0 0 20 20" aria-hidden="true" class="h-5 w-5 shrink-0 text-violet-200/75">
+					<svg viewBox="0 0 20 20" aria-hidden="true" class="h-5 w-5 shrink-0 text-accent-200-75 bk-notice-text">
 						<path d="m7.75 5.75 4.25 4.25-4.25 4.25" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
 					</svg>
 				</a>
@@ -1377,11 +1377,11 @@
 {#snippet calendarHandoffFeedback()}
 	{#if calendarHandoffAllowed && calendarHandoffStage === 'asking'}
 		<div
-			class="mt-5 rounded-2xl border border-violet-300/30 bg-violet-400/[0.075] p-5 shadow-[0_16px_36px_rgba(76,29,149,0.16)]"
+			class="mt-5 rounded-2xl border border-accent-300-30 bg-accent-400-10 p-5 shadow-[0_16px_36px_rgba(76,29,149,0.16)] bk-notice-fill bk-notice-line"
 			aria-live="polite"
 			aria-labelledby="calendar-handoff-question"
 		>
-			<h3 id="calendar-handoff-question" class="text-lg font-bold leading-snug text-white">
+			<h3 id="calendar-handoff-question" class="text-lg font-bold leading-snug text-fg bk-text">
 				¿Pudiste guardar el turno en tu calendario?
 			</h3>
 			<div class="mt-4 grid gap-3 sm:grid-cols-2">
@@ -1399,11 +1399,11 @@
 		</div>
 	{:else if calendarHandoffAllowed && calendarHandoffStage === 'saved'}
 		<div
-			class="mt-5 inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-300/[0.08] px-4 py-2 text-sm font-bold text-emerald-100"
+			class="mt-5 inline-flex items-center gap-2 rounded-full border border-success-300-25 bg-success-300-08 px-4 py-2 text-sm font-bold text-success-100 bk-success-text bk-success-fill bk-success-line"
 			role="status"
 			aria-live="polite"
 		>
-			<svg viewBox="0 0 20 20" aria-hidden="true" class="h-4 w-4 shrink-0 text-emerald-300">
+			<svg viewBox="0 0 20 20" aria-hidden="true" class="h-4 w-4 shrink-0 text-success-300 bk-success-text">
 				<path d="m5.5 10 3 3 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
 			</svg>
 			<span>Listo, quedó guardado</span>
@@ -1414,19 +1414,19 @@
 {#snippet depositCard(current: NonNullable<PageData['appointment']>, deposit: NonNullable<NonNullable<PageData['appointment']>['deposit']>)}
 	<section class="ux-card">
 		<h2 class="ux-section-title">Seña del turno</h2>
-		<p class="mt-2 text-white/80">
-			Para confirmar tu turno, transferí la seña de <strong class="text-white">{formatDepositAmount(deposit.amount)}</strong>
+		<p class="mt-2 text-fg-80 bk-muted">
+			Para confirmar tu turno, transferí la seña de <strong class="text-fg bk-text">{formatDepositAmount(deposit.amount)}</strong>
 			antes del {formatInTimeZone(deposit.due_at, current.business.timezone).full}.
 		</p>
 		{#if deposit.auto_cancel}
-			<p class="mt-2 text-sm text-white/65">
+			<p class="mt-2 text-sm text-fg-65 bk-muted">
 				Si no se registra para esa fecha, el turno se cancela automáticamente y el horario se libera.
 			</p>
 		{/if}
 		{#if current.deposit_transfer_details}
 			<div class="ux-soft-card mt-4 p-4">
-				<p class="text-sm font-bold text-white/55">Datos para transferir</p>
-				<p class="mt-1 whitespace-pre-wrap break-words font-bold text-white">{current.deposit_transfer_details}</p>
+				<p class="text-sm font-bold text-fg-55 bk-muted">Datos para transferir</p>
+				<p class="mt-1 whitespace-pre-wrap break-words font-bold text-fg bk-text">{current.deposit_transfer_details}</p>
 				<button type="button" class="ux-btn-secondary mt-3 w-full" onclick={copyTransferDetails}>
 					{#if transferCopied}<Icon name="check" class="h-4 w-4 shrink-0" />Copiado{:else}Copiar datos{/if}
 				</button>
@@ -1458,7 +1458,7 @@
 {#snippet practiceWhatsAppCard(notice: PracticeWhatsAppNotice)}
 	<section class="ux-card">
 		<h2 class="ux-section-title">{data.created ? 'Avisale al consultorio' : 'Contacto con el consultorio'}</h2>
-		<p class="mt-2 text-sm text-white/65">
+		<p class="mt-2 text-sm text-fg-65 bk-muted">
 			{data.created
 				? 'Mandales un WhatsApp con tu nombre, el día y la hora: así les queda el aviso y el chat abierto. Podés revisar el mensaje antes de enviarlo.'
 				: 'Si necesitás escribirle al consultorio por este turno, el mensaje ya sale con tu nombre, el día y la hora.'}
@@ -1481,9 +1481,9 @@
 		{:else}
 			<h2 class="ux-section-title">{isVirtual ? 'Tu consulta virtual' : 'Dónde es'}</h2>
 		{/if}
-		<p class="mt-4 text-lg font-bold text-white">{isVirtual ? 'Modalidad: Virtual' : current.business.address}</p>
+		<p class="mt-4 text-lg font-bold text-fg bk-text">{isVirtual ? 'Modalidad: Virtual' : current.business.address}</p>
 		{#if current.business.address_instructions}
-			<p class="mt-2 text-sm text-white/70">{current.business.address_instructions}</p>
+			<p class="mt-2 text-sm text-fg-70 bk-muted">{current.business.address_instructions}</p>
 		{/if}
 		{#if current.business.maps_link}
 			<a href={`${base}/ir/maps`} target="_blank" rel="noreferrer" class="ux-btn-primary mt-5 block w-full text-center">
@@ -1495,10 +1495,10 @@
 
 {#snippet reminderCard()}
 	<section class="ux-card">
-		<h2 class="text-2xl font-bold leading-tight tracking-tight text-white">
+		<h2 class="text-2xl font-bold leading-tight tracking-tight text-fg bk-text">
 			{reminderTitle}
 		</h2>
-		<p class="mt-3 text-sm leading-relaxed text-white/70">{reminderIntro}</p>
+		<p class="mt-3 text-sm leading-relaxed text-fg-70 bk-muted">{reminderIntro}</p>
 
 		{#if device === 'android'}
 			{#if googleCalendarHasVisibleStatus}
@@ -1516,16 +1516,16 @@
 				>
 					<Icon name="calendar" />Agregar al calendario
 				</a>
-				<p class="mt-3 text-center text-xs leading-relaxed text-white/45">
+				<p class="mt-3 text-center text-xs leading-relaxed text-copy-subtle bk-muted">
 					El evento queda preparado con la fecha, la hora y sus avisos.
 				</p>
 			{/if}
 		{:else}
-			<details class="mt-4 rounded-2xl border border-white/10 bg-white/[0.035]">
+			<details class="mt-4 rounded-2xl border border-line bg-fill-04 bk-line bk-soft">
 				<summary class={`${calendarSummaryClass} block w-full cursor-pointer list-none text-center`}>
 					<span class="inline-flex items-center justify-center gap-2"><Icon name={needsCalendarUpdate ? 'refresh' : 'calendar'} />{needsCalendarUpdate ? 'Actualizar calendario' : 'Agregar al calendario'}</span>
 				</summary>
-				<div class="border-t border-white/10 p-4">
+				<div class="border-t border-line p-4 bk-line">
 					{#if hasCalendarAction && !needsCalendarUpdate}
 						<p class="ux-alert mb-4">
 							Ya registramos una acción de calendario para este turno. Si lo agregás otra vez,
@@ -1535,14 +1535,14 @@
 					<div class="grid gap-3">
 						{#each calendarOptions as option}
 							<a href={option.href} class="ux-choice flex items-center justify-between px-5 py-4">
-								<span class="font-bold text-white">{option.label}</span>
+								<span class="font-bold text-fg bk-text">{option.label}</span>
 								{#if option.hint}
 									<span class="ux-badge">{option.hint}</span>
 								{/if}
 							</a>
 						{/each}
 					</div>
-					<p class="mt-4 text-xs text-white/45">
+					<p class="mt-4 text-xs text-copy-subtle bk-muted">
 						El evento incluye avisos sugeridos 24 horas y 2 horas antes, {isVirtual ? 'las indicaciones de acceso' : 'la dirección'} y este enlace.
 						Algunos calendarios usan tus recordatorios habituales.
 					</p>
@@ -1553,12 +1553,12 @@
 
 		{@render calendarHandoffFeedback()}
 
-		<details class="mt-4 rounded-2xl border border-white/10 bg-white/[0.02]">
-			<summary class="cursor-pointer list-none px-5 py-3 text-sm font-bold text-white/70">
+		<details class="mt-4 rounded-2xl border border-line bg-fill-04 bk-line bk-soft">
+			<summary class="cursor-pointer list-none px-5 py-3 text-sm font-bold text-fg-70 bk-muted">
 				Copiar detalles del turno
 			</summary>
-			<div class="border-t border-white/10 p-4">
-				<pre class="overflow-x-auto whitespace-pre-wrap text-sm text-white/80">{copyDetailsText}</pre>
+			<div class="border-t border-line p-4 bk-line">
+				<pre class="overflow-x-auto whitespace-pre-wrap text-sm text-fg-80 bk-muted">{copyDetailsText}</pre>
 				<button type="button" class="ux-btn-secondary mt-3 w-full" onclick={copyDetails}>
 					{#if copied}<Icon name="check" class="h-4 w-4 shrink-0" />Copiado{:else}Copiar al portapapeles{/if}
 				</button>
@@ -1568,7 +1568,7 @@
 {/snippet}
 
 <BookingAppearance theme={appointment?.booking_context?.theme ?? 'cita-suite'}>
-<main class="min-h-screen bg-[#06111f] px-4 py-6 text-white sm:py-10">{#if data.appointment?.price_quote_snapshot}<section class="ux-card mb-5"><h2 class="ux-section-title">Arancel registrado al reservar</h2><p class="mt-2 font-bold">{formatQuotedPrice(data.appointment.price_quote_snapshot)}</p></section>{/if}{#if data.appointment?.patient_instructions_snapshot}<section class="ux-card mb-5"><h2 class="ux-section-title">Indicaciones para tu turno</h2><p class="mt-2 whitespace-pre-wrap break-words">{data.appointment.patient_instructions_snapshot}</p></section>{/if}
+<main class="min-h-screen bg-fill-06111f px-4 py-6 text-fg sm:py-10 bk-text">{#if data.appointment?.price_quote_snapshot}<section class="ux-card mb-5"><h2 class="ux-section-title">Arancel registrado al reservar</h2><p class="mt-2 font-bold">{formatQuotedPrice(data.appointment.price_quote_snapshot)}</p></section>{/if}{#if data.appointment?.patient_instructions_snapshot}<section class="ux-card mb-5"><h2 class="ux-section-title">Indicaciones para tu turno</h2><p class="mt-2 whitespace-pre-wrap break-words">{data.appointment.patient_instructions_snapshot}</p></section>{/if}
 	<div class="mx-auto flex w-full max-w-3xl flex-col gap-5">
 		<section class="ux-hero">
 			{#if appointment?.business?.logo_url}
@@ -1598,7 +1598,7 @@
 				<p class="ux-alert ux-alert-success">Recibimos tu seña. Tu turno está confirmado.</p>
 			{/if}
 			{#if data.bookingInformationEnabled && isActive}
-				<section class="ux-soft-card p-5"><h2 class="ux-section-title">Información para tu consulta</h2><p class="mt-2 text-white/65">Podés ampliar la información para la profesional. Los campos configurados se incorporan a tu perfil. Tu reserva se conserva.</p><a class="ux-btn-primary mt-4" href={`/turno/${appointment.token}/informacion`}>Ver y ampliar mis datos</a></section>
+				<section class="ux-soft-card p-5"><h2 class="ux-section-title">Información para tu consulta</h2><p class="mt-2 text-fg-65 bk-muted">Podés ampliar la información para la profesional. Los campos configurados se incorporan a tu perfil. Tu reserva se conserva.</p><a class="ux-btn-primary mt-4" href={`/turno/${appointment.token}/informacion`}>Ver y ampliar mis datos</a></section>
 			{/if}
 			{#if googleCalendarIsUpdating && isActive}
 				<div class="ux-alert ux-alert-success">
@@ -1621,8 +1621,8 @@
 			<section class="ux-card">
 				<div class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
 					<div>
-						<h2 class="text-2xl font-bold text-white">{data.created ? 'Resumen de la reserva' : appointment.business.name}</h2>
-						<p class="mt-1 text-sm text-white/55">{appointment.business.name}</p>
+						<h2 class="text-2xl font-bold text-fg bk-text">{data.created ? 'Resumen de la reserva' : appointment.business.name}</h2>
+						<p class="mt-1 text-sm text-fg-55 bk-muted">{appointment.business.name}</p>
 					</div>
 					<span class="ux-badge">{appointment.public_status_label}</span>
 				</div>
@@ -1630,23 +1630,23 @@
 				<div class="mt-6 grid gap-4 sm:grid-cols-2">
 					{#if appointment.booking_context}
 						<div class="ux-soft-card p-5 sm:col-span-2">
-							<p class="text-sm font-bold text-white/55">Modalidad</p>
-							<p class="mt-2 text-lg font-bold text-white">{BOOKING_MODALITY_LABELS[appointment.booking_context.modality as BookingModality]}</p>
+							<p class="text-sm font-bold text-fg-55 bk-muted">Modalidad</p>
+							<p class="mt-2 text-lg font-bold text-fg bk-text">{BOOKING_MODALITY_LABELS[appointment.booking_context.modality as BookingModality]}</p>
 						</div>
 					{/if}
 					<div class="ux-soft-card p-5">
-						<p class="text-sm font-bold text-white/55">Servicio</p>
-						<p class="mt-2 text-lg font-bold text-white">{appointment.service_name_snapshot}</p>
+						<p class="text-sm font-bold text-fg-55 bk-muted">Servicio</p>
+						<p class="mt-2 text-lg font-bold text-fg bk-text">{appointment.service_name_snapshot}</p>
 					</div>
 					<div class="ux-soft-card p-5">
-						<p class="text-sm font-bold text-white/55">
+						<p class="text-sm font-bold text-fg-55 bk-muted">
 							{appointment.is_joint ? 'Equipo profesional' : 'Profesional'}
 						</p>
-						<p class="mt-2 text-lg font-bold text-white">{appointment.professional_name_snapshot}</p>
+						<p class="mt-2 text-lg font-bold text-fg bk-text">{appointment.professional_name_snapshot}</p>
 					</div>
 					<div class="ux-soft-card p-5 sm:col-span-2">
-						<p class="text-sm font-bold text-white/55">Fecha y hora</p>
-						<p class="mt-2 text-lg font-bold text-white">{formatDateTime(appointment.starts_at, timezone)}</p>
+						<p class="text-sm font-bold text-fg-55 bk-muted">Fecha y hora</p>
+						<p class="mt-2 text-lg font-bold text-fg bk-text">{formatDateTime(appointment.starts_at, timezone)}</p>
 					</div>
 				</div>
 
@@ -1675,7 +1675,7 @@
 				<section class="ux-card">
 					<h2 class="ux-section-title">Turno cancelado</h2>
 					{#if appointment.deposit?.status === 'expired'}
-						<p class="mt-3 text-sm text-white/70">
+						<p class="mt-3 text-sm text-fg-70 bk-muted">
 							Este turno se canceló porque no se registró la seña antes del {formatInTimeZone(appointment.deposit.due_at, timezone).full}.
 							Si ya transferiste, escribile al consultorio.
 						</p>
@@ -1694,14 +1694,14 @@
 						{/if}
 					{/if}
 					{#if data.googleCalendar.state === 'removed'}
-						<p class="mt-3 text-sm text-white/70">También quitamos el evento de tu cuenta Google.</p>
+						<p class="mt-3 text-sm text-fg-70 bk-muted">También quitamos el evento de tu cuenta Google.</p>
 					{:else if data.googleCalendar.state === 'removing'}
-						<p class="mt-3 text-sm text-white/70">También estamos quitando el evento de tu cuenta Google.</p>
+						<p class="mt-3 text-sm text-fg-70 bk-muted">También estamos quitando el evento de tu cuenta Google.</p>
 					{:else}
-						<p class="mt-3 text-sm text-white/70">
+						<p class="mt-3 text-sm text-fg-70 bk-muted">
 							Si lo guardaste con otra aplicación de calendario, podés eliminar esa copia desde allí.
 						</p>
-						<p class="mt-3 text-xs text-white/45">
+						<p class="mt-3 text-xs text-copy-subtle bk-muted">
 							<a href={`${base}/calendario.ics`} class="underline">Abrir actualización de calendario</a>
 							para calendarios compatibles.
 						</p>
@@ -1720,9 +1720,9 @@
 								<button disabled={!appointment.can_confirm} class="ux-btn-primary w-full">Confirmo que voy</button>
 							</form>
 						{/if}
-						<details class="rounded-2xl border border-white/10 bg-white/[0.035]">
-							<summary class="cursor-pointer list-none px-5 py-4 text-base font-bold text-white">Necesito reprogramar</summary>
-							<form method="POST" action="?/request_reschedule" class="border-t border-white/10 p-5" use:enhance>
+						<details class="rounded-2xl border border-line bg-fill-04 bk-line bk-soft">
+							<summary class="cursor-pointer list-none px-5 py-4 text-base font-bold text-fg bk-text">Necesito reprogramar</summary>
+							<form method="POST" action="?/request_reschedule" class="border-t border-line p-5 bk-line" use:enhance>
 								<label>
 									<span class="ux-label">Comentario (opcional)</span>
 									<textarea name="note" rows="2" disabled={!appointment.can_request_reschedule} class="ux-textarea"></textarea>
@@ -1733,15 +1733,15 @@
 							</form>
 						</details>
 						{#if canShowCancelAction}
-							<details class="rounded-2xl border border-red-400/20 bg-red-500/10">
-								<summary class="cursor-pointer list-none px-5 py-4 text-base font-bold text-red-100">Cancelar turno</summary>
-								<form method="POST" action="?/cancel" class="border-t border-red-400/20 p-5" use:enhance>
+							<details class="rounded-2xl border border-danger-400-20 bg-danger-500-10 bk-error-fill bk-error-line">
+								<summary class="cursor-pointer list-none px-5 py-4 text-base font-bold text-danger-100 bk-error-text">Cancelar turno</summary>
+								<form method="POST" action="?/cancel" class="border-t border-danger-400-20 p-5 bk-error-line" use:enhance>
 									<label>
 										<span class="ux-label">Motivo (opcional)</span>
 										<textarea name="note" rows="2" disabled={!appointment.can_cancel} class="ux-textarea"></textarea>
 									</label>
-									<label class="mt-4 flex items-start gap-3 text-sm font-bold text-red-100">
-										<input type="checkbox" name="confirm_cancel" value="true" required disabled={!appointment.can_cancel} class="mt-1 h-4 w-4 accent-red-600 disabled:opacity-60" />
+									<label class="mt-4 flex items-start gap-3 text-sm font-bold text-danger-100 bk-error-text">
+										<input type="checkbox" name="confirm_cancel" value="true" required disabled={!appointment.can_cancel} class="mt-1 h-4 w-4 accent-check-danger-600 disabled:opacity-60" />
 										<span>Confirmo que quiero cancelar este turno.</span>
 									</label>
 									<button disabled={!appointment.can_cancel} class="ux-btn-danger mt-4 w-full">Cancelar turno</button>

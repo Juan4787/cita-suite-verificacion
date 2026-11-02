@@ -12,7 +12,7 @@
 
 <a
 	{href}
-	class={`group inline-flex w-fit items-center gap-2 rounded-full border border-neutral-200 bg-white/85 px-3 py-2 text-sm font-semibold text-neutral-700 shadow-sm transition hover:-translate-y-0.5 hover:border-[#7c3aed]/40 hover:bg-[#f5f3ff] hover:text-[#5b21b6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] dark:border-[#1f3554] dark:bg-[#0f1f36]/80 dark:text-neutral-100 dark:hover:border-[#7c3aed]/50 dark:hover:bg-[#182842] dark:hover:text-white ${className}`}
+	class={`group inline-flex w-fit items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold shadow-sm transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-accent-600 border-line-strong bg-fill-13243d-70 text-fg-n100 hover:border-accent-600-50 hover:bg-fill-182842 hover:text-fg ${className}`}
 >
 	<svg
 		aria-hidden="true"

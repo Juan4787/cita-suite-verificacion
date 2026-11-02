@@ -54,9 +54,9 @@
 	<div class="ux-soft-card p-5">
 		<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 			<div class="min-w-0">
-				<p class="text-lg font-bold text-white">{candidate.time_label} · {candidate.patient_name}</p>
-				<p class="mt-1 text-sm text-white/55">{candidate.service_name} · {candidate.professional_name}</p>
-				<p class="mt-2 flex items-center gap-2 text-sm font-bold {candidate.coverage === 'pendiente_actualizar' ? 'text-amber-300' : candidate.coverage === 'aviso_automatico' ? 'text-emerald-300' : 'text-white/70'}">
+				<p class="text-lg font-bold text-fg">{candidate.time_label} · {candidate.patient_name}</p>
+				<p class="mt-1 text-sm text-fg-55">{candidate.service_name} · {candidate.professional_name}</p>
+				<p class="mt-2 flex items-center gap-2 text-sm font-bold {candidate.coverage === 'pendiente_actualizar' ? 'text-warning-300' : candidate.coverage === 'aviso_automatico' ? 'text-success-300' : 'text-fg-70'}">
 					{#if candidate.coverage === 'pendiente_actualizar'}
 						<Icon name="alert" class="h-4 w-4 shrink-0" />Calendario pendiente de actualizar
 					{:else if candidate.coverage === 'aviso_automatico'}
@@ -66,15 +66,15 @@
 					{/if}
 				</p>
 				{#if candidate.whatsapp_marked_sent_at}
-					<p class="mt-2 flex items-center gap-2 text-sm font-bold text-emerald-300"><Icon name="check" class="h-4 w-4 shrink-0" />Enviado {relativeTime(candidate.whatsapp_marked_sent_at)}</p>
+					<p class="mt-2 flex items-center gap-2 text-sm font-bold text-success-300"><Icon name="check" class="h-4 w-4 shrink-0" />Enviado {relativeTime(candidate.whatsapp_marked_sent_at)}</p>
 				{:else if candidate.whatsapp_opened_at}
-					<p class="mt-2 text-sm text-white/55">WhatsApp abierto {relativeTime(candidate.whatsapp_opened_at)}</p>
+					<p class="mt-2 text-sm text-fg-55">WhatsApp abierto {relativeTime(candidate.whatsapp_opened_at)}</p>
 				{/if}
 			</div>
 			<div class="flex shrink-0 flex-col gap-2 sm:items-end">
 				{#if !candidate.phone_e164}
 					<span class="ux-badge ux-badge-warning">Revisar teléfono</span>
-					<p class="max-w-60 text-right text-xs leading-relaxed text-white/50">
+					<p class="max-w-60 text-right text-xs leading-relaxed text-fg-50">
 						Falta un número argentino completo con código de área.
 					</p>
 					<a href={`/odonto/pacientes/${candidate.patient_id}`} class="ux-btn-secondary">
@@ -85,7 +85,7 @@
 						Abrir de nuevo
 					</a>
 				{:else if candidate.whatsapp_opened_at}
-					<p class="max-w-60 text-right text-xs text-white/45">
+					<p class="max-w-60 text-right text-xs text-copy-subtle">
 						Ya se abrió un recordatorio para este turno. ¿Abrirlo otra vez?
 					</p>
 					<a href={openHref(candidate, true)} target="_blank" rel="noreferrer" class="ux-btn-secondary">
@@ -125,8 +125,8 @@
 	{#if !data.restricted && !data.remindersUnavailable}
 		<div class="ux-soft-card flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
 			<div>
-				<p class="text-sm font-bold text-white">Criterio de la lista</p>
-				<p class="mt-1 text-sm text-white/55">
+				<p class="text-sm font-bold text-fg">Criterio de la lista</p>
+				<p class="mt-1 text-sm text-fg-55">
 					Arriba, los turnos sin un calendario iniciado ni una notificación confirmada. Al final,
 					plegados, los que ya tienen aviso automático: podés mandarles el recordatorio igual.
 				</p>
@@ -164,7 +164,7 @@
 		{#if pendingUpdate.length > 0}
 			<div class="ux-card">
 				<h2 class="ux-section-title">Calendario pendiente de actualizar</h2>
-				<p class="mt-2 text-sm text-white/55">
+				<p class="mt-2 text-sm text-fg-55">
 					Estos turnos se reprogramaron después de que el paciente registró el calendario:
 					puede tener guardada la fecha vieja.
 				</p>
@@ -201,7 +201,7 @@
 				<summary class="ux-section-title cursor-pointer">
 					Ya tienen aviso automático ({automatic.length})
 				</summary>
-				<p class="mt-2 text-sm text-white/55">
+				<p class="mt-2 text-sm text-fg-55">
 					Iniciaron un calendario o confirmaron una notificación. El recordatorio por WhatsApp es
 					opcional.
 				</p>

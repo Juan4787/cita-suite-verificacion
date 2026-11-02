@@ -50,8 +50,8 @@
 				<p class="ux-subtitle">Carga de turnos por día para anticipar demanda.</p>
 			</div>
 			<div class="ux-soft-card min-w-36 p-5 text-center">
-				<p class="text-sm font-bold text-white/55">Turnos</p>
-				<p class="mt-1 text-4xl font-bold text-white">{totalWeek}</p>
+				<p class="text-sm font-bold text-fg-55">Turnos</p>
+				<p class="mt-1 text-4xl font-bold text-fg">{totalWeek}</p>
 			</div>
 		</div>
 	</div>
@@ -77,14 +77,15 @@
 
 	<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-7">
 		{#each data.days as day}
-			<a href={`/odonto/agenda?date=${day.date}${data.selectedProfessionalId ? `&professional_id=${data.selectedProfessionalId}` : ''}`} class={`ux-choice p-5 ${day.total > 0 ? '' : 'opacity-70'}`}>
-				<p class="text-sm font-bold capitalize text-white">{formatDate(`${day.date}T00:00:00`)}</p>
-				<p class="mt-4 text-4xl font-bold text-white">{day.total}</p>
-				<p class="mt-1 text-sm text-white/50">turnos</p>
+			<a href={`/odonto/agenda?date=${day.date}${data.selectedProfessionalId ? `&professional_id=${data.selectedProfessionalId}` : ''}`} class="ux-choice p-5">
+				<!-- A day without appointments is quieter through its text colors, not through opacity, which lowered its small texts below 4.5:1. -->
+				<p class={`text-sm font-bold capitalize ${day.total > 0 ? 'text-fg' : 'text-copy-muted'}`}>{formatDate(`${day.date}T00:00:00`)}</p>
+				<p class={`mt-4 text-4xl font-bold ${day.total > 0 ? 'text-fg' : 'text-copy-muted'}`}>{day.total}</p>
+				<p class="mt-1 text-sm text-fg-50">turnos</p>
 				{#if statusText(day)}
-					<p class="mt-5 text-xs leading-5 text-white/55">{statusText(day)}</p>
+					<p class="mt-5 text-xs leading-5 text-fg-55">{statusText(day)}</p>
 				{:else}
-					<p class="mt-5 text-xs leading-5 text-white/42">Sin turnos.</p>
+					<p class="mt-5 text-xs leading-5 text-copy-subtle">Sin turnos.</p>
 				{/if}
 			</a>
 		{/each}

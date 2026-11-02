@@ -291,8 +291,8 @@
 	<header class="master-hero">
 		<div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
 			<div class="max-w-2xl">
-				<h1 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">Consultorios y accesos</h1>
-				<p class="mt-3 max-w-xl text-base leading-relaxed text-white/60">
+				<h1 class="text-3xl font-bold tracking-tight text-fg sm:text-4xl">Consultorios y accesos</h1>
+				<p class="mt-3 max-w-xl text-base leading-relaxed text-fg-60">
 					Buscá una cuenta, revisá su vencimiento y cambiá el acceso. Las herramientas técnicas quedan apartadas.
 				</p>
 			</div>
@@ -355,20 +355,20 @@
 				</svg>
 			</div>
 			<div class="min-w-0 flex-1">
-				<h2 id="assistance-title" class="font-bold text-white">
+				<h2 id="assistance-title" class="font-bold text-fg">
 					{assistance.length === 1 ? '1 cuenta pidió ayuda' : `${assistance.length} cuentas pidieron ayuda`}
 				</h2>
-				<p class="mt-1 text-sm text-white/55">Sólo aparecen mientras la ayuda sigue vigente.</p>
+				<p class="mt-1 text-sm text-fg-55">Sólo aparecen mientras la ayuda sigue vigente.</p>
 				<div class="mt-4 grid gap-3 lg:grid-cols-2">
 					{#each assistance as item (item.id)}
 						<div class="ux-soft-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
 							<div class="min-w-0">
-								<p class="break-words font-bold text-white">{item.businessName}</p>
-								<p class="mt-1 break-words text-sm text-white/55">{item.requestedByEmail ?? 'Dueño del consultorio'}</p>
-								<p class="mt-2 text-sm font-bold text-emerald-200">
+								<p class="break-words font-bold text-fg">{item.businessName}</p>
+								<p class="mt-1 break-words text-sm text-fg-55">{item.requestedByEmail ?? 'Dueño del consultorio'}</p>
+								<p class="mt-2 text-sm font-bold text-success">
 									{item.kind ? `${ACCOUNT_ASSISTANCE_OPTIONS[item.kind].title} · ` : ''}{formatAccessRemaining(item.expiresAt) ?? 'Vence pronto'}
 								</p>
-								<p class="mt-1 text-sm text-white/55">
+								<p class="mt-1 text-sm text-fg-55">
 									Hasta {formatAssistanceMoment(item.expiresAt, assistanceTimeZone(item.businessId))?.full ?? dateTime(item.expiresAt)}
 								</p>
 							</div>
@@ -400,16 +400,16 @@
 		<details class="master-action-strip master-action-strip-warning">
 			<summary>
 				<span><strong>{data.mpAttention.length}</strong> {data.mpAttention.length === 1 ? 'evento de Mercado Pago requiere revisión' : 'eventos de Mercado Pago requieren revisión'}</span>
-				<span class="text-sm font-bold text-amber-100/70">Ver detalle</span>
+				<span class="text-sm font-bold text-warning-100-70">Ver detalle</span>
 			</summary>
 			<div class="mt-4 space-y-3">
 				{#each data.mpAttention as event}
 					<div class="ux-soft-card p-4">
 						<div class="flex flex-wrap items-center justify-between gap-2">
-							<p class="font-bold text-white">{event.businessName ?? 'Evento global'}</p>
-							<time class="text-sm text-white/45">{dateTime(event.received_at)}</time>
+							<p class="font-bold text-fg">{event.businessName ?? 'Evento global'}</p>
+							<time class="text-sm text-copy-subtle">{dateTime(event.received_at)}</time>
 						</div>
-						<p class="mt-2 text-sm text-white/65">{event.processing_detail}</p>
+						<p class="mt-2 text-sm text-fg-65">{event.processing_detail}</p>
 					</div>
 				{/each}
 			</div>
@@ -420,8 +420,8 @@
 		<section class="ux-card master-reveal" aria-labelledby="create-business-title">
 			<div class="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
 				<div>
-					<h2 id="create-business-title" class="text-2xl font-bold text-white">Nuevo consultorio</h2>
-					<p class="mt-3 text-sm leading-relaxed text-white/55">
+					<h2 id="create-business-title" class="text-2xl font-bold text-fg">Nuevo consultorio</h2>
+					<p class="mt-3 text-sm leading-relaxed text-fg-55">
 						Creá el consultorio y definí su primer período de acceso en un solo paso. Si el dueño todavía no tiene cuenta, quedará invitado.
 					</p>
 				</div>
@@ -444,10 +444,10 @@
 						</select>
 					</label>
 					<label>
-						<span class="ux-label">Nota interna <span class="font-normal text-white/35">(opcional)</span></span>
+						<span class="ux-label">Nota interna <span class="font-normal text-copy-subtle">(opcional)</span></span>
 						<input name="note" class="ux-input" placeholder="Motivo del alta" />
 					</label>
-					<p class="sm:col-span-2 rounded-2xl border border-violet-400/20 bg-violet-400/10 px-4 py-3 text-sm text-violet-100/80">
+					<p class="sm:col-span-2 rounded-2xl border border-accent-400-20 bg-accent-400-10 px-4 py-3 text-sm text-accent-100-80">
 						“1 hora” son exactamente 60 minutos. El vencimiento se mostrará con hora y minutos, sin redondearlo a días.
 					</p>
 					<button class="ux-btn-primary sm:col-span-2">Crear consultorio y dar acceso</button>
@@ -459,15 +459,15 @@
 	{#if showTools}
 		<section class="ux-card master-reveal" aria-labelledby="tools-title">
 			<div>
-				<h2 id="tools-title" class="text-2xl font-bold text-white">Herramientas administrativas</h2>
-				<p class="mt-2 text-sm text-white/55">Se mantienen fuera del flujo diario para que no compitan con la gestión de accesos.</p>
+				<h2 id="tools-title" class="text-2xl font-bold text-fg">Herramientas administrativas</h2>
+				<p class="mt-2 text-sm text-fg-55">Se mantienen fuera del flujo diario para que no compitan con la gestión de accesos.</p>
 				<a class="ux-btn-secondary mt-4" href="/odonto/maestro/almacenamiento">Administrar espacio para documentos</a>
 			</div>
 
 			<div class="mt-6 grid gap-4 lg:grid-cols-2">
 				<div class="ux-soft-card p-5">
-					<h3 class="font-bold text-white">Mercado Pago</h3>
-					<p class="mt-2 text-sm leading-relaxed text-white/55">
+					<h3 class="font-bold text-fg">Mercado Pago</h3>
+					<p class="mt-2 text-sm leading-relaxed text-fg-55">
 						La conciliación automática corre aproximadamente cada 6 horas. Forzala sólo si un pago no aparece.
 					</p>
 					<form method="post" action="?/mp_reconcile_now" class="mt-4" onsubmit={() => (mpReconciling = true)}>
@@ -478,9 +478,9 @@
 				</div>
 
 				<div class="ux-soft-card p-5">
-					<h3 class="font-bold text-white">Referencias de email (legacy)</h3>
-					<p class="mt-2 text-sm leading-relaxed text-white/55">
-						Esta lista sirve para rastrear altas manuales antiguas. <strong class="text-white/80">No define la duración del acceso</strong> de un consultorio.
+					<h3 class="font-bold text-fg">Referencias de email (legacy)</h3>
+					<p class="mt-2 text-sm leading-relaxed text-fg-55">
+						Esta lista sirve para rastrear altas manuales antiguas. <strong class="text-fg-80">No define la duración del acceso</strong> de un consultorio.
 					</p>
 					<form method="post" action="?/add_email" class="mt-4 grid gap-3">
 						<input name="email" type="email" required class="ux-input" placeholder="email@consultorio.com" aria-label="Email de referencia" />
@@ -498,12 +498,12 @@
 					{#each emails as item}
 						<div class="master-email-row">
 							<div class="min-w-0">
-								<p class="break-words text-sm font-bold text-white">{item.email}</p>
+								<p class="break-words text-sm font-bold text-fg">{item.email}</p>
 								<div class="mt-2 flex flex-wrap gap-2">
 									<span class={item.enabled ? 'ux-badge ux-badge-success' : 'ux-badge'}>{item.enabled ? 'Referencia activa' : 'Referencia inactiva'}</span>
 									<span class="ux-badge">{linkedEmails.has(item.email.toLowerCase()) ? 'Con consultorio' : 'Sin consultorio'}</span>
 								</div>
-								{#if item.note}<p class="mt-2 text-sm text-white/45">{item.note}</p>{/if}
+								{#if item.note}<p class="mt-2 text-sm text-copy-subtle">{item.note}</p>{/if}
 							</div>
 							{#if item.enabled}
 								<button
@@ -533,14 +533,14 @@
 	<section class="ux-card master-directory" aria-labelledby="businesses-title">
 		<div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
 			<div>
-				<h2 id="businesses-title" class="text-xl font-bold text-white">{showingArchived ? 'Consultorios archivados' : 'Consultorios'}</h2>
-				<p class="mt-1 text-sm text-white/50">
+				<h2 id="businesses-title" class="text-xl font-bold text-fg">{showingArchived ? 'Consultorios archivados' : 'Consultorios'}</h2>
+				<p class="mt-1 text-sm text-fg-50">
 					{showingArchived
 						? 'No tienen acceso y no aparecen en la lista ni en el buscador de consultorios. Para volver a usar uno, abrí Gestionar y reactivalo.'
 						: 'El acceso se administra por consultorio, no por dirección de email.'}
 				</p>
 			</div>
-			<span class="text-sm font-bold text-white/45">{filteredBusinesses.length} {filteredBusinesses.length === 1 ? 'resultado' : 'resultados'}</span>
+			<span class="text-sm font-bold text-copy-subtle">{filteredBusinesses.length} {filteredBusinesses.length === 1 ? 'resultado' : 'resultados'}</span>
 		</div>
 
 		<div class="mt-5 grid gap-3 lg:grid-cols-[1fr_auto]">
@@ -550,7 +550,7 @@
 					<circle cx="11" cy="11" r="7" />
 					<path d="m20 20-3.5-3.5" />
 				</svg>
-				<input id="master-search" class="ux-input" placeholder={showingArchived ? 'Buscar en archivados…' : 'Buscar por consultorio o email…'} bind:value={search} />
+				<input id="master-search" class="ux-input" placeholder={showingArchived ? 'Buscar en archivados…' : 'Consultorio o email…'} bind:value={search} />
 			</label>
 			{#if showingArchived}
 				<button type="button" class="ux-btn-secondary master-archive-back" onclick={() => showView('all')}>Volver a consultorios</button>
@@ -575,10 +575,10 @@
 		{#if filteredBusinesses.length === 0}
 			<div class="ux-empty">
 				{#if showingArchived && counts.archived === 0}
-					<p class="font-bold text-white">No hay consultorios archivados</p>
+					<p class="font-bold text-fg">No hay consultorios archivados</p>
 					<p class="text-sm">Cuando archives uno desde Gestionar, va a aparecer acá.</p>
 				{:else}
-					<p class="font-bold text-white">No encontramos consultorios</p>
+					<p class="font-bold text-fg">No encontramos consultorios</p>
 					<p class="text-sm">{showingArchived ? 'Probá otra búsqueda.' : 'Probá otra búsqueda o cambiá el filtro.'}</p>
 				{/if}
 			</div>
@@ -591,20 +591,20 @@
 						<div class="master-business-avatar" aria-hidden="true">{business.name.trim().charAt(0).toUpperCase() || 'C'}</div>
 						<div class="min-w-0">
 							<div class="flex flex-wrap items-center gap-2">
-								<h3 class="break-words text-lg font-bold text-white">{business.name}</h3>
+								<h3 class="break-words text-lg font-bold text-fg">{business.name}</h3>
 								<span class={statusClass(business)}>{statusLabel(business)}</span>
 								{#if business.mpSubscription}
 									<span class={mpStatusClass(business.mpSubscription.status)}>{mpStatusLabel(business.mpSubscription.status)}</span>
 								{/if}
 							</div>
-							<p class="mt-2 break-words text-sm text-white/55">{business.primaryOwnerEmail ?? 'Sin dueño vinculado'}</p>
-							<p class="mt-1 text-xs font-bold text-white/30">/{business.slug}</p>
+							<p class="mt-2 break-words text-sm text-fg-55">{business.primaryOwnerEmail ?? 'Sin dueño vinculado'}</p>
+							<p class="mt-1 text-xs font-bold text-copy-subtle">/{business.slug}</p>
 						</div>
 					</div>
 
 					<div class="master-access-summary">
-						<p class="font-bold text-white">{accessSummary(business)}</p>
-						<p class="mt-1 text-sm text-white/50">{accessDetail(business)}</p>
+						<p class="font-bold text-fg">{accessSummary(business)}</p>
+						<p class="mt-1 text-sm text-fg-50">{accessDetail(business)}</p>
 					</div>
 
 					<button
@@ -626,9 +626,9 @@
 					<div class="master-management">
 						<section class="master-primary-action" aria-labelledby={`grant-title-${business.id}`}>
 							<div>
-								<p class="text-xs font-bold uppercase tracking-[0.14em] text-violet-200/70">Acción principal</p>
-								<h4 id={`grant-title-${business.id}`} class="mt-2 text-xl font-bold text-white">Dar más acceso</h4>
-								<p class="mt-2 max-w-xl text-sm leading-relaxed text-white/55">
+								<p class="text-xs font-bold uppercase tracking-[0.14em] text-accent-200-70">Acción principal</p>
+								<h4 id={`grant-title-${business.id}`} class="mt-2 text-xl font-bold text-fg">Dar más acceso</h4>
+								<p class="mt-2 max-w-xl text-sm leading-relaxed text-fg-55">
 									Si el acceso sigue vigente, el tiempo se suma al vencimiento actual. Si ya venció, empieza ahora.
 								</p>
 							</div>
@@ -758,11 +758,11 @@
 										{#each business.recentGrants as grant}
 											<div class="master-history-row">
 												<div>
-													<p class="font-bold text-white">{operationLabel(grant.operation)}</p>
-													<p class="mt-1 text-sm text-white/45">{grant.admin_email ?? 'Sistema'} · {money(grant.amount)}</p>
-													{#if grant.note}<p class="mt-1 text-sm text-white/60">{grant.note}</p>{/if}
+													<p class="font-bold text-fg">{operationLabel(grant.operation)}</p>
+													<p class="mt-1 text-sm text-copy-subtle">{grant.admin_email ?? 'Sistema'} · {money(grant.amount)}</p>
+													{#if grant.note}<p class="mt-1 text-sm text-fg-60">{grant.note}</p>{/if}
 												</div>
-												<time class="shrink-0 text-sm text-white/40">{dateTime(grant.created_at, businessTimeZone(business))}</time>
+												<time class="shrink-0 text-sm text-copy-subtle">{dateTime(grant.created_at, businessTimeZone(business))}</time>
 											</div>
 										{/each}
 									{/if}
@@ -777,7 +777,7 @@
 </section>
 
 <Modal open={Boolean(disableEmailTarget)} title="Desactivar referencia" on:close={() => (disableEmailTarget = null)} dismissible>
-	<div class="space-y-4 text-sm text-neutral-800 dark:text-neutral-100">
+	<div class="space-y-4 text-sm text-fg-n100">
 		<p>
 			Vas a desactivar la referencia de <span class="font-semibold">{disableEmailTarget?.email ?? ''}</span>.
 			Esto no cambia por sí solo la duración comercial del consultorio.
@@ -796,12 +796,12 @@
 </Modal>
 
 <Modal open={Boolean(confirmModal)} title={confirmModal?.title ?? 'Confirmar'} on:close={() => (confirmModal = null)} dismissible>
-	<div class="space-y-4 text-sm text-neutral-800 dark:text-neutral-100">
+	<div class="space-y-4 text-sm text-fg-n100">
 		<p>{confirmModal?.body}</p>
 		{#if confirmModal?.tone === 'danger'}
 			<p class="ux-alert">Esta acción puede cortar el acceso operativo. Revisá antes de confirmar.</p>
 		{:else if confirmModal?.tone === 'warning'}
-			<p class="rounded-2xl border border-amber-400/25 bg-amber-400/10 p-3 text-amber-100">
+			<p class="rounded-2xl border border-warning-400-25 bg-warning-400-10 p-3 text-warning-100">
 				Este cambio modifica la licencia comercial del consultorio.
 			</p>
 		{/if}
@@ -822,11 +822,11 @@
 	.master-hero {
 		position: relative;
 		overflow: hidden;
-		border: 1px solid rgba(139, 92, 246, 0.38);
+		border: 1px solid var(--master-hero-border);
 		border-radius: var(--radius-xl);
 		background:
-			radial-gradient(circle at 85% 0%, rgba(139, 92, 246, 0.2), transparent 22rem),
-			linear-gradient(145deg, #101f36 0%, #09182a 70%);
+			radial-gradient(circle at 85% 0%, var(--master-hero-glow), transparent 22rem),
+			linear-gradient(145deg, var(--surface) 0%, var(--bg) 70%);
 		padding: 1.35rem;
 		box-shadow: var(--shadow);
 	}
@@ -836,7 +836,7 @@
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 		gap: 0.5rem;
 		margin-top: 1.4rem;
-		border-top: 1px solid rgba(255, 255, 255, 0.08);
+		border-top: 1px solid var(--border);
 		padding-top: 1rem;
 	}
 
@@ -849,7 +849,7 @@
 	}
 
 	.master-stats strong {
-		color: white;
+		color: var(--c-text-fg);
 		font-size: 1.35rem;
 		line-height: 1;
 	}
@@ -869,7 +869,7 @@
 	.master-action-strip {
 		border: 1px solid var(--border);
 		border-radius: var(--radius-lg);
-		background: rgba(255, 255, 255, 0.035);
+		background: var(--c-bg-fill-04);
 		padding: 1rem;
 	}
 
@@ -877,13 +877,13 @@
 		display: flex;
 		align-items: flex-start;
 		gap: 0.9rem;
-		border-color: rgba(52, 211, 153, 0.26);
-		background: rgba(52, 211, 153, 0.065);
+		border-color: var(--c-line-success-400-25);
+		background: var(--c-bg-success-300-08);
 	}
 
 	.master-action-strip-warning {
-		border-color: rgba(251, 191, 36, 0.3);
-		background: rgba(251, 191, 36, 0.07);
+		border-color: var(--c-line-warning-400-30);
+		background: var(--warning-tint-removed);
 	}
 
 	.master-action-strip-warning > summary {
@@ -911,7 +911,7 @@
 		flex: 0 0 auto;
 		place-items: center;
 		border-radius: 0.9rem;
-		background: rgba(52, 211, 153, 0.14);
+		background: var(--success-soft);
 		color: var(--success-text);
 	}
 
@@ -936,7 +936,7 @@
 		gap: 1rem;
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		background: rgba(255, 255, 255, 0.025);
+		background: var(--empty-bg);
 		padding: 0.9rem;
 	}
 
@@ -971,7 +971,7 @@
 		gap: 0.25rem;
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		background: rgba(255, 255, 255, 0.025);
+		background: var(--empty-bg);
 		padding: 0.25rem;
 	}
 
@@ -996,12 +996,12 @@
 
 	.master-filter button.active {
 		background: var(--accent-strong);
-		color: white;
-		box-shadow: 0 8px 20px rgba(124, 58, 237, 0.22);
+		color: var(--on-accent);
+		box-shadow: 0 8px 20px var(--tab-active-glow);
 	}
 
 	.master-filter button.active span {
-		color: rgba(255, 255, 255, 0.72);
+		color: var(--on-accent-muted);
 	}
 
 	/* Archived practices are opened on purpose, apart from the filters that work on the directory. */
@@ -1029,7 +1029,7 @@
 
 	.master-archive-link:hover,
 	.master-archive-link:focus-visible {
-		background: rgba(255, 255, 255, 0.05);
+		background: var(--c-bg-fill-04);
 		color: var(--text);
 	}
 
@@ -1051,18 +1051,18 @@
 		overflow: hidden;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-lg);
-		background: linear-gradient(145deg, rgba(15, 34, 56, 0.94), rgba(8, 24, 41, 0.96));
+		background: linear-gradient(145deg, var(--master-card-from), var(--master-card-to));
 		box-shadow: var(--shadow-sm);
 		transition: border-color 160ms ease, box-shadow 160ms ease;
 	}
 
 	.master-business-card:hover,
 	.master-business-card.expanded {
-		border-color: rgba(139, 92, 246, 0.42);
+		border-color: var(--master-card-open-border);
 	}
 
 	.master-business-card.expanded {
-		box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+		box-shadow: 0 20px 50px var(--c-shadow-shade-black-40);
 	}
 
 	.master-business-head {
@@ -1086,7 +1086,7 @@
 		height: 2.8rem;
 		flex: 0 0 auto;
 		place-items: center;
-		border: 1px solid rgba(139, 92, 246, 0.32);
+		border: 1px solid var(--c-line-accent-500-30);
 		border-radius: 0.9rem;
 		background: var(--accent-soft);
 		color: var(--accent-text);
@@ -1108,14 +1108,14 @@
 
 	.master-management {
 		border-top: 1px solid var(--border);
-		background: rgba(3, 13, 24, 0.34);
+		background: var(--master-inset);
 		padding: 1rem;
 	}
 
 	.master-primary-action {
-		border: 1px solid rgba(139, 92, 246, 0.28);
+		border: 1px solid var(--c-line-accent-500-30);
 		border-radius: var(--radius-lg);
-		background: rgba(124, 58, 237, 0.075);
+		background: var(--c-bg-accent-600-10);
 		padding: 1rem;
 	}
 
@@ -1125,7 +1125,7 @@
 		gap: 0.65rem;
 		margin-top: 0.9rem;
 		border-radius: 0.8rem;
-		background: rgba(52, 211, 153, 0.08);
+		background: var(--c-bg-success-300-08);
 		padding: 0.7rem 0.85rem;
 		color: var(--success-text);
 		font-size: 0.78rem;
@@ -1138,7 +1138,7 @@
 	}
 
 	.master-optional {
-		border-top: 1px solid rgba(255, 255, 255, 0.08);
+		border-top: 1px solid var(--border);
 		padding-top: 0.75rem;
 	}
 
@@ -1161,7 +1161,7 @@
 		margin-top: 0.75rem;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-lg);
-		background: rgba(255, 255, 255, 0.018);
+		background: var(--empty-bg);
 	}
 
 	.master-advanced > summary {
@@ -1179,7 +1179,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.2rem;
-		color: white;
+		color: var(--c-text-fg);
 	}
 
 	.master-advanced > summary small {
@@ -1209,12 +1209,12 @@
 	.master-advanced-group {
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		background: rgba(255, 255, 255, 0.025);
+		background: var(--empty-bg);
 		padding: 0.9rem;
 	}
 
 	.master-advanced-group h5 {
-		color: white;
+		color: var(--c-text-fg);
 		font-weight: 700;
 	}
 
@@ -1237,7 +1237,7 @@
 		gap: 1rem;
 		border: 1px solid var(--border);
 		border-radius: 0.85rem;
-		background: rgba(255, 255, 255, 0.025);
+		background: var(--empty-bg);
 		padding: 0.8rem;
 	}
 

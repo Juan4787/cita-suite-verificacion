@@ -166,18 +166,18 @@
 	});
 
 	const fieldClass = (invalid: boolean) =>
-		`w-full rounded-xl border px-3 py-2 text-sm text-neutral-900 shadow-sm outline-none transition ${
+		`w-full rounded-xl border px-3 py-2 text-sm text-ink-n900 shadow-sm outline-none transition ${
 			invalid
-				? 'border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100'
-				: 'border-neutral-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:focus:border-primary-400 dark:focus:ring-primary-800'
-		} bg-white placeholder:text-neutral-400 dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500`;
+				? 'border-danger-300 focus:border-danger-400 focus:ring-2 focus:ring-focus-danger-100'
+				: ' focus:ring-2 border-line-strong focus:border-info-primary-400 focus:ring-focus-info-primary-800'
+		} bg-surface text-fg placeholder:text-copy-subtle`;
 </script>
 
 <input type="hidden" name={name} value={createdAtValue} />
 
 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 	<div class="space-y-1">
-		<label class="text-xs font-semibold text-neutral-500 dark:text-neutral-300" for={`${name}-year`}>Año</label>
+		<label class="text-xs font-semibold text-fg-n300" for={`${name}-year`}>Año</label>
 		<input
 			id={`${name}-year`}
 			readonly={readOnly}
@@ -193,7 +193,7 @@
 	</div>
 
 	<div class="space-y-1">
-		<label class="text-xs font-semibold text-neutral-500 dark:text-neutral-300" for={`${name}-month`}>Mes</label>
+		<label class="text-xs font-semibold text-fg-n300" for={`${name}-month`}>Mes</label>
 		<input
 			id={`${name}-month`}
 			readonly={readOnly}
@@ -210,7 +210,7 @@
 	</div>
 
 	<div class="space-y-1">
-		<label class="text-xs font-semibold text-neutral-500 dark:text-neutral-300" for={`${name}-day`}>Día</label>
+		<label class="text-xs font-semibold text-fg-n300" for={`${name}-day`}>Día</label>
 		<input
 			id={`${name}-day`}
 			readonly={readOnly}
@@ -227,7 +227,7 @@
 	</div>
 
 	<div class="space-y-1">
-		<label class="text-xs font-semibold text-neutral-500 dark:text-neutral-300" for={`${name}-time`}>Hora</label>
+		<label class="text-xs font-semibold text-fg-n300" for={`${name}-time`}>Hora</label>
 		<input
 			id={`${name}-time`}
 			readonly={readOnly}
@@ -244,5 +244,5 @@
 </div>
 
 {#if errorsVisible && validation.error}
-	<p class="mt-2 text-sm font-semibold text-red-600" aria-live="polite">{validation.error}</p>
+	<p class="mt-2 text-sm font-semibold text-danger" aria-live="polite">{validation.error}</p>
 {/if}

@@ -138,7 +138,7 @@
 	{#if attendingEligible.length > 0}
 		<div class="ux-card">
 			<h2 class="ux-section-title">¿El dueño o un administrador también atiende pacientes?</h2>
-			<p class="mt-2 text-sm text-white/55">
+			<p class="mt-2 text-sm text-fg-55">
 				Si una persona del equipo también atiende pacientes, creá su perfil profesional para configurar
 				horarios y servicios. Si todavía no creó su cuenta, el perfil queda preparado y oculto de las
 				reservas online hasta que se registre. No cambia su rol.
@@ -148,7 +148,7 @@
 				<div class="mt-4 grid gap-2">
 					{#each attendingActive as m (m.id)}
 						<div class="ux-choice flex min-w-0 items-center justify-between gap-3 p-4">
-							<span class="min-w-0 break-all font-bold text-white">{m.email}</span>
+							<span class="min-w-0 break-all font-bold text-fg">{m.email}</span>
 							<a href={`/odonto/profesionales/${m.professional_id}`} class="ux-btn-secondary shrink-0 text-sm">
 								Ver profesional
 							</a>
@@ -216,7 +216,7 @@
 					</form>
 				{/if}
 			{:else}
-				<p class="mt-4 text-sm text-white/45">
+				<p class="mt-4 text-sm text-copy-subtle">
 					Todos los dueños y administradores del equipo ya tienen su perfil profesional.
 				</p>
 			{/if}
@@ -235,11 +235,11 @@
 					aria-expanded={Boolean(openCategories[category.id])}
 				>
 					<span class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-						<span class="text-lg font-bold text-white sm:text-xl">{category.title}</span>
+						<span class="text-lg font-bold text-fg sm:text-xl">{category.title}</span>
 						<span class="ux-badge">{categoryMembers.length}</span>
 					</span>
 					<svg
-						class={`h-5 w-5 shrink-0 text-white/45 transition-transform ${openCategories[category.id] ? 'rotate-180' : ''}`}
+						class={`h-5 w-5 shrink-0 text-copy-subtle transition-transform ${openCategories[category.id] ? 'rotate-180' : ''}`}
 						viewBox="0 0 24 24"
 						fill="none"
 						stroke="currentColor"
@@ -256,7 +256,7 @@
 								<div class="flex flex-col gap-4 min-w-0 lg:flex-row lg:items-center lg:justify-between">
 									<div class="min-w-0 flex-1">
 										<div class="flex min-w-0 flex-wrap items-center gap-2">
-											<h3 class="min-w-0 max-w-full break-all text-lg font-bold text-white">{member.email}</h3>
+											<h3 class="min-w-0 max-w-full break-all text-lg font-bold text-fg">{member.email}</h3>
 											{#if member.user_id === data.currentUserId}
 												<span class="ux-badge shrink-0">Vos</span>
 											{/if}
@@ -264,13 +264,13 @@
 												<span class="ux-badge ux-badge-warning shrink-0">Pendiente</span>
 											{/if}
 										</div>
-										<p class="mt-2 text-sm text-white/55">
+										<p class="mt-2 text-sm text-fg-55">
 											{roleLabels[member.role]} · {member.status === 'pending' ? 'invitado el' : 'agregado el'} {formatDate(member.created_at)}
 										</p>
 										{#if member.status === 'pending' && member.professional_id}
-											<div class="mt-3 rounded-2xl border border-amber-300/25 bg-amber-300/10 px-4 py-3" role="status">
-												<p class="font-bold text-amber-100">Cuenta profesional pendiente</p>
-												<p class="mt-1 text-sm text-amber-50/80">
+											<div class="mt-3 rounded-2xl border border-warning-300-25 bg-warning-400-10 px-4 py-3" role="status">
+												<p class="font-bold text-warning-100">Cuenta profesional pendiente</p>
+												<p class="mt-1 text-sm text-warning-50-80">
 													No aparecerá en las reservas online hasta que cree su cuenta con <strong>{member.email}</strong>.
 													Cuando se registre, accederá al perfil ya configurado.
 												</p>
@@ -346,12 +346,12 @@
 	}}
 >
 	{#if memberToRemove}
-		<div class="space-y-4 text-neutral-800 dark:text-neutral-100">
-			<p class="text-base font-semibold text-neutral-900 dark:text-white">
+		<div class="space-y-4 text-fg-n100">
+			<p class="text-base font-semibold text-fg">
 				¿Seguro querés eliminar este rol?
 			</p>
-			<p class="text-sm text-neutral-600 dark:text-white/70">
-				Se quitará el rol de <strong class="text-neutral-900 dark:text-white">{roleLabels[memberToRemove.role]}</strong> para <strong class="text-neutral-900 dark:text-white">{memberToRemove.email}</strong>{memberToRemove.status === 'pending' ? ' (invitación pendiente)' : ''}. Esta acción no se puede deshacer.
+			<p class="text-sm text-fg-70">
+				Se quitará el rol de <strong class="text-fg">{roleLabels[memberToRemove.role]}</strong> para <strong class="text-fg">{memberToRemove.email}</strong>{memberToRemove.status === 'pending' ? ' (invitación pendiente)' : ''}. Esta acción no se puede deshacer.
 			</p>
 			<div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
 				<button

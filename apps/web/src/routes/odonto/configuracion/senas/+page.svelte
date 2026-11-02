@@ -95,11 +95,11 @@
 		<input type="hidden" name="expected_revision" value={data.policy.revision} />
 
 		<label class="ux-choice flex items-center gap-3 px-4 py-3">
-			<input type="checkbox" name="enabled" value="true" bind:checked={enabled} disabled={!canSave} class="accent-[#7c3aed]" />
-			<span class="font-bold text-white">Pedir seña en las reservas</span>
+			<input type="checkbox" name="enabled" value="true" bind:checked={enabled} disabled={!canSave} class="accent-check-accent-600" />
+			<span class="font-bold text-fg">Pedir seña en las reservas</span>
 		</label>
 		{#if !enabled && data.policy.enabled}
-			<p class="text-sm text-amber-300">
+			<p class="text-sm text-warning-300">
 				Al guardar con la seña apagada, las señas pendientes quedan exceptuadas y ningún turno se cancela por ellas.
 			</p>
 		{/if}
@@ -107,28 +107,28 @@
 		<fieldset class="grid gap-4">
 			<legend class="ux-section-title">Monto</legend>
 			<label class="ux-choice flex items-center gap-3 px-4 py-3">
-				<input type="radio" name="amount_mode" value="fixed" bind:group={amountMode} disabled={!canSave} class="accent-[#7c3aed]" />
-				<span class="text-white">Un monto fijo, el mismo para todas las prestaciones</span>
+				<input type="radio" name="amount_mode" value="fixed" bind:group={amountMode} disabled={!canSave} class="accent-check-accent-600" />
+				<span class="text-fg">Un monto fijo, el mismo para todas las prestaciones</span>
 			</label>
 			<label class="ux-choice flex items-center gap-3 px-4 py-3">
-				<input type="radio" name="amount_mode" value="percentage" bind:group={amountMode} disabled={!canSave} class="accent-[#7c3aed]" />
-				<span class="text-white">Un porcentaje del arancel del mes del turno</span>
+				<input type="radio" name="amount_mode" value="percentage" bind:group={amountMode} disabled={!canSave} class="accent-check-accent-600" />
+				<span class="text-fg">Un porcentaje del arancel del mes del turno</span>
 			</label>
 			<label>
 				<span class="ux-label">Monto fijo, en pesos{amountMode === 'percentage' ? ' (se usa cuando la prestación no tiene arancel)' : ''}</span>
 				<input name="fixed_amount" inputmode="numeric" bind:value={fixedAmount} disabled={!canSave} class="ux-input" placeholder="40.000" />
-				{#if errors.fixed_amount}<span class="mt-1 block text-sm text-amber-300">{errors.fixed_amount}</span>{/if}
+				{#if errors.fixed_amount}<span class="mt-1 block text-sm text-warning-300">{errors.fixed_amount}</span>{/if}
 			</label>
 			{#if amountMode === 'percentage'}
 				<label>
 					<span class="ux-label">Porcentaje del arancel</span>
 					<input name="percentage" inputmode="decimal" bind:value={percentage} disabled={!canSave} class="ux-input" placeholder="35" />
-					<span class="mt-1 block text-xs text-white/45">Se redondea con la misma unidad que el arancel.</span>
-					{#if errors.percentage}<span class="mt-1 block text-sm text-amber-300">{errors.percentage}</span>{/if}
+					<span class="mt-1 block text-xs text-copy-subtle">Se redondea con la misma unidad que el arancel.</span>
+					{#if errors.percentage}<span class="mt-1 block text-sm text-warning-300">{errors.percentage}</span>{/if}
 				</label>
 				{#if withoutFee.length > 0}
-					<div class="ux-soft-card p-4 text-sm text-white/70" data-without-fee>
-						<p class="font-bold text-white">
+					<div class="ux-soft-card p-4 text-sm text-fg-70" data-without-fee>
+						<p class="font-bold text-fg">
 							{fixedFallback
 								? 'Estas prestaciones no tienen arancel para todos los profesionales: ahí se pide el monto fijo.'
 								: 'Estas prestaciones no tienen arancel para todos los profesionales: ahí no se va a pedir seña.'}
@@ -150,26 +150,26 @@
 			<label>
 				<span class="ux-label">Días antes del turno para pedirla</span>
 				<input name="request_days" inputmode="numeric" value={initial.requestDays} disabled={!canSave} class="ux-input" />
-				{#if errors.request_days}<span class="mt-1 block text-sm text-amber-300">{errors.request_days}</span>{/if}
+				{#if errors.request_days}<span class="mt-1 block text-sm text-warning-300">{errors.request_days}</span>{/if}
 			</label>
 			<label>
 				<span class="ux-label">Horas antes del turno en que vence</span>
 				<input name="deadline_hours" inputmode="numeric" value={initial.deadlineHours} disabled={!canSave} class="ux-input" />
-				{#if errors.deadline_hours}<span class="mt-1 block text-sm text-amber-300">{errors.deadline_hours}</span>{/if}
+				{#if errors.deadline_hours}<span class="mt-1 block text-sm text-warning-300">{errors.deadline_hours}</span>{/if}
 			</label>
 			<label>
 				<span class="ux-label">Plazo mínimo para pagar, en horas</span>
 				<input name="min_payment_hours" inputmode="numeric" value={initial.minPaymentHours} disabled={!canSave} class="ux-input" />
-				{#if errors.min_payment_hours}<span class="mt-1 block text-sm text-amber-300">{errors.min_payment_hours}</span>{/if}
+				{#if errors.min_payment_hours}<span class="mt-1 block text-sm text-warning-300">{errors.min_payment_hours}</span>{/if}
 			</label>
 		</fieldset>
 
 		<div class="grid gap-2">
 			<label class="ux-choice flex items-center gap-3 px-4 py-3">
-				<input type="checkbox" name="auto_cancel_enabled" value="true" bind:checked={autoCancelEnabled} disabled={!canSave} class="accent-[#7c3aed]" />
-				<span class="font-bold text-white">Cancelar solo el turno si la seña no llega a tiempo</span>
+				<input type="checkbox" name="auto_cancel_enabled" value="true" bind:checked={autoCancelEnabled} disabled={!canSave} class="accent-check-accent-600" />
+				<span class="font-bold text-fg">Cancelar solo el turno si la seña no llega a tiempo</span>
 			</label>
-			<p class="text-sm text-white/55">
+			<p class="text-sm text-fg-55">
 				Al vencer, el turno se cancela y el horario vuelve a estar disponible. Nunca cancela un turno reservado
 				con menos del plazo mínimo para pagar, uno con un pedido de reprogramación ni una seña vencida hace
 				más de 24&nbsp;horas: esos quedan en la lista para decidir a mano.
@@ -179,13 +179,13 @@
 		<label>
 			<span class="ux-label">Datos para transferir</span>
 			<textarea name="transfer_details" rows="3" maxlength="500" disabled={!canSave} class="ux-textarea" placeholder="Alias, CBU y titular">{initial.transferDetails}</textarea>
-			<span class="mt-1 block text-xs text-white/45">La persona los ve en la página de su turno y en el pedido por WhatsApp.</span>
-			{#if errors.transfer_details}<span class="mt-1 block text-sm text-amber-300">{errors.transfer_details}</span>{/if}
+			<span class="mt-1 block text-xs text-copy-subtle">La persona los ve en la página de su turno y en el pedido por WhatsApp.</span>
+			{#if errors.transfer_details}<span class="mt-1 block text-sm text-warning-300">{errors.transfer_details}</span>{/if}
 		</label>
 
 		<label class="ux-choice flex items-center gap-3 px-4 py-3">
-			<input type="checkbox" name="applies_to_manual" value="true" checked={initial.appliesToManual} disabled={!canSave} class="accent-[#7c3aed]" />
-			<span class="text-white">Pedirla también en los turnos que carga el consultorio</span>
+			<input type="checkbox" name="applies_to_manual" value="true" checked={initial.appliesToManual} disabled={!canSave} class="accent-check-accent-600" />
+			<span class="text-fg">Pedirla también en los turnos que carga el consultorio</span>
 		</label>
 
 		{#if data.services.length > 0}
@@ -200,16 +200,16 @@
 							checked={excluded.includes(service.id)}
 							onchange={(event) => toggleExcluded(service.id, event.currentTarget.checked)}
 							disabled={!canSave}
-							class="accent-[#7c3aed]"
+							class="accent-check-accent-600"
 						/>
-						<span class="text-white">{service.name}</span>
+						<span class="text-fg">{service.name}</span>
 					</label>
 				{/each}
 			</fieldset>
 		{/if}
 
 		{#if enabled && amountMode === 'fixed' && fixedFallback}
-			<p class="text-sm text-white/55">
+			<p class="text-sm text-fg-55">
 				Cada reserva nueva va a pedir {formatDepositAmount(Number(fixedAmount.replaceAll('.', '')))}.
 			</p>
 		{/if}

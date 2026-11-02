@@ -167,12 +167,12 @@
 		<input type="hidden" name="entry_id" value={entry?.id ?? ''} />
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
 			<div class="space-y-2">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for={`${prefix}entry_type`}>Tipo de consulta</label>
+				<label class="text-sm font-semibold text-fg" for={`${prefix}entry_type`}>Tipo de consulta</label>
 				<select
 					id={`${prefix}entry_type`}
 					name="entry_type"
 					required
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
+					class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm outline-none transition focus:border-info-primary-500 focus:ring-2 focus:ring-focus-info-primary-100 border-line-strong bg-surface text-fg placeholder:text-copy-subtle"
 					bind:value={entryType}
 				>
 					<option value="">Seleccionar</option>
@@ -183,44 +183,44 @@
 				</select>
 			</div>
 			<div class="space-y-2">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for="created_at-year">Fecha y hora</label>
+				<label class="text-sm font-semibold text-fg" for="created_at-year">Fecha y hora</label>
 				<DateTimePartsInput name="created_at" readOnly={isProfessional} timeZone={timeZone} minYear={2000} maxYear={2045} initialValue={entry?.created_at} showErrors={showErrors} />
-				{#if isProfessional}<p class="text-xs text-neutral-600 dark:text-neutral-300">{entry ? 'La fecha y hora de registro se conservan.' : 'La fecha y hora se registrarán al guardar.'}</p>{/if}
+				{#if isProfessional}<p class="text-xs text-fg-n300">{entry ? 'La fecha y hora de registro se conservan.' : 'La fecha y hora se registrarán al guardar.'}</p>{/if}
 			</div>
 		</div>
 		<div class="space-y-2">
-			<label class="text-sm font-semibold text-neutral-800 dark:text-white" for={`${prefix}description`}>Descripción</label>
+			<label class="text-sm font-semibold text-fg" for={`${prefix}description`}>Descripción</label>
 			<textarea
 				id={`${prefix}description`}
 				name="description"
 				required
 				rows="4"
-				class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
+				class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm outline-none transition focus:border-info-primary-500 focus:ring-2 focus:ring-focus-info-primary-100 border-line-strong bg-surface text-fg placeholder:text-copy-subtle"
 				bind:value={description}
 				placeholder="Motivo de consulta, hallazgos, indicaciones..."
 			></textarea>
 		</div>
 		<div class="grid grid-cols-1 gap-3 md:grid-cols-3">
 			<div class="space-y-2">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for={`${prefix}teeth`}>{industry && industry!=='odontology'?'Zona / referencia (opcional)':'Dientes / zona (opcional)'}</label>
+				<label class="text-sm font-semibold text-fg" for={`${prefix}teeth`}>{industry && industry!=='odontology'?'Zona / referencia (opcional)':'Dientes / zona (opcional)'}</label>
 				<input
 					id={`${prefix}teeth`}
 					name="teeth"
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
+					class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm outline-none transition focus:border-info-primary-500 focus:ring-2 focus:ring-focus-info-primary-100 border-line-strong bg-surface text-fg placeholder:text-copy-subtle"
 					bind:value={teeth}
 					placeholder="Ej: 11-12"
 				/>
 			</div>
 			{#if canViewCosts}
 				<div class="space-y-2">
-					<label class="text-sm font-semibold text-neutral-800 dark:text-white" for={`${prefix}amount`}>Importe (opcional)</label>
+					<label class="text-sm font-semibold text-fg" for={`${prefix}amount`}>Importe (opcional)</label>
 					<input type="hidden" name="amount" value={amountRaw} />
 					<input
 						id={`${prefix}amount`}
 						name="amount_display"
 						type="text"
 						inputmode={entry ? "decimal" : "numeric"}
-						class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
+						class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm outline-none transition focus:border-info-primary-500 focus:ring-2 focus:ring-focus-info-primary-100 border-line-strong bg-surface text-fg placeholder:text-copy-subtle"
 						value={amountDisplay}
 						oninput={handleAmountChange}
 						placeholder="Ej: 18.000"
@@ -228,32 +228,32 @@
 				</div>
 			{/if}
 			<div class="space-y-2">
-				<label class="text-sm font-semibold text-neutral-800 dark:text-white" for={`${prefix}internal_note`}>Nota interna (opcional)</label>
+				<label class="text-sm font-semibold text-fg" for={`${prefix}internal_note`}>Nota interna (opcional)</label>
 				<input
 					id={`${prefix}internal_note`}
 					name="internal_note"
-					class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm shadow-sm outline-none transition text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-[#1f3554] dark:bg-[#0f1f36] dark:text-white dark:placeholder:text-neutral-500"
+					class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm outline-none transition focus:border-info-primary-500 focus:ring-2 focus:ring-focus-info-primary-100 border-line-strong bg-surface text-fg placeholder:text-copy-subtle"
 					bind:value={note}
 					placeholder="Ej: recordar control"
 				/>
 			</div>
 		</div>
 		{#if errorMessage}
-			<p class="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{errorMessage}</p>
+			<p class="rounded-xl bg-chip-red-50 px-4 py-3 text-sm font-semibold text-ink-red-700">{errorMessage}</p>
 		{/if}
-		{#if uncertain}<p class="text-sm text-neutral-700 dark:text-neutral-200" role="alert">No pudimos confirmar si se guardó la consulta. Revisá el historial antes de volver a guardarla. <a class="font-semibold underline" href={`/odonto/pacientes/${patient.id}`}>Revisar historial</a></p>{/if}
+		{#if uncertain}<p class="text-sm text-fg-n200" role="alert">No pudimos confirmar si se guardó la consulta. Revisá el historial antes de volver a guardarla. <a class="font-semibold underline" href={`/odonto/pacientes/${patient.id}`}>Revisar historial</a></p>{/if}
 		<div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
 			<button
 				type="button"
 				onclick={() => (open = false)} disabled={saving}
-				class="w-full rounded-xl px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-white dark:hover:bg-[#1b2d4b] sm:w-auto"
+				class="w-full rounded-xl px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 text-fg hover:bg-fill-1b2d4b sm:w-auto"
 			>
 				Cancelar
 			</button>
 			<button
 				type="submit"
 				disabled={saving || uncertain}
-				class="w-full rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 sm:w-auto"
+				class="w-full rounded-xl bg-info-primary-600 px-4 py-2 text-sm font-semibold text-on-accent shadow-sm transition hover:bg-info-primary-700 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-info-primary-500 sm:w-auto"
 			>
 				{saving ? 'Guardando…' : entry ? 'Guardar cambios' : 'Guardar'}
 			</button>

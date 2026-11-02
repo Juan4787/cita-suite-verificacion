@@ -127,7 +127,7 @@ describe('validación previa del teléfono al crear un turno', () => {
 
 		await user.type(phone, '351 123 4567');
 
-		expect(phone.className).not.toContain('border-amber-300');
+		expect(phone.className).not.toContain('border-warning-300');
 		expect(phone).not.toHaveAttribute('aria-invalid', 'true');
 	});
 
@@ -145,7 +145,7 @@ describe('validación previa del teléfono al crear un turno', () => {
 		const phone = screen.getByLabelText('Teléfono');
 		await waitFor(() => expect(phone).toHaveFocus());
 		expect(screen.queryByText('El número de teléfono no es válido')).not.toBeInTheDocument();
-		expect(phone.className).toContain('border-amber-300');
+		expect(phone.className).toContain('border-warning-300');
 
 		await user.clear(phone);
 		await user.type(phone, '351 123 4567');

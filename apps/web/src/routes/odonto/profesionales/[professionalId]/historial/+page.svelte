@@ -55,18 +55,18 @@
 			{#each data.appointments as appt}
 				<a href={`/odonto/turnos/${appt.id}`} class="ux-choice flex items-center gap-3 p-4">
 					<div class="min-w-0 flex-1">
-						<p class="break-words font-bold text-white">{appt.patients?.full_name ?? 'Paciente'}</p>
-						<p class="mt-0.5 text-sm text-white/55">
-							{formatDateTime(appt.starts_at)}{appt.service_name_snapshot ? ` · ${appt.service_name_snapshot}` : ''} · {statusLabels[appt.status] ?? appt.status}
+						<p class="break-words font-bold text-fg">{appt.patients?.full_name ?? 'Paciente'}</p>
+						<p class="mt-0.5 text-sm text-fg-55">
+							{formatDateTime(appt.starts_at)}{appt.service_name_snapshot ? ` ·\u00a0${appt.service_name_snapshot}` : ''} ·&nbsp;{statusLabels[appt.status] ?? appt.status}
 						</p>
 					</div>
-					<svg class="h-5 w-5 shrink-0 text-white/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+					<svg class="h-5 w-5 shrink-0 text-fg-30" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
 				</a>
 			{/each}
 			{#if data.appointments.length === 0}
 				<EmptyState title="Sin turnos" description="Este profesional no tiene turnos cargados." />
 			{:else if data.appointmentsTotal > data.appointments.length}
-				<p class="text-sm text-white/55">Se muestran los {data.appointments.length} más recientes de {data.appointmentsTotal}.</p>
+				<p class="text-sm text-fg-55">Se muestran los {data.appointments.length} más recientes de {data.appointmentsTotal}.</p>
 			{/if}
 		</div>
 	</div>
@@ -80,21 +80,21 @@
 			{#each data.entries as entry}
 				<a href={`/odonto/pacientes/${entry.patient_id}`} class="ux-choice flex items-center gap-3 p-4">
 					<div class="min-w-0 flex-1">
-						<p class="break-words font-bold text-white">{entry.patients?.full_name ?? 'Paciente'}</p>
-						<p class="mt-0.5 text-sm text-white/55">
-							{formatDateTime(entry.created_at)}{entry.entry_type ? ` · ${entry.entry_type}` : ''}
+						<p class="break-words font-bold text-fg">{entry.patients?.full_name ?? 'Paciente'}</p>
+						<p class="mt-0.5 text-sm text-fg-55">
+							{formatDateTime(entry.created_at)}{entry.entry_type ? ` ·\u00a0${entry.entry_type}` : ''}
 						</p>
 						{#if entry.description}
-							<p class="mt-2 text-sm text-white/70">{entry.description}</p>
+							<p class="mt-2 text-sm text-fg-70">{entry.description}</p>
 						{/if}
 					</div>
-					<svg class="h-5 w-5 shrink-0 text-white/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+					<svg class="h-5 w-5 shrink-0 text-fg-30" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
 				</a>
 			{/each}
 			{#if data.entries.length === 0}
 				<EmptyState title="Sin consultas" description="Este profesional no tiene consultas cargadas." />
 			{:else if data.entriesTotal > data.entries.length}
-				<p class="text-sm text-white/55">Se muestran las {data.entries.length} más recientes de {data.entriesTotal}.</p>
+				<p class="text-sm text-fg-55">Se muestran las {data.entries.length} más recientes de {data.entriesTotal}.</p>
 			{/if}
 		</div>
 	</div>

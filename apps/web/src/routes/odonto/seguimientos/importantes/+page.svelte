@@ -39,7 +39,7 @@
 		{#each data.executing as f (f.id)}
 			<div class="ux-card">
 				<div class="flex items-start justify-between gap-3">
-					<p class="min-w-0 font-bold text-white">
+					<p class="min-w-0 font-bold text-fg">
 						{f.patient_name}: {f.message?.trim() || 'control pendiente'}
 					</p>
 					<button type="button" onclick={() => (editingItem = f)} class="ux-btn-secondary shrink-0 text-sm">
@@ -54,7 +54,7 @@
 		{#if data.executing.length === 0}
 			<EmptyState title="Todo al día" description="No hay recordatorios importantes pendientes." />
 		{:else if data.executingTotal > data.executing.length}
-			<p class="text-sm text-white/55">Se muestran los {data.executing.length} más antiguos de {data.executingTotal}.</p>
+			<p class="text-sm text-fg-55">Se muestran los {data.executing.length} más antiguos de {data.executingTotal}.</p>
 		{/if}
 	</div>
 </section>

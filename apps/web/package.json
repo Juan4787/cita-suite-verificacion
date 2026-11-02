@@ -33,6 +33,7 @@
 		"@testing-library/user-event": "^14.6.1",
 		"@types/web-push": "^3.6.4",
 		"autoprefixer": "^10.4.20",
+		"axe-core": "4.14.0",
 		"fflate": "0.8.3",
 		"jsdom": "^27.3.0",
 		"postcss": "^8.5.25",
@@ -45,8 +46,8 @@
 		"wrangler": "4.86.0"
 	},
 	"dependencies": {
-		"@supabase/supabase-js": "^2.87.1",
 		"@cita-suite/shared": "workspace:*",
+		"@supabase/supabase-js": "^2.87.1",
 		"pdf-lib": "^1.17.1",
 		"web-push": "^3.6.7",
 		"write-excel-file": "4.1.1"

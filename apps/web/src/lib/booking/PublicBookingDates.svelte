@@ -14,7 +14,7 @@
 
 					<section class="ux-card scroll-mt-5" bind:this={activeStepCard}>
 						<h2 class="ux-section-title">Elegí un día</h2>
-						{#if dateWindowLabel}<p class="mt-2 text-sm text-white/70">{dateWindowLabel}</p>{/if}
+						{#if dateWindowLabel}<p class="mt-2 text-sm text-fg-70 bk-muted">{dateWindowLabel}</p>{/if}
 						<div class="mt-5 grid gap-3 sm:grid-cols-2">
 							{#each visibleDays as day (day.date)}
 								<a
@@ -23,8 +23,8 @@
 									href={queryFor({ date: day.date, slot: '' })}
 									class="ux-choice px-4 py-3"
 								>
-									<span class="block font-bold text-white">{day.label}</span>
-									<span class="mt-0.5 block text-sm text-white/50">
+									<span class="block font-bold text-fg bk-text">{day.label}</span>
+									<span class="mt-0.5 block text-sm text-fg-50 bk-muted">
 										Horarios disponibles
 									</span>
 								</a>
@@ -41,10 +41,10 @@
 						{/if}
 						{#if days.length === 0}
 							<div class="ux-empty mt-4">
-								<p class="font-bold text-white/80">
+								<p class="font-bold text-fg-80 bk-muted">
 									No hay horarios disponibles entre estas fechas.
 								</p>
-								<p class="mt-2 text-sm text-white/55">
+								<p class="mt-2 text-sm text-fg-55 bk-muted">
 									{dateWindow?.nextFromDate ? 'Probá con las siguientes fechas.' : 'Elegí otro servicio o profesional, o consultá al consultorio.'}
 								</p>
 								<a
@@ -57,7 +57,7 @@
 										date: '',
 										slot: ''
 									})}
-									class="mt-4 inline-flex font-bold text-[#a78bfa] hover:underline"
+									class="mt-4 inline-flex font-bold text-accent-400 hover:underline bk-accent-text"
 								>
 									{compact ? 'Cambiar el servicio' : selection.bookingMode === 'joint' ? 'Cambiar el equipo' : 'Cambiar el profesional'}
 								</a>

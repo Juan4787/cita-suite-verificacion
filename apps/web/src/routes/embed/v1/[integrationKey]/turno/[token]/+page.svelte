@@ -13,7 +13,7 @@
 <svelte:head><title>Tu turno · {appointment.business.name}</title></svelte:head>
 <BookingAppearance theme={data.theme}>
     {#if data.embed}<BookingFrameBridge context={data.embed} completed={true} />{/if}
-    <main class="min-h-screen bg-[#06111f] px-4 py-5 text-white sm:py-8">{#if data.appointment.price_quote_snapshot}<section class="ux-card mb-5"><h2 class="ux-section-title">Arancel registrado al reservar</h2><p class="mt-2 font-bold">{formatQuotedPrice(data.appointment.price_quote_snapshot)}</p></section>{/if}{#if data.appointment.patient_instructions_snapshot}<section class="ux-card mb-5"><h2 class="ux-section-title">Indicaciones para tu turno</h2><p class="mt-2 whitespace-pre-wrap break-words">{data.appointment.patient_instructions_snapshot}</p></section>{/if}
+    <main class="min-h-screen bg-fill-06111f px-4 py-5 text-fg sm:py-8 bk-text">{#if data.appointment.price_quote_snapshot}<section class="ux-card mb-5"><h2 class="ux-section-title">Arancel registrado al reservar</h2><p class="mt-2 font-bold">{formatQuotedPrice(data.appointment.price_quote_snapshot)}</p></section>{/if}{#if data.appointment.patient_instructions_snapshot}<section class="ux-card mb-5"><h2 class="ux-section-title">Indicaciones para tu turno</h2><p class="mt-2 whitespace-pre-wrap break-words">{data.appointment.patient_instructions_snapshot}</p></section>{/if}
         <div class="mx-auto flex max-w-3xl flex-col gap-4">
             <section class="ux-card">
                 <h1 class="ux-title">{appointment.status === 'cancelled' ? 'Este turno está cancelado' : appointment.is_past ? 'Tu turno' : data.recovered ? 'Recuperamos tu reserva' : 'Tu turno quedó reservado'}</h1>
@@ -26,7 +26,7 @@
                 {#if appointment.business.address}<p class="mt-4">{appointment.business.address}</p>{/if}
                 {#if appointment.business.address_instructions}<p class="mt-2">{appointment.business.address_instructions}</p>{/if}
                 <a class="ux-btn-primary mt-5 inline-flex w-full justify-center" href={'/turno/' + appointment.token} target="_blank" rel="noopener noreferrer">Ver y gestionar mi turno</a>
-                <p class="mt-3 text-sm text-white/55">Abrí tu turno para ver las opciones de calendario, recordatorios, cancelación y solicitud de reprogramación.</p>
+                <p class="mt-3 text-sm text-fg-55 bk-muted">Abrí tu turno para ver las opciones de calendario, recordatorios, cancelación y solicitud de reprogramación.</p>
             <a class="ux-btn-secondary mt-4 inline-flex" href={data.bookingStartUrl}>Reservar otra consulta</a>
             </section>
         </div>

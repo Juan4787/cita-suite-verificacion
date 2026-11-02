@@ -87,7 +87,7 @@
         disabled={saving || cleaning || uploadsPaused}
       /><span>Permitir que adjunten archivos al turno</span></label
     >
-    <p class="mt-2 text-sm text-white/75">
+    <p class="mt-2 text-sm text-fg-75">
       PDF, JPG o PNG. Hasta 5 MB por archivo y 3 archivos por turno, con un
       total de 10 MB.
     </p>
@@ -108,7 +108,7 @@
       value={Math.min(100, clinicPercentage)}
       aria-label="Uso del espacio de este consultorio, incluidas cargas pendientes"
     ></progress>
-    <p class="mt-2 text-sm text-white/75">
+    <p class="mt-2 text-sm text-fg-75">
       {mb(data.budget.business.reserved_bytes)} MB reservados para cargas pendientes.
     </p>
     {#if clinicPercentage >= 100}<p class="ux-alert mt-4">
@@ -141,13 +141,13 @@
       <button class="ux-btn-secondary" disabled={saving || cleaning || dirty}
         >{cleaning ? "Revisando…" : "Limpiar cargas abandonadas"}</button
       >
-      <p class="mt-2 text-sm text-white/75">
+      <p class="mt-2 text-sm text-fg-75">
         Conserva los archivos guardados y la papelera.
       </p>
     </form>
-    <details class="mt-5 border-t border-white/10 pt-4">
+    <details class="mt-5 border-t border-line pt-4">
       <summary class="cursor-pointer min-h-11">Detalle de consumo</summary>
-      <div class="mt-2 space-y-3 text-sm text-white/75">
+      <div class="mt-2 space-y-3 text-sm text-fg-75">
         <p>
           Espacio compartido: {mb(data.budget.used_bytes + data.budget.reserved_bytes)} MB de {mb(data.budget.max_bytes)} MB.
           Los límites por consultorio comparten esa capacidad.

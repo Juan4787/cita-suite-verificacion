@@ -88,10 +88,10 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 	};
 
 	const statusTone: Record<string, string> = {
-		reserved: 'bg-[#7c3aed]/25 text-[#c4b5fd]',
-		confirmed: 'bg-emerald-400/15 text-emerald-200',
-		cancelled: 'bg-red-500/15 text-red-200',
-		reschedule_requested: 'bg-amber-400/15 text-amber-100'
+		reserved: 'bg-accent-600-25 text-accent',
+		confirmed: 'bg-success-soft text-success',
+		cancelled: 'bg-danger-500-15 text-danger',
+		reschedule_requested: 'bg-warning-soft text-warning-100'
 	};
 
 	// Hora y fecha en la zona del consultorio, no en la del navegador.
@@ -106,13 +106,13 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 				: ''
 	);
 	const headerTone = $derived(
-		depositSuffix === ', seña pendiente' ? 'bg-amber-400/15 text-amber-100' : (statusTone[data.appointment?.status ?? ''] ?? 'bg-white/10 text-white')
+		depositSuffix === ', seña pendiente' ? 'bg-warning-soft text-warning-100' : (statusTone[data.appointment?.status ?? ''] ?? 'bg-fill-10 text-fg')
 	);
 	const depositTone: Record<string, string> = {
-		pending: 'bg-amber-400/15 text-amber-100',
-		paid: 'bg-emerald-400/15 text-emerald-200',
-		waived: 'bg-white/10 text-white',
-		expired: 'bg-red-500/15 text-red-200'
+		pending: 'bg-warning-soft text-warning-100',
+		paid: 'bg-success-soft text-success',
+		waived: 'bg-fill-10 text-fg',
+		expired: 'bg-danger-500-15 text-danger'
 	};
 	// Only an active turn changes its deposit; a waiver made by turning the policy off is final.
 	const depositActionsAvailable = $derived(
@@ -353,17 +353,17 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 <section class="flex flex-col gap-5">
 	<div class="flex flex-col items-start gap-4">
 		<BackLink href={`/odonto/agenda?date=${data.fromDate}`} label="Volver" />
-		<div class="flex items-center gap-3 text-sm font-semibold text-neutral-500 dark:text-white/55">
+		<div class="flex items-center gap-3 text-sm font-semibold text-fg-55">
 			<span>Agenda</span>
-			<span class="text-white/25">/</span>
+			<span class="text-fg-25" aria-hidden="true">/</span>
 			<span>Turno</span>
-			<span class="text-white/25">/</span>
-			<span class="text-[#a78bfa]">Detalle</span>
+			<span class="text-fg-25" aria-hidden="true">/</span>
+			<span class="text-accent-400">Detalle</span>
 		</div>
 	</div>
 
 	{#if form?.message}
-		<p class={`rounded-2xl px-4 py-3 text-sm font-semibold ${form.success ? 'bg-emerald-400/15 text-emerald-100' : 'bg-red-500/15 text-red-100'}`}>
+		<p class={`rounded-2xl px-4 py-3 text-sm font-semibold ${form.success ? 'bg-success-soft text-success-100' : 'bg-danger-500-15 text-danger-100'}`}>
 			{form.message}
 		</p>
 	{/if}
@@ -371,14 +371,14 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 	{#if data.justCreated && data.appointment && !data.phoneWarningAcknowledged}
 		<section
 			aria-labelledby="activation-title"
-			class="relative overflow-hidden rounded-3xl border border-violet-300/35 bg-[linear-gradient(135deg,rgba(124,58,237,0.2),rgba(7,22,38,0.96)_62%)] p-5 shadow-2xl shadow-violet-950/25 sm:p-7"
+			class="relative overflow-hidden rounded-3xl border border-accent-300-35 bg-[linear-gradient(135deg,rgba(124,58,237,0.2),rgba(7,22,38,0.96)_62%)] p-5 shadow-2xl shadow-shade-accent-950-30 sm:p-7"
 		>
-			<div class="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-violet-400/10 blur-2xl" aria-hidden="true"></div>
+			<div class="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-accent-400-10 blur-2xl" aria-hidden="true"></div>
 			<div class="relative">
-				<span class="inline-flex rounded-full border border-violet-300/25 bg-violet-300/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-violet-100">
+				<span class="inline-flex rounded-full border border-accent-300-25 bg-accent-300-10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-accent-100">
 					Turno creado
 				</span>
-				<h2 id="activation-title" class="mt-4 text-xl font-bold tracking-tight text-white sm:text-2xl">
+				<h2 id="activation-title" class="mt-4 text-xl font-bold tracking-tight text-fg sm:text-2xl">
 					Último paso
 				</h2>
 				{#if activationWhatsAppHref}
@@ -386,7 +386,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 						href={activationWhatsAppHref}
 						target="_blank"
 						rel="noreferrer"
-						class="group mt-5 flex min-h-[4.5rem] w-full items-center justify-center gap-3 rounded-2xl bg-emerald-500 px-5 py-4 text-center text-lg font-bold leading-tight text-white shadow-xl shadow-emerald-950/30 ring-1 ring-emerald-300/35 transition hover:bg-emerald-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-emerald-300"
+						class="group mt-5 flex min-h-[4.5rem] w-full items-center justify-center gap-3 rounded-2xl bg-success-500 px-5 py-4 text-center text-lg font-bold leading-tight text-on-accent shadow-xl shadow-shade-success-950-30 ring-1 ring-focus-success-300-35 transition hover:bg-success-press focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-focus-success-300"
 					>
 						<svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-6 w-6 shrink-0 transition-transform group-hover:scale-105">
 							<path d="M20.4 11.7a8.4 8.4 0 0 1-12.5 7.3L4 20l1.1-3.7a8.4 8.4 0 1 1 15.3-4.6Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
@@ -394,13 +394,13 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 						</svg>
 						<span>Enviar enlace de activación</span>
 					</a>
-					<p class="mt-3 text-center text-sm font-semibold leading-relaxed text-white/65">
+					<p class="mt-3 text-center text-sm font-semibold leading-relaxed text-fg-65">
 						El paciente recibirá un enlace para activar sus recordatorios.
 					</p>
 				{:else}
-					<div class="mt-5 rounded-2xl border border-amber-300/25 bg-amber-300/[0.08] p-5">
-						<p class="text-base font-bold text-amber-50">Falta completar el teléfono del paciente</p>
-						<p class="mt-2 text-sm leading-relaxed text-amber-50/75">
+					<div class="mt-5 rounded-2xl border border-warning-300-25 bg-warning-400-07 p-5">
+						<p class="text-base font-bold text-warning-50">Falta completar el teléfono del paciente</p>
+						<p class="mt-2 text-sm leading-relaxed text-warning-50-75">
 							Cargá un número argentino completo con código de área para preparar el enlace de WhatsApp.
 						</p>
 						{#if data.appointment?.patients?.id}
@@ -420,9 +420,9 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 	{/if}
 
 	{#if data.justRescheduled && data.appointment}
-		<div class="rounded-3xl border border-emerald-400/30 bg-emerald-400/10 p-5">
-			<h2 class="text-lg font-semibold text-emerald-50">Turno reprogramado</h2>
-			<p class="mt-2 text-sm text-emerald-100/80">
+		<div class="rounded-3xl border border-success-400-30 bg-success-400-10 p-5">
+			<h2 class="text-lg font-semibold text-success-50">Turno reprogramado</h2>
+			<p class="mt-2 text-sm text-success-100-80">
 				Los avisos del horario anterior se invalidaron y los recordatorios se recalcularon para
 				la nueva fecha. Avisale al paciente del cambio.
 			</p>
@@ -432,7 +432,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 						href={rescheduleWhatsAppHref}
 						target="_blank"
 						rel="noreferrer"
-						class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-400"
+						class="inline-flex items-center justify-center gap-2 rounded-2xl bg-success-500 px-5 py-3 text-sm font-bold text-on-accent transition hover:bg-success-press"
 					>
 						Enviar actualización por WhatsApp
 					</a>
@@ -441,14 +441,14 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 							href={data.reschedulePublicUrl}
 							target="_blank"
 							rel="noreferrer"
-							class="text-sm font-semibold text-emerald-100/80 underline"
+							class="text-sm font-semibold text-success-100-80 underline"
 						>
 							Ver lo que verá el paciente
 						</a>
 					{/if}
 				</div>
 			{:else}
-				<p class="mt-4 text-sm font-semibold text-amber-100">
+				<p class="mt-4 text-sm font-semibold text-warning-100">
 					Este paciente no tiene un teléfono válido cargado: avisale del cambio por otro medio.
 				</p>
 			{/if}
@@ -456,22 +456,22 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 	{/if}
 
 	{#if data.appointment}
-		<article class="rounded-3xl border border-[#244062] bg-[#071626] p-5 shadow-2xl shadow-black/20 sm:p-7 lg:p-9">
+		<article class="rounded-3xl border border-line-strong bg-canvas p-5 shadow-2xl shadow-shade-black-10 sm:p-7 lg:p-9">
 			<div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
 				<div class="flex items-start gap-5">
-					<div class="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-[#7c3aed]/35 text-2xl font-bold uppercase text-white ring-1 ring-[#8b5cf6]/40">
+					<div class="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-accent-600-35 text-2xl font-bold uppercase text-fg ring-1 ring-focus-accent-500-35">
 						{(data.appointment.patients?.full_name || data.appointment.service_name_snapshot || '·').trim().charAt(0)}
 					</div>
 					<div>
-						<h1 class="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+						<h1 class="text-3xl font-semibold tracking-tight text-fg md:text-4xl">
 							{data.appointment.service_name_snapshot}
 						</h1>
-						<p class="mt-2 text-lg font-semibold text-white/55">
-							<span class="text-white/40">{isJoint ? 'Equipo:' : 'Profesional:'}</span>
+						<p class="mt-2 text-lg font-semibold text-fg-55">
+							<span class="text-copy-subtle">{isJoint ? 'Equipo:' : 'Profesional:'}</span>
 							{data.appointment.professional_name_snapshot}
 						</p>
 						{#if isJoint}
-							<span class="mt-3 inline-flex rounded-full border border-[#8b5cf6]/30 bg-[#7c3aed]/15 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-[#c4b5fd]">
+							<span class="mt-3 inline-flex rounded-full border border-accent-500-30 bg-accent-soft px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-accent">
 								Turno conjunto · {appointmentProfessionals.length} profesionales
 							</span>
 						{/if}
@@ -483,43 +483,43 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 			</div>
 
 			<div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-				<div class="rounded-2xl border border-white/10 bg-white/[0.045] p-5">
-					<p class="text-sm font-semibold text-white/55">Paciente</p>
-					<p class="mt-2 text-lg font-semibold text-white">{data.appointment.patients?.full_name ?? 'Sin paciente'}</p>
+				<div class="rounded-2xl border border-line bg-fill-04 p-5">
+					<p class="text-sm font-semibold text-fg-55">Paciente</p>
+					<p class="mt-2 text-lg font-semibold text-fg">{data.appointment.patients?.full_name ?? 'Sin paciente'}</p>
 				</div>
-				<div class="rounded-2xl border border-white/10 bg-white/[0.045] p-5">
-					<p class="text-sm font-semibold text-white/55">Fecha</p>
-					<p class="mt-2 text-lg font-semibold capitalize text-white">{dateOnly(data.appointment.starts_at)}</p>
+				<div class="rounded-2xl border border-line bg-fill-04 p-5">
+					<p class="text-sm font-semibold text-fg-55">Fecha</p>
+					<p class="mt-2 text-lg font-semibold capitalize text-fg">{dateOnly(data.appointment.starts_at)}</p>
 				</div>
-				<div class="rounded-2xl border border-white/10 bg-white/[0.045] p-5">
-					<p class="text-sm font-semibold text-white/55">Hora</p>
-					<p class="mt-2 text-lg font-semibold text-white">
+				<div class="rounded-2xl border border-line bg-fill-04 p-5">
+					<p class="text-sm font-semibold text-fg-55">Hora</p>
+					<p class="mt-2 text-lg font-semibold text-fg">
 						{timeOnly(data.appointment.starts_at)} - {timeOnly(data.appointment.ends_at)}
 					</p>
 				</div>
-				<div class="rounded-2xl border border-white/10 bg-white/[0.045] p-5">
-					<p class="text-sm font-semibold text-white/55">Duración</p>
-					<p class="mt-2 text-lg font-semibold text-white">{durationText(data.appointment)}</p>
+				<div class="rounded-2xl border border-line bg-fill-04 p-5">
+					<p class="text-sm font-semibold text-fg-55">Duración</p>
+					<p class="mt-2 text-lg font-semibold text-fg">{durationText(data.appointment)}</p>
 				</div>
 				{#if isJoint}
-					<div class="rounded-2xl border border-[#8b5cf6]/25 bg-[#7c3aed]/10 p-5 md:col-span-2 xl:col-span-4">
-						<p class="text-sm font-semibold text-[#c4b5fd]">Profesionales reservados</p>
+					<div class="rounded-2xl border border-accent-500-25 bg-accent-600-10 p-5 md:col-span-2 xl:col-span-4">
+						<p class="text-sm font-semibold text-accent">Profesionales reservados</p>
 						<div class="mt-3 flex flex-wrap gap-2">
 							{#each appointmentProfessionals as professional}
-								<span class="rounded-full border border-[#8b5cf6]/30 bg-[#7c3aed]/20 px-3 py-2 text-sm font-semibold text-white">
+								<span class="rounded-full border border-accent-500-30 bg-accent-soft px-3 py-2 text-sm font-semibold text-fg">
 									{professional.professional_name_snapshot}
 								</span>
 							{/each}
 						</div>
-						<p class="mt-3 text-sm leading-relaxed text-white/55">
+						<p class="mt-3 text-sm leading-relaxed text-fg-55">
 							Es un único turno y ocupa simultáneamente la agenda de todo el equipo.
 						</p>
 					</div>
 				{/if}
 				{#if data.appointment.booking_context}
-						<div class="rounded-2xl border border-white/10 bg-white/[0.045] p-5">
-							<p class="text-sm font-semibold text-white/55">Modalidad</p>
-							<p class="mt-2 text-base font-semibold text-white">{BOOKING_MODALITY_LABELS[data.appointment.booking_context.modality as BookingModality]}</p>
+						<div class="rounded-2xl border border-line bg-fill-04 p-5">
+							<p class="text-sm font-semibold text-fg-55">Modalidad</p>
+							<p class="mt-2 text-base font-semibold text-fg">{BOOKING_MODALITY_LABELS[data.appointment.booking_context.modality as BookingModality]}</p>
 						</div>
 				{/if}
 				{#if data.appointment.price_quote_snapshot}<div class="ux-soft-card mb-5 p-4"><p class="ux-label">Arancel registrado al reservar</p><p class="mt-2 text-lg font-semibold">{formatQuotedPrice(data.appointment.price_quote_snapshot)}</p></div>{/if}
@@ -527,28 +527,28 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
  <form method="POST" action="?/save_instructions" use:enhance class="ux-soft-card mb-5 space-y-4 p-5">
  <h2 class="ux-section-title">Indicaciones para este turno</h2><input type="hidden" name="updated_at" value={data.appointment.updated_at}/>
  <label class="block"><span class="ux-label">Texto en la página del turno</span><textarea name="instructions" class="ux-textarea mt-2" rows="3" maxlength="2000">{data.appointment.patient_instructions_snapshot??''}</textarea></label>
- <label class="block"><span class="ux-label">Descripción breve del recordatorio</span><textarea name="public_description" class="ux-textarea mt-2" rows="2" maxlength="180">{data.appointment.public_reminder_description_snapshot??''}</textarea><span class="mt-1 block text-sm text-white/75">Puede aparecer en la pantalla bloqueada. No incluyas información clínica ni notas internas.</span></label>
+ <label class="block"><span class="ux-label">Descripción breve del recordatorio</span><textarea name="public_description" class="ux-textarea mt-2" rows="2" maxlength="180">{data.appointment.public_reminder_description_snapshot??''}</textarea><span class="mt-1 block text-sm text-fg-75">Puede aparecer en la pantalla bloqueada. No incluyas información clínica ni notas internas.</span></label>
  <button class="ux-btn-secondary">Guardar indicaciones de este turno</button></form>{/if}
  {#if data.appointment.internal_note}
-					<div class="rounded-2xl border border-white/10 bg-white/[0.045] p-5">
-						<p class="text-sm font-semibold text-white/55">Nota interna</p>
-						<p class="mt-2 text-base font-semibold text-white">{data.appointment.internal_note}</p>
+					<div class="rounded-2xl border border-line bg-fill-04 p-5">
+						<p class="text-sm font-semibold text-fg-55">Nota interna</p>
+						<p class="mt-2 text-base font-semibold text-fg">{data.appointment.internal_note}</p>
 					</div>
 				{/if}
 				{#if data.appointment.cancelled_reason}
-					<div class="rounded-2xl border border-red-400/20 bg-red-500/10 p-5">
-						<p class="text-sm font-semibold text-red-100/70">Motivo de cancelación</p>
-						<p class="mt-2 text-base font-semibold text-white">{data.appointment.cancelled_reason}</p>
+					<div class="rounded-2xl border border-danger-400-20 bg-danger-500-10 p-5">
+						<p class="text-sm font-semibold text-danger-100-70">Motivo de cancelación</p>
+						<p class="mt-2 text-base font-semibold text-fg">{data.appointment.cancelled_reason}</p>
 					</div>
 				{/if}
 			</div>
 			{#if data.appointment.booking_intake?.length}
 				<section class="ux-soft-card mt-5 p-5">
 					<h2 class="ux-section-title">Datos informados al reservar</h2>
-					<p class="mt-2 text-sm text-white/55">Son respuestas aportadas por el paciente desde su reserva. Se conservan junto al turno y al formulario que completó.</p>
+					<p class="mt-2 text-sm text-fg-55">Son respuestas aportadas por el paciente desde su reserva. Se conservan junto al turno y al formulario que completó.</p>
 					<dl class="mt-4 grid gap-4 sm:grid-cols-2">
 						{#each data.appointment.booking_intake as response}
-							<div><dt class="text-sm font-semibold text-white/55">{response.label}</dt><dd class="mt-1 whitespace-pre-wrap break-words">{response.value}</dd></div>
+							<div><dt class="text-sm font-semibold text-fg-55">{response.label}</dt><dd class="mt-1 whitespace-pre-wrap break-words">{response.value}</dd></div>
 						{/each}
 					</dl>
 				</section>
@@ -562,10 +562,10 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 							{DEPOSIT_STATUS_LABELS[data.deposit.status]}
 						</span>
 					</div>
-					<p class="mt-3 text-white">
+					<p class="mt-3 text-fg">
 						{formatDepositAmount(data.deposit.amount)} · vence el {formatInTimeZone(data.deposit.due_at, timeZone).full}
 					</p>
-					<p class="mt-2 text-sm text-white/65">
+					<p class="mt-2 text-sm text-fg-65">
 						{#if data.deposit.status === 'pending'}
 							{data.deposit.cancelsItself === true
 								? 'Si no se registra antes del vencimiento, el turno se cancela solo.'
@@ -593,7 +593,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 								<details>
 									<summary class="ux-btn-secondary cursor-pointer list-none">Exceptuar</summary>
 									<form method="POST" action="?/deposit" class="mt-2 flex flex-col gap-2">
-										<p class="max-w-72 text-xs text-white/55">El turno queda Confirmado sin seña, como decisión del consultorio.</p>
+										<p class="max-w-72 text-xs text-fg-55">El turno queda Confirmado sin seña, como decisión del consultorio.</p>
 										<input type="hidden" name="deposit_action" value="waived" />
 										<input type="hidden" name="expected_revision" value={data.deposit.revision} />
 										<button class="ux-btn-secondary">Sí, exceptuar la seña</button>
@@ -603,7 +603,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 								<details>
 									<summary class="ux-btn-secondary cursor-pointer list-none">Deshacer</summary>
 									<form method="POST" action="?/deposit" class="mt-2 flex flex-col gap-2">
-										<p class="max-w-72 text-xs text-white/55">
+										<p class="max-w-72 text-xs text-fg-55">
 											La seña vuelve a pendiente y, si el turno estaba Confirmado, vuelve a Reservado.
 										</p>
 										<input type="hidden" name="deposit_action" value="pending" />
@@ -619,16 +619,16 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 
 			{#if canShowCancelAction}
 				<div class="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-					<details class="rounded-2xl border border-red-400/20 bg-red-500/10 md:col-span-2 xl:col-span-3">
-						<summary class="cursor-pointer list-none px-5 py-5 text-lg font-bold text-red-100">Cancelar turno</summary>
-						<form method="POST" action="?/update_status" class="border-t border-red-400/20 p-5">
+					<details class="rounded-2xl border border-danger-400-20 bg-danger-500-10 md:col-span-2 xl:col-span-3">
+						<summary class="cursor-pointer list-none px-5 py-5 text-lg font-bold text-danger-100">Cancelar turno</summary>
+						<form method="POST" action="?/update_status" class="border-t border-danger-400-20 p-5">
 							<input type="hidden" name="status" value="cancelled" />
 							<label>
 								<span class="ux-label">Motivo (opcional)</span>
 								<textarea name="reason" rows="2" disabled={!canUseStatusAction('cancelled')} class="ux-textarea"></textarea>
 							</label>
-							<label class="mt-4 flex items-start gap-3 text-sm font-bold text-red-100">
-								<input type="checkbox" required disabled={!canUseStatusAction('cancelled')} class="mt-1 h-4 w-4 accent-red-600 disabled:opacity-60" />
+							<label class="mt-4 flex items-start gap-3 text-sm font-bold text-danger-100">
+								<input type="checkbox" required disabled={!canUseStatusAction('cancelled')} class="mt-1 h-4 w-4 accent-check-danger-600 disabled:opacity-60" />
 								<span>Confirmo que quiero cancelar este turno.</span>
 							</label>
 							<button disabled={!canUseStatusAction('cancelled')} class="ux-btn-danger mt-4 w-full">Cancelar turno</button>
@@ -637,73 +637,73 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 				</div>
 			{/if}
 
-			<div class="mt-7 grid gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-5 lg:grid-cols-3">
+			<div class="mt-7 grid gap-4 rounded-2xl border border-line bg-fill-04 p-5 lg:grid-cols-3">
 				<div>
-					<p class="text-sm font-semibold text-white/45">Teléfono</p>
-					<p class="mt-1 text-base font-semibold text-white">{data.appointment.patients?.phone_e164 ?? 'Sin teléfono'}</p>
+					<p class="text-sm font-semibold text-copy-subtle">Teléfono</p>
+					<p class="mt-1 text-base font-semibold text-fg">{data.appointment.patients?.phone_e164 ?? 'Sin teléfono'}</p>
 				</div>
 				<div>
-					<p class="text-sm font-semibold text-white/45">Correo</p>
-					<p class="mt-1 text-base font-semibold text-white">{data.appointment.patients?.email ?? 'Sin correo electrónico'}</p>
+					<p class="text-sm font-semibold text-copy-subtle">Correo</p>
+					<p class="mt-1 text-base font-semibold text-fg">{data.appointment.patients?.email ?? 'Sin correo electrónico'}</p>
 				</div>
 				<div>
-					<p class="text-sm font-semibold text-white/45">Origen</p>
-					<p class="mt-1 text-base font-semibold text-white">{sourceLabels[data.appointment.source] ?? data.appointment.source}</p>
+					<p class="text-sm font-semibold text-copy-subtle">Origen</p>
+					<p class="mt-1 text-base font-semibold text-fg">{sourceLabels[data.appointment.source] ?? data.appointment.source}</p>
 				</div>
 			</div>
 		</article>
 
-		<details bind:open={reprogramOpen} id="reprogramar" class="group rounded-3xl border border-[#244062] bg-[#071626] shadow-xl shadow-black/10">
-			<summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-5 text-lg font-semibold text-white sm:px-7">
+		<details bind:open={reprogramOpen} id="reprogramar" class="group rounded-3xl border border-line-strong bg-canvas shadow-xl shadow-shade-black-10">
+			<summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-5 text-lg font-semibold text-fg sm:px-7">
 				<span>Reprogramar</span>
-				<svg viewBox="0 0 20 20" fill="none" aria-hidden="true" class="h-4 w-4 shrink-0 text-white/35 transition-transform duration-200 group-open:rotate-180">
+				<svg viewBox="0 0 20 20" fill="none" aria-hidden="true" class="h-4 w-4 shrink-0 text-fg-35 transition-transform duration-200 group-open:rotate-180">
 					<path d="m6.5 8 3.5 3.5L13.5 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
 				</svg>
 			</summary>
-			<div class="border-t border-white/10 px-5 py-6 sm:px-7">
+			<div class="border-t border-line px-5 py-6 sm:px-7">
 				<div>
-					<div class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
-						<h2 class="text-lg font-semibold text-white">Reprogramar</h2>
+					<div class="rounded-2xl border border-line bg-fill-04 p-5">
+						<h2 class="text-lg font-semibold text-fg">Reprogramar</h2>
 						{#if !canOperate || isClosed}
-							<p class="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/55">
+							<p class="mt-3 rounded-2xl border border-line bg-fill-04 px-4 py-3 text-sm text-fg-55">
 								{isClosed
 									? 'Este turno está cerrado, no se puede reprogramar.'
 									: 'No tenés permiso para reprogramar este turno.'}
 							</p>
 						{:else}
 							{#if isJoint}
-								<div class="mt-4 rounded-2xl border border-[#8b5cf6]/25 bg-[#7c3aed]/10 p-4">
-									<p class="text-sm font-bold text-[#c4b5fd]">
+								<div class="mt-4 rounded-2xl border border-accent-500-25 bg-accent-600-10 p-4">
+									<p class="text-sm font-bold text-accent">
 										Se recalculará la disponibilidad de todo el equipo
 									</p>
-									<p class="mt-1 text-sm leading-relaxed text-white/60">
+									<p class="mt-1 text-sm leading-relaxed text-fg-60">
 										Sólo verás horarios en los que los {appointmentProfessionals.length} profesionales estén libres. Si uno no puede, el turno completo conserva su horario actual.
 									</p>
 								</div>
 							{/if}
 
-							<label class="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-amber-300/20 bg-amber-400/[0.07] p-4">
+							<label class="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-warning-300-20 bg-warning-400-07 p-4">
 								<input
 									type="checkbox"
 									checked={ignoreBreak}
 									onchange={updateIgnoreBreak}
-									class="mt-1 h-5 w-5 shrink-0 accent-amber-400"
+									class="mt-1 h-5 w-5 shrink-0 accent-check-warning-400"
 								/>
 								<span>
-									<span class="block text-sm font-bold text-amber-100">Ignorar descanso en la nueva fecha</span>
-									<span class="mt-1 block text-sm leading-relaxed text-amber-100/70">
+									<span class="block text-sm font-bold text-warning-100">Ignorar descanso en la nueva fecha</span>
+									<span class="mt-1 block text-sm leading-relaxed text-warning-100-70">
 										Usalo sólo después de confirmar que puede comenzarse inmediatamente. Nunca permite superponer dos atenciones reales.
 									</span>
 								</span>
 							</label>
 
-							<div class="mt-4 rounded-2xl border border-white/10 bg-[#0a1b2e] p-4">
+							<div class="mt-4 rounded-2xl border border-line bg-surface p-4">
 								<div class="flex items-center justify-between">
-									<button type="button" onclick={prevMonth} disabled={!canGoPrev} aria-label="Mes anterior" class="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-lg text-white/80 transition hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent">‹</button>
-									<span class="text-sm font-semibold capitalize text-white">{monthLabel}</span>
-									<button type="button" onclick={nextMonth} aria-label="Mes siguiente" class="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-lg text-white/80 transition hover:bg-white/10">›</button>
+									<button type="button" onclick={prevMonth} disabled={!canGoPrev} aria-label="Mes anterior" class="grid h-9 w-9 place-items-center rounded-xl border border-line text-lg text-fg-80 transition hover:bg-fill-10 disabled:opacity-30 disabled:hover:bg-transparent">‹</button>
+									<span class="text-sm font-semibold capitalize text-fg">{monthLabel}</span>
+									<button type="button" onclick={nextMonth} aria-label="Mes siguiente" class="grid h-9 w-9 place-items-center rounded-xl border border-line text-lg text-fg-80 transition hover:bg-fill-10">›</button>
 								</div>
-								<div class="mt-3 grid grid-cols-7 gap-1 text-center text-xs font-semibold text-white/35">
+								<div class="mt-3 grid grid-cols-7 gap-1 text-center text-xs font-semibold text-copy-subtle">
 									{#each weekdayLabels as wd}
 										<span class="py-1">{wd}</span>
 									{/each}
@@ -719,11 +719,11 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 												disabled={isPast(cell.iso)}
 												class={`grid h-10 place-items-center rounded-xl text-sm font-semibold transition ${
 													isSelected(cell.iso)
-														? 'bg-[#7c3aed] text-white shadow-lg shadow-[#7c3aed]/30'
+														? 'bg-accent-strong text-on-accent shadow-lg shadow-shade-accent-600-30'
 														: isPast(cell.iso)
-															? 'cursor-not-allowed text-white/20'
-															: 'text-white/80 hover:bg-white/10'
-												} ${isToday(cell.iso) && !isSelected(cell.iso) ? 'ring-1 ring-[#8b5cf6]/60' : ''}`}
+															? 'cursor-not-allowed text-fg-20'
+															: 'text-fg-80 hover:bg-fill-10'
+												} ${isToday(cell.iso) && !isSelected(cell.iso) ? 'ring-1 ring-focus-accent-500-60' : ''}`}
 											>
 												{cell.day}
 											</button>
@@ -734,24 +734,24 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 
 							<div class="mt-4">
 								<div class="flex items-center justify-between gap-2">
-									<span class="text-sm font-semibold text-white/65">
-										Horarios · <span class="capitalize text-white">{selectedDayLabel}</span>
+									<span class="text-sm font-semibold text-fg-65">
+										Horarios · <span class="capitalize text-fg">{selectedDayLabel}</span>
 									</span>
 									{#if loadingSlots}
-										<span class="text-xs font-semibold text-[#a78bfa]">Buscando…</span>
+										<span class="text-xs font-semibold text-accent-400">Buscando…</span>
 									{/if}
 								</div>
 
 								{#if slotsError}
-									<p class="mt-3 rounded-xl bg-red-500/15 px-3 py-2 text-sm text-red-100">{slotsError}</p>
+									<p class="mt-3 rounded-xl bg-danger-500-15 px-3 py-2 text-sm text-danger-100">{slotsError}</p>
 								{:else if loadingSlots && currentSlots.length === 0}
 									<div class="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
 										{#each Array(8) as _}
-											<div class="h-10 animate-pulse rounded-xl bg-white/5"></div>
+											<div class="h-10 animate-pulse rounded-xl bg-fill-04"></div>
 										{/each}
 									</div>
 								{:else if currentSlots.length === 0}
-									<p class="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-sm text-white/55">
+									<p class="mt-3 rounded-xl border border-line bg-fill-04 px-3 py-3 text-sm text-fg-55">
 										No hay horarios disponibles ese día. Probá con otra fecha.
 									</p>
 								{:else}
@@ -762,8 +762,8 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 												onclick={() => (selectedSlot = slot.starts_at)}
 												class={`rounded-xl border px-2 py-2.5 text-sm font-semibold tabular-nums transition ${
 													selectedSlot === slot.starts_at
-														? 'border-[#7c3aed] bg-[#7c3aed] text-white shadow-lg shadow-[#7c3aed]/30'
-														: 'border-white/10 bg-white/[0.04] text-white/85 hover:border-[#8b5cf6]/60 hover:bg-white/10'
+														? 'border-accent-600 bg-accent-strong text-on-accent shadow-lg shadow-shade-accent-600-30'
+														: 'border-line bg-fill-04 text-fg-85 hover:border-accent-500-60 hover:bg-fill-10'
 												}`}
 											>
 												{slot.time}
@@ -780,7 +780,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 								<button
 									type="submit"
 									disabled={!selectedSlot || submitting}
-									class="w-full rounded-2xl bg-[#7c3aed] px-5 py-4 text-sm font-semibold text-white transition hover:bg-[#6d28d9] disabled:cursor-not-allowed disabled:opacity-40"
+									class="w-full rounded-2xl bg-accent-strong px-5 py-4 text-sm font-semibold text-on-accent transition hover:bg-accent-press disabled:cursor-not-allowed disabled:opacity-40"
 								>
 									{submitting
 										? 'Reprogramando…'
@@ -796,29 +796,29 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 			</div>
 		</details>
 
-		<details class="group rounded-3xl border border-[#244062] bg-[#071626] shadow-xl shadow-black/10">
-			<summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-5 text-lg font-semibold text-white sm:px-7">
+		<details class="group rounded-3xl border border-line-strong bg-canvas shadow-xl shadow-shade-black-10">
+			<summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-5 text-lg font-semibold text-fg sm:px-7">
 				<span>Historial</span>
-				<svg viewBox="0 0 20 20" fill="none" aria-hidden="true" class="h-4 w-4 shrink-0 text-white/35 transition-transform duration-200 group-open:rotate-180">
+				<svg viewBox="0 0 20 20" fill="none" aria-hidden="true" class="h-4 w-4 shrink-0 text-fg-35 transition-transform duration-200 group-open:rotate-180">
 					<path d="m6.5 8 3.5 3.5L13.5 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
 				</svg>
 			</summary>
-			<div class="border-t border-white/10 px-5 py-6 sm:px-7">
+			<div class="border-t border-line px-5 py-6 sm:px-7">
 				<div class="grid gap-3">
 					{#if data.auditLogs === null}
 						<p class="ux-alert">No pudimos cargar el historial del turno. Volvé a intentar en unos momentos.</p>
 					{/if}
 					{#each data.auditLogs ?? [] as log}
-						<div class="rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-4 text-sm">
-							<p class="font-semibold text-white">{auditLabel(log)}</p>
-							<p class="mt-1 text-xs font-semibold text-white/45">{formatDateTime(log.created_at)}</p>
+						<div class="rounded-2xl border border-line bg-fill-04 px-4 py-4 text-sm">
+							<p class="font-semibold text-fg">{auditLabel(log)}</p>
+							<p class="mt-1 text-xs font-semibold text-copy-subtle">{formatDateTime(log.created_at)}</p>
 							{#if auditDetail(log)}
-								<p class="mt-2 text-white/70">{auditDetail(log)}</p>
+								<p class="mt-2 text-fg-70">{auditDetail(log)}</p>
 							{/if}
 						</div>
 					{/each}
 					{#if data.auditLogs?.length === 0}
-						<p class="rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-4 text-sm text-white/60">
+						<p class="rounded-2xl border border-line bg-fill-04 px-4 py-4 text-sm text-fg-60">
 							Todavía no hay movimientos registrados.
 						</p>
 					{/if}

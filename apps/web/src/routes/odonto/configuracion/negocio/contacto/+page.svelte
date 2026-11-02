@@ -80,11 +80,11 @@
           bind:checked={settings.public_contact_enabled}
         /><span>Mostrar el teléfono y la dirección en la web</span></label
       >
-      <p class="text-sm text-white/75">
+      <p class="text-sm text-fg-75">
         Se usan los datos del consultorio, incluso si las reservas están
         pausadas.
       </p>
-      <div class="border-t border-white/10 pt-5">
+      <div class="border-t border-line pt-5">
         <h2 class="ux-section-title">WhatsApp de contacto</h2>
         <label class="mt-4 flex min-h-11 items-center gap-3"
           ><input
@@ -107,7 +107,7 @@
             /></label
           ><label class="block"
             ><span class="ux-label"
-              >Mensaje inicial <span class="text-white/65">(opcional)</span
+              >Mensaje inicial <span class="text-fg-65">(opcional)</span
               ></span
             ><textarea
               class="ux-textarea mt-2"

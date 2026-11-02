@@ -59,10 +59,10 @@
 			{#each data.programmed as f (f.id)}
 				<div class="ux-choice flex items-start justify-between gap-3 p-4">
 					<div class="min-w-0">
-						<p class="font-bold text-white">
+						<p class="font-bold text-fg">
 							{f.patient_name}{f.message?.trim() ? `: ${f.message.trim()}` : ''}
 						</p>
-						<p class="mt-1 text-sm text-white/55">Fecha: {dateLabel(f.remind_on)}</p>
+						<p class="mt-1 text-sm text-fg-55">Fecha: {dateLabel(f.remind_on)}</p>
 					</div>
 					<button type="button" onclick={() => (editingItem = f)} class="ux-btn-secondary shrink-0 text-sm">
 						Editar
@@ -75,7 +75,7 @@
 					description="No hay recordatorios programados para más adelante."
 				/>
 			{:else if data.programmedTotal > data.programmed.length}
-				<p class="text-sm text-white/55">Se muestran los {data.programmed.length} más próximos de {data.programmedTotal}.</p>
+				<p class="text-sm text-fg-55">Se muestran los {data.programmed.length} más próximos de {data.programmedTotal}.</p>
 			{/if}
 		</div>
 	</div>

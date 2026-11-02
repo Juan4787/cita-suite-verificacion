@@ -20,9 +20,10 @@ test.describe('Login/registro - UX', () => {
 
 		const modeNav = page.locator('.ux-pill-nav');
 		await modeNav.getByRole('button', { name: 'Crear cuenta' }).click();
-		await expect(modeNav.getByRole('button', { name: 'Crear cuenta', exact: true })).toHaveClass(
-			/bg-\[#7c3aed\]/
-		);
+		// The chosen mode is filled with the primary violet of the theme (light by default).
+		const register = modeNav.getByRole('button', { name: 'Crear cuenta', exact: true });
+		await expect(register).toHaveClass(/(?:^|\s)bg-accent-strong(?:\s|$)/);
+		await expect(register).toHaveCSS('background-color', 'rgb(102, 51, 194)');
 		await expectWholeHintsOnPhones(page);
 
 		const email = page.locator('#email');
@@ -44,7 +45,8 @@ test.describe('Login/registro - UX', () => {
 		await page.locator('form').first().getByRole('button', { name: 'Crear cuenta', exact: true }).click();
 
 		await expect(page.getByText('Las contraseñas no coinciden.')).toBeVisible();
-		await expect(modeNav.getByRole('button', { name: 'Crear cuenta', exact: true })).toHaveClass(/bg-\[#7c3aed\]/);
+		// After the failed attempt, «Crear cuenta» is still the chosen mode.
+		await expect(register).toHaveClass(/(?:^|\s)bg-accent-strong(?:\s|$)/);
 		await expect(email).toHaveValue('cliente-ux@example.com');
 		await expect(password).toHaveValue('secreto123');
 		await expect(confirmPassword).toHaveValue('distinto123');

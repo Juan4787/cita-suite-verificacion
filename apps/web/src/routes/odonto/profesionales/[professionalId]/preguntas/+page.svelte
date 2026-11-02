@@ -51,7 +51,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    border-bottom: 1px solid var(--border);
   }
   .professional-navigation a,
   .professional-navigation span {
@@ -60,11 +60,11 @@
     font-size: 0.9375rem;
   }
   .professional-navigation span {
-    color: var(--accent);
+    color: var(--accent-text);
     border-bottom: 2px solid currentColor;
   }
   .professional-navigation a:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--c-bg-fill-04);
   }
   @media (max-width: 480px) {
     .professional-navigation {
