@@ -26,7 +26,7 @@
 
 					<section class="ux-card scroll-mt-5" bind:this={activeStepCard}>
 						<h2 class="ux-section-title">¿Con quién?</h2>
-						<div class="mt-5 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5">
+						<div class="mt-5 grid grid-cols-2 gap-2 rounded-2xl border border-line bg-fill-04 p-1.5 bk-line bk-soft">
 							<a
 								data-sveltekit-noscroll
 								href={queryFor({
@@ -39,8 +39,8 @@
 								aria-current={selection.bookingMode === 'individual' ? 'true' : undefined}
 								class={`rounded-xl px-3 py-3 text-center text-sm font-bold transition ${
 									selection.bookingMode === 'individual'
-										? 'bg-[#7c3aed] text-white shadow-lg shadow-violet-950/30'
-										: 'text-white/60 hover:bg-white/[0.06] hover:text-white'
+										? 'bg-accent-strong text-on-accent shadow-lg shadow-shade-accent-950-30 bk-text bk-accent-fill'
+										: 'text-fg-60 hover:bg-fill-04 hover:text-fg bk-muted bk-soft'
 								}`}
 							>
 								Un profesional
@@ -58,8 +58,8 @@
 									aria-current={selection.bookingMode === 'joint' ? 'true' : undefined}
 									class={`rounded-xl px-3 py-3 text-center text-sm font-bold transition ${
 										selection.bookingMode === 'joint'
-											? 'bg-[#7c3aed] text-white shadow-lg shadow-violet-950/30'
-											: 'text-white/60 hover:bg-white/[0.06] hover:text-white'
+											? 'bg-accent-strong text-on-accent shadow-lg shadow-shade-accent-950-30 bk-text bk-accent-fill'
+											: 'text-fg-60 hover:bg-fill-04 hover:text-fg bk-muted bk-soft'
 									}`}
 								>
 									Equipo de profesionales
@@ -67,7 +67,7 @@
 							{:else}
 								<span
 									aria-disabled="true"
-									class="cursor-not-allowed rounded-xl px-3 py-3 text-center text-sm font-bold text-white/25"
+									class="cursor-not-allowed rounded-xl px-3 py-3 text-center text-sm font-bold text-fg-25 bk-muted"
 									title="Este procedimiento tiene un solo profesional disponible."
 								>
 									Equipo de profesionales
@@ -76,7 +76,7 @@
 						</div>
 
 						{#if selection.bookingMode === 'joint'}
-							<p class="mt-4 text-sm leading-relaxed text-white/55">
+							<p class="mt-4 text-sm leading-relaxed text-fg-55 bk-muted">
 								Seleccioná dos o más integrantes. Sólo te mostraremos días y horarios en los que todo el
 								equipo pueda atender al mismo tiempo.
 							</p>
@@ -88,27 +88,27 @@
 										onclick={() => toggleTeamProfessional(professional.id)}
 										class={`ux-choice flex min-h-24 items-start gap-4 p-5 text-left ${
 											teamDraftIds.includes(professional.id)
-												? 'border-[#8b5cf6] bg-[#7c3aed]/20 ring-1 ring-[#8b5cf6]/50'
+												? 'border-accent bg-accent-soft ring-1 ring-focus-accent-500-50 bk-accent-fill'
 												: ''
 										}`}
 									>
 										{#if professional.avatar_url}
 											<img src={professional.avatar_url} alt="" class="h-12 w-12 shrink-0 rounded-full object-cover" />
 										{:else}
-											<div class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/10 text-sm font-bold text-white/80">
+											<div class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-fill-10 text-sm font-bold text-fg-80 bk-muted bk-soft">
 												{initialsFor(professional.name)}
 											</div>
 										{/if}
 										<div class="min-w-0 flex-1">
-											<p class="text-lg font-bold text-white">{professional.name}</p>
-											<p class="mt-0.5 text-sm text-white/55">{professional.specialty ?? 'Profesional'}</p>
+											<p class="text-lg font-bold text-fg bk-text">{professional.name}</p>
+											<p class="mt-0.5 text-sm text-fg-55 bk-muted">{professional.specialty ?? 'Profesional'}</p>
 										</div>
 										<span
 											aria-hidden="true"
 											class={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-sm font-bold ${
 												teamDraftIds.includes(professional.id)
-													? 'border-[#a78bfa] bg-[#7c3aed] text-white'
-													: 'border-white/20 text-transparent'
+													? 'border-accent-400 bg-accent-strong text-on-accent bk-text bk-accent-fill'
+													: 'border-line-20 text-transparent bk-line'
 											}`}
 										>
 											<Icon name="check" class="h-4 w-4" />
@@ -116,7 +116,7 @@
 									</button>
 								{/each}
 							</div>
-							<p class="mt-4 text-sm font-semibold text-white/60" aria-live="polite">
+							<p class="mt-4 text-sm font-semibold text-fg-60 bk-muted" aria-live="polite">
 								{orderedTeamDraftIds.length === 0
 									? 'Todavía no seleccionaste integrantes.'
 									: `${orderedTeamDraftIds.length} ${
@@ -143,7 +143,7 @@
 								</button>
 							{/if}
 						{:else}
-							<p class="mt-4 text-sm text-white/55">Elegí quién realizará el procedimiento.</p>
+							<p class="mt-4 text-sm text-fg-55 bk-muted">Elegí quién realizará el procedimiento.</p>
 							<div class="mt-4 grid gap-3 sm:grid-cols-2">
 								{#each professionals as professional (professional.id)}
 									<a
@@ -161,13 +161,13 @@
 										{#if professional.avatar_url}
 											<img src={professional.avatar_url} alt="" class="h-12 w-12 shrink-0 rounded-full object-cover" />
 										{:else}
-											<div class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/10 text-sm font-bold text-white/80">
+											<div class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-fill-10 text-sm font-bold text-fg-80 bk-muted bk-soft">
 												{initialsFor(professional.name)}
 											</div>
 										{/if}
 										<div class="min-w-0">
-											<p class="text-lg font-bold text-white">{professional.name}</p>
-											<p class="mt-0.5 text-sm text-white/55">{professional.specialty ?? 'Profesional'}</p>
+											<p class="text-lg font-bold text-fg bk-text">{professional.name}</p>
+											<p class="mt-0.5 text-sm text-fg-55 bk-muted">{professional.specialty ?? 'Profesional'}</p>
 										</div>
 									</a>
 								{/each}

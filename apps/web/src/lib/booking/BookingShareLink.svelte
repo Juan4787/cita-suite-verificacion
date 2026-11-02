@@ -28,7 +28,7 @@
     rel="noreferrer">Ver como paciente</a
   >
 </div>
-<p class="min-h-5 mt-2 text-sm text-white/80" role="status">{message}</p>
+<p class="min-h-5 mt-2 text-sm text-fg-80" role="status">{message}</p>
 
 <style>
   .share-link {
@@ -41,17 +41,18 @@
     white-space: nowrap;
   }
   @media (max-width: 640px) {
+    /* The field takes the first row. The two actions share the next one while both labels fit on
+       one line; otherwise each takes its own row, so a label never splits in two lines. */
     .share-link {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      flex-wrap: wrap;
     }
     .share-link label {
-      grid-column: 1/-1;
+      flex-basis: 100%;
     }
     .share-link :global(.ux-btn-primary),
     .share-link :global(.ux-btn-secondary) {
-      padding: 0.75rem 0.5rem;
-      white-space: normal;
+      flex: 1 1 auto;
+      padding: 0.75rem 1rem;
     }
   }
 </style>

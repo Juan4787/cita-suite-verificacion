@@ -33,7 +33,7 @@
 			<div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
 				<div class="min-w-0 flex-1">
 					<h2 class="ux-section-title">Perfil</h2>
-					<p class="mt-1 text-sm text-white/55">Datos básicos del profesional.</p>
+					<p class="mt-1 text-sm text-fg-55">Datos básicos del profesional.</p>
 					{#if missingItems.includes('Nombre visible')}
 						<p class="ux-section-meta ux-section-meta-danger">Nombre visible necesario para recibir turnos</p>
 					{:else if shouldSaveProfile}
@@ -78,14 +78,14 @@
 					<input name="email" bind:value={draft.email} type="email" disabled={!canOperate} class={`ux-input ${fieldStateClass(dirtyFields.email)}`} />
 				</label>
 			</div>
-			<label class={`mt-5 inline-flex items-center gap-3 rounded-2xl border bg-white/[0.04] px-4 py-3 text-sm font-bold text-white ${fieldStateClass(dirtyFields.profilePublic) || 'border-white/10'}`}>
+			<label class={`mt-5 inline-flex items-center gap-3 rounded-2xl border bg-fill-04 px-4 py-3 text-sm font-bold text-fg ${fieldStateClass(dirtyFields.profilePublic) || 'border-line'}`}>
 				<input
 					type="checkbox"
 						name="is_available"
 						value="true"
 						bind:checked={draft.isAvailable}
 						disabled={!canOperate || accountLinkPending}
-						class="accent-[#7c3aed]"
+						class="accent-check-accent-600"
 					/>
 					{accountLinkPending ? 'Visible cuando vincule su cuenta' : 'Visible en reservas'}
 				{#if dirtyFields.profilePublic}<span class="ux-inline-status ux-inline-status-warning">Sin guardar</span>{/if}

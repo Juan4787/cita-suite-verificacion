@@ -84,12 +84,12 @@
 
 <div class="space-y-3">
 	{#if value}
-		<div class="rounded-2xl border border-[#7c3aed]/40 bg-[#7c3aed]/10 px-4 py-3 text-center">
-			<p class="text-micro font-bold uppercase tracking-wide text-[#b89bff]">Fecha del recordatorio</p>
-			<p class="mt-1 text-lg font-bold leading-tight text-white">{fullLabel(value)}</p>
+		<div class="rounded-2xl border border-accent-600-40 bg-accent-600-10 px-4 py-3 text-center">
+			<p class="text-micro font-bold uppercase tracking-wide text-accent-b89bff">Fecha del recordatorio</p>
+			<p class="mt-1 text-lg font-bold leading-tight text-fg">{fullLabel(value)}</p>
 		</div>
 	{:else}
-		<p class="text-sm text-white/55">Elegí cuándo querés que la app te recuerde contactar al paciente.</p>
+		<p class="text-sm text-fg-55">Elegí cuándo querés que la app te recuerde contactar al paciente.</p>
 	{/if}
 
 	<div class="flex flex-wrap gap-2">
@@ -99,8 +99,8 @@
 				onclick={() => choose(p.iso)}
 				class={`rounded-full px-3 py-1.5 text-sm font-bold transition ${
 					value === p.iso
-						? 'bg-[#7c3aed] text-white'
-						: 'bg-white/5 text-white/70 hover:bg-white/10'
+						? 'bg-accent-strong text-on-accent'
+						: 'bg-fill-04 text-fg-70 hover:bg-fill-10'
 				}`}
 			>
 				{p.label}
@@ -113,7 +113,7 @@
 				showCalendar = !showCalendar;
 			}}
 			class={`rounded-full px-3 py-1.5 text-sm font-bold transition ${
-				showCalendar ? 'bg-white/15 text-white' : 'bg-white/5 text-white/70 hover:bg-white/10'
+				showCalendar ? 'bg-fill-15 text-fg' : 'bg-fill-04 text-fg-70 hover:bg-fill-10'
 			}`}
 		>
 			Elegir fecha
@@ -121,26 +121,26 @@
 	</div>
 
 	{#if showCalendar}
-		<div class="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+		<div class="rounded-2xl border border-line bg-fill-04 p-3">
 			<div class="flex items-center justify-between">
 				<button
 					type="button"
 					onclick={prevMonth}
 					disabled={!canGoPrev}
-					class="grid h-9 w-9 place-items-center rounded-full text-white/70 transition hover:bg-white/10 disabled:opacity-30"
+					class="grid h-9 w-9 place-items-center rounded-full text-fg-70 transition hover:bg-fill-10 disabled:opacity-30"
 					aria-label="Mes anterior"
 				>‹</button>
-				<span class="text-sm font-bold text-white">{monthTitle}</span>
+				<span class="text-sm font-bold text-fg">{monthTitle}</span>
 				<button
 					type="button"
 					onclick={nextMonth}
-					class="grid h-9 w-9 place-items-center rounded-full text-white/70 transition hover:bg-white/10"
+					class="grid h-9 w-9 place-items-center rounded-full text-fg-70 transition hover:bg-fill-10"
 					aria-label="Mes siguiente"
 				>›</button>
 			</div>
 			<div class="mt-2 grid grid-cols-7 gap-1 text-center">
 				{#each WEEKDAYS as wd}
-					<span class="py-1 text-micro font-bold text-white/40">{wd}</span>
+					<span class="py-1 text-micro font-bold text-copy-subtle">{wd}</span>
 				{/each}
 				{#each grid as cell}
 					{#if cell}
@@ -148,7 +148,7 @@
 							type="button"
 							onclick={() => choose(cell.iso)}
 							class={`aspect-square rounded-lg text-sm font-bold transition ${
-								value === cell.iso ? 'bg-[#7c3aed] text-white' : 'text-white/80 hover:bg-white/10'
+								value === cell.iso ? 'bg-accent-strong text-on-accent' : 'text-fg-80 hover:bg-fill-10'
 							}`}
 						>
 							{cell.day}

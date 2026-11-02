@@ -152,13 +152,13 @@
   />
   <div>
     <h2 class="ux-section-title">Preguntas al paciente</h2>
-    <p class="mt-2 text-sm text-white/75">
+    <p class="mt-2 text-sm text-fg-75">
       El paciente responde al reservar. Sus respuestas quedan en su ficha.
     </p>
   </div>
   <fieldset disabled={!ready || saving} class="mt-6">
     <legend class="text-base font-semibold">Datos habituales</legend>
-    <div class="mt-3 divide-y divide-white/10">
+    <div class="mt-3 divide-y divide-line">
       {#each targets as target}
         {@const field = fields.find(
           (item) => item.patientField === target.value,
@@ -200,10 +200,10 @@
   </fieldset>
   <fieldset disabled={!ready || saving} class="mt-8">
     <legend class="text-base font-semibold">Otras preguntas</legend>
-    {#if !custom.length}<p class="mt-2 text-sm text-white/75">
+    {#if !custom.length}<p class="mt-2 text-sm text-fg-75">
         Agregá una pregunta si necesitás otro dato.
       </p>{/if}
-    <div class="mt-3 divide-y divide-white/10">
+    <div class="mt-3 divide-y divide-line">
       {#each custom as field (field.id)}<div
           class="question-row"
           data-question-id={field.id}
@@ -249,7 +249,7 @@
   </fieldset>
   {#if fields.length > 1}<details class="mt-7">
       <summary class="cursor-pointer min-h-11">Orden de las preguntas</summary>
-      <ol class="divide-y divide-white/10">
+      <ol class="divide-y divide-line">
         {#each fields as field, index (field.id)}<li
             class="flex min-h-14 items-center justify-between gap-4 py-2"
           >
@@ -265,7 +265,7 @@
   <div class="question-footer">
     <button class="ux-btn-primary" type="submit" disabled={!ready || saving}
       >{saving ? "Guardando…" : "Guardar preguntas"}</button
-    >{#if dirty}<span class="text-sm text-amber-100">Cambios sin guardar</span
+    >{#if dirty}<span class="text-sm text-warning-100">Cambios sin guardar</span
       >{/if}
   </div>
   <noscript
@@ -307,7 +307,7 @@
     display: flex;
     gap: 1rem;
     align-items: center;
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid var(--border);
     margin-top: 2rem;
     padding-top: 1.5rem;
   }

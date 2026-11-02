@@ -50,12 +50,12 @@
 		{#if isAssisting}
 			<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 				<div class="min-w-0">
-					<p class="inline-flex items-center gap-2 text-sm font-bold text-emerald-100">
-						<span class="h-[0.85em] w-[0.85em] rounded-full bg-emerald-400 shadow-[0_0_0.8rem_rgba(52,211,153,0.85)]"></span>
+					<p class="inline-flex items-center gap-2 text-sm font-bold text-success-100">
+						<span class="h-[0.85em] w-[0.85em] rounded-full bg-success shadow-[0_0_0.8rem_rgba(52,211,153,0.85)]"></span>
 						Activa
 					</p>
 					<h1 class="ux-title mt-3">Configurando {context.business.name}</h1>
-					<p class="mt-3 max-w-2xl text-sm leading-6 text-white/60">
+					<p class="mt-3 max-w-2xl text-sm leading-6 text-fg-60">
 						{#if assistance.endsAt}
 							La ayuda termina {assistance.endsAt.full}. Al vencer, volvés automáticamente al panel maestro.
 						{:else}
@@ -80,19 +80,19 @@
 		{:else if !canUseBusiness}
 			<div class="max-w-2xl">
 				<h1 class="ux-title">Ayuda para configurar</h1>
-				<p class="mt-3 text-sm leading-6 text-white/60">
+				<p class="mt-3 text-sm leading-6 text-fg-60">
 					Primero activá la cuenta. Después podemos ayudarte a completar la configuración inicial.
 				</p>
 			</div>
 		{:else if assistance.status === 'active'}
 			<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 				<div class="min-w-0">
-					<p class="inline-flex items-center gap-2 text-sm font-bold text-emerald-100">
-						<span class="h-[0.85em] w-[0.85em] rounded-full bg-emerald-400 shadow-[0_0_0.8rem_rgba(52,211,153,0.85)]"></span>
+					<p class="inline-flex items-center gap-2 text-sm font-bold text-success-100">
+						<span class="h-[0.85em] w-[0.85em] rounded-full bg-success shadow-[0_0_0.8rem_rgba(52,211,153,0.85)]"></span>
 						Ayuda activa{assistance.kind ? ` · ${ACCOUNT_ASSISTANCE_OPTIONS[assistance.kind].title}` : ''}
 					</p>
 					<h1 class="ux-title mt-3">Ayuda de Cita Suite activa</h1>
-					<p class="mt-3 max-w-2xl text-sm leading-6 text-white/60">
+					<p class="mt-3 max-w-2xl text-sm leading-6 text-fg-60">
 						Cita Suite puede entrar a tu cuenta hasta {assistance.endsAt?.full ?? 'la fecha indicada'}.
 					</p>
 				</div>
@@ -112,15 +112,15 @@
 			</div>
 
 			{#if isOwner && assistance.canExtend && assistance.grantId}
-				<div class="mt-6 border-t border-white/10 pt-5">
-					<h2 class="text-base font-bold text-white">¿Necesitás más tiempo?</h2>
-					<p class="mt-1 text-sm leading-6 text-white/60">El nuevo plazo se cuenta desde el momento en que lo confirmes.</p>
+				<div class="mt-6 border-t border-line pt-5">
+					<h2 class="text-base font-bold text-fg">¿Necesitás más tiempo?</h2>
+					<p class="mt-1 text-sm leading-6 text-fg-60">El nuevo plazo se cuenta desde el momento en que lo confirmes.</p>
 					<ul class="mt-4 grid gap-3">
 						{#each assistance.extensionKinds as kind (kind)}
 							<li class="ux-soft-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
 								<div class="min-w-0">
-									<p class="font-bold text-white">{ACCOUNT_ASSISTANCE_OPTIONS[kind].title}</p>
-									<p class="mt-1 text-sm leading-6 text-white/60">{ACCOUNT_ASSISTANCE_OPTIONS[kind].description}</p>
+									<p class="font-bold text-fg">{ACCOUNT_ASSISTANCE_OPTIONS[kind].title}</p>
+									<p class="mt-1 text-sm leading-6 text-fg-60">{ACCOUNT_ASSISTANCE_OPTIONS[kind].description}</p>
 								</div>
 								<ConfirmForm
 									action="?/extend"
@@ -139,10 +139,10 @@
 			{/if}
 		{:else}
 			{#if assistance.showBanner && assistance.endedAtMoment && assistance.grantId}
-				<div class="mb-6 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:flex-row sm:items-start sm:justify-between">
+				<div class="mb-6 flex flex-col gap-3 rounded-2xl border border-line bg-fill-04 p-4 sm:flex-row sm:items-start sm:justify-between">
 					<div class="min-w-0">
-						<h2 class="text-base font-bold text-white">La ayuda de Cita Suite terminó</h2>
-						<p class="mt-1 text-sm leading-6 text-white/60">{assistanceEndText(assistance.endedBy, assistance.endedAtMoment)}</p>
+						<h2 class="text-base font-bold text-fg">La ayuda de Cita Suite terminó</h2>
+						<p class="mt-1 text-sm leading-6 text-fg-60">{assistanceEndText(assistance.endedBy, assistance.endedAtMoment)}</p>
 					</div>
 					{#if assistance.canDismiss}
 						<form method="post" action="?/dismiss" class="w-full shrink-0 sm:w-auto">
@@ -156,7 +156,7 @@
 
 			<div class="max-w-2xl">
 				<h1 class="ux-title">¿Querés que te ayudemos con tu cuenta?</h1>
-				<p class="mt-3 text-sm leading-6 text-white/60">
+				<p class="mt-3 text-sm leading-6 text-fg-60">
 					Elegí por cuánto tiempo Cita Suite puede entrar a tu cuenta. Podés terminar la ayuda cuando quieras.
 				</p>
 			</div>
@@ -166,8 +166,8 @@
 					{#each assistance.activationKinds as kind (kind)}
 						<li class="ux-soft-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
 							<div class="min-w-0">
-								<p class="font-bold text-white">{ACCOUNT_ASSISTANCE_OPTIONS[kind].title}</p>
-								<p class="mt-1 text-sm leading-6 text-white/60">{ACCOUNT_ASSISTANCE_OPTIONS[kind].description}</p>
+								<p class="font-bold text-fg">{ACCOUNT_ASSISTANCE_OPTIONS[kind].title}</p>
+								<p class="mt-1 text-sm leading-6 text-fg-60">{ACCOUNT_ASSISTANCE_OPTIONS[kind].description}</p>
 							</div>
 							<ConfirmForm
 								action="?/activate"
@@ -183,14 +183,14 @@
 					{/each}
 				</ul>
 			{:else if !isOwner}
-				<p class="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/65">
+				<p class="mt-5 rounded-2xl border border-line bg-fill-04 px-4 py-3 text-sm font-semibold text-fg-65">
 					Esta opción la puede activar el dueño del consultorio.
 				</p>
 			{/if}
 		{/if}
 
-		<div class="mt-5 border-t border-white/10 pt-4">
-			<p class="text-sm leading-6 text-white/50">
+		<div class="mt-5 border-t border-line pt-4">
+			<p class="text-sm leading-6 text-fg-50">
 				Tu suscripción y tu equipo quedan siempre bajo tu control.
 			</p>
 		</div>

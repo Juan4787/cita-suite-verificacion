@@ -1,4 +1,5 @@
 import type { LayoutServerLoad } from './$types';
+import { THEME_COOKIE, parseThemePreference } from '$lib/theme/preference';
 
 // A display preference only: shared by the native booking and its management pages.
 // Embedded integrations continue to receive their mode from the existing host bridge.
@@ -14,5 +15,7 @@ export const load: LayoutServerLoad = ({ url, cookies }) => {
 			maxAge: 60 * 60 * 24 * 30
 		});
 	}
-	return { bookingColorMode };
+	// The app's own color mode on this device (light by default), for the mode selector.
+	const themePreference = parseThemePreference(cookies.get(THEME_COOKIE));
+	return { bookingColorMode, themePreference };
 };

@@ -200,7 +200,7 @@
 				<div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
 					<div class="min-w-0 flex-1">
 						<h2 class="ux-section-title">Servicios que ofrece</h2>
-						<p class="mt-1 text-sm text-white/55">Estos servicios estarán disponibles para reservar con este profesional.</p>
+						<p class="mt-1 text-sm text-fg-55">Estos servicios estarán disponibles para reservar con este profesional.</p>
 						{#if dirty}
 							<p class="ux-section-meta ux-section-meta-warning">{serviceChangeSummary}</p>
 						{/if}
@@ -222,12 +222,12 @@
 									value={service.id}
 									checked={isDefault || selectedIds.includes(service.id)}
 									disabled={!canManage || isDefault}
-									class="accent-[#7c3aed]"
+									class="accent-check-accent-600"
 									onchange={() => !isDefault && onToggleService(service.id)}
 								/>
 								<span class="min-w-0 flex-1">
-									<span class="block font-bold text-white">{service.name}</span>
-									<span class="mt-1 block text-sm text-white/55">
+									<span class="block font-bold text-fg">{service.name}</span>
+									<span class="mt-1 block text-sm text-fg-55">
 										{formatDuration(service.duration_minutes)}{currentPriceLabels?.[service.id] ? ` ·\u00a0${currentPriceLabels[service.id]} este mes` : service.price_label ? ` ·\u00a0${service.price_label}` : ''}
 									</span>
 								</span>
@@ -252,7 +252,7 @@
 				<div class="flex flex-col items-start gap-4">
 					<div class="min-w-0">
 						<h2 class="ux-section-title">¿No encontrás el servicio?</h2>
-						<p class="mt-1 text-sm text-white/55">Crealo una vez y queda asignado a {professional?.name ?? 'este profesional'}.</p>
+						<p class="mt-1 text-sm text-fg-55">Crealo una vez y queda asignado a {professional?.name ?? 'este profesional'}.</p>
 					</div>
 					<button type="button" class="ux-btn-secondary" disabled={!canManage || saving === 'service-create'} onclick={() => (showNewService = !showNewService)}>
 						{showNewService ? 'Cerrar' : 'Crear servicio nuevo'}
@@ -272,7 +272,7 @@
 						<label>
 							<span class="ux-label">Arancel a mostrar (opcional)</span>
 							<input name="price_label" type="text" inputmode="numeric" disabled={!canManage} placeholder="$ 35.000" class="ux-input" oninput={handlePriceInput} />
-							<p class="mt-2 text-sm text-white/70">Se usa cuando no configuraste ajustes mensuales.</p>
+							<p class="mt-2 text-sm text-fg-70">Se usa cuando no configuraste ajustes mensuales.</p>
 						</label>
 						<button class="ux-btn-primary" disabled={!canManage || saving !== null || uncertainCreation}>
 							{saving === 'service-create' ? 'Creando...' : 'Crear y asignar'}
@@ -287,7 +287,7 @@
 				<form method="POST" action="?/update_service" class="grid gap-4" use:enhance={updateServiceEnhance}>
 					<input type="hidden" name="service_id" value={editingService.id} />
 					<input type="hidden" name="service_updated_at" value={editingService.updated_at} />
-					<p class="text-sm text-white/60">
+					<p class="text-sm text-fg-60">
 						Los cambios se aplican a los turnos nuevos. Los turnos ya reservados conservan el servicio y la duración originales.
 					</p>
 					<label>
@@ -300,7 +300,7 @@
 							class="ux-input"
 						/>
 						{#if editingDefaultService}
-							<span class="mt-1 block text-xs text-white/45">Este nombre identifica un servicio base del consultorio.</span>
+							<span class="mt-1 block text-xs text-copy-subtle">Este nombre identifica un servicio base del consultorio.</span>
 						{/if}
 					</label>
 					<div class="grid gap-4 sm:grid-cols-2">
@@ -311,7 +311,7 @@
 						<label>
 							<span class="ux-label">Arancel a mostrar (opcional)</span>
 							<input name="price_label" type="text" inputmode="numeric" value={editingService.price_label ?? ''} disabled={!canManage} placeholder="$ 35.000" class="ux-input" oninput={handlePriceInput} />
-							<p class="mt-2 text-sm text-white/70">Se usa cuando no configuraste ajustes mensuales.</p>
+							<p class="mt-2 text-sm text-fg-70">Se usa cuando no configuraste ajustes mensuales.</p>
 						</label>
 					</div>
 					<label>
@@ -328,19 +328,19 @@
 							<input name="buffer_after_minutes" type="number" min="0" max="480" step="1" required value={editingService.buffer_after_minutes} disabled={!canManage} class="ux-input" />
 						</label>
 					</div>
-					<fieldset class="space-y-4 border-t border-white/10 pt-4"><legend class="ux-section-title">Información para el paciente</legend><label class="block"><span class="ux-label">Indicaciones para la consulta <span class="text-white/65">(opcional)</span></span><textarea class="ux-textarea mt-2" name="patient_instructions" rows="2" maxlength="2000" disabled={!canManage}>{editingService.patient_instructions??''}</textarea></label><label class="block"><span class="ux-label">Texto del aviso del turno <span class="text-white/65">(opcional)</span></span><textarea class="ux-textarea mt-2" name="public_reminder_description" rows="2" maxlength="180" disabled={!canManage}>{editingService.public_reminder_description??''}</textarea><span class="mt-1 block text-sm text-white/75">Puede verse con el teléfono bloqueado. Evitá datos clínicos.</span></label></fieldset>
+					<fieldset class="space-y-4 border-t border-line pt-4"><legend class="ux-section-title">Información para el paciente</legend><label class="block"><span class="ux-label">Indicaciones para la consulta <span class="text-fg-65">(opcional)</span></span><textarea class="ux-textarea mt-2" name="patient_instructions" rows="2" maxlength="2000" disabled={!canManage}>{editingService.patient_instructions??''}</textarea></label><label class="block"><span class="ux-label">Texto del aviso del turno <span class="text-fg-65">(opcional)</span></span><textarea class="ux-textarea mt-2" name="public_reminder_description" rows="2" maxlength="180" disabled={!canManage}>{editingService.public_reminder_description??''}</textarea><span class="mt-1 block text-sm text-fg-75">Puede verse con el teléfono bloqueado. Evitá datos clínicos.</span></label></fieldset>
 					{#if editingDefaultService}
 						<input type="hidden" name="is_active" value="true" />
 						<input type="hidden" name="is_public" value="true" />
 					{:else}
 						<div class="grid gap-3 sm:grid-cols-2">
 							<label class="ux-choice flex items-center gap-3 px-4 py-3">
-								<input type="checkbox" name="is_active" value="true" checked={editingService.is_active} disabled={!canManage} class="accent-[#7c3aed]" />
-								<span class="font-bold text-white">Servicio activo</span>
+								<input type="checkbox" name="is_active" value="true" checked={editingService.is_active} disabled={!canManage} class="accent-check-accent-600" />
+								<span class="font-bold text-fg">Servicio activo</span>
 							</label>
 							<label class="ux-choice flex items-center gap-3 px-4 py-3">
-								<input type="checkbox" name="is_public" value="true" checked={editingService.is_public} disabled={!canManage} class="accent-[#7c3aed]" />
-								<span class="font-bold text-white">Visible al reservar</span>
+								<input type="checkbox" name="is_public" value="true" checked={editingService.is_public} disabled={!canManage} class="accent-check-accent-600" />
+								<span class="font-bold text-fg">Visible al reservar</span>
 							</label>
 						</div>
 					{/if}

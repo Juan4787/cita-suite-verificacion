@@ -179,13 +179,13 @@
       La conexión con sitios externos todavía no está habilitada.
     </p>
   {:else if !editing}
-    {#if data.profiles.length}<div class="divide-y divide-white/10">
+    {#if data.profiles.length}<div class="divide-y divide-line">
         {#each data.profiles as item}<a
             class="connected-site"
             href={`?perfil=${item.id}`}
             ><div class="min-w-0">
               <strong class="block text-lg">{item.name}</strong><span
-                class="mt-1 block break-words text-sm text-white/75"
+                class="mt-1 block break-words text-sm text-fg-75"
                 >{item.allowed_origins.join(" · ") ||
                   "Sitio pendiente de configurar"}</span
               >
@@ -198,7 +198,7 @@
       </div>
     {:else}<div class="ux-card">
         <h2 class="ux-section-title">Agregá el sitio donde querés mostrar la agenda</h2>
-        <p class="mt-2 text-white/75">
+        <p class="mt-2 text-fg-75">
           Podés seguir compartiendo el enlace de tu agenda.
         </p>
       </div>{/if}
@@ -349,7 +349,7 @@
                   ></label
                 >{/each}
             </fieldset>{/if}
-          <p class="mt-3 text-sm text-white/75">
+          <p class="mt-3 text-sm text-fg-75">
             Servicios y horarios ya configurados en Equipo.
           </p>
         </section>
@@ -427,7 +427,7 @@
                 >Limitar los horarios que muestra esta web</summary
               >
               <div class="mt-3 space-y-4">
-                <p class="text-sm text-white/75">
+                <p class="text-sm text-fg-75">
                   Estos filtros se aplican sólo en esta web.
                 </p>
                 {#each draft.windows as window, index}<div class="window-row">
@@ -511,7 +511,7 @@
                   class="cursor-pointer min-h-11 flex items-center text-sm"
                   >Preguntas anteriores de esta web</summary
                 >
-                <ul class="mt-2 space-y-2 text-sm text-white/75">
+                <ul class="mt-2 space-y-2 text-sm text-fg-75">
                   {#each draft.fields as field}<li>
                       {field.label}{field.required ? " · Obligatoria" : ""}
                     </li>{/each}
@@ -541,7 +541,7 @@
           ><a
             class="ux-btn-secondary"
             href="/odonto/configuracion/reserva-online/webs">Cancelar</a
-          >{#if dirty}<span class="text-sm text-amber-100"
+          >{#if dirty}<span class="text-sm text-warning-100"
               >Cambios sin guardar</span
             >{/if}
         </div>
@@ -577,14 +577,14 @@
     flex: 1;
   }
   .connected-site:hover strong {
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .domain-row {
     display: flex;
     gap: 0.75rem;
   }
   .connection-options {
-    border-block: 1px solid rgba(255, 255, 255, 0.12);
+    border-block: 1px solid var(--border);
     padding-block: 1rem;
   }
   .connection-options > summary {
@@ -598,7 +598,7 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1rem;
     padding-block: 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    border-bottom: 1px solid var(--border);
   }
   .window-professional {
     grid-column: 1/4;

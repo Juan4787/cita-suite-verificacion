@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { signInWithPassword } from './helpers/shared-auth';
+import { applyThemeInPage, expectRenderedTheme } from './helpers/theme';
 import { ownedEmailFixture, capturedSignupMessages, capturedSignupUrl } from './helpers/email-confirmation';
 import { observeRenderHealth } from './helpers/render-health';
 import { layoutIssues, type LayoutIssue } from './helpers/layout-usability';
@@ -448,10 +449,10 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		for (const width of [320, 390, 768, 1280, 1600])
 			for (const theme of ['light', 'dark']) {
 				await page.setViewportSize({ width, height: 900 });
-				await page.emulateMedia({ colorScheme: theme === 'dark' ? 'dark' : 'light' });
-				expect(await page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(
-					true
-				);
+				// The device prefers the other mode; the open task switches as the selector does.
+				await page.emulateMedia({ colorScheme: theme === 'dark' ? 'light' : 'dark' });
+				await applyThemeInPage(page, theme as 'light' | 'dark');
+				await expectRenderedTheme(page, theme as 'light' | 'dark');
 				for (const issue of await layoutIssues(
 					page,
 					'form[action="?/add_user"] input:visible,form[action="?/add_user"] button:visible'

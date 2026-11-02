@@ -37,7 +37,7 @@
 <BookingAppearance theme={data.info.theme}>
 <main class="mx-auto max-w-2xl space-y-6 px-5 py-8">
   <a class="ux-btn-secondary" href={`/turno/${data.token}`}>Volver a mi turno</a>
-  <div><h1 class="ux-title">Información para tu consulta</h1><p class="mt-3 text-white/65">Tu turno ya está reservado. Podés ampliar los datos para la profesional. Los campos configurados se guardan automáticamente en tu perfil y los envíos anteriores se conservan.</p></div>
+  <div><h1 class="ux-title">Información para tu consulta</h1><p class="mt-3 text-fg-65 bk-muted">Tu turno ya está reservado. Podés ampliar los datos para la profesional. Los campos configurados se guardan automáticamente en tu perfil y los envíos anteriores se conservan.</p></div>
   {#if form?.message}<p class={form.saved ? 'ux-success' : 'ux-error'} role={form.saved ? 'status' : 'alert'}>{form.message}</p>{/if}
   <form method="POST" action="?/save" use:enhance={() => { busy = true; return async ({ update,result }) => { try{await update({ reset: false,invalidateAll:result.type==='success' });}finally{busy = false;} }; }} class="ux-soft-card space-y-4 p-5">
     <fieldset disabled={busy} class="space-y-4">
@@ -47,11 +47,11 @@
         {#if field.kind === 'textarea'}<textarea class="ux-textarea" name={'intake_' + field.id} required={field.required} maxlength={field.maxLength} rows="3" bind:value={answers[field.id]}></textarea>
         {:else if field.kind === 'text'}<input type={field.patientField === 'birth_date' ? 'date' : field.patientField === 'age' ? 'number' : 'text'} min={field.patientField === 'age' ? 0 : undefined} max={field.patientField === 'age' ? 130 : undefined} class="ux-input" name={'intake_' + field.id} required={field.required} maxlength={field.maxLength} bind:value={answers[field.id]} />
         {:else}<select class="ux-select" required={field.required} name={'intake_' + field.id} bind:value={answers[field.id]}><option value="">Sin responder</option>{#if field.kind === 'boolean'}<option value="true">Sí</option><option value="false">No</option>{:else}{#each field.options ?? [] as option}<option value={option}>{option}</option>{/each}{/if}</select>{/if}
-        {#if field.help}<span class="mt-1 block text-sm text-white/60">{field.help}</span>{/if}
+        {#if field.help}<span class="mt-1 block text-sm text-fg-60 bk-muted">{field.help}</span>{/if}
       </label>
     {/each}
     <label class="block"><span class="ux-label">Comentario adicional (opcional)</span><textarea class="ux-textarea" name="comment" maxlength="2000" rows="3" bind:value={comment}></textarea></label>
-    <p class="text-sm text-white/60">Los datos quedan privados para el equipo clínico. Tu reserva se conserva si un envío falla.</p>
+    <p class="text-sm text-fg-60 bk-muted">Los datos quedan privados para el equipo clínico. Tu reserva se conserva si un envío falla.</p>
     <button class="ux-btn-primary" disabled={busy} type="submit">{busy ? 'Guardando…' : 'Guardar información'}</button>
     </fieldset>
   </form>

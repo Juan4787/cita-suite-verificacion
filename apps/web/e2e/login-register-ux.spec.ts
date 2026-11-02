@@ -20,9 +20,10 @@ test.describe('Login/registro - UX', () => {
 
 		const modeNav = page.locator('.ux-pill-nav');
 		await modeNav.getByRole('button', { name: 'Crear cuenta' }).click();
-		await expect(modeNav.getByRole('button', { name: 'Crear cuenta', exact: true })).toHaveClass(
-			/bg-\[#7c3aed\]/
-		);
+		// The chosen mode is filled with the primary violet of the theme (light by default).
+		const register = modeNav.getByRole('button', { name: 'Crear cuenta', exact: true });
+		await expect(register).toHaveClass(/(?:^|\s)bg-accent-strong(?:\s|$)/);
+		await expect(register).toHaveCSS('background-color', 'rgb(102, 51, 194)');
 		await expectWholeHintsOnPhones(page);
 
 		const email = page.locator('#email');
