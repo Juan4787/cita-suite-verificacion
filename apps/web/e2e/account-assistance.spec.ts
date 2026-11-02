@@ -228,8 +228,40 @@ const screenshotPath = (name: string) => {
 	return test.info().outputPath(name);
 };
 
+const WEEKDAY = '(?:lunes|martes|miércoles|jueves|viernes|sábado|domingo)';
+// Every text says the date as well as the time: «el domingo 8 de noviembre a las 10:15».
+const DATE_TIME = `el ${WEEKDAY} \\d{1,2} de [a-záéíóú]+(?: de \\d{4})? a las \\d{2}:\\d{2}`;
+
+type GrantRow = {
+	id: string;
+	status: string;
+	kind: string;
+	expires_at: string;
+	extended_at: string | null;
+	revoked_by_role: string | null;
+	dismissed_at: string | null;
+};
+
+const grants = async (admin: FixtureClient, businessId: string): Promise<GrantRow[]> =>
+	must(
+		admin
+			.from('account_assistance_grants')
+			.select('id, status, kind, expires_at, extended_at, revoked_by_role, dismissed_at')
+			.eq('business_id', businessId)
+			.order('created_at', { ascending: true })
+	);
+
+const confirmIn = async (page: import('@playwright/test').Page, trigger: string, dialogTitle: string, confirm: string) => {
+	await page.getByRole('button', { name: trigger, exact: true }).first().click();
+	const dialog = page.getByRole('dialog', { name: dialogTitle });
+	await expect(dialog).toBeVisible();
+	const text = (await dialog.innerText()).replace(/\s+/g, ' ');
+	await dialog.getByRole('button', { name: confirm, exact: true }).click();
+	return text;
+};
+
 test.describe('Ayuda para configurar', () => {
-	test.setTimeout(120_000);
+	test.setTimeout(300_000);
 	test.skip(!supabaseUrl || !serviceRoleKey, 'Definí ODONTO_SUPABASE_URL y ODONTO_SUPABASE_SERVICE_ROLE_KEY.');
 	test.skip(!masterPassword, 'Definí E2E_MASTER_PASSWORD para validar el ingreso desde panel maestro.');
 
@@ -249,7 +281,7 @@ test.describe('Ayuda para configurar', () => {
 		await cleanupMasterFixture(adminClient());
 	});
 
-	test('el dueño activa ayuda, el equipo configura datos operativos y luego pierde acceso al revocar', async ({
+	test('la dueña elige la duración y confirma; el maestro configura y la termina; ella extiende y termina otra', async ({
 		page,
 		browser
 	}) => {
@@ -260,135 +292,172 @@ test.describe('Ayuda para configurar', () => {
 		const masterContext = await browser.newContext();
 		const masterPage = await masterContext.newPage();
 
-		await login(ownerPage, fixture.email, password);
-		await ownerPage.goto('/odonto/configuracion/ayuda');
-		await expect(
-			ownerPage.getByRole('heading', {
-				name: '¿Querés que te ayudemos a configurar tu cuenta?',
-				level: 1
-			})
-		).toBeVisible();
-		await ownerPage.getByRole('button', { name: 'Quiero ayuda por 1 hora' }).first().click();
-		await expect(ownerPage.getByText('Ayuda de Cita Suite activa').first()).toBeVisible();
-		await expect(ownerPage.getByText(/hasta las \d{2}:\d{2}/).first()).toBeVisible();
-		await ownerPage.goto('/odonto/agenda');
-		await expect(ownerPage.getByRole('heading', { name: 'Ayuda de Cita Suite activa' })).toBeVisible();
-		await expect(
-			ownerPage.getByRole('button', { name: 'Quitar aviso: Ayuda de Cita Suite activa' })
-		).toBeVisible();
-		await ownerPage.screenshot({
-			type: 'jpeg', quality: 65, path: screenshotPath('account-assistance-owner-desktop-active.jpg'),
-			fullPage: false
+		await test.step('sin pacientes, la dueña ve las tres duraciones y nada se da sin confirmar', async () => {
+			await login(ownerPage, fixture!.email, password);
+			await ownerPage.goto('/odonto/configuracion/ayuda');
+			await expect(ownerPage.getByRole('heading', { name: '¿Querés que te ayudemos con tu cuenta?', level: 1 })).toBeVisible();
+			for (const label of ['Dar ayuda por 1 hora', 'Dar ayuda por 24 horas', 'Dar ayuda para la configuración inicial'])
+				await expect(ownerPage.getByRole('button', { name: label, exact: true })).toBeVisible();
+			await expect(ownerPage.locator('main .ux-card').getByText(/historia|historial|clínic/i)).toHaveCount(0);
+
+			await ownerPage.getByRole('button', { name: 'Dar ayuda por 24 horas', exact: true }).click();
+			const dialog = ownerPage.getByRole('dialog', { name: 'Dar ayuda por 24 horas' });
+			await expect(dialog).toContainText(new RegExp(`hasta el ${WEEKDAY} \\d{1,2} de [a-záéíóú]+(?: de \\d{4})?, alrededor de las \\d{2}:\\d{2}`));
+			await dialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
+			await expect(dialog).toHaveCount(0);
+
+			// The server requires the confirmation too: a form sent without the dialog gives nothing.
+			const unconfirmed = await ownerPage.request.post('/odonto/configuracion/ayuda?/activate', {
+				form: { kind: 'day', return_to: '/odonto/configuracion/ayuda' },
+				headers: { origin: new URL(ownerPage.url()).origin },
+				maxRedirects: 0
+			});
+			const body = await unconfirmed.text();
+			await test.info().attach('envio-sin-confirmar', {
+				body: JSON.stringify({ status: unconfirmed.status(), url: unconfirmed.url(), rejected: body.includes('Confirmá la acción para continuar.') }),
+				contentType: 'application/json'
+			});
+			expect(body).toContain('Confirmá la acción para continuar.');
+			expect(await grants(admin, fixture!.businessId)).toHaveLength(0);
 		});
-		await ownerPage.setViewportSize({ width: 390, height: 844 });
-		await ownerPage.screenshot({
-			type: 'jpeg', quality: 65, path: screenshotPath('account-assistance-owner-mobile-active.jpg'),
-			fullPage: false
+
+		let firstGrant = '';
+		await test.step('la dueña da 24 horas: aviso con fecha y hora, y una marca fija en el menú', async () => {
+			const text = await confirmIn(ownerPage, 'Dar ayuda por 24 horas', 'Dar ayuda por 24 horas', 'Dar ayuda');
+			expect(text).toContain('Cita Suite va a poder entrar a tu cuenta hasta el');
+			await expect(ownerPage.getByRole('heading', { name: 'Ayuda de Cita Suite activa', level: 1 })).toBeVisible();
+			await expect(ownerPage.getByText(new RegExp(`Cita Suite puede entrar a tu cuenta hasta ${DATE_TIME}\\.`))).toBeVisible();
+			await expect(ownerPage.getByRole('button', { name: 'Pasar a la configuración inicial, 7 días', exact: true })).toBeVisible();
+
+			const rows = await grants(admin, fixture!.businessId);
+			expect(rows).toHaveLength(1);
+			expect(rows[0]).toMatchObject({ status: 'active', kind: 'day', extended_at: null });
+			const hoursLeft = (Date.parse(rows[0].expires_at) - Date.now()) / 3_600_000;
+			expect(hoursLeft).toBeGreaterThan(23.9);
+			expect(hoursLeft).toBeLessThanOrEqual(24);
+			firstGrant = rows[0].id;
+
+			await ownerPage.goto('/odonto/agenda');
+			const notice = ownerPage.getByRole('region', { name: 'Ayuda de Cita Suite activa' });
+			await expect(notice).toContainText(new RegExp(`hasta ${DATE_TIME}`));
+			await expect(notice.getByRole('button', { name: 'Terminar ayuda', exact: true })).toBeVisible();
+			const mark = ownerPage.getByRole('link', { name: /^Ayuda activa hasta / });
+			await expect(mark).toBeVisible();
+			await expect(mark).toHaveAccessibleName(
+				new RegExp(`^Ayuda activa hasta (dom|lun|mar|mié|jue|vie|sáb) \\d{1,2}/\\d{1,2}(?:/\\d{4})? \\d{2}:\\d{2}: ayuda de Cita Suite activa hasta ${DATE_TIME}$`)
+			);
+			await ownerPage.screenshot({ type: 'jpeg', quality: 65, path: screenshotPath('account-assistance-owner-desktop-active.jpg') });
+			// Closing the notice leaves the mark: she stays told while it lasts.
+			await ownerPage.getByRole('button', { name: 'Quitar aviso: Ayuda de Cita Suite activa' }).click();
+			await expect(notice).toHaveCount(0);
+			await expect(mark).toBeVisible();
+			await ownerPage.setViewportSize({ width: 390, height: 844 });
+			await expect(ownerPage.getByRole('button', { name: 'Abrir menú. Ayuda de Cita Suite activa.' }).last()).toBeVisible();
+			await ownerPage.screenshot({ type: 'jpeg', quality: 65, path: screenshotPath('account-assistance-owner-mobile-active.jpg') });
+			await ownerPage.setViewportSize({ width: 1280, height: 720 });
 		});
-		await ownerPage.setViewportSize({ width: 1280, height: 720 });
 
-		const { data: activeRows, error: activeError } = await admin
-			.from('account_assistance_grants')
-			.select('id, status, expires_at, revoked_at')
-			.eq('business_id', fixture.businessId)
-			.eq('status', 'active')
-			.is('revoked_at', null);
-		if (activeError) throw activeError;
-		expect(activeRows).toHaveLength(1);
-		expect(new Date(activeRows[0].expires_at).getTime()).toBeGreaterThan(Date.now() + 45 * 60 * 1000);
+		await test.step('el maestro ve la duración, entra y configura', async () => {
+			await login(masterPage, masterEmail, masterPassword);
+			await expect(masterPage.getByRole('heading', { name: 'Consultorios y accesos' })).toBeVisible();
+			const helpSection = masterPage.locator('#solicitudes-ayuda');
+			const card = helpSection.locator('.ux-soft-card').filter({ hasText: fixture!.businessName });
+			await expect(card).toContainText('24 horas ·');
+			await expect(card).toContainText(new RegExp(`Hasta ${DATE_TIME}`));
+			await expect(card.getByRole('button', { name: 'Terminar ayuda', exact: true })).toBeVisible();
 
-		await login(masterPage, masterEmail, masterPassword);
-		await expect(masterPage.getByRole('heading', { name: 'Consultorios y accesos' })).toBeVisible();
-		const assistanceHeading = masterPage.getByRole('heading', {
-			name: /^\d+ consultorios? (?:pidió|pidieron) ayuda para configurar$/
+			const assistanceNotice = masterPage.getByRole('region', { name: /^\d+ consultorios? (?:pidió|pidieron) ayuda para configurar$/ });
+			await expect(assistanceNotice.getByText(fixture!.businessName, { exact: true })).toBeVisible();
+			await assistanceNotice.getByRole('button', { name: 'Abrir', exact: true }).click();
+			await expect(masterPage).toHaveURL(/\/odonto\/configuracion\/usuarios/);
+			const configuring = masterPage.getByRole('region', { name: `Configurando ${fixture!.businessName}` });
+			await expect(configuring).toContainText(new RegExp(`Hasta ${DATE_TIME}\\. Al vencer, volvés automáticamente al panel maestro\\.`));
+
+			const serviceName = `Limpieza E2E ${unique()}`;
+			await masterPage.goto(`/odonto/profesionales/${fixture!.professionalId}?tab=servicios`);
+			const servicePanel = masterPage.locator('.ux-soft-card').filter({ hasText: '¿No encontrás el servicio?' });
+			const closeServiceForm = servicePanel.getByRole('button', { name: 'Cerrar' });
+			if (!(await closeServiceForm.isVisible().catch(() => false))) {
+				await servicePanel.getByRole('button', { name: 'Crear servicio nuevo' }).click();
+			}
+			await expect(closeServiceForm).toBeVisible({ timeout: 10_000 });
+			await servicePanel.getByLabel('Nombre').fill(serviceName);
+			await servicePanel.getByLabel('Duración en minutos').fill('35');
+			await servicePanel.getByRole('button', { name: 'Crear y asignar' }).click();
+			await expect(masterPage.getByText('Servicio creado y asignado.')).toBeVisible();
+			const services = await must(admin.from('services').select('id, duration_minutes').eq('business_id', fixture!.businessId).eq('name', serviceName));
+			expect(services).toHaveLength(1);
+			expect(services[0].duration_minutes).toBe(35);
 		});
-		await expect(assistanceHeading).toBeVisible();
-		const assistanceLabel = (await assistanceHeading.innerText()).trim();
-		const assistanceNotice = masterPage.getByRole('region', {
-			name: /^\d+ consultorios? (?:pidió|pidieron) ayuda para configurar$/
+
+		await test.step('cargar un paciente no corta ni acorta la ayuda', async () => {
+			const before = (await grants(admin, fixture!.businessId))[0];
+			await write(
+				admin.from('patients').insert({ business_id: fixture!.businessId, owner_id: fixture!.userId, full_name: `Paciente E2E ayuda ${unique()}` })
+			);
+			expect((await grants(admin, fixture!.businessId))[0]).toEqual(before);
+			await masterPage.goto('/odonto/configuracion/usuarios');
+			await expect(masterPage.getByRole('region', { name: `Configurando ${fixture!.businessName}` })).toBeVisible();
+			// With a patient the owner can no longer move to the initial setup.
+			await ownerPage.goto('/odonto/configuracion/ayuda');
+			await expect(ownerPage.getByRole('heading', { name: 'Ayuda de Cita Suite activa', level: 1 })).toBeVisible();
+			await expect(ownerPage.getByRole('button', { name: 'Pasar a la configuración inicial, 7 días' })).toHaveCount(0);
 		});
-		await expect(assistanceNotice.getByText(fixture.businessName, { exact: true })).toBeVisible();
-		await assistanceNotice.getByRole('button', { name: 'Abrir', exact: true }).click();
-		await expect(masterPage).toHaveURL(/\/odonto\/configuracion\/usuarios/);
-		await expect(assistanceHeading).toBeVisible();
-		await expect(
-			masterPage.getByRole('heading', { name: 'Falta la dirección del consultorio.' })
-		).toBeVisible();
-		await expect(
-			masterPage.getByRole('heading', { name: `Configurando ${fixture.businessName}` })
-		).toBeVisible();
-		for (const label of [
-			assistanceLabel,
-			'Falta la dirección del consultorio.',
-			`Configurando ${fixture.businessName}`
-		]) {
-			await expect(masterPage.getByRole('button', { name: `Quitar aviso: ${label}` })).toBeVisible();
-		}
 
-		await masterPage.getByRole('button', { name: 'Configurar', exact: true }).click();
-		await expect(masterPage.getByLabel('Persona del equipo')).toBeVisible();
-		const memberSelect = masterPage.getByLabel('Persona del equipo');
-		await expect(memberSelect.getByRole('option', { name: `${fixture.email} · Dueño` })).toHaveCount(1);
-		await expect(
-			memberSelect.getByRole('option', { name: `${fixture.adminEmail} · Administrador` })
-		).toHaveCount(1);
-		await masterPage.getByRole('button', { name: 'Cancelar', exact: true }).click();
-		await masterPage.screenshot({
-			type: 'jpeg', quality: 65, path: screenshotPath('account-assistance-master-configuring.jpg'),
-			fullPage: false
+		await test.step('el maestro la termina desde el consultorio y la dueña ve que la terminó Cita Suite', async () => {
+			const text = await confirmIn(masterPage, 'Terminar ayuda', 'Terminar la ayuda', 'Terminar ayuda');
+			expect(text).toContain(`Vas a dejar de poder entrar a ${fixture!.businessName} ahora.`);
+			await expect(masterPage).toHaveURL(/\/odonto\/maestro/);
+			await expect(masterPage.locator('#solicitudes-ayuda .ux-soft-card').filter({ hasText: fixture!.businessName })).toHaveCount(0);
+			expect((await grants(admin, fixture!.businessId))[0]).toMatchObject({ id: firstGrant, status: 'revoked', revoked_by_role: 'support' });
+
+			await ownerPage.goto('/odonto/agenda');
+			const ended = ownerPage.getByRole('region', { name: 'La ayuda de Cita Suite terminó' });
+			await expect(ended).toContainText(new RegExp(`Cita Suite la terminó ${DATE_TIME}\\. Ya no puede entrar a tu cuenta\\.`));
+			await expect(ended.getByRole('link', { name: 'Pedir ayuda otra vez' })).toBeVisible();
+			await expect(ownerPage.getByRole('link', { name: /^Ayuda activa hasta / })).toHaveCount(0);
+
+			await ownerPage.goto('/odonto/configuracion/ayuda');
+			await ownerPage.getByRole('button', { name: 'Cerrar aviso', exact: true }).click();
+			await expect(ownerPage.getByText('La ayuda de Cita Suite terminó')).toHaveCount(0);
+			expect((await grants(admin, fixture!.businessId))[0].dismissed_at).toBeTruthy();
 		});
-		await masterPage
-			.getByRole('button', { name: 'Quitar aviso: Falta la dirección del consultorio.' })
-			.click();
 
-		const serviceName = `Limpieza E2E ${unique()}`;
-		await masterPage.goto(`/odonto/profesionales/${fixture.professionalId}?tab=servicios`);
-		await expect(
-			masterPage.getByRole('heading', { name: `Configurando ${fixture.businessName}` })
-		).toBeVisible();
-		await expect(masterPage.getByText('Falta la dirección del consultorio.')).toHaveCount(0);
-		const servicePanel = masterPage.locator('.ux-soft-card').filter({ hasText: '¿No encontrás el servicio?' });
-		const closeServiceForm = servicePanel.getByRole('button', { name: 'Cerrar' });
-		if (!(await closeServiceForm.isVisible().catch(() => false))) {
-			await servicePanel.getByRole('button', { name: 'Crear servicio nuevo' }).click();
-		}
-		await expect(closeServiceForm).toBeVisible({ timeout: 10_000 });
-		await servicePanel.getByLabel('Nombre').fill(serviceName);
-		await servicePanel.getByLabel('Duración en minutos').fill('35');
-		await servicePanel.getByRole('button', { name: 'Crear y asignar' }).click();
-		await expect(masterPage.getByText('Servicio creado y asignado.')).toBeVisible();
+		await test.step('con pacientes, la dueña da 1 hora, la pasa a 24 horas y la termina', async () => {
+			await expect(ownerPage.getByRole('button', { name: 'Dar ayuda para la configuración inicial' })).toHaveCount(0);
+			await confirmIn(ownerPage, 'Dar ayuda por 1 hora', 'Dar ayuda por 1 hora', 'Dar ayuda');
+			await expect(ownerPage.getByRole('heading', { name: 'Ayuda de Cita Suite activa', level: 1 })).toBeVisible();
+			const hourGrant = (await grants(admin, fixture!.businessId))[1];
+			expect(hourGrant).toMatchObject({ status: 'active', kind: 'hour' });
 
-		const { data: services, error: servicesError } = await admin
-			.from('services')
-			.select('id, duration_minutes, professional_services!inner(professional_id)')
-			.eq('business_id', fixture.businessId)
-			.eq('name', serviceName);
-		if (servicesError) throw servicesError;
-		expect(services).toHaveLength(1);
-		expect(services[0].duration_minutes).toBe(35);
+			const text = await confirmIn(ownerPage, 'Pasar a 24 horas', 'Extender la ayuda', 'Extender ayuda');
+			expect(text).toContain('contando desde ahora');
+			await expect(ownerPage.getByText('Ayuda activa · 24 horas')).toBeVisible();
+			const extended = (await grants(admin, fixture!.businessId))[1];
+			expect(extended).toMatchObject({ id: hourGrant.id, status: 'active', kind: 'day' });
+			expect(extended.extended_at).toBeTruthy();
 
-		await ownerPage.goto('/odonto/configuracion/ayuda');
-		await ownerPage.getByRole('button', { name: 'Detener ayuda' }).first().click();
-		await expect(ownerPage.getByRole('heading', { name: 'Ayuda detenida' })).toBeVisible();
+			await confirmIn(ownerPage, 'Terminar ayuda', 'Terminar la ayuda', 'Terminar ayuda');
+			await expect(ownerPage.getByText(new RegExp(`La terminaste ${DATE_TIME}\\. Cita Suite ya no puede entrar a tu cuenta\\.`))).toBeVisible();
+			expect((await grants(admin, fixture!.businessId))[1]).toMatchObject({ status: 'revoked', revoked_by_role: 'owner' });
+		});
 
-		const { data: revoked, error: revokedError } = await admin
-			.from('account_assistance_grants')
-			.select('status, revoked_at')
-			.eq('id', activeRows[0].id)
-			.single();
-		if (revokedError) throw revokedError;
-		expect(revoked.status).toBe('revoked');
-		expect(revoked.revoked_at).toBeTruthy();
+		await test.step('el maestro termina otra desde el panel y pierde el acceso', async () => {
+			await confirmIn(ownerPage, 'Dar ayuda por 1 hora', 'Dar ayuda por 1 hora', 'Dar ayuda');
+			await masterPage.goto('/odonto/maestro');
+			const card = masterPage.locator('#solicitudes-ayuda .ux-soft-card').filter({ hasText: fixture!.businessName });
+			await expect(card).toContainText('1 hora ·');
+			await card.getByRole('button', { name: 'Terminar ayuda', exact: true }).click();
+			await masterPage.getByRole('dialog', { name: 'Terminar la ayuda' }).getByRole('button', { name: 'Terminar ayuda', exact: true }).click();
+			await expect(
+				masterPage.getByRole('status').filter({ hasText: `Terminaste la ayuda de ${fixture!.businessName}: ya no podés entrar a su cuenta.` })
+			).toBeVisible();
+			expect((await grants(admin, fixture!.businessId))[2]).toMatchObject({ status: 'revoked', revoked_by_role: 'support' });
 
-		await masterPage.goto('/odonto/maestro');
-		await expect(masterPage.getByRole('heading', { name: 'Consultorios y accesos' })).toBeVisible();
-		await expect(masterPage.locator('.ux-soft-card').filter({ hasText: fixture.businessName })).toHaveCount(0);
-		await masterPage.goto(`/odonto/profesionales/${fixture.professionalId}?tab=servicios`);
-		await expect(
-			masterPage.getByRole('heading', { name: /Página no encontrada|Activá tu suscripción/ })
-		).toBeVisible();
-		await expect(masterPage.getByText(serviceName)).toHaveCount(0);
-		await expect(masterPage.getByText(`Configurando ${fixture.businessName}`)).toHaveCount(0);
+			await masterPage.goto(`/odonto/profesionales/${fixture!.professionalId}?tab=servicios`);
+			await expect(masterPage.getByRole('heading', { name: /Página no encontrada|Activá tu suscripción/ })).toBeVisible();
+			await expect(masterPage.getByText(`Configurando ${fixture!.businessName}`)).toHaveCount(0);
+		});
 		await masterContext.close();
 	});
 });
