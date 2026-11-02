@@ -1,10 +1,32 @@
 import forms from '@tailwindcss/forms';
 import typography from '@tailwindcss/typography';
+import plugin from 'tailwindcss/plugin';
+import { cssVariables, tailwindColors } from './src/lib/theme/palette.js';
+
+// Colors come from src/lib/theme/palette.js: each class color is a CSS variable with a light value
+// (default) and a dark one. The server puts `dark` or `theme-system` on <html> from the
+// `cita-theme` cookie (hooks.server.ts); `theme-system` follows the device with CSS only.
+const colors = tailwindColors();
+const themeVariables = plugin(({ addBase }) => {
+	// Each block gets its own object: the CSS-in-JS parser consumes the objects it reads.
+	const dark = () => ({ colorScheme: 'dark', ...cssVariables('dark') });
+	addBase({
+		':root': { colorScheme: 'light', ...cssVariables('light') },
+		':root.dark': dark(),
+		'@media (prefers-color-scheme: dark)': { ':root.theme-system': dark() },
+		// Natalia's booking appearance keeps its look from before the light mode: inside its scope, the
+		// app variables it does not redefine keep their dark values, whatever mode the visitor chose.
+		// :where() has no specificity, so its own variables (BookingAppearance.svelte) always win.
+		':where(.booking-natalia, .booking-control-menu-natalia)': cssVariables('dark')
+	});
+});
 
 /** @type {import('tailwindcss').Config} */
 export default {
 	darkMode: 'class',
 	content: ['./src/**/*.{html,js,svelte,ts}'],
+	// The server adds these classes to <html> (hooks.server.ts): their variable blocks must always exist.
+	safelist: ['dark', 'theme-system', 'booking-natalia', 'booking-control-menu-natalia'],
 	theme: {
 		extend: {
 			fontFamily: {
@@ -19,37 +41,20 @@ export default {
 				body: '17px',
 				cta: '1.075rem' // the patient's main actions on their appointment page
 			},
-			colors: {
-				primary: {
-					50: '#eef7ff',
-					100: '#d8eaff',
-					200: '#b5d7ff',
-					300: '#82bcff',
-					400: '#4f9aff',
-					500: '#1f7bff',
-					600: '#0b60e6',
-					700: '#084bb4',
-					800: '#0a3e8e',
-					900: '#0d346e'
-				},
-				neutral: {
-					25: '#f8fafc',
-					50: '#f5f7fb',
-					100: '#e9edf5',
-					200: '#d8deec',
-					300: '#c2cadd',
-					400: '#9aa2ba',
-					500: '#6f7794',
-					600: '#505772',
-					700: '#383e54',
-					800: '#242a38',
-					900: '#1a1f2b'
-				}
-			},
+			textColor: colors.textColor,
+			backgroundColor: colors.backgroundColor,
+			borderColor: colors.borderColor,
+			divideColor: colors.divideColor,
+			ringColor: colors.ringColor,
+			ringOffsetColor: colors.ringOffsetColor,
+			outlineColor: colors.outlineColor,
+			accentColor: colors.accentColor,
+			boxShadowColor: colors.boxShadowColor,
+			gradientColorStops: colors.gradientColorStops,
 			boxShadow: {
 				card: '0 12px 40px rgba(18,38,63,0.12)'
 			}
 		}
 	},
-	plugins: [forms, typography]
+	plugins: [forms, typography, themeVariables]
 }

@@ -553,7 +553,7 @@
 	<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 		<div>
 			<h2 id="clinical-images-title" class="ux-section-title">Estudios y documentos</h2>
-			<p class="mt-2 max-w-2xl text-sm text-white/60">
+			<p class="mt-2 max-w-2xl text-sm text-fg-60">
 				El equipo autorizado puede consultarlos desde esta ficha. Los originales permanecen privados.
 			</p>
 		</div>
@@ -596,13 +596,13 @@
 			<p class="ux-alert mt-5">En el modo de demostración podés recorrer la ficha, pero no cargar ni abrir archivos.</p>
 		{/if}
 		{#if errorMessage}
-			<div class="mt-5 flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-400/40 dark:bg-red-500/10 dark:text-red-100" role="alert">
+			<div class="mt-5 flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm border-danger-400-40 bg-danger-500-10 text-danger-100" role="alert">
 				<p>{errorMessage}</p>
 				<button type="button" class="font-semibold underline" onclick={() => (errorMessage = '')}>Cerrar</button>
 			</div>
 		{/if}
 		{#if message}
-			<div class="mt-5 flex items-start justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-100" role="status">
+			<div class="mt-5 flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm border-success-400-40 bg-success-400-10 text-success-100" role="status">
 				<p>{message}</p>
 				<button type="button" class="font-semibold underline" onclick={() => (message = '')}>Cerrar</button>
 			</div>
@@ -611,7 +611,7 @@
 		{#if loading}
 			<div class="mt-6 grid gap-3" aria-label="Cargando documentos">
 				{#each [1, 2, 3] as placeholder}
-					<div class="h-24 animate-pulse rounded-xl bg-white/5" aria-hidden="true"></div>
+					<div class="h-24 animate-pulse rounded-xl bg-fill-04" aria-hidden="true"></div>
 				{/each}
 			</div>
 		{:else if loadError}
@@ -620,9 +620,9 @@
 				<button type="button" class="mt-3 font-semibold underline" onclick={() => loadItems()}>Reintentar</button>
 			</div>
 		{:else if loaded && items.length === 0}
-			<div class="mt-6 rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-5 py-8 text-center">
-				<p class="text-base font-semibold text-white">Todavía no hay documentos en esta ficha</p>
-				<p class="mx-auto mt-2 max-w-lg text-sm text-white/55">
+			<div class="mt-6 rounded-2xl border border-dashed border-line-15 bg-fill-04 px-5 py-8 text-center">
+				<p class="text-base font-semibold text-fg">Todavía no hay documentos en esta ficha</p>
+				<p class="mx-auto mt-2 max-w-lg text-sm text-fg-55">
 					{#if canUpload && !demo}
 						Podés adjuntar imágenes y estudios en JPG, PNG o PDF, de hasta 5 MB.
 					{:else}
@@ -636,8 +636,8 @@
 		{:else}
 			<div class="mt-6 grid gap-3">
 				{#each items as item (item.id)}
-					<article class="flex min-w-0 flex-col gap-4 rounded-xl border border-white/10 bg-white/[0.04] p-4 sm:flex-row sm:items-center">
-						<div class="h-20 w-full shrink-0 overflow-hidden rounded-xl border border-white/10 bg-[#0b1626] sm:w-24">
+					<article class="flex min-w-0 flex-col gap-4 rounded-xl border border-line bg-fill-04 p-4 sm:flex-row sm:items-center">
+						<div class="h-20 w-full shrink-0 overflow-hidden rounded-xl border border-line bg-canvas sm:w-24">
 							{#if item.thumbnail_url && !thumbnailFailures[item.id]}
 								<img
 									src={item.thumbnail_url}
@@ -647,7 +647,7 @@
 									onerror={() => (thumbnailFailures = { ...thumbnailFailures, [item.id]: true })}
 								/>
 							{:else}
-								<div class="grid h-full place-items-center text-white/45" aria-hidden="true">
+								<div class="grid h-full place-items-center text-copy-subtle" aria-hidden="true">
 									<svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
 										<rect x="3" y="4" width="18" height="16" rx="2" />
 										<circle cx="9" cy="10" r="1.5" />
@@ -657,15 +657,15 @@
 							{/if}
 						</div>
 						<div class="min-w-0 flex-1">
-							<h3 class="break-words text-sm font-semibold text-white" title={item.original_filename ?? ''}>{titleFor(item)}</h3>
- {#if item.source==='patient'}<p class="text-xs text-white/75">Adjuntado desde el enlace del turno</p>{/if}
-							<p class="mt-1 text-xs text-white/50">{metadataFor(item)}</p>
+							<h3 class="break-words text-sm font-semibold text-fg" title={item.original_filename ?? ''}>{titleFor(item)}</h3>
+ {#if item.source==='patient'}<p class="text-xs text-fg-75">Adjuntado desde el enlace del turno</p>{/if}
+							<p class="mt-1 text-xs text-fg-50">{metadataFor(item)}</p>
 							{#if item.status === 'ready' && item.integrity_status !== 'ok'}
-								<p class="mt-2 text-xs font-semibold text-red-300">Archivo temporalmente no disponible</p>
+								<p class="mt-2 text-xs font-semibold text-danger-300">Archivo temporalmente no disponible</p>
 							{:else if item.status === 'failed'}
-								<p class="mt-2 text-xs font-semibold text-red-300">La carga no se completó</p>
+								<p class="mt-2 text-xs font-semibold text-danger-300">La carga no se completó</p>
 							{:else if item.status === 'uploading'}
-								<p class="mt-2 text-xs font-semibold text-amber-200">Carga pendiente</p>
+								<p class="mt-2 text-xs font-semibold text-warning">Carga pendiente</p>
 							{/if}
 						</div>
 						<div class="flex flex-col gap-2 sm:flex-row">
@@ -690,44 +690,44 @@
 			{/if}
 		{/if}
 
-		<div class="mt-6 flex flex-col gap-3 border-t border-white/10 pt-5 text-xs text-white/50 sm:flex-row sm:items-center sm:justify-between">
+		<div class="mt-6 flex flex-col gap-3 border-t border-line pt-5 text-xs text-fg-50 sm:flex-row sm:items-center sm:justify-between">
 			<p>El acceso se controla con los permisos de la ficha del paciente.</p>
 			{#if canViewTrash}
-				<a class="font-semibold text-white/75 hover:text-white hover:underline" href="/odonto/pacientes/papelera">Abrir papelera de documentos</a>
+				<a class="font-semibold text-fg-75 hover:text-fg hover:underline" href="/odonto/pacientes/papelera">Abrir papelera de documentos</a>
 			{/if}
 		</div>
 	{/if}
 </section>
 
 <Modal open={showUpload} title="Añadir documento clínico" closable={!uploadBusy} on:close={closeUpload}>
-	<div class="space-y-4 text-sm text-neutral-800 dark:text-neutral-100">
-		<div class="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 dark:border-[#1f3554] dark:bg-[#122641]">
-			<p class="break-words font-semibold text-neutral-900 dark:text-white">{selectedFile?.name ?? 'Imagen seleccionada'}</p>
-			<p class="mt-1 text-xs text-neutral-500 dark:text-neutral-300">{formatClinicalFileBytes(selectedFile?.size)}</p>
+	<div class="space-y-4 text-sm text-fg-n100">
+		<div class="rounded-xl border px-4 py-3 border-line-strong bg-raised">
+			<p class="break-words font-semibold text-fg">{selectedFile?.name ?? 'Imagen seleccionada'}</p>
+			<p class="mt-1 text-xs text-fg-n300">{formatClinicalFileBytes(selectedFile?.size)}</p>
 		</div>
 		<div class="grid gap-4 sm:grid-cols-2">
 			<div class="space-y-2">
 				<label for="clinical-image-date" class="text-xs font-semibold">Fecha de toma (opcional)</label>
-				<input id="clinical-image-date" type="date" max={todayISO} bind:value={takenAt} disabled={uploadBusy} class="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 dark:border-[#1f3554] dark:bg-[#0b1626]" />
+				<input id="clinical-image-date" type="date" max={todayISO} bind:value={takenAt} disabled={uploadBusy} class="w-full rounded-xl border px-3 py-2 border-line-strong bg-canvas" />
 			</div>
 			<div class="space-y-2">
 				<label for="clinical-image-note" class="text-xs font-semibold">Descripción (opcional)</label>
-				<input id="clinical-image-note" maxlength="500" placeholder="Ej: Panorámica inicial" bind:value={note} disabled={uploadBusy} class="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 dark:border-[#1f3554] dark:bg-[#0b1626]" />
+				<input id="clinical-image-note" maxlength="500" placeholder="Ej: Panorámica inicial" bind:value={note} disabled={uploadBusy} class="w-full rounded-xl border px-3 py-2 border-line-strong bg-canvas" />
 			</div>
 		</div>
 		{#if errorMessage}
-			<p class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-400/40 dark:bg-red-500/10 dark:text-red-100" role="alert">{errorMessage}</p>
+			<p class="rounded-xl border px-4 py-3 text-sm border-danger-400-40 bg-danger-500-10 text-danger-100" role="alert">{errorMessage}</p>
 		{/if}
 		{#if uploadBusy}
-			<div class="rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 dark:border-primary-400/30 dark:bg-primary-500/10">
+			<div class="rounded-xl border px-4 py-3 border-info-primary-400-30 bg-info-primary-500-10">
 				<div class="flex items-center justify-between gap-3 text-xs font-semibold">
 					<span>{uploadStatus}</span>
 					<span>{uploadProgress}%</span>
 				</div>
-				<div class="mt-2 h-2 overflow-hidden rounded-full bg-primary-100 dark:bg-white/10" role="progressbar" aria-label="Progreso de carga" aria-valuemin="0" aria-valuemax="100" aria-valuenow={uploadProgress}>
-					<div class="h-full rounded-full bg-primary-600 transition-[width]" style={`width: ${uploadProgress}%`}></div>
+				<div class="mt-2 h-2 overflow-hidden rounded-full bg-fill-10" role="progressbar" aria-label="Progreso de carga" aria-valuemin="0" aria-valuemax="100" aria-valuenow={uploadProgress}>
+					<div class="h-full rounded-full bg-info-primary-600 transition-[width]" style={`width: ${uploadProgress}%`}></div>
 				</div>
-				<p class="mt-2 text-xs text-neutral-600 dark:text-neutral-300">No cierres esta pantalla hasta que termine.</p>
+				<p class="mt-2 text-xs text-fg-n300">No cierres esta pantalla hasta que termine.</p>
 			</div>
 		{/if}
 		<div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -752,7 +752,7 @@
 />
 
 <Modal open={Boolean(trashTarget)} title="Mover documento a la papelera" dismissible={!trashBusy} on:close={() => !trashBusy && (trashTarget = null)}>
-	<div class="space-y-4 text-sm text-neutral-800 dark:text-neutral-100">
+	<div class="space-y-4 text-sm text-fg-n100">
 		<p>El documento dejará de verse en la ficha, pero no se borrará físicamente. El dueño o un administrador podrá restaurarla desde la papelera.</p>
 		<div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
 			<button type="button" class="ux-btn-secondary" disabled={trashBusy} onclick={() => (trashTarget = null)}>Cancelar</button>

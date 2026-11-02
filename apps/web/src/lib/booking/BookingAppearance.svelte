@@ -9,7 +9,17 @@
         if (theme !== 'natalia' || window.parent !== window) return;
         const prior = document.documentElement.dataset.bookingColorMode;
         document.documentElement.dataset.bookingColorMode = colorMode;
-        return () => { if (prior) document.documentElement.dataset.bookingColorMode = prior; else delete document.documentElement.dataset.bookingColorMode; };
+        // Only her page opened on its own: a framed booking of any practice also gets a color mode.
+        document.documentElement.dataset.bookingCanvas = 'natalia';
+        // The app's browser bar color belongs to its own light or dark mode: this appearance keeps the
+        // bar it had before the light mode (none), and gives it back when the page leaves.
+        const bars = [...document.head.querySelectorAll('meta[name="theme-color"]')];
+        for (const bar of bars) bar.remove();
+        return () => {
+            if (prior) document.documentElement.dataset.bookingColorMode = prior; else delete document.documentElement.dataset.bookingColorMode;
+            delete document.documentElement.dataset.bookingCanvas;
+            for (const bar of bars) document.head.append(bar);
+        };
     });
 </script>
 
@@ -25,6 +35,12 @@
 
 <style>
 	:global(html[data-booking-embedded='true'] body), :global(html[data-booking-embedded='true'] .booking-surface main) { min-height: 0; }
+	/* Her page opened on its own, as her site opens it: the canvas around her paper (what shows when the
+	   page is pulled past its edges) and the page scrollbar follow her mode, never the app mode. The
+	   values are her --paper. `html:root` outweighs the app's `:root.dark`. */
+	:global(html:root[data-booking-canvas='natalia'][data-booking-color-mode='light']) { --booking-canvas: #f3eee5; color-scheme: light; }
+	:global(html:root[data-booking-canvas='natalia'][data-booking-color-mode='dark']) { --booking-canvas: #1a1612; color-scheme: dark; }
+	:global(html:root[data-booking-canvas='natalia']), :global(html:root[data-booking-canvas='natalia'] body) { background-color: var(--booking-canvas); }
     :global(.booking-natalia), :global(.booking-control-menu-natalia) {
         --paper: #f3eee5; --surface: #fffaf2; --text: #1e1a16;
         --text-muted: #463e36; --text-subtle: #6b6155;
@@ -62,12 +78,14 @@
     :global(.booking-natalia h1), :global(.booking-natalia .ux-section-title), :global(.booking-natalia .ux-title) {
         font-family: 'Newsreader', Georgia, serif; color: var(--text); font-weight: 500;
     }
-    :global(.booking-natalia .text-white) { color: var(--text) !important; }
-    :global(.booking-natalia [class*='text-white/']) { color: var(--text-muted) !important; }
-    :global(.booking-natalia [class*='text-[#a78bfa]']), :global(.booking-natalia [class*='text-[#c4b5fd]']) { color: var(--accent-strong) !important; }
-    :global(.booking-natalia [class*='bg-[#7c3aed]']) { background: var(--accent) !important; color: var(--on-accent) !important; }
-    :global(.booking-natalia [class*='border-white/']) { border-color: var(--border) !important; }
-    :global(.booking-natalia [class*='bg-white/']) { background: var(--accent-soft) !important; }
+    /* Roles marked in the booking components (bk-*): each marks exactly the class strings that this
+       appearance repainted before the light mode, when it matched fragments of Tailwind class names. */
+    :global(.booking-natalia .bk-text) { color: var(--text) !important; }
+    :global(.booking-natalia .bk-muted) { color: var(--text-muted) !important; }
+    :global(.booking-natalia .bk-accent-text) { color: var(--accent-strong) !important; }
+    :global(.booking-natalia .bk-accent-fill) { background: var(--accent) !important; color: var(--on-accent) !important; }
+    :global(.booking-natalia .bk-line) { border-color: var(--border) !important; }
+    :global(.booking-natalia .bk-soft) { background: var(--accent-soft) !important; }
     :global(.booking-natalia .ux-label), :global(.booking-natalia .ux-subtitle), :global(.booking-natalia .ux-muted) { color: var(--text-muted); }
     :global(.booking-natalia .ux-input), :global(.booking-natalia .ux-textarea), :global(.booking-natalia .ux-select) {
         background: var(--paper); color: var(--text); border-color: var(--border); color-scheme: inherit;
@@ -78,18 +96,18 @@
     :global(.booking-natalia .ux-btn-secondary) { background: transparent; color: var(--text); border-color: var(--border-strong); }
     :global(.booking-natalia .ux-badge) { background: var(--accent-soft); color: var(--accent-strong); border-color: var(--border); }
     :global(.booking-natalia .ux-alert) { color: var(--text); background: var(--accent-soft); border-color: var(--border-strong); }
-	:global(.booking-natalia [class*='text-red-']) { color: var(--error-text) !important; }
-	:global(.booking-natalia [class*='bg-red-']) { background: var(--error-bg) !important; }
-	:global(.booking-natalia [class*='border-red-']) { border-color: var(--error-border) !important; }
-	:global(.booking-natalia [class*='text-emerald-']) { color: var(--success-text) !important; }
-	:global(.booking-natalia [class*='bg-emerald-']) { background: var(--success-bg) !important; }
-	:global(.booking-natalia [class*='border-emerald-']) { border-color: var(--success-border) !important; }
-	:global(.booking-natalia [class*='text-violet-']) { color: var(--notice-text) !important; }
-	:global(.booking-natalia [class*='bg-violet-']) { background: var(--notice-bg) !important; }
-	:global(.booking-natalia [class*='border-violet-']) { border-color: var(--notice-border) !important; }
-	:global(.booking-natalia [class*='text-amber-']) { color: var(--warning-text) !important; }
-	:global(.booking-natalia [class*='bg-amber-']) { background: var(--warning-bg) !important; }
-	:global(.booking-natalia [class*='border-amber-']) { border-color: var(--warning-border) !important; }
+	:global(.booking-natalia .bk-error-text) { color: var(--error-text) !important; }
+	:global(.booking-natalia .bk-error-fill) { background: var(--error-bg) !important; }
+	:global(.booking-natalia .bk-error-line) { border-color: var(--error-border) !important; }
+	:global(.booking-natalia .bk-success-text) { color: var(--success-text) !important; }
+	:global(.booking-natalia .bk-success-fill) { background: var(--success-bg) !important; }
+	:global(.booking-natalia .bk-success-line) { border-color: var(--success-border) !important; }
+	:global(.booking-natalia .bk-notice-text) { color: var(--notice-text) !important; }
+	:global(.booking-natalia .bk-notice-fill) { background: var(--notice-bg) !important; }
+	:global(.booking-natalia .bk-notice-line) { border-color: var(--notice-border) !important; }
+	:global(.booking-natalia .bk-warning-text) { color: var(--warning-text) !important; }
+	:global(.booking-natalia .bk-warning-fill) { background: var(--warning-bg) !important; }
+	:global(.booking-natalia .bk-warning-line) { border-color: var(--warning-border) !important; }
     :global(.booking-natalia a:focus-visible), :global(.booking-natalia button:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
     :global(.booking-natalia ::selection) { background: var(--accent-soft); color: var(--text); }
     :global(.booking-natalia *) { scrollbar-color: var(--accent) var(--paper); }

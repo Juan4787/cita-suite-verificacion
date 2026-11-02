@@ -72,7 +72,7 @@
         <h2 id="share-title" class="ux-section-title">
           Agenda de {data.business.name}
         </h2>
-        <p class="mt-2 text-sm text-white/75">
+        <p class="mt-2 text-sm text-fg-75">
           Tus pacientes reservan con los servicios y horarios de tu equipo.
         </p>
       </div>
@@ -131,13 +131,13 @@
             ? "Pausar nuevas reservas"
             : "Activar reservas"}</button
       >
-      <span class="text-sm text-white/75"
+      <span class="text-sm text-fg-75"
         >{dirty
           ? "Guardá las reglas antes de cambiar el estado."
           : "Los turnos ya reservados se conservan."}</span
       >
     </form>
-    {#if !data.business.address}<p class="mt-4 text-sm text-amber-100">
+    {#if !data.business.address}<p class="mt-4 text-sm text-warning-100">
         Falta la dirección. <a
           class="underline underline-offset-4"
           href="/odonto/configuracion/negocio"
@@ -200,7 +200,7 @@
       >
       <label class="sm:col-span-2"
         ><span class="ux-label"
-          >Condiciones de cancelación <span class="text-white/65"
+          >Condiciones de cancelación <span class="text-fg-65"
             >(opcional)</span
           ></span
         ><textarea
@@ -215,7 +215,7 @@
     <div class="mt-5 flex flex-wrap items-center gap-3">
       <button class="ux-btn-primary" disabled={!!saving}
         >{saving === "rules" ? "Guardando…" : "Guardar reglas"}</button
-      >{#if dirty}<span class="text-sm text-amber-100">Cambios sin guardar</span
+      >{#if dirty}<span class="text-sm text-warning-100">Cambios sin guardar</span
         >{/if}
     </div>
   </form>
@@ -224,7 +224,7 @@
       class="reservation-web-link"
       ><span
         ><strong class="block">Reservas desde tu sitio web</strong><span
-          class="mt-1 block text-sm text-white/75"
+          class="mt-1 block text-sm text-fg-75"
           >{data.connectedSites
             ? `${data.connectedSites} sitio${data.connectedSites === 1 ? "" : "s"} configurado${data.connectedSites === 1 ? "" : "s"}`
             : "Configurá e instalá la agenda en tu web."}</span
@@ -255,7 +255,7 @@
     gap: 1rem;
     margin-top: 1.25rem;
     padding-top: 1.25rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid var(--border);
   }
   .reservation-web-link {
     display: flex;
@@ -263,10 +263,10 @@
     justify-content: space-between;
     gap: 1.5rem;
     padding: 1.25rem 0;
-    border-block: 1px solid rgba(255, 255, 255, 0.12);
+    border-block: 1px solid var(--border);
   }
   .reservation-web-link:hover {
-    color: var(--accent);
+    color: var(--accent-text);
   }
   @media (max-width: 640px) {
     .reservation-heading,

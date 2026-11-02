@@ -93,14 +93,14 @@
     gap: 3rem;
   }
   .settings-list {
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid var(--border);
   }
   .settings-list a {
     display: flex;
     flex-direction: column;
     gap: 0.375rem;
     padding: 1.25rem 0.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    border-bottom: 1px solid var(--border);
     min-height: 5.5rem;
   }
   .settings-list strong {
@@ -111,10 +111,10 @@
     color: var(--text-muted);
   }
   .settings-list a:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--c-bg-fill-04);
   }
   .settings-list a:hover strong {
-    color: var(--accent);
+    color: var(--accent-text);
   }
   @media (max-width: 720px) {
     .settings-columns {

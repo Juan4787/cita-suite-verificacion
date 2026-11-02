@@ -544,8 +544,8 @@ describe('activación de notificaciones en el teléfono', () => {
 		const other = screen.getByText('¿Tu teléfono es de otra marca?');
 		const google = screen.getByRole('link', { name: /¿Tu teléfono es de otra marca\?.*Agregar a Google Calendar/i });
 		expect(google).toHaveAttribute('href', '/turno/public-token/ir/google');
-		expect(samsung.closest('details')?.className).toContain('border-violet-300/30');
-		expect(other.closest('a')?.className).toContain('border-violet-300/30');
+		expect(samsung.closest('details')?.className).toContain('border-accent-300-30');
+		expect(other.closest('a')?.className).toContain('border-accent-300-30');
 		expect(screen.queryByText(/otro Android/i)).not.toBeInTheDocument();
 	});
 

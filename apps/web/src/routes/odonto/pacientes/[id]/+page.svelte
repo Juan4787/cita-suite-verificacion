@@ -184,13 +184,13 @@
 		<div class="flex min-w-0 flex-wrap items-start justify-between gap-4">
 			<div class="flex min-w-0 flex-[1_1_24rem] items-start justify-between gap-3">
 				<div class="min-w-0 space-y-1">
-					<h1 class="break-words text-3xl font-semibold text-neutral-900 dark:text-white">
+					<h1 class="break-words text-3xl font-semibold text-fg">
 						{data.patient.full_name}
 					</h1>
 				</div>
 				<button disabled={!client.ready}
 					type="button"
-					class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-neutral-200 text-neutral-700 transition hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-100 dark:hover:bg-[#122641] md:hidden"
+					class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition border-line-strong text-fg-n100 hover:bg-raised md:hidden"
 					onclick={() => (showMobileActions = true)}
 					aria-label="Acciones del paciente"
 				>
@@ -259,7 +259,7 @@
 		<div class="mt-4 flex flex-wrap gap-2 text-xs sm:text-sm md:items-center md:gap-3">
 			<a
 				href="/odonto/pacientes"
-				class="flex flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full border border-neutral-200 px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:-translate-y-0.5 hover:bg-neutral-100 hover:shadow-card dark:border-[#1f3554] dark:text-[#eaf1ff] dark:hover:bg-[#122641] sm:px-4 sm:text-sm md:flex-none"
+				class="flex flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full border px-3 py-2 text-xs font-semibold transition hover:-translate-y-0.5 hover:shadow-card border-line-strong text-copy hover:bg-raised sm:px-4 sm:text-sm md:flex-none"
 			>
 				<svg
 					aria-hidden="true"
@@ -277,8 +277,8 @@
 			<button disabled={!client.ready}
 				class={`flex-auto whitespace-nowrap rounded-full px-3 py-2 text-center text-xs font-semibold transition sm:px-4 sm:text-sm md:flex-none ${
 					tab === 'historial'
-						? 'bg-[#7c3aed] text-white shadow-sm'
-						: 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-[#0f1f36]'
+						? 'bg-accent-strong text-on-accent shadow-sm'
+						: 'text-fg-n200 hover:bg-surface'
 				}`}
 				onclick={() => selectTab('historial')}
 			>
@@ -288,8 +288,8 @@
 			<button disabled={!client.ready}
 				class={`flex-auto whitespace-nowrap rounded-full px-3 py-2 text-center text-xs font-semibold transition sm:px-4 sm:text-sm md:flex-none ${
 					tab === 'datos'
-						? 'bg-[#7c3aed] text-white shadow-sm'
-						: 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-[#0f1f36]'
+						? 'bg-accent-strong text-on-accent shadow-sm'
+						: 'text-fg-n200 hover:bg-surface'
 				}`}
 				onclick={() => selectTab('datos')}
 			>
@@ -298,8 +298,8 @@
 			<button disabled={!client.ready}
 				class={`flex-auto whitespace-nowrap rounded-full px-3 py-2 text-center text-xs font-semibold transition sm:px-4 sm:text-sm md:flex-none ${
 					tab === 'radiografias'
-						? 'bg-[#7c3aed] text-white shadow-sm'
-						: 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-[#0f1f36]'
+						? 'bg-accent-strong text-on-accent shadow-sm'
+						: 'text-fg-n200 hover:bg-surface'
 				}`}
 				onclick={() => selectTab('radiografias')}
 			>
@@ -311,9 +311,9 @@
 				<div
 					class={`flex min-w-0 max-w-full items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ${
 						{
-							neutral: 'bg-white/60 text-neutral-800 dark:bg-white/10 dark:text-neutral-100',
-							alert: 'bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-100',
-							warn: 'bg-indigo-100 text-indigo-900 dark:bg-indigo-500/15 dark:text-indigo-100'
+							neutral: ' bg-fill-10 text-fg-n100',
+							alert: ' bg-warning-500-15 text-warning-100',
+							warn: ' bg-accent-indigo-500-15 text-accent-indigo-100'
 						}[chip.intent]
 					}`}
 				>
@@ -322,20 +322,20 @@
 				</div>
 			{/each}
 		</div>
-		<div class="mt-5 rounded-xl border border-neutral-200 bg-white/60 p-4 dark:border-[#1f3554] dark:bg-[#0f1f36]">
+		<div class="mt-5 rounded-xl border p-4 border-line-strong bg-surface">
 			<div class="flex items-center justify-between gap-3">
-				<h2 class="text-sm font-semibold text-neutral-900 dark:text-white">Próximos turnos</h2>
-				<a href={`/odonto/agenda`} class="text-xs font-semibold text-[#7c3aed] hover:underline">Abrir agenda</a>
+				<h2 class="text-sm font-semibold text-fg">Próximos turnos</h2>
+				<a href={`/odonto/agenda`} class="text-xs font-semibold text-accent hover:underline">Abrir agenda</a>
 			</div>
 			<div class="mt-3 grid gap-2">
 				{#each data.appointments as appointment}
-					<a href={`/odonto/turnos/${appointment.id}`} class="rounded-xl border border-neutral-100 bg-white px-3 py-2 text-sm transition hover:bg-neutral-50 dark:border-[#1f3554] dark:bg-[#152642] dark:hover:bg-[#122641]">
-						<span class="block font-semibold text-neutral-900 dark:text-white">{formatDateTime(appointment.starts_at)} ·&nbsp;{appointment.service_name_snapshot}</span>
-						<span class="text-xs text-neutral-500 dark:text-neutral-300">{appointment.professional_name_snapshot} ·&nbsp;{appointmentStatusLabels[appointment.status] ?? 'Estado pendiente'}</span>
+					<a href={`/odonto/turnos/${appointment.id}`} class="rounded-xl border px-3 py-2 text-sm transition border-line-strong bg-raised hover:bg-raised">
+						<span class="block font-semibold text-fg">{formatDateTime(appointment.starts_at)} ·&nbsp;{appointment.service_name_snapshot}</span>
+						<span class="text-xs text-fg-n300">{appointment.professional_name_snapshot} ·&nbsp;{appointmentStatusLabels[appointment.status] ?? 'Estado pendiente'}</span>
 					</a>
 				{/each}
 				{#if data.appointments.length === 0}
-					<p class="text-sm text-neutral-600 dark:text-neutral-200">No hay próximos turnos.</p>
+					<p class="text-sm text-fg-n200">No hay próximos turnos.</p>
 				{/if}
 			</div>
 		</div>
@@ -375,16 +375,16 @@
 		/>
 	{/if}
 	{#if permissions.canExportPatientData && !data.demo}
-		<section class="mt-6 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-[#1f3554] dark:bg-[#0f1f36] sm:flex sm:items-center sm:justify-between sm:gap-5" aria-labelledby="patient-export-title">
+		<section class="mt-6 rounded-2xl border p-5 shadow-sm border-line-strong bg-surface sm:flex sm:items-center sm:justify-between sm:gap-5" aria-labelledby="patient-export-title">
 			<div class="min-w-0">
-				<h2 id="patient-export-title" class="text-lg font-bold text-neutral-950 dark:text-white">Exportar datos de este paciente</h2>
-				<p class="mt-1 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+				<h2 id="patient-export-title" class="text-lg font-bold text-fg">Exportar datos de este paciente</h2>
+				<p class="mt-1 text-sm leading-6 text-fg-n300">
 					Prepará un Excel con su ficha, historial, turnos y seguimientos. No incluye radiografías ni adjuntos.
 				</p>
 			</div>
 			<a
 				href={`/odonto/exportar-datos?patient_id=${encodeURIComponent(String(data.patient.id))}`}
-				class="mt-4 inline-flex min-h-11 w-full shrink-0 items-center justify-center rounded-xl border border-violet-300 bg-violet-50 px-4 py-2.5 text-sm font-bold text-violet-800 transition hover:bg-violet-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] dark:border-violet-400/35 dark:bg-violet-400/10 dark:text-violet-100 dark:hover:bg-violet-400/15 sm:mt-0 sm:w-auto"
+				class="mt-4 inline-flex min-h-11 w-full shrink-0 items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-accent-600 border-accent-400-35 bg-accent-400-10 text-accent-100 hover:bg-accent-400-15 sm:mt-0 sm:w-auto"
 			>
 				Abrir exportación
 			</a>
@@ -394,7 +394,7 @@
 <!-- FAB móvil para nueva entrada -->
 {#if tab === 'historial' && permissions.canCreateClinicalEntry}
 	<button disabled={!client.ready}
-		class="fixed bottom-20 right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[#7c3aed] text-2xl font-bold text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed] md:hidden"
+		class="fixed bottom-20 right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-accent-strong text-2xl font-bold text-on-accent shadow-lg transition hover:-translate-y-0.5 hover:shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-accent-600 md:hidden"
 		onclick={openNewEntryModal}
 		aria-label="Registrar consulta"
 	>
@@ -407,7 +407,7 @@
 		{#if permissions.canArchivePatient}
 			<button disabled={!client.ready}
 				type="button"
-				class="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-100 dark:border-[#1f3554] dark:text-neutral-100 dark:hover:bg-[#122641]"
+				class="w-full rounded-xl border px-4 py-3 text-sm font-semibold transition border-line-strong text-fg-n100 hover:bg-raised"
 				onclick={() => {
 					showMobileActions = false;
 					showArchiveConfirm = true;
@@ -419,7 +419,7 @@
 		{#if permissions.canCreateClinicalEntry}
 			<button disabled={!client.ready}
 				type="button"
-				class="w-full rounded-xl bg-[#7c3aed] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#6d28d9]"
+				class="w-full rounded-xl bg-accent-strong px-4 py-3 text-sm font-semibold text-on-accent shadow-sm transition hover:bg-accent-press"
 				onclick={() => {
 					showMobileActions = false;
 					openNewEntryModal();
@@ -431,7 +431,7 @@
 		{#if permissions.canCreateAppointment}
 			<a
 				href={`/odonto/agenda?patient_id=${data.patient.id}`}
-				class="block w-full rounded-xl border border-[#7c3aed]/40 px-4 py-3 text-center text-sm font-semibold text-[#7c3aed] transition hover:bg-[#7c3aed]/10 dark:text-[#c4b5fd]"
+				class="block w-full rounded-xl border border-accent-600-40 px-4 py-3 text-center text-sm font-semibold transition hover:bg-accent-600-10 text-accent"
 				onclick={() => (showMobileActions = false)}
 			>
 				Nuevo turno
@@ -440,7 +440,7 @@
 		{#if data.followUpParticipates}
 			<button disabled={!client.ready}
 				type="button"
-				class="block w-full rounded-xl border border-[#7c3aed]/40 px-4 py-3 text-center text-sm font-semibold text-[#7c3aed] transition hover:bg-[#7c3aed]/10 dark:text-[#c4b5fd]"
+				class="block w-full rounded-xl border border-accent-600-40 px-4 py-3 text-center text-sm font-semibold transition hover:bg-accent-600-10 text-accent"
 				onclick={() => {
 					showMobileActions = false;
 					showFollowUpModal = true;
@@ -452,7 +452,7 @@
 		{#if isProfessional}
 			<button disabled={!client.ready}
 				type="button"
-				class="w-full rounded-xl border border-red-300/70 px-4 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 dark:border-red-400/40 dark:text-red-200 dark:hover:bg-red-500/10"
+				class="w-full rounded-xl border px-4 py-3 text-sm font-semibold transition border-danger-400-40 text-danger hover:bg-danger-500-10"
 				onclick={() => {
 					showMobileActions = false;
 					showDeleteConfirm = true;
@@ -463,7 +463,7 @@
 		{/if}
 		<button disabled={!client.ready}
 			type="button"
-			class="w-full rounded-xl px-4 py-3 text-sm font-semibold text-neutral-600 transition hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-[#122641]"
+			class="w-full rounded-xl px-4 py-3 text-sm font-semibold transition text-fg-n300 hover:bg-raised"
 			onclick={() => (showMobileActions = false)}
 		>
 			Cerrar
@@ -493,7 +493,7 @@
     onCreated={acceptCreatedEntry} onCommitted={markPatientRevisionUnverified} />
 
 <Modal open={showArchiveConfirm} title={isArchived ? 'Desarchivar paciente' : 'Archivar paciente'} on:close={() => (showArchiveConfirm = false)} dismissible>
-	<div class="space-y-4 text-sm text-neutral-800 dark:text-neutral-100">
+	<div class="space-y-4 text-sm text-fg-n100">
 		{#if isArchived}
 			<p>{isProfessional ? 'El paciente volverá a tu lista de activos.' : 'El paciente volverá a la lista de activos.'}</p>
 		{:else}
@@ -502,14 +502,14 @@
 		<div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
 			<button disabled={!client.ready}
 				type="button"
-				class="w-full rounded-xl px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:text-white dark:hover:bg-[#1b2d4b] sm:w-auto"
+				class="w-full rounded-xl px-4 py-2 text-sm font-semibold text-fg hover:bg-fill-1b2d4b sm:w-auto"
 				onclick={() => (showArchiveConfirm = false)}
 			>
 				Cancelar
 			</button>
 				<button disabled={!client.ready}
 					type="button"
-					class="w-full rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 sm:w-auto"
+					class="w-full rounded-xl bg-info-primary-600 px-4 py-2 text-sm font-semibold text-on-accent shadow-sm transition hover:bg-info-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-info-primary-500 sm:w-auto"
 					onclick={() => {
 						showArchiveConfirm = false;
 					if (isArchived) {
@@ -526,20 +526,20 @@
 	</Modal>
 
 <Modal open={showDeleteConfirm} title="Eliminar paciente" on:close={() => (showDeleteConfirm = false)} dismissible>
-	<div class="space-y-4 text-sm text-neutral-800 dark:text-neutral-100">
+	<div class="space-y-4 text-sm text-fg-n100">
 		{#if isProfessional}
-			<p class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950 dark:border-amber-400/60 dark:bg-amber-500/15 dark:text-amber-100">
+			<p class="rounded-xl border px-4 py-3 text-sm font-semibold border-warning-400-60 bg-warning-500-15 text-warning-100">
 				Para eliminar un paciente, consultá al dueño del consultorio.
 			</p>
 		{:else}
-			<p class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950 dark:border-amber-400/60 dark:bg-amber-500/15 dark:text-amber-100">
+			<p class="rounded-xl border px-4 py-3 text-sm font-semibold border-warning-400-60 bg-warning-500-15 text-warning-100">
 				La app no elimina pacientes desde esta pantalla. Para ocultarlo de la lista, archivá el paciente.
 			</p>
 		{/if}
 		<div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
 			<button disabled={!client.ready}
 				type="button"
-				class="w-full rounded-xl px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:text-white dark:hover:bg-[#1b2d4b] sm:w-auto"
+				class="w-full rounded-xl px-4 py-2 text-sm font-semibold text-fg hover:bg-fill-1b2d4b sm:w-auto"
 				onclick={() => {
 					showDeleteConfirm = false;
 				}}
@@ -549,7 +549,7 @@
 			{#if !isProfessional && permissions.canArchivePatient && !isArchived}
 				<button disabled={!client.ready}
 					type="button"
-					class="w-full rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 sm:w-auto"
+					class="w-full rounded-xl bg-info-primary-600 px-4 py-2 text-sm font-semibold text-on-accent shadow-sm transition hover:bg-info-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-info-primary-500 sm:w-auto"
 					onclick={() => {
 						showDeleteConfirm = false;
 						showArchiveConfirm = true;

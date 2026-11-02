@@ -105,7 +105,7 @@ describe('último paso después de crear un turno desde Agenda', () => {
 		const action = screen.getByRole('link', { name: 'Enviar enlace de activación' });
 		expect(action).toHaveAttribute('href', data.activationWhatsAppWebUrl);
 		expect(action).toHaveAttribute('target', '_blank');
-		expect(action.className).toContain('bg-emerald-500');
+		expect(action.className).toContain('bg-success-500');
 		expect(action.className).toContain('min-h-[4.5rem]');
 		expect(
 			screen.getByText('El paciente recibirá un enlace para activar sus recordatorios.')

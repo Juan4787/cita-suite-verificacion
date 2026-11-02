@@ -8,6 +8,7 @@ import Page from './+page.svelte';
 
 const data = (status: 'pending' | 'confirmed' = 'pending') => ({
 	bookingColorMode: 'dark' as const,
+	themePreference: 'light' as const,
 	context: { email: 'una-direccion-muy-larga-de-un-consultorio@example.com', status, resendAfter: Date.now() + 60_000, expiresAt: Date.now() + 3600_000 },
 	currentEmail: null, entryRoute: '/login'
 });

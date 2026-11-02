@@ -1,9 +1,5 @@
+/* Its colors (--patient-*) come from src/lib/theme/palette.js; the Natalia appearance redefines them below. */
 .patient-booking-form {
-  --patient-muted: #b5c2d7;
-  --patient-field-bg: rgba(234, 241, 255, 0.045);
-  --patient-field-border: #52637b;
-  --patient-summary-bg: rgba(139, 92, 246, 0.06);
-  --patient-summary-border: #8056c9;
   padding: 1.5rem;
   border-radius: 1.5rem;
   background: var(--bg);

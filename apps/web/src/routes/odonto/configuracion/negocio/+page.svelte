@@ -57,7 +57,7 @@
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
 			<div>
 				<h2 class="ux-section-title">Datos visibles</h2>
-				<p class="mt-1 text-sm text-white/55">Información básica del consultorio.</p>
+				<p class="mt-1 text-sm text-fg-55">Información básica del consultorio.</p>
 			</div>
 			<button type="submit" disabled={!canManage} class="ux-btn-primary">Guardar</button>
 		</div>
@@ -102,10 +102,11 @@
 					name="address"
 					value={valueOf('address')}
 					disabled={!canManage}
-					placeholder="Av. Santa Fe 1234, Piso 3, Consultorio B, CABA"
+					placeholder="Av. Santa Fe 1234, CABA"
 					class="ux-input"
 				/>
-				<span class="mt-1 block text-xs text-white/45">
+				<span class="mt-1 block text-xs text-copy-subtle">
+					Incluí piso y consultorio si corresponde.
 					Aparece en la confirmación del turno, el evento de calendario y el botón "Cómo llegar".
 					Obligatoria para la reserva online.
 				</span>
@@ -128,14 +129,14 @@
 					placeholder="https://maps.app.goo.gl/..."
 					class="ux-input"
 				/>
-				<span class="mt-1 block text-xs text-white/45">
+				<span class="mt-1 block text-xs text-copy-subtle">
 					Si lo dejás vacío, generamos el mapa automáticamente desde la dirección.
 				</span>
 			</label>
 			<label class="md:col-span-2">
 				<span class="ux-label">Logo (opcional)</span>
 				<input name="logo_url" value={valueOf('logo_url')} disabled={!canManage} class="ux-input" />
-				<span class="mt-1 block text-xs text-white/45">
+				<span class="mt-1 block text-xs text-copy-subtle">
 					Usá una URL HTTPS del dominio público configurado o del proyecto de datos del consultorio para que el logo se vea también en la reserva online.
 				</span>
 			</label>
@@ -151,13 +152,13 @@
 		{#if !canManage}
 			<p class="ux-empty mt-5">Tu permiso actual no permite editar esta configuración.</p>
 		{/if}
-		<details class="mt-6 border-t border-white/10 pt-4">
+		<details class="mt-6 border-t border-line pt-4">
 			<summary class="min-h-11 cursor-pointer font-semibold">Dirección personalizada</summary>
 			<label class="mt-3 block">
 				<span class="ux-label">Última parte de la dirección</span>
 				<input name="slug" required value={valueOf('slug')} disabled={!canManage} class="ux-input mt-2" />
 			</label>
-			<p class="mt-2 text-sm text-white/70">/reservar/{valueOf('slug')}</p>
+			<p class="mt-2 text-sm text-fg-70">/reservar/{valueOf('slug')}</p>
 		</details>
 	</form>
 </section>

@@ -554,18 +554,18 @@
 		<!-- Ancho mínimo, no fijo: «09:00» en negrita no entra en 56 px y se partía en dos líneas. -->
 		<div class={`flex flex-wrap items-baseline gap-2 sm:row-span-2 sm:block sm:text-center ${showDate ? 'min-w-16 sm:min-w-24' : 'min-w-14 sm:min-w-20'}`}>
 			{#if showDate}
-				<p class="text-micro font-bold uppercase tracking-wide text-[#c4b5fd]">{shortDayLabel(appointment.starts_at)}</p>
+				<p class="text-micro font-bold uppercase tracking-wide text-accent">{shortDayLabel(appointment.starts_at)}</p>
 			{/if}
-			<p class="whitespace-nowrap text-xl font-bold tabular-nums text-white sm:text-2xl">{timeOnly(appointment.starts_at)}</p>
-			<p class="mt-0.5 whitespace-nowrap text-xs tabular-nums text-white/40">{timeOnly(appointment.ends_at)}</p>
+			<p class="whitespace-nowrap text-xl font-bold tabular-nums text-fg sm:text-2xl">{timeOnly(appointment.starts_at)}</p>
+			<p class="mt-0.5 whitespace-nowrap text-xs tabular-nums text-copy-subtle">{timeOnly(appointment.ends_at)}</p>
 		</div>
 		<div class="col-span-2 min-w-0 sm:col-span-1">
-			<p class="break-words text-base font-bold text-white sm:text-lg">{appointment.patients?.full_name ?? 'Paciente'}</p>
-			<p class="mt-0.5 break-words text-sm text-white/55">
+			<p class="break-words text-base font-bold text-fg sm:text-lg">{appointment.patients?.full_name ?? 'Paciente'}</p>
+			<p class="mt-0.5 break-words text-sm text-fg-55">
 				{appointment.service_name_snapshot} ·&nbsp;{appointment.professional_name_snapshot}
 			</p>
 		</div>
-		<svg class="col-start-2 row-start-1 h-5 w-5 shrink-0 text-white/30 sm:col-start-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+		<svg class="col-start-2 row-start-1 h-5 w-5 shrink-0 text-fg-30 sm:col-start-3" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
 		<div class="col-span-2 flex flex-wrap gap-2 sm:col-start-2">
 			<span class={appointmentStatusTone(appointment)}>{appointmentStatusLabel(appointment)}</span>
 			{#if appointment.source === 'public_booking'}<span class="ux-badge">Online</span>{/if}
@@ -582,7 +582,7 @@
 				<details>
 					<summary class="ux-btn-secondary cursor-pointer list-none">Exceptuar</summary>
 					<form method="POST" action={`/odonto/turnos/${appointment.id}?/deposit`} class="mt-2 grid gap-2">
-						<p class="max-w-sm text-sm text-white/65">El turno queda Confirmado sin seña. Queda registrado como decisión del consultorio.</p>
+						<p class="max-w-sm text-sm text-fg-65">El turno queda Confirmado sin seña. Queda registrado como decisión del consultorio.</p>
 						<input type="hidden" name="deposit_action" value="waived" />
 						<input type="hidden" name="expected_revision" value={appointment.appointment_deposits.revision} />
 						<button class="ux-btn-secondary">Sí, exceptuar la seña</button>
@@ -592,7 +592,7 @@
 				<details>
 					<summary class="ux-btn-secondary cursor-pointer list-none">Deshacer</summary>
 					<form method="POST" action={`/odonto/turnos/${appointment.id}?/deposit`} class="mt-2 grid gap-2">
-						<p class="max-w-sm text-sm text-white/65">La seña vuelve a pendiente. Si el turno estaba Confirmado, vuelve a Reservado.</p>
+						<p class="max-w-sm text-sm text-fg-65">La seña vuelve a pendiente. Si el turno estaba Confirmado, vuelve a Reservado.</p>
 						<input type="hidden" name="deposit_action" value="pending" />
 						<input type="hidden" name="expected_revision" value={appointment.appointment_deposits.revision} />
 						<button class="ux-btn-secondary">Sí, deshacer el registro</button>
@@ -609,21 +609,21 @@
 			{#if !data.anyDay}
 				<a
 					href={buildAgendaHref(prevDate)}
-					class="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-white/80 transition hover:bg-white/10 sm:h-11 sm:w-11"
+					class="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-line bg-fill-04 text-fg-80 transition hover:bg-fill-10 sm:h-11 sm:w-11"
 					aria-label="Día anterior"
 				>
 					<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6" /></svg>
 				</a>
 			{/if}
 			<div class="min-w-0 flex-1 text-center">
-				<h1 class="text-lg font-bold leading-tight tracking-tight text-white sm:text-2xl lg:text-4xl">
+				<h1 class="text-lg font-bold leading-tight tracking-tight text-fg sm:text-2xl lg:text-4xl">
 					{data.anyDay ? 'Cualquier día' : dayLabel(data.date)}
 				</h1>
 			</div>
 			{#if !data.anyDay}
 				<a
 					href={buildAgendaHref(nextDate)}
-					class="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-white/80 transition hover:bg-white/10 sm:h-11 sm:w-11"
+					class="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-line bg-fill-04 text-fg-80 transition hover:bg-fill-10 sm:h-11 sm:w-11"
 					aria-label="Día siguiente"
 				>
 					<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6" /></svg>
@@ -706,7 +706,7 @@
 	{#if needsSetup}
 		<div class="ux-card">
 			<h2 class="ux-section-title">Antes de tomar turnos</h2>
-			<p class="mt-1 text-sm text-white/55">Completá lo básico para poder agendar.</p>
+			<p class="mt-1 text-sm text-fg-55">Completá lo básico para poder agendar.</p>
 			<div class="mt-4 flex flex-wrap gap-2">
 				{#if professionals.length === 0}
 					<a href="/odonto/configuracion/usuarios" class="ux-btn-primary">Agregar profesional</a>
@@ -730,7 +730,7 @@
 					onfocus={() => void loadLiveSnapshot()}
 				/>
 			</label>
-			<p class="mt-2 text-xs font-semibold text-white/40">Busca turnos activos mientras escribís.</p>
+			<p class="mt-2 text-xs font-semibold text-copy-subtle">Busca turnos activos mientras escribís.</p>
 			{#if referencesError}
 				<div class="ux-alert mt-3">
 					{referencesError}
@@ -739,9 +739,9 @@
 			{/if}
 
 			<div class="my-5 flex items-center gap-3" aria-hidden="true">
-				<span class="h-px flex-1 bg-white/10"></span>
-				<span class="text-xs font-bold uppercase tracking-wide text-white/40">O buscá con filtros</span>
-				<span class="h-px flex-1 bg-white/10"></span>
+				<span class="h-px flex-1 bg-fill-10"></span>
+				<span class="text-xs font-bold uppercase tracking-wide text-copy-subtle">O buscá con filtros</span>
+				<span class="h-px flex-1 bg-fill-10"></span>
 			</div>
 
 			<form method="GET" class="grid gap-4 lg:grid-cols-[1.15fr_1fr_1fr_1fr_auto]">
@@ -779,7 +779,7 @@
 				<button class="ux-btn-primary self-end">Buscar</button>
 			</form>
 			{#if hasActiveSearch}
-				<a href={`/odonto/agenda?date=${data.date}`} class="mt-3 inline-block text-sm font-semibold text-[#c4b5fd] hover:underline">
+				<a href={`/odonto/agenda?date=${data.date}`} class="mt-3 inline-block text-sm font-semibold text-accent hover:underline">
 					Limpiar filtros
 				</a>
 			{/if}
@@ -789,7 +789,7 @@
 	{#if showCreate}
 		<div transition:clippedSlide={{ duration: 180 }} class="scroll-mt-5" bind:this={createSection}>
 			{#if referencesLoading && !referencesLoaded}
-				<div class="ux-card text-sm font-semibold text-white/60" aria-live="polite">
+				<div class="ux-card text-sm font-semibold text-fg-60" aria-live="polite">
 					Cargando profesionales y servicios…
 				</div>
 			{:else if referencesError && !referencesLoaded}
@@ -834,9 +834,9 @@
 					{liveActive ? 'Resultado del buscador' : hasActiveSearch ? 'Resultado de búsqueda' : 'Turnos del día'}
 				</h2>
 				{#if liveActive}
-					<p class="mt-1 break-words text-sm font-semibold text-white/50">“{liveQuery}”</p>
+					<p class="mt-1 break-words text-sm font-semibold text-fg-50">“{liveQuery}”</p>
 				{:else if searchSummary}
-					<p class="mt-1 break-words text-sm font-semibold text-white/50">{searchSummary}</p>
+					<p class="mt-1 break-words text-sm font-semibold text-fg-50">{searchSummary}</p>
 				{/if}
 			</div>
 			<span class="ux-badge shrink-0">{resultLabel}</span>
@@ -851,7 +851,7 @@
 				<div class="mt-5 grid gap-5">
 					{#if displayGroups.upcoming.length > 0}
 						<div>
-							<p class="text-xs font-bold uppercase tracking-wide text-white/40">Próximos</p>
+							<p class="text-xs font-bold uppercase tracking-wide text-copy-subtle">Próximos</p>
 							<div class="mt-2 grid gap-3">
 								{#each displayGroups.upcoming as appointment (appointment.id)}
 									{@render appointmentRow(appointment, true)}
@@ -861,7 +861,7 @@
 					{/if}
 					{#if displayGroups.past.length > 0}
 						<div>
-							<p class="text-xs font-bold uppercase tracking-wide text-white/40">Expirados</p>
+							<p class="text-xs font-bold uppercase tracking-wide text-copy-subtle">Expirados</p>
 							<div class="mt-2 grid gap-3">
 								{#each displayGroups.past as appointment (appointment.id)}
 									{@render appointmentRow(appointment, true)}
@@ -871,7 +871,7 @@
 					{/if}
 				</div>
 				{#if !liveActive && data.anyDayLimited}
-					<p class="mt-4 text-sm font-semibold text-white/45">
+					<p class="mt-4 text-sm font-semibold text-copy-subtle">
 						Mostramos los turnos más cercanos a hoy. Refiná los filtros para acotar la búsqueda.
 					</p>
 				{/if}

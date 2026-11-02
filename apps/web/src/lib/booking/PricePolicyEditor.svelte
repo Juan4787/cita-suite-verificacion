@@ -183,7 +183,7 @@
 >
   <fieldset disabled={!canEdit || saving} class="min-w-0">
     <h2 class="ux-section-title">Aranceles y ajustes mensuales</h2>
-    <p class="mt-2 text-sm text-white/70">
+    <p class="mt-2 text-sm text-fg-70">
       El paciente verá el arancel correspondiente a la fecha que elija. Los
       aumentos se acumulan con precisión y el arancel se redondea sólo al
       cotizar cada fecha.
@@ -205,7 +205,7 @@
             value="service_default">Predeterminada de la prestación</option
           ></select
         ></label
-      >{#if scope === "service_default"}<p class="mt-2 text-sm text-white/75">
+      >{#if scope === "service_default"}<p class="mt-2 text-sm text-fg-75">
           Se usa en turnos conjuntos y en individuales sin una tarifa propia. No
           suma los aranceles de los participantes.
         </p>{/if}{/if}
@@ -261,7 +261,7 @@
           inputmode="decimal"
           class="ux-input mt-2"
           required
-        /><span class="mt-1 block text-xs text-white/70"
+        /><span class="mt-1 block text-xs text-fg-70"
           >0 mantiene el arancel sin aumentos.</span
         ></label
       >
@@ -276,12 +276,12 @@
         ></label
       >
     </div>
-    <p class="mt-4 text-sm text-white/75">
+    <p class="mt-4 text-sm text-fg-75">
       Aranceles en pesos argentinos, sin centavos.
     </p>
     <fieldset class="mt-6">
       <legend class="text-base font-bold">Cambios de meses específicos</legend>
-      <p class="mt-1 text-sm text-white/70">
+      <p class="mt-1 text-sm text-fg-70">
         Un cambio de un solo mes reemplaza el porcentaje habitual. Para revisar
         el aumento a partir de un mes, elegí “Desde este mes en adelante”; los
         meses anteriores y las excepciones posteriores se conservan.
@@ -367,7 +367,7 @@
               >{/each}</tbody
           >
         </table>
-      </div>{:else if previewResult.error}<p id={feedbackId} role="status" class="ux-alert mt-4">{previewResult.error}</p>{:else}<p class="mt-4 text-sm text-white/70">
+      </div>{:else if previewResult.error}<p id={feedbackId} role="status" class="ux-alert mt-4">{previewResult.error}</p>{:else}<p class="mt-4 text-sm text-fg-70">
         Completá el importe y los meses para ver los aranceles antes de guardar.
       </p>{/if}
     <button

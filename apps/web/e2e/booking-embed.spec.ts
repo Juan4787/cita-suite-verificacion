@@ -1,6 +1,7 @@
 import { observeRenderHealth } from './helpers/render-health';
 import { layoutIssues, type LayoutIssue } from './helpers/layout-usability';
 import { alignTaskForCapture } from './helpers/task-capture';
+import { applyThemeInPage, chooseTheme, expectRenderedTheme } from './helpers/theme';
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
@@ -703,10 +704,10 @@ test.describe('isolated booking integration', () => {
 			for (const width of [320, 390, 768, 1280, 1600])
 				for (const theme of ['light', 'dark']) {
 					await page.setViewportSize({ width, height: 900 });
-					await page.emulateMedia({ colorScheme: theme === 'dark' ? 'dark' : 'light' });
-					expect(
-						await page.evaluate(() => document.documentElement.classList.contains('dark'))
-					).toBe(true);
+					// The device prefers the other mode; the open task switches as the selector does.
+					await page.emulateMedia({ colorScheme: theme === 'dark' ? 'light' : 'dark' });
+					await applyThemeInPage(page, theme as 'light' | 'dark');
+					await expectRenderedTheme(page, theme as 'light' | 'dark');
 					for (const issue of await layoutIssues(
 						page,
 						'input:not(.ux-native-source):not([type="hidden"]):visible, select:not(.ux-native-source):visible, textarea:visible, .ux-control-trigger:visible'
@@ -1108,13 +1109,12 @@ test.describe('isolated booking integration', () => {
 			for (const width of [320, 390, 768, 1280, 1600])
 				for (const theme of ['light', 'dark']) {
 					await page.setViewportSize({ width, height: 900 });
-					await page.emulateMedia({ colorScheme: theme === 'dark' ? 'dark' : 'light' });
-					await page.evaluate((theme) => localStorage.setItem('theme', theme), theme);
+					// The device prefers the other mode: the choice of this device must win.
+					await page.emulateMedia({ colorScheme: theme === 'dark' ? 'light' : 'dark' });
+					await chooseTheme(page, theme as 'light' | 'dark');
 					await page.goto(editorURL);
 					await expect(page.locator('[data-editor-ready="true"]')).toBeVisible();
-					await expect
-						.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark')))
-						.toBe(true);
+					await expectRenderedTheme(page, theme as 'light' | 'dark');
 					await geometry(page, { viewport: width, theme, task: 'profile' });
 					// Name and booking status share the header; it is captured on its own because the
 					// profile task capture below starts at the form.
@@ -1280,7 +1280,9 @@ test.describe('isolated booking integration', () => {
 					for (const theme of ['light', 'dark']) {
 						await page.setViewportSize({ width, height: 900 });
 						await page.emulateMedia({ colorScheme: theme === 'dark' ? 'dark' : 'light' });
-						await page.evaluate((theme) => localStorage.setItem('theme', theme), theme);
+						// Cita Suite's appearance follows the app mode of the device. Natalia's follows only
+						// her site's color_mode: the app cookie is set to the opposite mode to prove it.
+						await chooseTheme(page, brand === 'natalia' ? (theme === 'dark' ? 'light' : 'dark') : (theme as 'light' | 'dark'));
 						const url = new URL(selectedURL);
 						url.pathname =
 							brand === 'natalia' ? '/embed/v1/' + fixture.key : '/reservar/' + fixture.businessId;
@@ -1317,17 +1319,23 @@ test.describe('isolated booking integration', () => {
 							'.patient-control:not(.ux-native-source):visible, .ux-control-trigger:visible'
 						))
 							publicLayout.push({ brand, viewport: width, theme, ...issue });
-						if (brand === 'natalia')
+						if (brand === 'natalia') {
 							await expect(page.locator('[data-booking-theme="natalia"]')).toHaveAttribute(
 								'data-booking-color-mode',
 								theme
 							);
-						else
-							await expect
-								.poll(() =>
-									page.evaluate(() => document.documentElement.classList.contains('dark'))
-								)
-								.toBe(true);
+							// Her paper color, exactly as before the light mode, whatever the app mode is.
+							expect(await page.locator('[data-booking-theme="natalia"] main').first().evaluate((main) => getComputedStyle(main).backgroundColor))
+								.toBe(theme === 'dark' ? 'rgb(26, 22, 18)' : 'rgb(243, 238, 229)');
+							// Nor the browser bar of the app's own mode: before the light mode there was none.
+							await expect(page.locator('meta[name="theme-color"]')).toHaveCount(0);
+							// The canvas around her paper and the page scrollbar follow her mode as well.
+							expect(await page.evaluate(() => ({ scheme: getComputedStyle(document.documentElement).colorScheme,
+								canvas: getComputedStyle(document.documentElement).backgroundColor, body: getComputedStyle(document.body).backgroundColor })))
+								.toEqual(theme === 'dark'
+									? { scheme: 'dark', canvas: 'rgb(26, 22, 18)', body: 'rgb(26, 22, 18)' }
+									: { scheme: 'light', canvas: 'rgb(243, 238, 229)', body: 'rgb(243, 238, 229)' });
+						} else await expectRenderedTheme(page, theme as 'light' | 'dark');
 						// Certify the final form itself (summary, then required fields), not the steps above it.
 						const form = page.locator('.patient-booking-form');
 						await alignTaskForCapture(form);
@@ -1354,7 +1362,7 @@ test.describe('isolated booking integration', () => {
 							brand,
 							width,
 							theme,
-							renderedTheme: brand === 'natalia' ? theme : 'dark'
+							renderedTheme: theme
 						});
 					}
 			expect(coverage).toHaveLength(20);

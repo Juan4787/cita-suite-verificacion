@@ -55,15 +55,15 @@
 
 	const toneClass = $derived.by(() => {
 		if (tone === 'warning') {
-			return 'border-amber-300/35 bg-amber-400/10 shadow-amber-950/10';
+			return 'border-warning-300-35 bg-warning-400-10 shadow-shade-warning-950-10';
 		}
 		if (tone === 'success') {
-			return 'border-emerald-300/25 bg-emerald-400/10 shadow-emerald-950/10';
+			return 'border-success-300-25 bg-success-400-10 shadow-shade-success-950-10';
 		}
 		if (tone === 'info') {
-			return 'border-violet-300/25 bg-violet-400/10 shadow-violet-950/10';
+			return 'border-accent-300-25 bg-accent-400-10 shadow-shade-accent-950-10';
 		}
-		return 'border-white/10 bg-[#102842]/95 shadow-black/15';
+		return 'border-line bg-fill-102842-95 shadow-shade-black-10';
 	});
 </script>
 
@@ -75,7 +75,7 @@
 	>
 		<button
 			type="button"
-			class="absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-xl text-white/65 transition hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
+			class="absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-xl text-fg-65 transition hover:bg-fill-10 hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-accent-300"
 			onclick={dismiss}
 			aria-label={`Quitar aviso: ${title}`}
 			title="Quitar aviso"
@@ -85,9 +85,9 @@
 			</svg>
 		</button>
 
-		<h2 class="text-base font-bold text-white sm:text-lg">{title}</h2>
+		<h2 class="text-base font-bold text-fg sm:text-lg">{title}</h2>
 		{#if message}
-			<p class="mt-1 text-sm font-semibold leading-6 text-white/65">{message}</p>
+			<p class="mt-1 text-sm font-semibold leading-6 text-fg-65">{message}</p>
 		{/if}
 		{@render children?.()}
 	</section>

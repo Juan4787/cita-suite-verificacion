@@ -7,7 +7,7 @@ import { page } from '$app/state';
 import BookingAppearance from './BookingAppearance.svelte';
 
 const children = createRawSnippet(() => ({ render: () => '<p>Reserva</p>' }));
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); delete document.documentElement.dataset.bookingColorMode; });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); delete document.documentElement.dataset.bookingColorMode; delete document.documentElement.dataset.bookingCanvas; });
 
 it.each(['light', 'dark'] as const)('renders the explicit %s mode without consulting the system', async (mode) => {
 	page.data.bookingColorMode = mode;
@@ -19,10 +19,20 @@ it.each(['light', 'dark'] as const)('renders the explicit %s mode without consul
 	expect(matchMedia).not.toHaveBeenCalled();
 });
 
+it('gives her page, opened on its own, the canvas of her mode and takes it back when it leaves', async () => {
+	page.data.bookingColorMode = 'dark';
+	const { unmount } = render(BookingAppearance, { theme: 'natalia', children });
+	await waitFor(() => expect(document.documentElement.dataset.bookingCanvas).toBe('natalia'));
+	unmount();
+	expect(document.documentElement.dataset.bookingCanvas).toBeUndefined();
+	expect(document.documentElement.dataset.bookingColorMode).toBeUndefined();
+});
+
 it('does not apply Natalia colors to the standard Cita Suite appearance', () => {
 	const { container } = render(BookingAppearance, { theme: 'cita-suite', children });
 	expect(container.querySelector('.booking-surface')).not.toHaveAttribute('data-booking-color-mode');
 	expect(document.documentElement.dataset.bookingColorMode).toBeUndefined();
+	expect(document.documentElement.dataset.bookingCanvas).toBeUndefined();
 });
 
 it('leaves the embedded host bridge in control of the mode', () => {
@@ -35,6 +45,8 @@ it('leaves the embedded host bridge in control of the mode', () => {
 		const { container } = render(BookingAppearance, { theme: 'natalia', children });
 		expect(container.querySelector('.booking-natalia')).not.toHaveAttribute('data-booking-color-mode');
 		expect(document.documentElement.dataset.bookingColorMode).toBeUndefined();
+		// A framed booking keeps the canvas of the page that frames it.
+		expect(document.documentElement.dataset.bookingCanvas).toBeUndefined();
 	} finally {
 		Object.defineProperty(window, 'parent', { value: parent, configurable: true });
 		page.url.search = '';

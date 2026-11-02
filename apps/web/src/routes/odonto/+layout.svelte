@@ -7,6 +7,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import DismissibleNotice from '$lib/components/notices/DismissibleNotice.svelte';
 	import ConfirmForm from '$lib/components/ConfirmForm.svelte';
+	import ThemeSelector from '$lib/components/ThemeSelector.svelte';
 	import { ACCOUNT_ASSISTANCE_OPTIONS, assistanceEndText, formatAssistanceMoment } from '$lib/access/assistance-durations';
 	import { assistanceNoticeMode as assistanceNoticeModeFor } from '$lib/access/assistance-notice';
 	import OdontoRouteSkeleton from '$lib/components/skeleton/OdontoRouteSkeleton.svelte';
@@ -663,13 +664,13 @@
 	});
 </script>
 
-<div class="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-[#0b1626] dark:text-[#eaf1ff]">
-	<header class="sticky top-0 z-40 border-b border-neutral-100 bg-white/95 dark:border-[#1f2b45] dark:bg-[#0f1f36]/95">
+<div class="min-h-screen bg-canvas text-copy">
+	<header class="sticky top-0 z-40 border-b border-line-1f2b45 bg-fill-0f1f36-95">
 		<div class="flex h-14 items-center gap-2 px-3 md:hidden">
 			{#if showBack}
 				<a
 					href={mobileBackHref}
-					class="flex h-11 w-11 items-center justify-center rounded-full text-neutral-700 transition hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-[#13243d]"
+					class="flex h-11 w-11 items-center justify-center rounded-full transition text-fg-n200 hover:bg-surface-2"
 					aria-label="Volver"
 				>
 					<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -679,7 +680,7 @@
 			{:else}
 				<button
 					type="button"
-					class="relative flex h-11 w-11 items-center justify-center rounded-full text-neutral-700 transition hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-[#13243d]"
+					class="relative flex h-11 w-11 items-center justify-center rounded-full transition text-fg-n200 hover:bg-surface-2"
 					aria-label={menuButtonLabel}
 					disabled={!client.ready}
 					onclick={() => (mobileMenuOpen = true)}
@@ -688,17 +689,17 @@
 						<path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16" />
 					</svg>
 					{#if assistanceMark}
-						<span class="absolute right-2 top-2 h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true"></span>
+						<span class="absolute right-2 top-2 h-2 w-2 rounded-full bg-success" aria-hidden="true"></span>
 					{/if}
 				</button>
 			{/if}
-			<h1 class="min-w-0 flex-1 truncate text-base font-semibold text-neutral-900 dark:text-white" data-truncation="allowed">
+			<h1 class="min-w-0 flex-1 truncate text-base font-semibold text-fg" data-truncation="allowed">
 				{mobileTitle}
 			</h1>
 			{#if showBack}
 				<button
 					type="button"
-					class="relative flex h-11 w-11 items-center justify-center rounded-full text-neutral-700 transition hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-[#13243d]"
+					class="relative flex h-11 w-11 items-center justify-center rounded-full transition text-fg-n200 hover:bg-surface-2"
 					aria-label={menuButtonLabel}
 					disabled={!client.ready}
 					onclick={() => (mobileMenuOpen = true)}
@@ -707,7 +708,7 @@
 						<path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16" />
 					</svg>
 					{#if assistanceMark}
-						<span class="absolute right-2 top-2 h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true"></span>
+						<span class="absolute right-2 top-2 h-2 w-2 rounded-full bg-success" aria-hidden="true"></span>
 					{/if}
 				</button>
 			{:else}
@@ -715,18 +716,18 @@
 			{/if}
 		</div>
 		{#if mobileMenuOpen}
-			<div class="fixed inset-0 z-50 flex items-stretch justify-center bg-black/60 px-3 py-3 md:hidden">
+			<div class="fixed inset-0 z-50 flex items-stretch justify-center bg-fill-black-60 px-3 py-3 md:hidden">
 				<div
-					class="relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-neutral-100 bg-white text-neutral-900 shadow-2xl dark:border-white/10 dark:bg-[#0f1f36] dark:text-white"
+					class="relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full max-w-sm flex-col overflow-hidden rounded-2xl border shadow-2xl border-line bg-surface text-fg"
 					role="dialog"
 					aria-modal="true"
 					aria-label="Menú de navegación"
 				>
 					<div class="flex items-center justify-between px-4 pt-4">
-						<p class="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-300">Menú</p>
+						<p class="text-sm font-semibold uppercase tracking-wide text-fg-n300">Menú</p>
 						<button
 							type="button"
-							class="flex h-10 w-10 items-center justify-center rounded-full text-neutral-500 transition hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-white/10"
+							class="flex h-10 w-10 items-center justify-center rounded-full transition text-fg-n300 hover:bg-fill-10"
 							onclick={() => {
 								mobileMenuOpen = false;
 								showReportHelp = false;
@@ -737,28 +738,28 @@
 						</button>
 					</div>
 					{#if isMasterPage}
-						<div class="mx-4 mt-4 rounded-xl border border-violet-300/25 bg-violet-500/10 px-4 py-3 text-sm">
-							<p class="text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-200/70">Modo actual</p>
-							<p class="mt-1 font-semibold text-neutral-900 dark:text-white">Administración Cita Suite</p>
+						<div class="mx-4 mt-4 rounded-xl border border-accent-300-25 bg-accent-600-10 px-4 py-3 text-sm">
+							<p class="text-xs font-semibold uppercase tracking-wide text-accent-200-70">Modo actual</p>
+							<p class="mt-1 font-semibold text-fg">Administración Cita Suite</p>
 						</div>
 					{:else if activeBusiness?.business}
-						<div class="mx-4 mt-4 rounded-xl border border-neutral-200 px-4 py-3 text-sm dark:border-white/10">
-							<p class="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-300">
+						<div class="mx-4 mt-4 rounded-xl border px-4 py-3 text-sm border-line">
+							<p class="text-xs font-semibold uppercase tracking-wide text-fg-n300">
 								Consultorio activo
 							</p>
-							<p class="mt-1 font-semibold text-neutral-900 dark:text-white">
+							<p class="mt-1 font-semibold text-fg">
 								{activeBusiness.business.name}
 							</p>
 							{#if assistanceMark}
 								<a
 									href="/odonto/configuracion/ayuda"
-									class="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-400/10 px-2.5 py-1 text-xs font-bold text-emerald-800 transition hover:bg-emerald-400/20 dark:text-emerald-100"
+									class="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full border border-success-500-30 bg-success-400-10 px-2.5 py-1 text-xs font-bold transition hover:bg-success-400-20 text-success-100"
 									onclick={() => {
 										mobileMenuOpen = false;
 										closeMenus();
 									}}
 								>
-									<span class="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" aria-hidden="true"></span>
+									<span class="h-1.5 w-1.5 shrink-0 rounded-full bg-success" aria-hidden="true"></span>
 									<span>{assistanceMark.text}<span class="sr-only">{assistanceMark.detail}</span></span>
 								</a>
 							{/if}
@@ -767,7 +768,7 @@
 					<nav class="mt-4 min-h-0 flex-1 overflow-y-auto px-4 pb-3">
 						<div class="flex flex-col gap-2">
 							{#if primaryMobileNav.length > 0}
-								<p class="mt-2 px-1 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-300">
+								<p class="mt-2 px-1 text-xs font-semibold uppercase tracking-wide text-fg-n300">
 									Trabajo diario
 								</p>
 								{#each primaryMobileNav as item}
@@ -775,8 +776,8 @@
 										href={item.href}
 										class={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
 											isNavItemActive(item)
-												? 'bg-[#7c3aed] text-white'
-												: 'text-neutral-600 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-white/10'
+												? 'bg-accent-strong text-on-accent'
+												: 'text-fg-n200 hover:bg-fill-10'
 										}`}
 										onclick={() => {
 											mobileMenuOpen = false;
@@ -788,7 +789,7 @@
 								{/each}
 							{/if}
 						{#if canShowConfigMenu}
-							<p class="mt-4 px-1 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-300">
+							<p class="mt-4 px-1 text-xs font-semibold uppercase tracking-wide text-fg-n300">
 								Configuración
 							</p>
 							{#each configNav as item}
@@ -796,8 +797,8 @@
 									href={item.href}
 									class={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
 										isNavItemActive(item)
-											? 'bg-[#7c3aed] text-white'
-											: 'text-neutral-600 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-white/10'
+											? 'bg-accent-strong text-on-accent'
+											: 'text-fg-n200 hover:bg-fill-10'
 									}`}
 									onclick={() => {
 										mobileMenuOpen = false;
@@ -808,7 +809,7 @@
 								</a>
 							{/each}
 						{/if}
-						<p class="mt-4 px-1 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-300">
+						<p class="mt-4 px-1 text-xs font-semibold uppercase tracking-wide text-fg-n300">
 							Cuenta
 						</p>
 						{#if activeBusiness?.role !== 'professional'}
@@ -816,8 +817,8 @@
 								href="/odonto/mis-turnos"
 								class={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
 									isActive('/odonto/mis-turnos')
-										? 'bg-[#7c3aed] text-white'
-										: 'text-neutral-600 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-white/10'
+										? 'bg-accent-strong text-on-accent'
+										: 'text-fg-n200 hover:bg-fill-10'
 								}`}
 								onclick={() => {
 									mobileMenuOpen = false;
@@ -832,8 +833,8 @@
 								href="/odonto/maestro"
 								class={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
 									isActive('/odonto/maestro')
-										? 'bg-[#7c3aed] text-white'
-										: 'text-neutral-600 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-white/10'
+										? 'bg-accent-strong text-on-accent'
+										: 'text-fg-n200 hover:bg-fill-10'
 								}`}
 								onclick={() => {
 									mobileMenuOpen = false;
@@ -845,16 +846,19 @@
 						{/if}
 						</div>
 					</nav>
-					<div class="border-t border-neutral-200 p-4 dark:border-white/10">
+					<div class="border-t p-4 border-line">
+						<div class="mb-4">
+							<ThemeSelector value={data?.themePreference} />
+						</div>
 						<button
 							type="button"
-							class="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100 dark:border-white/10 dark:text-neutral-200 dark:hover:bg-white/10"
+							class="w-full rounded-xl border px-4 py-3 text-sm font-semibold transition border-line text-fg-n200 hover:bg-fill-10"
 							onclick={() => (showReportHelp = !showReportHelp)}
 						>
 							Reportar problema
 						</button>
 						{#if showReportHelp}
-							<div class="mt-3 rounded-xl border border-red-400/30 bg-[#430a0a] p-3 text-xs text-white">
+							<div class="mt-3 rounded-xl border border-danger-400-30 bg-danger-430a0a p-3 text-xs text-fg">
 								<p class="font-semibold">Soporte</p>
 								<p>
 									Para reportar errores, escribí a
@@ -865,7 +869,7 @@
 						<form method="POST" action="/logout" class="mt-3">
 							<button
 								type="submit"
-								class="block w-full rounded-xl bg-neutral-900 px-4 py-3 text-center text-sm font-semibold text-white dark:bg-white dark:text-neutral-900"
+								class="block w-full rounded-xl px-4 py-3 text-center text-sm font-semibold bg-inverse text-on-inverse"
 							>
 								Salir
 							</button>
@@ -898,16 +902,16 @@
 				</picture>
 				{#if isMasterPage}
 					<div class="min-w-0">
-						<p class="truncate text-sm font-semibold text-neutral-900 dark:text-white" data-truncation="allowed">Administración Cita Suite</p>
+						<p class="truncate text-sm font-semibold text-fg" data-truncation="allowed">Administración Cita Suite</p>
 					</div>
 				{:else if activeBusiness?.business}
 					<div class="min-w-0">
-						<p class="truncate text-sm font-semibold text-neutral-900 dark:text-white" title={activeBusiness.business.name} data-truncation="allowed">
+						<p class="truncate text-sm font-semibold text-fg" title={activeBusiness.business.name} data-truncation="allowed">
 							{activeBusiness.business.name}
 						</p>
 						{#if assistanceMark}
-							<a href="/odonto/configuracion/ayuda" class="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-400/10 px-2.5 py-1 text-xs font-bold text-emerald-800 transition hover:bg-emerald-400/20 dark:text-emerald-100" title={assistanceMark.title}>
-								<span class="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" aria-hidden="true"></span>
+							<a href="/odonto/configuracion/ayuda" class="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full border border-success-500-30 bg-success-400-10 px-2.5 py-1 text-xs font-bold transition hover:bg-success-400-20 text-success-100" title={assistanceMark.title}>
+								<span class="h-1.5 w-1.5 shrink-0 rounded-full bg-success" aria-hidden="true"></span>
 								<span>{assistanceMark.text}<span class="sr-only">{assistanceMark.detail}</span></span>
 							</a>
 						{/if}
@@ -925,8 +929,8 @@
 								type="button"
 								class={`group whitespace-nowrap rounded-2xl px-4 py-3 transition-all duration-200 ${
 									isNavItemActive(item)
-										? 'bg-[#7c3aed]/90 text-white shadow-sm shadow-[#7c3aed]/20'
-										: 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-white/10 dark:hover:text-white'
+										? 'bg-accent-600-90 text-on-accent shadow-sm shadow-shade-accent-600-20'
+										: 'text-fg-n300 hover:bg-fill-10 hover:text-fg'
 								}`}
 								aria-haspopup="menu"
 								aria-expanded={configMenuOpen}
@@ -939,8 +943,8 @@
 								<span
 									class={`inline-block transition-colors duration-200 ${
 										isNavItemActive(item)
-											? 'text-white'
-											: 'group-hover:text-[#7c3aed] dark:group-hover:text-[#c084fc]'
+											? 'text-on-accent'
+											: 'group-hover:text-accent-purple-400'
 									}`}
 								>
 									{item.label}
@@ -948,7 +952,7 @@
 							</button>
 							{#if configMenuOpen}
 								<div
-									class="absolute left-1/2 top-full z-30 mt-3 w-64 -translate-x-1/2 rounded-2xl border border-neutral-200 bg-white p-2 shadow-2xl shadow-black/10 dark:border-white/10 dark:bg-[#101f35] dark:shadow-black/40"
+									class="absolute left-1/2 top-full z-30 mt-3 w-64 -translate-x-1/2 rounded-2xl border p-2 shadow-2xl border-line bg-surface shadow-shade-black-40"
 									role="menu"
 								>
 									{#each configNav as configItem}
@@ -957,8 +961,8 @@
 											data-sveltekit-preload-data="hover"
 											class={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
 												isNavItemActive(configItem)
-													? 'bg-[#7c3aed] text-white'
-													: 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950 dark:text-neutral-200 dark:hover:bg-white/10 dark:hover:text-white'
+													? 'bg-accent-strong text-on-accent'
+													: 'text-fg-n200 hover:bg-fill-10 hover:text-fg'
 											}`}
 											role="menuitem"
 											onclick={closeMenus}
@@ -975,15 +979,15 @@
 							data-sveltekit-preload-data="hover"
 							class={`group shrink-0 whitespace-nowrap rounded-2xl px-4 py-3 transition-all duration-200 ${
 								isNavItemActive(item)
-									? 'bg-[#7c3aed]/90 text-white shadow-sm shadow-[#7c3aed]/20'
-									: 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-white/10 dark:hover:text-white'
+									? 'bg-accent-600-90 text-on-accent shadow-sm shadow-shade-accent-600-20'
+									: 'text-fg-n300 hover:bg-fill-10 hover:text-fg'
 							}`}
 						>
 							<span
 								class={`inline-block transition-colors duration-200 ${
 									isNavItemActive(item)
-										? 'text-white'
-										: 'group-hover:text-[#7c3aed] dark:group-hover:text-[#c084fc]'
+										? 'text-on-accent'
+										: 'group-hover:text-accent-purple-400'
 								}`}
 							>
 								{item.label}
@@ -995,7 +999,7 @@
 				<div class="relative col-start-2 row-start-1 flex min-w-0 justify-end xl:col-start-3" data-menu-root>
 				<button
 					type="button"
-					class="flex max-w-64 items-center gap-3 rounded-2xl border border-neutral-200 bg-white/70 px-3 py-2 text-left shadow-sm transition hover:border-[#7c3aed]/40 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.07]"
+					class="flex max-w-64 items-center gap-3 rounded-2xl border px-3 py-2 text-left shadow-sm transition hover:border-accent-600-40 border-line bg-fill-04 hover:bg-fill-07"
 					aria-haspopup="menu"
 					aria-expanded={userMenuOpen}
 					disabled={!client.ready}
@@ -1016,19 +1020,19 @@
 						/>
 					</picture>
 						<span class="min-w-0">
-							<span class="block truncate text-sm font-semibold text-neutral-900 dark:text-white" data-truncation="allowed">
+							<span class="block truncate text-sm font-semibold text-fg" data-truncation="allowed">
 								{isMasterPage ? 'Panel maestro' : (activeBusiness?.business?.name ?? 'Cuenta')}
 							</span>
-						<span class="flex items-center gap-2 truncate text-xs text-neutral-500 dark:text-neutral-300" data-truncation="allowed">
+						<span class="flex items-center gap-2 truncate text-xs text-fg-n300" data-truncation="allowed">
 							<span>{isMasterPage ? 'Administrador del sistema' : roleLabel}</span>
 							{#if shouldShowAccessChip}
 								<span
 									class={`rounded-full px-2 py-0.5 text-micro font-bold ${
 										accessTone === 'danger'
-											? 'bg-red-500/15 text-red-200'
+											? 'bg-danger-500-15 text-danger'
 											: accessTone === 'warning'
-												? 'bg-amber-400/15 text-amber-100'
-												: 'bg-white/10 text-white/70'
+												? 'bg-warning-soft text-warning-100'
+												: 'bg-fill-10 text-fg-70'
 									}`}
 								>
 									{accessLabel}
@@ -1036,13 +1040,13 @@
 							{/if}
 						</span>
 						</span>
-					<svg class="h-4 w-4 shrink-0 text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<svg class="h-4 w-4 shrink-0 text-fg-n400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
 					</svg>
 				</button>
 				{#if userMenuOpen}
 					<div
-						class="absolute right-0 top-full z-30 mt-3 w-64 rounded-2xl border border-neutral-200 bg-white p-2 shadow-2xl shadow-black/10 dark:border-white/10 dark:bg-[#101f35] dark:shadow-black/40"
+						class="absolute right-0 top-full z-30 mt-3 w-64 rounded-2xl border p-2 shadow-2xl border-line bg-surface shadow-shade-black-40"
 						role="menu"
 					>
 						{#if activeBusiness?.role !== 'professional'}
@@ -1050,8 +1054,8 @@
 								href="/odonto/mis-turnos"
 								class={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
 									isActive('/odonto/mis-turnos')
-										? 'bg-[#7c3aed] text-white'
-										: 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950 dark:text-neutral-200 dark:hover:bg-white/10 dark:hover:text-white'
+										? 'bg-accent-strong text-on-accent'
+										: 'text-fg-n200 hover:bg-fill-10 hover:text-fg'
 								}`}
 								role="menuitem"
 								onclick={closeMenus}
@@ -1064,8 +1068,8 @@
 								href="/odonto/maestro"
 								class={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
 									isActive('/odonto/maestro')
-										? 'bg-[#7c3aed] text-white'
-										: 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950 dark:text-neutral-200 dark:hover:bg-white/10 dark:hover:text-white'
+										? 'bg-accent-strong text-on-accent'
+										: 'text-fg-n200 hover:bg-fill-10 hover:text-fg'
 								}`}
 								role="menuitem"
 								onclick={closeMenus}
@@ -1073,11 +1077,13 @@
 								Panel maestro
 							</a>
 						{/if}
-						<div class="my-2 border-t border-neutral-200 dark:border-white/10"></div>
+						<div class="my-2 border-t border-line"></div>
+						<ThemeSelector value={data?.themePreference} variant="menu" />
+						<div class="my-2 border-t border-line"></div>
 						<form method="POST" action="/logout">
 							<button
 								type="submit"
-								class="block w-full rounded-xl px-4 py-3 text-left text-sm font-semibold text-red-700 transition hover:bg-red-50 dark:text-red-200 dark:hover:bg-red-500/10"
+								class="block w-full rounded-xl px-4 py-3 text-left text-sm font-semibold transition text-danger hover:bg-danger-500-10"
 								role="menuitem"
 							>
 								Salir
@@ -1091,7 +1097,7 @@
 
 	<main class="mx-auto max-w-6xl px-4 pt-6 pb-28 md:pb-6" aria-busy={showSkeleton}>
 		{#if data?.businessError}
-			<div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100">
+			<div class="mb-4 rounded-xl border px-4 py-3 text-sm font-semibold border-warning-400-30 bg-warning-500-15 text-warning-100">
 				{data.businessError}
 			</div>
 		{/if}
@@ -1101,8 +1107,8 @@
 					<div
 						class={`rounded-2xl border px-4 py-3 text-sm font-bold ${
 							accessTone === 'danger'
-								? 'border-red-300 bg-red-50 text-red-900 dark:border-red-300/60 dark:bg-red-200 dark:text-red-950'
-								: 'border-amber-300 bg-amber-100 text-amber-950 dark:border-amber-200/70 dark:bg-amber-200 dark:text-amber-950'
+								? ' border-danger-300-60 bg-chip-red-200 text-ink-red-950'
+								: ' border-warning-200-70 bg-chip-amber-200 text-ink-amber-950'
 						}`}
 					>
 						{commercialNotice}
@@ -1120,13 +1126,13 @@
 					>
 						<div class="mt-3 grid gap-2 lg:grid-cols-2">
 							{#each masterAssistanceRequests as request (request.id)}
-								<div class="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3 sm:flex-row sm:items-center sm:justify-between">
+								<div class="flex flex-col gap-3 rounded-xl border border-line bg-fill-04 p-3 sm:flex-row sm:items-center sm:justify-between">
 									<div class="min-w-0">
-										<p class="break-words font-bold text-white">{request.businessName}</p>
-										<p class="mt-1 text-xs font-bold text-emerald-200">
+										<p class="break-words font-bold text-fg">{request.businessName}</p>
+										<p class="mt-1 text-xs font-bold text-success">
 											{formatAccessRemaining(request.expiresAt) ?? 'La ayuda vence pronto'}
 										</p>
-										<p class="mt-1 text-xs font-semibold text-white/60">{masterAssistanceEnd(request)}</p>
+										<p class="mt-1 text-xs font-semibold text-fg-60">{masterAssistanceEnd(request)}</p>
 									</div>
 									<form method="post" action="/odonto/maestro?/enter_assisted_business" class="shrink-0">
 										<input type="hidden" name="grant_id" value={request.id} />
@@ -1136,7 +1142,7 @@
 								</div>
 							{/each}
 						</div>
-						<a href="/odonto/maestro#solicitudes-ayuda" class="mt-3 inline-flex text-sm font-bold text-violet-200 hover:text-white">
+						<a href="/odonto/maestro#solicitudes-ayuda" class="mt-3 inline-flex text-sm font-bold text-accent-200 hover:text-fg">
 							Ver en el panel maestro
 						</a>
 					</DismissibleNotice>
@@ -1211,14 +1217,14 @@
 			</div>
 		{/if}
 		{#if commercialLockActive}
-			<section class="mx-auto mt-8 max-w-2xl rounded-3xl border border-amber-300/40 bg-amber-400/12 p-8 text-center shadow-2xl shadow-amber-950/10 dark:border-amber-400/25 dark:bg-amber-400/10">
-				<p class="mx-auto inline-flex rounded-full bg-amber-400/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-900 dark:text-amber-100">
+			<section class="mx-auto mt-8 max-w-2xl rounded-3xl border p-8 text-center shadow-2xl shadow-shade-warning-950-10 border-warning-400-25 bg-warning-400-10">
+				<p class="mx-auto inline-flex rounded-full bg-warning-soft px-3 py-1 text-xs font-bold uppercase tracking-wide text-warning-100">
 					Cita Suite
 				</p>
-				<h1 class="mt-5 text-3xl font-bold text-neutral-950 dark:text-white">
+				<h1 class="mt-5 text-3xl font-bold text-fg">
 					{isInitialActivation ? 'Activá tu suscripción' : 'Tu acceso a Cita Suite venció'}
 				</h1>
-				<p class="mx-auto mt-3 max-w-lg text-base font-semibold text-neutral-700 dark:text-amber-50/80">
+				<p class="mx-auto mt-3 max-w-lg text-base font-semibold text-warning-50-80">
 					{#if isInitialActivation}
 						Tu cuenta ya está creada. Activá tu suscripción para comenzar a gestionar turnos, pacientes y tu agenda.
 					{:else}
@@ -1226,24 +1232,24 @@
 					{/if}
 				</p>
 				{#if canExportPatientDataNow}
-					<div class="mx-auto mt-6 max-w-lg rounded-2xl border border-teal-300/45 bg-teal-50/80 p-4 text-left dark:border-teal-300/25 dark:bg-teal-400/10">
-						<p class="text-sm font-bold text-teal-950 dark:text-teal-100">Tus datos siguen disponibles</p>
-						<p class="mt-1 text-sm font-medium text-teal-900/80 dark:text-teal-50/75">
+					<div class="mx-auto mt-6 max-w-lg rounded-2xl border p-4 text-left border-success-teal-300-25 bg-success-300-08">
+						<p class="text-sm font-bold text-success-teal-100">Tus datos siguen disponibles</p>
+						<p class="mt-1 text-sm font-medium text-success-teal-50-75">
 							Podés llevarte pacientes, historial clínico, turnos y seguimientos en un archivo Excel.
 						</p>
 						<a
 							href="/odonto/exportar-datos"
-							class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-teal-700 px-4 py-2.5 text-center text-sm font-bold text-white shadow-sm transition hover:bg-teal-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 sm:w-auto"
+							class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-success-teal-700 px-4 py-2.5 text-center text-sm font-bold text-on-accent shadow-sm transition hover:bg-success-teal-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-success-teal-600 sm:w-auto"
 						>
 							Exportar mis datos en Excel
 						</a>
 					</div>
 				{/if}
 				{#if canSelfServiceActivation}
-					<div class="mx-auto mt-6 max-w-sm rounded-2xl border border-amber-300/30 bg-white/70 p-4 text-left shadow-sm dark:bg-[#13243d]/70">
-						<p class="text-sm font-bold text-amber-950 dark:text-amber-100">Cita Suite</p>
-						<p class="mt-1 text-2xl font-bold text-neutral-950 dark:text-white">{money(data?.mpAmount)} por mes</p>
-						<p class="mt-2 text-sm font-semibold text-neutral-700 dark:text-amber-50/75">
+					<div class="mx-auto mt-6 max-w-sm rounded-2xl border border-warning-300-30 p-4 text-left shadow-sm bg-fill-13243d-70">
+						<p class="text-sm font-bold text-warning-100">Cita Suite</p>
+						<p class="mt-1 text-2xl font-bold text-fg">{money(data?.mpAmount)} por mes</p>
+						<p class="mt-2 text-sm font-semibold text-warning-50-75">
 							Serás redirigido a Mercado Pago para completar el pago de forma segura.
 						</p>
 					</div>
@@ -1258,12 +1264,12 @@
 						<button
 							type="submit"
 							disabled={mpSubmitting}
-							class="inline-flex items-center justify-center rounded-2xl bg-amber-400 px-6 py-3 text-sm font-bold text-amber-950 shadow-lg transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+							class="inline-flex items-center justify-center rounded-2xl bg-chip-amber-400 px-6 py-3 text-sm font-bold text-ink-amber-950 shadow-lg transition hover:bg-chip-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
 						>
 							{mpSubmitting ? 'Creando enlace seguro en Mercado Pago…' : 'Activar suscripción con Mercado Pago'}
 						</button>
 						{#if mpSubmitting}
-							<p class="mt-3 text-sm font-semibold text-neutral-700 dark:text-amber-50/80">
+							<p class="mt-3 text-sm font-semibold text-warning-50-80">
 								Esto puede tardar unos segundos. No cierres esta ventana ni vuelvas a tocar el botón.
 							</p>
 						{/if}
@@ -1271,39 +1277,39 @@
 				{:else if activeBusiness?.role === 'owner' || activeBusiness?.role === 'admin'}
 					<!-- Kill-switch del administrador: un pago NO reactiva (lo manual
 					     gana); prometer autoservicio acá sería cobrar sin servicio. -->
-					<p class="mt-6 rounded-2xl border border-amber-300/35 bg-white/70 px-4 py-3 text-sm font-bold text-amber-950 dark:bg-[#13243d]/70 dark:text-amber-100">
+					<p class="mt-6 rounded-2xl border border-warning-300-35 px-4 py-3 text-sm font-bold bg-fill-13243d-70 text-warning-100">
 						El acceso fue suspendido por el administrador del sistema. Contactá a soporte
 						para regularizar; un pago no lo reactiva automáticamente.
 					</p>
 				{:else}
-					<p class="mt-6 rounded-2xl border border-amber-300/35 bg-white/70 px-4 py-3 text-sm font-bold text-amber-950 dark:bg-[#13243d]/70 dark:text-amber-100">
+					<p class="mt-6 rounded-2xl border border-warning-300-35 px-4 py-3 text-sm font-bold bg-fill-13243d-70 text-warning-100">
 						Contactá al responsable del consultorio.
 					</p>
 				{/if}
-				<p class="mt-5 text-sm font-semibold text-neutral-600 dark:text-amber-50/70">
+				<p class="mt-5 text-sm font-semibold text-warning-50-70">
 					¿Necesitás ayuda? Contactar soporte
 				</p>
 			</section>
 		{:else if accountPendingManualSetup}
-			<section class="mx-auto mt-8 max-w-2xl rounded-3xl border border-sky-300/35 bg-sky-400/10 p-8 text-center shadow-2xl shadow-sky-950/10 dark:border-sky-300/25">
-				<p class="mx-auto inline-flex rounded-full bg-sky-300/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-sky-900 dark:text-sky-100">
+			<section class="mx-auto mt-8 max-w-2xl rounded-3xl border bg-info-400-10 p-8 text-center shadow-2xl shadow-shade-info-950-10 border-info-300-25">
+				<p class="mx-auto inline-flex rounded-full bg-info-300-15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-info-100">
 					Cita Suite
 				</p>
-				<h1 class="mt-5 text-3xl font-bold text-neutral-950 dark:text-white">
+				<h1 class="mt-5 text-3xl font-bold text-fg">
 					Estamos configurando tu consultorio
 				</h1>
-				<p class="mx-auto mt-3 max-w-lg text-base font-semibold text-neutral-700 dark:text-sky-50/80">
+				<p class="mx-auto mt-3 max-w-lg text-base font-semibold text-info-50-80">
 					Tu cuenta ya está creada y tu email está habilitado. Falta que soporte cree o vincule
 					el consultorio que vas a usar.
 				</p>
-				<div class="mx-auto mt-6 max-w-sm rounded-2xl border border-sky-300/30 bg-white/70 p-4 text-left shadow-sm dark:bg-[#13243d]/70">
-					<p class="text-sm font-bold text-sky-950 dark:text-sky-100">Sin pago pendiente</p>
-					<p class="mt-2 text-sm font-semibold text-neutral-700 dark:text-sky-50/75">
+				<div class="mx-auto mt-6 max-w-sm rounded-2xl border border-info-300-30 p-4 text-left shadow-sm bg-fill-13243d-70">
+					<p class="text-sm font-bold text-info-100">Sin pago pendiente</p>
+					<p class="mt-2 text-sm font-semibold text-info-50-75">
 						Esta alta está en modo manual. No te vamos a enviar a Mercado Pago hasta que el
 						consultorio exista y el flujo comercial corresponda.
 					</p>
 				</div>
-				<p class="mt-5 text-sm font-semibold text-neutral-600 dark:text-sky-50/70">
+				<p class="mt-5 text-sm font-semibold text-info-50-70">
 					¿Necesitás ayuda? Contactar soporte
 				</p>
 			</section>
@@ -1347,7 +1353,7 @@
 
 	{#if !commercialAccessRestricted && primaryMobileNav.length > 0}
 		<nav
-			class="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#0b1d32]/95 backdrop-blur md:hidden"
+			class="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-fill-0b1d32-95 backdrop-blur md:hidden"
 			style="padding-bottom: env(safe-area-inset-bottom);"
 			aria-label="Navegación principal"
 			data-sveltekit-preload-code="viewport"
@@ -1359,12 +1365,12 @@
 						aria-current={isNavItemActive(item) ? 'page' : undefined}
 						aria-label={item.label}
 						class={`flex min-w-0 flex-1 flex-col items-center gap-1 px-1 py-2 text-micro font-bold transition ${
-							isNavItemActive(item) ? 'text-white' : 'text-white/70'
+							isNavItemActive(item) ? 'text-fg' : 'text-fg-70'
 						}`}
 					>
 						<span
 							class={`flex h-8 w-14 items-center justify-center rounded-full transition ${
-								isNavItemActive(item) ? 'bg-[#7c3aed] text-white shadow-lg shadow-[#7c3aed]/30' : 'bg-white/5'
+								isNavItemActive(item) ? 'bg-accent-strong text-on-accent shadow-lg shadow-shade-accent-600-30' : 'bg-fill-04'
 							}`}
 						>
 							{@render navIcon(item.label)}
@@ -1376,13 +1382,13 @@
 					type="button"
 					onclick={() => (mobileMenuOpen = true)}
 					disabled={!client.ready}
-					class="flex min-w-0 flex-1 flex-col items-center gap-1 px-1 py-2 text-micro font-bold text-white/70 transition"
+					class="flex min-w-0 flex-1 flex-col items-center gap-1 px-1 py-2 text-micro font-bold text-fg-70 transition"
 					aria-label={menuButtonLabel}
 				>
-					<span class="relative flex h-8 w-14 items-center justify-center rounded-full bg-white/5">
+					<span class="relative flex h-8 w-14 items-center justify-center rounded-full bg-fill-04">
 						{@render navIcon('mas')}
 						{#if assistanceMark}
-							<span class="absolute right-2 top-1 h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true"></span>
+							<span class="absolute right-2 top-1 h-2 w-2 rounded-full bg-success" aria-hidden="true"></span>
 						{/if}
 					</span>
 					<span>Más</span>

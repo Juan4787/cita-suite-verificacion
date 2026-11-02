@@ -1,6 +1,6 @@
 # Reserva online y configuración del profesional
 
-Mode: **Operate**. App: `apps/web`. Mundo: sistema oscuro existente de Cita Suite; ver `../../DESIGN.md` y `../design.json`.
+Mode: **Operate**. App: `apps/web`. Mundo: sistema de Cita Suite con modo claro predeterminado y modo oscuro; ver `../../DESIGN.md` y `../design.json`.
 
 ## Resultado de la tarea
 
