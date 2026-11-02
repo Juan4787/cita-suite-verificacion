@@ -36,7 +36,7 @@ begin
   insert into public.professional_services(business_id,professional_id,service_id) values(v_business,v_professional,v_service),(v_business,v_professional,v_follow_up);
   insert into public.professional_booking_forms(business_id,professional_id,fields) values(v_business,v_professional,'${form}');
   insert into public.service_price_policies(business_id,service_id,professional_id,base_amount,currency,base_month,first_adjustment_month,monthly_percentage,rounding_unit)
-  values(v_business,v_service,v_professional,20000,'ARS',date_trunc('month',now())::date,(date_trunc('month',now())+interval '1 month')::date,2,1);
+  values(v_business,v_service,v_professional,20000,'ARS',date_trunc('month',now() at time zone 'America/Argentina/Buenos_Aires')::date,(date_trunc('month',now() at time zone 'America/Argentina/Buenos_Aires')+interval '1 month')::date,2,1);
   insert into public.availability_rules(business_id,professional_id,weekday,start_time,end_time,slot_interval_minutes,break_minutes)
   select v_business,v_professional,n,'09:00','17:00',30,10 from generate_series(0,6) n;
   insert into public.booking_integrations(business_id,public_key,name,is_active,is_default,theme,allowed_origins,allowed_service_ids,allowed_professional_ids,allowed_modalities,intake_schema)

@@ -11,7 +11,13 @@ import {
 	type MpSubscriptionRow
 } from '$lib/server/integrations/public/mercadopago';
 import { ACTIVE_BUSINESS_COOKIE, normalizeSlug } from '$lib/server/access/public/business';
-import { createSupabaseAdminClient, isMasterEmail } from '$lib/server/platform/supabase';
+import { createSupabaseAdminClient, createSupabaseServerClient, isMasterEmail } from '$lib/server/platform/supabase';
+import {
+	accountAssistanceErrorMessage,
+	accountAssistanceErrorStatus,
+	endAccountAssistance
+} from '$lib/server/access/public/account-assistance';
+import { isAccountAssistanceKind } from '$lib/access/assistance-durations';
 import {
 	businessEmailAssociationErrorMessage,
 	businessEmailAssociationErrorStatus
@@ -185,7 +191,7 @@ const buildMasterData = async (
 			.limit(20),
 		admin
 			.from('account_assistance_grants')
-			.select('id, business_id, requested_by_user_id, support_user_id, status, starts_at, expires_at, revoked_at, business:businesses(id, name, slug)')
+			.select('id, business_id, requested_by_user_id, support_user_id, status, kind, starts_at, expires_at, revoked_at, business:businesses(id, name, slug)')
 			.eq('status', 'active')
 			.is('revoked_at', null)
 			.gt('expires_at', new Date().toISOString())
@@ -278,6 +284,7 @@ const buildMasterData = async (
 				businessSlug: String(business?.slug ?? ''),
 				requestedByEmail: emailsByUserId.get(String(grant.requested_by_user_id)) ?? null,
 				supportUserId: String(grant.support_user_id),
+				kind: isAccountAssistanceKind(grant.kind) ? grant.kind : null,
 				startsAt: String(grant.starts_at ?? ''),
 				expiresAt: String(grant.expires_at ?? '')
 			};
@@ -380,6 +387,28 @@ export const actions: Actions = {
 		});
 
 		throw redirect(303, '/odonto/configuracion/usuarios');
+	},
+	// The master ends an assistance from the panel with its own session: the database checks that
+	// it is the support user of that grant and records that Cita Suite ended it.
+	end_assistance: async ({ request, locals, fetch }) => {
+		if (!locals.auth) throw redirect(303, '/login');
+		ensureMaster(locals);
+		const form = await request.formData();
+		const grantId = String(form.get('grant_id') ?? '').trim();
+		const businessId = String(form.get('business_id') ?? '').trim();
+		const businessName = String(form.get('business_name') ?? '').trim() || 'ese consultorio';
+		if (form.get('confirmed') !== '1') return fail(400, { message: 'Confirmá la acción para continuar.' });
+		if (!isUuid(grantId) || !isUuid(businessId)) return fail(400, { message: 'Faltan datos para terminar la ayuda.' });
+
+		try {
+			const supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);
+			await endAccountAssistance({ supabase, businessId, grantId });
+		} catch (error) {
+			logServerFailure('Error terminando ayuda desde el panel maestro', error);
+			return fail(accountAssistanceErrorStatus(error), { message: accountAssistanceErrorMessage(error) });
+		}
+
+		return { success: true, message: `Terminaste la ayuda de ${businessName}: ya no podés entrar a su cuenta.` };
 	},
 	create_business: async ({ request, locals, fetch }) => {
 		if (!locals.auth) throw redirect(303, '/login');

@@ -1,9 +1,17 @@
 import { readRecord } from '$lib/contracts/json';
+import {
+	assistanceActivationKinds,
+	assistanceExtensionKinds,
+	formatAssistanceMoment,
+	isAccountAssistanceKind,
+	type AccountAssistanceEnd,
+	type AccountAssistanceKind,
+	type AssistanceMoment
+} from '$lib/access/assistance-durations';
 import { MASTER_EMAIL } from '$lib/server/platform/supabase';
 import type { BusinessRole } from '$lib/server/access/public/business';
 import type { CitaSupabaseClient } from '$lib/types/database';
 
-export const ACCOUNT_ASSISTANCE_DURATION_MINUTES = 60;
 export const ACCOUNT_ASSISTANCE_FINAL_NOTICE_HOURS = 24;
 
 export type AccountAssistanceRow = {
@@ -12,9 +20,12 @@ export type AccountAssistanceRow = {
 	requested_by_user_id: string;
 	support_user_id: string;
 	status: 'active' | 'expired' | 'revoked' | string;
+	kind: AccountAssistanceKind | string;
 	starts_at: string;
 	expires_at: string;
+	extended_at: string | null;
 	revoked_at: string | null;
+	revoked_by_role: 'owner' | 'support' | string | null;
 	dismissed_at: string | null;
 	created_at: string;
 	updated_at: string;
@@ -25,13 +36,24 @@ export type AccountAssistanceViewStatus = 'available' | 'active' | 'expired' | '
 export type AccountAssistanceView = {
 	status: AccountAssistanceViewStatus;
 	grantId: string | null;
+	/** Null when there is no grant, or when it has a duration this version does not know. */
+	kind: AccountAssistanceKind | null;
+	/** The global notice: the offer, the active grant, or for 24 hours how it ended. */
 	showBanner: boolean;
 	canActivate: boolean;
-	canRevoke: boolean;
+	/** The owner, or the support user inside the account, while it is active. */
+	canEnd: boolean;
+	/** Only the owner, and only when there is a longer duration to move to. */
+	canExtend: boolean;
 	canDismiss: boolean;
+	/** Empty when the patients were not read: options are never listed unchecked. */
+	activationKinds: AccountAssistanceKind[];
+	extensionKinds: AccountAssistanceKind[];
 	expiresAt: string | null;
-	endsAtLabel: string | null;
+	endsAt: AssistanceMoment | null;
+	endedBy: AccountAssistanceEnd | null;
 	endedAt: string | null;
+	endedAtMoment: AssistanceMoment | null;
 };
 
 export type MasterAccountAssistanceRequest = {
@@ -39,11 +61,14 @@ export type MasterAccountAssistanceRequest = {
 	businessId: string;
 	businessName: string;
 	businessSlug: string;
+	/** The practice's own time zone, in which its end is written. */
+	timeZone: string;
+	kind: AccountAssistanceKind | null;
 	expiresAt: string;
 };
 
 const ASSISTANCE_SELECT =
-	'id, business_id, requested_by_user_id, support_user_id, status, starts_at, expires_at, revoked_at, dismissed_at, created_at, updated_at';
+	'id, business_id, requested_by_user_id, support_user_id, status, kind, starts_at, expires_at, extended_at, revoked_at, revoked_by_role, dismissed_at, created_at, updated_at';
 
 const normalizeRow = (value: unknown): AccountAssistanceRow | null => {
 	if (value === null || value === undefined) return null;
@@ -55,9 +80,12 @@ const normalizeRow = (value: unknown): AccountAssistanceRow | null => {
 		requested_by_user_id: String(row.requested_by_user_id),
 		support_user_id: String(row.support_user_id),
 		status: String(row.status ?? 'active'),
+		kind: String(row.kind ?? 'hour'),
 		starts_at: String(row.starts_at ?? ''),
 		expires_at: String(row.expires_at ?? ''),
+		extended_at: row.extended_at ? String(row.extended_at) : null,
 		revoked_at: row.revoked_at ? String(row.revoked_at) : null,
+		revoked_by_role: row.revoked_by_role ? String(row.revoked_by_role) : null,
 		dismissed_at: row.dismissed_at ? String(row.dismissed_at) : null,
 		created_at: String(row.created_at ?? ''),
 		updated_at: String(row.updated_at ?? '')
@@ -68,14 +96,6 @@ const errorMessage = (error: unknown) =>
 	typeof error === 'object' && error !== null && 'message' in error
 		? String((error as { message?: unknown }).message ?? '')
 		: String(error ?? '');
-
-export const formatAccountAssistanceLocalTime = (value: string, timeZone: string) =>
-	new Intl.DateTimeFormat('es-AR', {
-		timeZone,
-		hour: '2-digit',
-		minute: '2-digit',
-		hourCycle: 'h23'
-	}).format(new Date(value));
 
 const addHours = (date: Date, hours: number) => new Date(date.getTime() + hours * 60 * 60 * 1000);
 
@@ -91,7 +111,8 @@ export const buildAccountAssistanceView = ({
 	timeZone,
 	now = new Date(),
 	canUseBusiness = true,
-	isAssisting = false
+	isAssisting = false,
+	hasPatients
 }: {
 	grant: AccountAssistanceRow | null;
 	role: BusinessRole | null | undefined;
@@ -99,59 +120,77 @@ export const buildAccountAssistanceView = ({
 	now?: Date;
 	canUseBusiness?: boolean;
 	isAssisting?: boolean;
+	/** Read only where the owner chooses a duration; undefined elsewhere. */
+	hasPatients?: boolean;
 }): AccountAssistanceView => {
 	const isOwner = role === 'owner' && !isAssisting;
+	const canOffer = isOwner && canUseBusiness;
+	const activationKinds = canOffer && hasPatients !== undefined ? assistanceActivationKinds(hasPatients) : [];
 	const available: AccountAssistanceView = {
 		status: 'available',
 		grantId: null,
-		showBanner: isOwner && canUseBusiness,
-		canActivate: isOwner && canUseBusiness,
-		canRevoke: false,
+		kind: null,
+		showBanner: canOffer,
+		canActivate: canOffer,
+		canEnd: false,
+		canExtend: false,
 		canDismiss: false,
+		activationKinds,
+		extensionKinds: [],
 		expiresAt: null,
-		endsAtLabel: null,
-		endedAt: null
+		endsAt: null,
+		endedBy: null,
+		endedAt: null,
+		endedAtMoment: null
 	};
 	if (!grant) return available;
 
+	const kind = isAccountAssistanceKind(grant.kind) ? grant.kind : null;
 	const expiresAt = parseDate(grant.expires_at);
 	const revokedAt = parseDate(grant.revoked_at);
 	const dismissedAt = parseDate(grant.dismissed_at);
 	const isActive = grant.status === 'active' && !revokedAt && expiresAt !== null && expiresAt > now;
 	if (isActive) {
+		const extensionKinds = canOffer && kind && hasPatients !== undefined ? assistanceExtensionKinds(kind, hasPatients) : [];
 		return {
+			...available,
 			status: 'active',
 			grantId: grant.id,
-			showBanner: isOwner && canUseBusiness,
+			kind,
+			showBanner: canOffer,
 			canActivate: false,
-			canRevoke: isOwner,
-			canDismiss: false,
+			canEnd: isOwner || isAssisting,
+			canExtend: extensionKinds.length > 0,
+			activationKinds: [],
+			extensionKinds,
 			expiresAt: grant.expires_at,
-			endsAtLabel: formatAccountAssistanceLocalTime(grant.expires_at, timeZone),
-			endedAt: null
+			endsAt: formatAssistanceMoment(grant.expires_at, timeZone, now)
 		};
 	}
 
 	const status: AccountAssistanceViewStatus = revokedAt || grant.status === 'revoked' ? 'revoked' : 'expired';
+	// Before V11 only the owner could end it, and nobody was recorded.
+	const endedBy: AccountAssistanceEnd = status === 'expired' ? 'expired' : grant.revoked_by_role === 'support' ? 'support' : 'owner';
 	const endedAt = (status === 'revoked' ? grant.revoked_at : grant.expires_at) ?? grant.updated_at;
 	const endedDate = parseDate(endedAt);
 	const withinNoticeWindow = Boolean(
 		endedDate && endedDate <= now && endedDate > addHours(now, -ACCOUNT_ASSISTANCE_FINAL_NOTICE_HOURS)
 	);
-	const canDismissFinalState = isOwner && canUseBusiness && withinNoticeWindow && !dismissedAt;
+	const showEnd = canOffer && withinNoticeWindow && !dismissedAt;
 
 	return {
+		...available,
 		status,
 		grantId: grant.id,
-		// El estado final sigue disponible en la página de detalle, pero no queda
-		// fijado globalmente después de que el permiso ya terminó.
-		showBanner: false,
-		canActivate: isOwner && canUseBusiness,
-		canRevoke: false,
-		canDismiss: canDismissFinalState,
+		kind,
+		// For 24 hours the owner is told how it ended, until she closes the notice.
+		showBanner: showEnd,
+		canDismiss: showEnd,
 		expiresAt: grant.expires_at,
-		endsAtLabel: grant.expires_at ? formatAccountAssistanceLocalTime(grant.expires_at, timeZone) : null,
-		endedAt
+		endsAt: formatAssistanceMoment(grant.expires_at, timeZone, now),
+		endedBy,
+		endedAt,
+		endedAtMoment: formatAssistanceMoment(endedAt, timeZone, now)
 	};
 };
 
@@ -177,7 +216,8 @@ export const loadAccountAssistanceView = async ({
 	role,
 	timeZone,
 	canUseBusiness,
-	isAssisting
+	isAssisting,
+	hasPatients
 }: {
 	supabase: CitaSupabaseClient;
 	businessId: string;
@@ -185,6 +225,7 @@ export const loadAccountAssistanceView = async ({
 	timeZone: string;
 	canUseBusiness: boolean;
 	isAssisting?: boolean;
+	hasPatients?: boolean;
 }): Promise<AccountAssistanceView> => {
 	const grant = await loadLatestAccountAssistanceGrant(supabase, businessId);
 	return buildAccountAssistanceView({
@@ -192,8 +233,24 @@ export const loadAccountAssistanceView = async ({
 		role,
 		timeZone,
 		canUseBusiness,
-		isAssisting: Boolean(isAssisting)
+		isAssisting: Boolean(isAssisting),
+		hasPatients
 	});
+};
+
+/** Whether the practice has patients, which decides if the initial setup is offered. Owner only. */
+export const loadAccountAssistanceHasPatients = async ({
+	supabase,
+	businessId
+}: {
+	supabase: CitaSupabaseClient;
+	businessId: string;
+}): Promise<boolean> => {
+	const { data, error } = await supabase.rpc('account_assistance_has_patients', { target_business_id: businessId });
+	if (error) throw error;
+	// An answer that is not a boolean is not "no patients".
+	if (typeof data !== 'boolean') throw new Error('ACCOUNT_ASSISTANCE_PATIENTS_UNREADABLE');
+	return data;
 };
 
 export const loadActiveMasterAccountAssistanceRequests = async ({
@@ -207,7 +264,7 @@ export const loadActiveMasterAccountAssistanceRequests = async ({
 }): Promise<MasterAccountAssistanceRequest[]> => {
 	const { data, error } = await admin
 		.from('account_assistance_grants')
-		.select('id, business_id, expires_at, business:businesses(id, name, slug)')
+		.select('id, business_id, kind, expires_at, business:businesses(id, name, slug, timezone)')
 		.eq('support_user_id', supportUserId)
 		.eq('status', 'active')
 		.is('revoked_at', null)
@@ -224,6 +281,8 @@ export const loadActiveMasterAccountAssistanceRequests = async ({
 				businessId: String(row.business_id),
 				businessName: String(business?.name ?? 'Consultorio'),
 				businessSlug: String(business?.slug ?? ''),
+				timeZone: String(business?.timezone || 'America/Argentina/Buenos_Aires'),
+				kind: isAccountAssistanceKind(row.kind) ? row.kind : null,
 				expiresAt: String(row.expires_at)
 			};
 		})
@@ -266,30 +325,57 @@ const firstRpcRow = (data: unknown): AccountAssistanceRow | null =>
 export const activateAccountAssistance = async ({
 	supabase,
 	admin,
-	businessId
+	businessId,
+	kind
 }: {
 	supabase: CitaSupabaseClient;
 	admin: CitaSupabaseClient;
 	businessId: string;
+	kind: AccountAssistanceKind;
 }) => {
 	const supportUserId = await ensureMasterSupportUser(admin);
-	const { data, error } = await supabase.rpc('activate_account_assistance', {
+	const { data, error } = await supabase.rpc('start_account_assistance', {
 		target_business_id: businessId,
-		target_support_user_id: supportUserId
+		target_support_user_id: supportUserId,
+		target_kind: kind
 	});
 	if (error) throw error;
 	return firstRpcRow(data);
 };
 
-export const revokeAccountAssistance = async ({
+export const extendAccountAssistance = async ({
 	supabase,
-	businessId
+	businessId,
+	grantId,
+	kind
 }: {
 	supabase: CitaSupabaseClient;
 	businessId: string;
+	grantId: string;
+	kind: AccountAssistanceKind;
 }) => {
-	const { data, error } = await supabase.rpc('revoke_account_assistance', {
-		target_business_id: businessId
+	const { data, error } = await supabase.rpc('extend_account_assistance', {
+		target_business_id: businessId,
+		target_grant_id: grantId,
+		target_kind: kind
+	});
+	if (error) throw error;
+	return firstRpcRow(data);
+};
+
+/** The owner, or the support user of the grant with its own session; the database checks which. */
+export const endAccountAssistance = async ({
+	supabase,
+	businessId,
+	grantId
+}: {
+	supabase: CitaSupabaseClient;
+	businessId: string;
+	grantId: string;
+}) => {
+	const { data, error } = await supabase.rpc('end_account_assistance', {
+		target_business_id: businessId,
+		target_grant_id: grantId
 	});
 	if (error) throw error;
 	return firstRpcRow(data);
@@ -314,7 +400,7 @@ export const dismissAccountAssistanceNotice = async ({
 export const accountAssistanceErrorMessage = (error: unknown) => {
 	const message = errorMessage(error);
 	if (message.includes('ACCOUNT_ASSISTANCE_OWNER_REQUIRED')) {
-		return 'Solo el dueño del consultorio puede activar o detener esta ayuda.';
+		return 'Solo el dueño del consultorio puede dar o extender esta ayuda.';
 	}
 	if (message.includes('ACCOUNT_ASSISTANCE_BUSINESS_NOT_AVAILABLE')) {
 		return 'La cuenta debe estar activa para pedir ayuda de configuración.';
@@ -325,13 +411,35 @@ export const accountAssistanceErrorMessage = (error: unknown) => {
 	if (message.includes('ACCOUNT_ASSISTANCE_SUPPORT_USER_NOT_ENABLED')) {
 		return 'Todavía no podemos activar la ayuda. Contactá a Cita Suite.';
 	}
+	if (message.includes('ACCOUNT_ASSISTANCE_INITIAL_SETUP_UNAVAILABLE')) {
+		return 'La configuración inicial se puede dar sólo mientras el consultorio no tiene pacientes. Podés dar ayuda por 1 hora o por 24 horas.';
+	}
+	if (message.includes('ACCOUNT_ASSISTANCE_ALREADY_ACTIVE')) {
+		return 'Ya hay una ayuda activa. Podés ver hasta cuándo dura y extenderla desde Ayuda.';
+	}
+	if (message.includes('ACCOUNT_ASSISTANCE_EXTENSION_NOT_ALLOWED')) {
+		return 'Esa opción no extiende la ayuda activa. Recargá la página para ver las opciones vigentes.';
+	}
 	if (message.includes('ACCOUNT_ASSISTANCE_NOT_ACTIVE')) {
 		return 'La ayuda ya no está activa.';
 	}
 	if (message.includes('ACCOUNT_ASSISTANCE_STILL_ACTIVE')) {
-		return 'La ayuda sigue activa. Podés detenerla cuando quieras.';
+		return 'La ayuda sigue activa. Podés terminarla cuando quieras.';
 	}
-	return 'No pudimos actualizar la ayuda para configurar. Recargá la página y volvé a intentar; si continúa, contactá a Cita Suite.';
+	return 'No pudimos actualizar la ayuda. Recargá la página y volvé a intentar; si continúa, contactá a Cita Suite.';
+};
+
+/** A refusal about the state of the grant is a conflict; one about who acts, a prohibition. */
+export const accountAssistanceErrorStatus = (error: unknown) => {
+	const message = errorMessage(error);
+	if (message.includes('ACCOUNT_ASSISTANCE_OWNER_REQUIRED')) return 403;
+	if (
+		['NOT_ACTIVE', 'ALREADY_ACTIVE', 'EXTENSION_NOT_ALLOWED', 'INITIAL_SETUP_UNAVAILABLE', 'BUSINESS_NOT_AVAILABLE', 'STILL_ACTIVE'].some((code) =>
+			message.includes(`ACCOUNT_ASSISTANCE_${code}`)
+		)
+	)
+		return 409;
+	return 500;
 };
 
 export const safeAssistanceReturnTo = (value: FormDataEntryValue | null) => {
