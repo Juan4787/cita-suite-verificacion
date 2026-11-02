@@ -484,7 +484,7 @@
 				<h2 class="ux-section-title">Agregar integrante</h2>
 				<div class="flex shrink-0 gap-2">
 					{#each steps as _, item}
-						<span class={`grid h-8 w-8 place-items-center rounded-full text-sm font-bold ${stepIndex === item ? 'bg-[#7c3aed] text-white' : 'bg-white/10 text-white/45'}`}>
+						<span class={`grid h-8 w-8 place-items-center rounded-full text-sm font-bold ${stepIndex === item ? 'bg-accent-strong text-on-accent' : 'bg-fill-10 text-copy-subtle'}`}>
 							{item + 1}
 						</span>
 					{/each}
@@ -519,11 +519,11 @@
 						autocomplete="email"
 						placeholder="persona@consultorio.com"
 						disabled={!canManage}
-						class={`ux-input ${emailError ? 'border-red-400/60' : ''}`}
+						class={`ux-input ${emailError ? 'border-danger-400-60' : ''}`}
 						bind:value={email}
 					/>
 				</label>
-				<p class="mt-2 text-sm text-white/55">
+				<p class="mt-2 text-sm text-fg-55">
 					Con este email la persona crea su cuenta y entra automáticamente al consultorio con el rol asignado.
 				</p>
 				{#if emailError}
@@ -540,27 +540,27 @@
 							disabled={!canManage}
 							class={`rounded-2xl border px-5 py-4 text-left transition ${
 								role === option
-									? 'border-[#7c3aed] bg-[#7c3aed]/20 text-white'
-									: 'border-white/10 bg-white/[0.04] text-white/80 hover:border-white/25'
+									? 'border-accent-600 bg-accent-soft text-fg'
+									: 'border-line bg-fill-04 text-fg-80 hover:border-line-25'
 							}`}
 							onclick={() => (role = option)}
 						>
 							<span class="block text-lg font-bold">{roleLabels[option]}</span>
-							<span class="mt-1 block text-sm text-white/55">{roleDescriptions[option]}</span>
+							<span class="mt-1 block text-sm text-fg-55">{roleDescriptions[option]}</span>
 						</button>
 					{/each}
 				</div>
 				{#if role === 'admin' || role === 'owner'}
-					<label class="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-white">
+					<label class="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-line bg-fill-04 px-4 py-4 text-fg">
 						<input
 							type="checkbox"
 							bind:checked={professionalProfileRequested}
 							disabled={!canManage}
-							class="mt-1 accent-[#7c3aed]"
+							class="mt-1 accent-check-accent-600"
 						/>
 						<span>
 							<span class="block font-bold">También atiende pacientes</span>
-							<span class="mt-1 block text-sm text-white/55">
+							<span class="mt-1 block text-sm text-fg-55">
 								Creá ahora su perfil profesional y dejá configurados sus servicios y horarios, aunque todavía no tenga cuenta.
 							</span>
 						</span>
@@ -577,7 +577,7 @@
 						<input
 							placeholder="Nombre y apellido"
 							disabled={!canManage}
-							class={`ux-input ${nameError ? 'border-red-400/60' : ''}`}
+							class={`ux-input ${nameError ? 'border-danger-400-60' : ''}`}
 							bind:value={professionalName}
 						/>
 					</label>
@@ -597,14 +597,14 @@
 				<div class="mt-5 grid gap-5 xl:grid-cols-[1fr_0.75fr]">
 					<div class="ux-soft-card p-4 sm:p-5">
 						<h3 class="ux-section-title">Servicios que ofrece</h3>
-						<p class="mt-1 text-sm text-white/55">Estos servicios estarán disponibles para reservar con este profesional.</p>
+						<p class="mt-1 text-sm text-fg-55">Estos servicios estarán disponibles para reservar con este profesional.</p>
 						<div class="mt-5 grid gap-3">
 							{#each defaultServiceRows as service}
 								<div class="ux-choice ux-choice-active flex min-w-0 items-center gap-3 p-3 sm:gap-4 sm:p-4">
-									<input type="checkbox" checked disabled class="accent-[#7c3aed]" />
+									<input type="checkbox" checked disabled class="accent-check-accent-600" />
 									<span class="min-w-0 flex-1">
-										<span class="block break-words font-bold text-white">{service.name}</span>
-										<span class="mt-1 block text-sm text-white/55">
+										<span class="block break-words font-bold text-fg">{service.name}</span>
+										<span class="mt-1 block text-sm text-fg-55">
 											{formatDuration(service.duration_minutes)}{service.price_label ? ` ·\u00a0${service.price_label}` : ''}
 										</span>
 									</span>
@@ -616,12 +616,12 @@
 										type="checkbox"
 										checked={selectedServiceIds.includes(service.id)}
 										disabled={!canManage}
-										class="accent-[#7c3aed]"
+										class="accent-check-accent-600"
 										onchange={() => toggleService(service.id)}
 									/>
 									<span class="min-w-0 flex-1">
-										<span class="block break-words font-bold text-white">{service.name}</span>
-										<span class="mt-1 block text-sm text-white/55">
+										<span class="block break-words font-bold text-fg">{service.name}</span>
+										<span class="mt-1 block text-sm text-fg-55">
 											{formatDuration(service.duration_minutes)}{service.price_label ? ` ·\u00a0${service.price_label}` : ''}
 										</span>
 									</span>
@@ -629,15 +629,15 @@
 							{/each}
 							{#each newServices as service, index}
 								<div class="ux-choice ux-choice-active flex min-w-0 items-center gap-3 p-3 sm:gap-4 sm:p-4">
-									<input type="checkbox" checked disabled class="accent-[#7c3aed]" />
+									<input type="checkbox" checked disabled class="accent-check-accent-600" />
 									<span class="min-w-0 flex-1">
-										<span class="block break-words font-bold text-white">{service.name}</span>
-										<span class="mt-1 block text-sm text-white/55">
+										<span class="block break-words font-bold text-fg">{service.name}</span>
+										<span class="mt-1 block text-sm text-fg-55">
 											{formatDuration(service.duration_minutes)}{service.price_label ? ` ·\u00a0${service.price_label}` : ''}
 										</span>
 									</span>
 									<span class="ux-badge shrink-0">Nuevo</span>
-									<button type="button" class="text-xs font-bold text-red-200" onclick={() => removeNewService(index)}>
+									<button type="button" class="text-xs font-bold text-danger" onclick={() => removeNewService(index)}>
 										Quitar
 									</button>
 								</div>
@@ -647,7 +647,7 @@
 
 					<div class="ux-soft-card p-4 sm:p-5">
 						<h3 class="ux-section-title">Agregar servicio</h3>
-						<p class="mt-1 text-sm text-white/55">
+						<p class="mt-1 text-sm text-fg-55">
 							Crealo una vez y queda asignado a {professionalName.trim() || 'este profesional'}.
 						</p>
 						<div class="mt-5 grid gap-4">
@@ -669,7 +669,7 @@
 							<button type="button" class="ux-btn-secondary" disabled={!canManage} onclick={addNewService}>
 								Crear y asignar
 							</button>
-							<p class="text-xs text-white/45">El servicio se guarda recién al confirmar con Guardar rol en el resumen.</p>
+							<p class="text-xs text-copy-subtle">El servicio se guarda recién al confirmar con Guardar rol en el resumen.</p>
 						</div>
 					</div>
 				</div>
@@ -679,17 +679,17 @@
 				</div>
 			{:else if currentStep === 'horarios'}
 				<div class="mt-5 grid gap-5 xl:grid-cols-[1fr_0.78fr]">
-					<div class={`ux-soft-card p-4 sm:p-5 ${scheduleError ? 'border border-red-400/40' : ''}`}>
+					<div class={`ux-soft-card p-4 sm:p-5 ${scheduleError ? 'border border-danger-400-40' : ''}`}>
 						<h3 class="ux-section-title">Horarios de atención</h3>
-						<p class="mt-1 text-sm text-white/55">Cada bloque tiene sus propios días, horarios y descanso.</p>
+						<p class="mt-1 text-sm text-fg-55">Cada bloque tiene sus propios días, horarios y descanso.</p>
 
 						<div class="mt-5 grid gap-4">
 							{#each scheduleBlocks as block, blockIndex (block.id)}
 								{@const assignedByOtherBlock = usedWeekdays(block.id)}
 								{@const preview = schedulePreview(block)}
-								<div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+								<div class="rounded-2xl border border-line bg-fill-04 p-4">
 									<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-										<h4 class="font-bold text-white">Bloque {blockIndex + 1}</h4>
+										<h4 class="font-bold text-fg">Bloque {blockIndex + 1}</h4>
 										<button type="button" class="ux-btn-secondary shrink-0 text-sm" disabled={!canManage} onclick={() => removeScheduleBlock(block.id)}>
 											Quitar bloque
 										</button>
@@ -703,10 +703,10 @@
 													disabled={!canManage}
 													class={`min-h-14 min-w-0 rounded-2xl border px-3 py-3 text-center text-sm font-bold leading-tight whitespace-normal transition disabled:cursor-not-allowed disabled:opacity-50 ${
 														block.weekdays.includes(index)
-															? 'border-[#8b5cf6] bg-[#7c3aed] text-white shadow-lg shadow-[#7c3aed]/20'
+															? 'border-accent bg-accent-strong text-on-accent shadow-lg shadow-shade-accent-600-20'
 															: assignedByOtherBlock.has(index)
-																? 'border-white/5 bg-white/[0.015] text-white/30'
-																: 'border-white/10 bg-white/[0.03] text-white/65 hover:border-[#8b5cf6]/60 hover:bg-white/[0.06]'
+																? 'border-line-05 bg-fill-13243d-70 text-copy-subtle'
+																: 'border-line bg-fill-04 text-fg-65 hover:border-accent-500-60 hover:bg-fill-04'
 													}`}
 													onclick={() => toggleBlockWeekday(block.id, index)}
 												>
@@ -715,9 +715,9 @@
 											{/each}
 										</div>
 										<div class="mt-3 flex flex-wrap gap-2">
-											<button type="button" class="rounded-full border border-white/10 px-4 py-2 text-xs font-bold text-white/65 hover:bg-white/[0.06]" onclick={() => setBlockWeekdays(block.id, [1, 2, 3, 4, 5])}>Lunes a viernes</button>
-											<button type="button" class="rounded-full border border-white/10 px-4 py-2 text-xs font-bold text-white/65 hover:bg-white/[0.06]" onclick={() => setBlockWeekdays(block.id, [6])}>Sólo sábado</button>
-											<button type="button" class="rounded-full border border-white/10 px-4 py-2 text-xs font-bold text-white/65 hover:bg-white/[0.06]" onclick={() => setBlockWeekdays(block.id, [])}>Limpiar</button>
+											<button type="button" class="rounded-full border border-line px-4 py-2 text-xs font-bold text-fg-65 hover:bg-fill-04" onclick={() => setBlockWeekdays(block.id, [1, 2, 3, 4, 5])}>Lunes a viernes</button>
+											<button type="button" class="rounded-full border border-line px-4 py-2 text-xs font-bold text-fg-65 hover:bg-fill-04" onclick={() => setBlockWeekdays(block.id, [6])}>Sólo sábado</button>
+											<button type="button" class="rounded-full border border-line px-4 py-2 text-xs font-bold text-fg-65 hover:bg-fill-04" onclick={() => setBlockWeekdays(block.id, [])}>Limpiar</button>
 										</div>
 									</div>
 
@@ -730,14 +730,14 @@
 												value={block.timeRanges}
 												disabled={!canManage}
 												aria-invalid={Boolean(scheduleError)}
-												class={`ux-input text-lg font-bold ${scheduleError ? 'border-red-400/60' : ''}`}
+												class={`ux-input text-lg font-bold ${scheduleError ? 'border-danger-400-60' : ''}`}
 												oninput={(event) => updateScheduleBlock(block.id, { timeRanges: (event.currentTarget as HTMLInputElement).value })}
 												onblur={() => commitScheduleBlockTimeRanges(block.id)}
 											/>
 											{#if preview.length > 0}
 												<div class="mt-3 flex flex-wrap gap-2">
 													{#each preview as range}
-														<span class="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-xs font-bold text-emerald-100">
+														<span class="rounded-full border border-success-300-25 bg-success-400-10 px-3 py-2 text-xs font-bold text-success-100">
 															{range.start} - {range.end}
 														</span>
 													{/each}
@@ -752,11 +752,11 @@
 												min="0"
 												step="1"
 												disabled={!canManage}
-												class={`ux-input text-lg font-bold ${scheduleError ? 'border-red-400/60' : ''}`}
+												class={`ux-input text-lg font-bold ${scheduleError ? 'border-danger-400-60' : ''}`}
 												value={block.slotInterval}
 												oninput={(event) => updateScheduleBlock(block.id, { slotInterval: (event.currentTarget as HTMLInputElement).value })}
 											/>
-											<span class="mt-2 block text-xs font-semibold leading-relaxed text-white/45">
+											<span class="mt-2 block text-xs font-semibold leading-relaxed text-copy-subtle">
 												Usá 0 para permitir otro turno inmediatamente. También podés escribir cualquier entero, por ejemplo 2, 23 o 60.
 											</span>
 										</label>
@@ -774,17 +774,17 @@
 
 					<div class="ux-soft-card p-4 sm:p-5">
 						<h3 class="ux-section-title">Ausencia o cambio de horario (opcional)</h3>
-						<p class="mt-1 text-sm text-white/55">Podés bloquear un horario puntual o varios días completos.</p>
+						<p class="mt-1 text-sm text-fg-55">Podés bloquear un horario puntual o varios días completos.</p>
 						<div class="mt-5 grid gap-4">
 							<div>
 								<span class="ux-label">Afecta a</span>
 								<div class="mt-3 grid gap-2 sm:grid-cols-2">
 									<label class={`ux-choice px-4 py-3 text-sm font-bold ${exceptionAppliesTo === 'professional' ? 'ux-choice-active' : ''}`}>
-										<input type="radio" value="professional" bind:group={exceptionAppliesTo} class="mr-2 accent-[#7c3aed]" />
+										<input type="radio" value="professional" bind:group={exceptionAppliesTo} class="mr-2 accent-check-accent-600" />
 										{professionalName.trim() || 'Profesional'}
 									</label>
 									<label class={`ux-choice px-4 py-3 text-sm font-bold ${exceptionAppliesTo === 'business' ? 'ux-choice-active' : ''}`}>
-										<input type="radio" value="business" bind:group={exceptionAppliesTo} class="mr-2 accent-[#7c3aed]" />
+										<input type="radio" value="business" bind:group={exceptionAppliesTo} class="mr-2 accent-check-accent-600" />
 										Todo el consultorio
 									</label>
 								</div>
@@ -793,11 +793,11 @@
 								<span class="ux-label">Tipo</span>
 								<div class="mt-3 grid gap-2 sm:grid-cols-2">
 									<label class={`ux-choice px-4 py-3 text-sm font-bold ${exceptionType === 'blocked' ? 'ux-choice-active' : ''}`}>
-										<input type="radio" value="blocked" bind:group={exceptionType} class="mr-2 accent-[#7c3aed]" />
+										<input type="radio" value="blocked" bind:group={exceptionType} class="mr-2 accent-check-accent-600" />
 										Bloquear
 									</label>
 									<label class={`ux-choice px-4 py-3 text-sm font-bold ${exceptionType === 'extra_available' ? 'ux-choice-active' : ''}`}>
-										<input type="radio" value="extra_available" bind:group={exceptionType} class="mr-2 accent-[#7c3aed]" />
+										<input type="radio" value="extra_available" bind:group={exceptionType} class="mr-2 accent-check-accent-600" />
 										Sumar horario
 									</label>
 								</div>
@@ -813,8 +813,8 @@
 											class={`ux-choice p-4 text-left ${exceptionPeriodMode === 'single' ? 'ux-choice-active' : ''}`}
 											onclick={() => (exceptionPeriodMode = 'single')}
 										>
-											<span class="block font-bold text-white">Un día</span>
-											<span class="mt-1 block text-xs text-white/50">Elegís fecha y horario.</span>
+											<span class="block font-bold text-fg">Un día</span>
+											<span class="mt-1 block text-xs text-fg-50">Elegís fecha y horario.</span>
 										</button>
 										<button
 											type="button"
@@ -823,8 +823,8 @@
 											class={`ux-choice p-4 text-left ${exceptionPeriodMode === 'range' ? 'ux-choice-active' : ''}`}
 											onclick={() => (exceptionPeriodMode = 'range')}
 										>
-											<span class="block font-bold text-white">Rango de días</span>
-											<span class="mt-1 block text-xs text-white/50">Desde y hasta, días completos.</span>
+											<span class="block font-bold text-fg">Rango de días</span>
+											<span class="mt-1 block text-xs text-fg-50">Desde y hasta, días completos.</span>
 										</button>
 									</div>
 								</div>
@@ -851,7 +851,7 @@
 										<input type="date" min={exceptionDateFrom} bind:value={exceptionDateTo} disabled={!canManage} class="ux-input" />
 									</label>
 								</div>
-								<p class="rounded-2xl border border-violet-300/20 bg-violet-400/10 px-4 py-3 text-sm font-bold text-violet-100">
+								<p class="rounded-2xl border border-accent-300-20 bg-accent-400-10 px-4 py-3 text-sm font-bold text-accent-100">
 									Incluye ambos días completos. Los turnos ya agendados no se cancelan.
 								</p>
 							{/if}
@@ -870,43 +870,43 @@
 					<button type="button" disabled={!canManage} class="ux-btn-primary flex-1" onclick={nextStep}>Siguiente</button>
 				</div>
 			{:else}
-				<div class="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-					<p class="text-sm font-bold text-white/45">Email</p>
-					<p class="mt-1 text-xl font-bold text-white">{email.trim().toLowerCase()}</p>
-					<p class="mt-4 text-sm font-bold text-white/45">Rol asignado</p>
-					<p class="mt-1 text-xl font-bold text-white">{roleLabels[role]}</p>
+				<div class="mt-5 rounded-2xl border border-line bg-fill-04 p-5">
+					<p class="text-sm font-bold text-copy-subtle">Email</p>
+					<p class="mt-1 text-xl font-bold text-fg">{email.trim().toLowerCase()}</p>
+					<p class="mt-4 text-sm font-bold text-copy-subtle">Rol asignado</p>
+					<p class="mt-1 text-xl font-bold text-fg">{roleLabels[role]}</p>
 					{#if hasProfessionalProfile}
-						<p class="mt-4 text-sm font-bold text-white/45">Perfil profesional</p>
-						<p class="mt-1 text-xl font-bold text-white">
+						<p class="mt-4 text-sm font-bold text-copy-subtle">Perfil profesional</p>
+						<p class="mt-1 text-xl font-bold text-fg">
 							{role === 'professional' ? 'Incluido por el rol Profesional' : 'También atiende pacientes'}
 						</p>
-						<p class="mt-4 text-sm font-bold text-white/45">Nombre</p>
-						<p class="mt-1 text-xl font-bold text-white">{professionalName}</p>
+						<p class="mt-4 text-sm font-bold text-copy-subtle">Nombre</p>
+						<p class="mt-1 text-xl font-bold text-fg">{professionalName}</p>
 						{#if professionalSpecialty.trim()}
-							<p class="mt-4 text-sm font-bold text-white/45">Especialidad</p>
-							<p class="mt-1 text-xl font-bold text-white">{professionalSpecialty}</p>
+							<p class="mt-4 text-sm font-bold text-copy-subtle">Especialidad</p>
+							<p class="mt-1 text-xl font-bold text-fg">{professionalSpecialty}</p>
 						{/if}
-						<p class="mt-4 text-sm font-bold text-white/45">Servicios incluidos</p>
-						<p class="mt-1 text-xl font-bold text-white">{(defaultServiceNames as readonly string[]).join(', ')}</p>
+						<p class="mt-4 text-sm font-bold text-copy-subtle">Servicios incluidos</p>
+						<p class="mt-1 text-xl font-bold text-fg">{(defaultServiceNames as readonly string[]).join(', ')}</p>
 						{#if summaryAdditionalServices.length > 0}
-							<p class="mt-4 text-sm font-bold text-white/45">Servicios adicionales</p>
-							<p class="mt-1 text-xl font-bold text-white">{summaryAdditionalServices.join(', ')}</p>
+							<p class="mt-4 text-sm font-bold text-copy-subtle">Servicios adicionales</p>
+							<p class="mt-1 text-xl font-bold text-fg">{summaryAdditionalServices.join(', ')}</p>
 						{/if}
-						<p class="mt-4 text-sm font-bold text-white/45">Horarios habituales</p>
+						<p class="mt-4 text-sm font-bold text-copy-subtle">Horarios habituales</p>
 						<div class="mt-2 grid gap-2">
 							{#each summaryScheduleBlocks as block, index}
-								<div class="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-									<p class="text-sm font-bold text-white/45">Bloque {index + 1}</p>
-									<p class="mt-1 text-lg font-bold text-white">{block.days || 'Sin días'}</p>
-									<p class="mt-1 text-sm font-bold text-white/65">
+								<div class="rounded-2xl border border-line bg-fill-04 px-4 py-3">
+									<p class="text-sm font-bold text-copy-subtle">Bloque {index + 1}</p>
+									<p class="mt-1 text-lg font-bold text-fg">{block.days || 'Sin días'}</p>
+									<p class="mt-1 text-sm font-bold text-fg-65">
 										{block.ranges || 'Sin horario'} · descanso {block.slotInterval} minutos
 									</p>
 								</div>
 							{/each}
 						</div>
 						{#if hasExceptionLoaded}
-							<p class="mt-4 text-sm font-bold text-white/45">Ausencia o cambio de horario</p>
-							<p class="mt-1 text-xl font-bold text-white">
+							<p class="mt-4 text-sm font-bold text-copy-subtle">Ausencia o cambio de horario</p>
+							<p class="mt-1 text-xl font-bold text-fg">
 								{#if exceptionPeriodMode === 'range'}
 									Bloquear del {formatDateKey(exceptionDateFrom)} al {formatDateKey(exceptionDateTo)} · Días completos
 								{:else}

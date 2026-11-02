@@ -1,12 +1,11 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" class="%cita.theme.class%">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<script nonce="%sveltekit.nonce%">
-			// La app usa un único tema oscuro pulido (Cita Suite).
-			document.documentElement.classList.add('dark');
-		</script>
+		<!-- Modo de color: el servidor completa la clase de <html> y el color de la barra del navegador
+		     con la cookie cita-theme (src/lib/theme/preference.ts, hooks.server.ts). Sin elección: claro. -->
+		%cita.theme.meta%
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link

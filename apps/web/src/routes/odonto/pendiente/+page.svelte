@@ -36,10 +36,10 @@
 	<div class="mx-auto max-w-2xl">
 		<div class="ux-card text-center">
 			<h1 class="ux-title">{copy.title}</h1>
-			<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-white/65">
+			<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-fg-65">
 				{copy.detail}
 			</p>
-			<p class="mt-7 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold text-white/70">
+			<p class="mt-7 rounded-2xl border border-line bg-fill-04 px-4 py-3 text-sm font-bold text-fg-70">
 				{copy.note}
 			</p>
 			{#if copy.canRetry}

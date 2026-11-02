@@ -108,7 +108,7 @@
 </script>
 <section class="ux-soft-card space-y-4 p-5" aria-labelledby="patient-documents-title">
  <h2 id="patient-documents-title" class="ux-section-title">Documentos para tu consulta</h2>
- <p class="text-sm text-white/75">Podés adjuntar JPG, PNG o PDF de hasta 5 MB. Para este turno se admiten hasta tres documentos y 10 MB en total.</p>
+ <p class="text-sm text-fg-75 bk-muted">Podés adjuntar JPG, PNG o PDF de hasta 5 MB. Para este turno se admiten hasta tres documentos y 10 MB en total.</p>
  <form onsubmit={upload} class="space-y-4"><fieldset disabled={busy} class="space-y-4">
   <label class="block"><span class="ux-label">Documento</span><input bind:this={picker} bind:files type="file" accept="image/jpeg,image/png,application/pdf" class="ux-input mt-2" required onchange={()=>{requestId='';pendingId='';uploaded=false;progress=0;message='';}}/></label>
   <label class="block"><span class="ux-label">Descripción (opcional)</span><input class="ux-input mt-2" maxlength="500" disabled={Boolean(pendingId)} bind:value={note}/></label>
@@ -116,6 +116,6 @@
  </fieldset></form>
  {#if busy}<progress max="100" value={progress} class="w-full" aria-label="Progreso de carga"></progress>{/if}
  {#if message}<p role={failed?'alert':'status'} class={failed?'ux-error':'ux-success'}>{message}</p>{/if}
- <p class="text-sm text-white/70">Los archivos quedan privados para el equipo clínico. Tu reserva se conserva si una carga falla.</p>
+ <p class="text-sm text-fg-70 bk-muted">Los archivos quedan privados para el equipo clínico. Tu reserva se conserva si una carga falla.</p>
  <noscript><p>Para adjuntar archivos, activá JavaScript o contactá al consultorio. Podés guardar los datos del formulario sin adjuntar documentos.</p></noscript>
 </section>

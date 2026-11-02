@@ -10,11 +10,11 @@
   {#if data.professionals.length}<p class="ux-subtitle">
       Elegí el perfil que querés configurar.
     </p>
-    <div class="mt-6 divide-y divide-white/10">
+    <div class="mt-6 divide-y divide-line">
       {#each data.professionals as person}<a
           class="flex min-h-16 items-center justify-between gap-4 py-4 font-semibold"
           href={`/odonto/profesionales/${person.id}/preguntas`}
-          >{person.name}<span class="text-sm text-white/70"
+          >{person.name}<span class="text-sm text-fg-70"
             >Configurar preguntas</span
           ></a
         >{/each}

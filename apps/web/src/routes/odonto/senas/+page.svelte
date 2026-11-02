@@ -47,12 +47,12 @@
 			<button class="ux-btn-primary px-3 sm:px-5" disabled>Pedir seña por WhatsApp</button>
 		{:else if !row.hasPhone}
 			<span class="ux-badge ux-badge-warning">Revisar teléfono</span>
-			<p class="max-w-60 text-xs leading-relaxed text-white/50 sm:text-right">
+			<p class="max-w-60 text-xs leading-relaxed text-fg-50 sm:text-right">
 				Falta un número argentino completo con código de área.
 			</p>
 			<a href={`/odonto/pacientes/${row.patientId}`} class="ux-btn-secondary">Corregir número</a>
 		{:else if row.reminder}
-			<p class="max-w-60 text-xs text-white/45 sm:text-right">Ya se pidió por WhatsApp. ¿Abrirlo otra vez?</p>
+			<p class="max-w-60 text-xs text-copy-subtle sm:text-right">Ya se pidió por WhatsApp. ¿Abrirlo otra vez?</p>
 			<a href={openHref(row, true)} target="_blank" rel="noreferrer" class="ux-btn-secondary">Abrir de todos modos</a>
 		{:else}
 			<a href={openHref(row)} target="_blank" rel="noreferrer" class="ux-btn-primary px-3 sm:px-5">Pedir seña por WhatsApp</a>
@@ -66,7 +66,7 @@
 		<details class="w-full sm:w-auto">
 			<summary class="ux-btn-secondary cursor-pointer list-none">Exceptuar</summary>
 			<form method="POST" action="?/deposit" class="mt-2 flex flex-col gap-2 sm:items-end">
-				<p class="max-w-60 text-xs text-white/55 sm:text-right">
+				<p class="max-w-60 text-xs text-fg-55 sm:text-right">
 					El turno queda Confirmado sin seña. Queda registrado como decisión del consultorio.
 				</p>
 				<input type="hidden" name="appointment_id" value={row.appointmentId} />
@@ -104,20 +104,20 @@
 	<div class="ux-soft-card p-5" data-deposit-row={row.appointmentId}>
 		<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 			<div class="min-w-0">
-				<p class="break-words text-lg font-bold text-white">{row.patientName}</p>
-				<p class="mt-1 text-sm text-white/65">Turno: {row.turnLabel}</p>
+				<p class="break-words text-lg font-bold text-fg">{row.patientName}</p>
+				<p class="mt-1 text-sm text-fg-65">Turno: {row.turnLabel}</p>
 				{#if row.section === 'cancelled'}
-					<p class="mt-2 text-sm font-bold text-amber-300">
+					<p class="mt-2 text-sm font-bold text-warning-300">
 						Se canceló porque no se registró la seña de {row.amountLabel} antes del {row.dueLabel}.
 					</p>
 				{:else}
-					<p class="mt-2 text-sm font-bold text-white">Seña de {row.amountLabel}, vence el {row.dueLabel}</p>
+					<p class="mt-2 text-sm font-bold text-fg">Seña de {row.amountLabel}, vence el {row.dueLabel}</p>
 					{#if row.appointmentStatus === 'reschedule_requested'}
-						<p class="mt-1 text-sm text-amber-300">Pidió reprogramar: resolver a mano.</p>
+						<p class="mt-1 text-sm text-warning-300">Pidió reprogramar: resolver a mano.</p>
 					{/if}
 				{/if}
 				{#if row.reminder}
-					<p class="mt-2 text-sm text-white/55">
+					<p class="mt-2 text-sm text-fg-55">
 						WhatsApp abierto {formatElapsed(row.reminder.openedAt, now)} por {row.reminder.openedBy}
 					</p>
 				{/if}
@@ -162,8 +162,8 @@
 				class={data.automation.tone === 'warning'
 					? 'ux-alert'
 					: data.automation.tone === 'ok'
-						? 'flex items-center gap-2 text-sm font-bold text-emerald-300'
-						: 'ux-soft-card p-4 text-sm text-white/70'}
+						? 'flex items-center gap-2 text-sm font-bold text-success-300'
+						: 'ux-soft-card p-4 text-sm text-fg-70'}
 				role={data.automation.tone === 'warning' ? 'alert' : undefined}
 			>
 				{#if data.automation.tone === 'ok'}<Icon name="check" class="h-4 w-4 shrink-0" />{/if}{data.automation.text}
@@ -217,7 +217,7 @@
 		{#if data.page > 1 || data.truncated}
 			<nav aria-label="Páginas de señas" class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				{#if data.page > 1}<a href={`?pagina=${data.page - 1}`} class="ux-btn-secondary">Página anterior</a>{/if}
-				<p class="text-sm text-white/65">Página {data.page ?? 1}</p>
+				<p class="text-sm text-fg-65">Página {data.page ?? 1}</p>
 				{#if data.truncated}<a href={`?pagina=${(data.page ?? 1) + 1}`} class="ux-btn-secondary">Página siguiente</a>{/if}
 			</nav>
 		{/if}

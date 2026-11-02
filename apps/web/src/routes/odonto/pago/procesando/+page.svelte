@@ -31,20 +31,20 @@
 		<div class="ux-card text-center">
 			{#if data.activated}
 				<h1 class="ux-title">Suscripción activada</h1>
-				<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-white/65">
+				<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-fg-65">
 					Ahora configurá tu agenda para empezar a recibir turnos.
 				</p>
 				<a href="/odonto/disponibilidad" class="ux-btn-primary mt-7 inline-flex">
 					Configurar mi agenda
 				</a>
 				{#if confirmedByReturn}
-					<p class="mt-4 text-sm font-semibold text-white/45">
+					<p class="mt-4 text-sm font-semibold text-copy-subtle">
 						Confirmamos el pago directamente con Mercado Pago.
 					</p>
 				{/if}
 			{:else if data.manualBlock}
 				<h1 class="ux-title">Tu cuenta requiere soporte</h1>
-				<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-white/65">
+				<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-fg-65">
 					El acceso fue suspendido por el administrador del sistema. Un pago no lo
 					reactiva automáticamente.
 				</p>
@@ -53,14 +53,14 @@
 				</a>
 			{:else}
 				<h1 class="ux-title">Estamos confirmando tu pago</h1>
-				<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-white/65">
+				<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-fg-65">
 					Esto suele demorar solo unos segundos. Tu cuenta y tus datos ya están guardados.
 				</p>
 
-				<div class="mx-auto mt-7 max-w-sm rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-left">
-					<p class="text-sm font-bold text-white/45">Plan Cita Suite</p>
-					<p class="mt-2 text-2xl font-bold text-white">{money(data.mpAmount)} por mes</p>
-					<p class="mt-2 text-sm font-semibold text-white/55">
+				<div class="mx-auto mt-7 max-w-sm rounded-2xl border border-line bg-fill-04 p-5 text-left">
+					<p class="text-sm font-bold text-copy-subtle">Plan Cita Suite</p>
+					<p class="mt-2 text-2xl font-bold text-fg">{money(data.mpAmount)} por mes</p>
+					<p class="mt-2 text-sm font-semibold text-fg-55">
 						Acceso completo a agenda, pacientes, turnos y recordatorios.
 					</p>
 				</div>

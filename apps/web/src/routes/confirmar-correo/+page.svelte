@@ -130,8 +130,8 @@
 </main>
 
 <style>
-	.confirmation-page { min-height:100svh; display:grid; place-items:center; padding:2rem 1rem; background:var(--bg, #0b1626); color:var(--text, #eaf1ff); }
-	.confirmation-panel { width:100%; max-width:30rem; padding:2rem; border:1px solid var(--border); border-radius:1rem; background:var(--surface, #0b1d32); }
+	.confirmation-page { min-height:100svh; display:grid; place-items:center; padding:2rem 1rem; background:var(--bg); color:var(--text); }
+	.confirmation-panel { width:100%; max-width:30rem; padding:2rem; border:1px solid var(--border); border-radius:1rem; background:var(--surface); }
 	.confirmation-brand { display:inline-flex; align-items:center; gap:.75rem; color:var(--text); font-weight:700; text-decoration:none; }
 	.confirmation-brand img { border-radius:.75rem; }
 	.confirmation-symbol { margin:2rem 0 1.25rem; width:3.5rem; height:3.5rem; padding:.8rem; border-radius:1rem; color:var(--accent-text); background:var(--accent-soft); }

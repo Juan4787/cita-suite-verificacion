@@ -90,6 +90,29 @@ describe('hooks auth validation', () => {
 		}
 	);
 
+	it.each([
+		[undefined, ''],
+		['dark', 'dark'],
+		['system', 'theme-system'],
+		['oscuro', '']
+	])('renders every document in the color mode of the device (cookie %s)', async (value, expected) => {
+		const event = makeEvent();
+		event.url = new URL('https://app.test/reservar/consultorio');
+		(event.cookies.get as ReturnType<typeof vi.fn>).mockImplementation((key: string) => (key === 'cita-theme' ? value : undefined));
+		let options: { transformPageChunk?: (input: { html: string; done: boolean }) => string } | undefined;
+		const resolve = vi.fn(async (_event: unknown, received: typeof options) => {
+			options = received;
+			return new Response('<!doctype html>', { headers: { 'content-type': 'text/html' } });
+		});
+
+		await handle({ event, resolve } as never);
+
+		const html = options?.transformPageChunk?.({ html: '<html lang="es" class="%cita.theme.class%"><head>%cita.theme.meta%</head><body></body></html>', done: true });
+		expect(html).toContain(`<html lang="es" class="${expected}">`);
+		expect(html).toContain('<meta name="theme-color"');
+		expect(html).not.toContain('%cita.theme');
+	});
+
 	it('keeps public tokens and internal authentication independent of stale user cookies', async () => {
 		mocks.createSupabaseServerClient.mockRejectedValue(new Error('invalid old user session'));
 		for (const path of ['/reservar/clinic', '/embed/v1/integration', '/turno/token/push', '/api/public/contacto/integration', '/internal/jobs/send-push-reminders', '/api/mercadopago/webhook', '/oauth/google-calendar/callback']) {

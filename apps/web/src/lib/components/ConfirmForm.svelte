@@ -74,7 +74,7 @@
 
 <div use:portal>
 	<Modal {open} {title} on:close={() => (open = false)} dismissible>
-		<div class="space-y-4 text-sm text-neutral-800 dark:text-neutral-100">
+		<div class="space-y-4 text-sm text-fg-n100">
 			<p class="leading-6">{text}</p>
 			<div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
 				<button class="ux-btn-secondary" type="button" onclick={() => (open = false)}>{cancelLabel}</button>

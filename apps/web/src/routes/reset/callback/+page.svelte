@@ -133,28 +133,28 @@
 	});
 </script>
 
-<div class="min-h-screen bg-gradient-to-br from-[#0b1626] via-[#0f1f36] to-[#0a1222] flex items-center justify-center px-4 py-10">
-	<div class="w-full max-w-lg rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur dark:border-[#1f3554] dark:bg-[#0f1f36]/90">
+<div class="min-h-screen bg-gradient-to-br from-canvas via-surface to-canvas flex items-center justify-center px-4 py-10">
+	<div class="w-full max-w-lg rounded-3xl border p-8 shadow-2xl backdrop-blur border-line-strong bg-fill-13243d-70">
 		<div class="mb-6 text-center space-y-3">
-			<h1 class="text-3xl font-semibold text-white">Restablecer contraseña</h1>
-			<p class="text-sm text-neutral-200">Elegí una nueva contraseña para tu cuenta.</p>
+			<h1 class="text-3xl font-semibold text-fg">Restablecer contraseña</h1>
+			<p class="text-sm text-fg-n200">Elegí una nueva contraseña para tu cuenta.</p>
 		</div>
 
 		{#if status === 'loading'}
-			<p class="rounded-xl bg-white/10 px-4 py-3 text-sm text-neutral-200">Validando enlace...</p>
+			<p class="rounded-xl bg-fill-10 px-4 py-3 text-sm text-fg-n200">Validando enlace...</p>
 		{:else if status === 'error'}
-			<p class="rounded-xl bg-red-500/15 px-4 py-3 text-sm font-semibold text-red-200">{message}</p>
+			<p class="rounded-xl bg-danger-500-15 px-4 py-3 text-sm font-semibold text-danger">{message}</p>
 			<div class="mt-4 flex justify-center">
 				<BackLink href="/reset" label="Volver a recuperar contraseña" />
 			</div>
 		{:else if status === 'success'}
 			<div class="space-y-4">
-				<p class="rounded-xl bg-green-500/15 px-4 py-3 text-sm font-semibold text-green-100">
+				<p class="rounded-xl bg-success-green-500-15 px-4 py-3 text-sm font-semibold text-success-green-100">
 					{message || 'Contraseña actualizada correctamente.'}
 				</p>
 				<a
 					href="/login"
-					class="inline-flex w-full items-center justify-center rounded-2xl bg-[#7c3aed] px-4 py-3 text-base font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed]"
+					class="inline-flex w-full items-center justify-center rounded-2xl bg-accent-strong px-4 py-3 text-base font-semibold text-on-accent shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-accent-600"
 				>
 					Volver a ingresar
 				</a>
@@ -162,12 +162,12 @@
 		{:else}
 			<form class="space-y-6" onsubmit={handleSubmit}>
 				<div class="space-y-3">
-					<label class="text-sm font-medium text-white" for="password">Nueva contraseña</label>
+					<label class="text-sm font-medium text-fg" for="password">Nueva contraseña</label>
 					<div class="relative">
 						<input
 							id="password"
 							type={showPassword ? 'text' : 'password'}
-							class="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 pr-16 text-white shadow-sm outline-none transition focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/40 placeholder:text-neutral-400"
+							class="w-full rounded-2xl border border-line bg-fill-10 px-4 py-3 pr-16 text-fg shadow-sm outline-none transition focus:border-accent-600 focus:ring-2 focus:ring-focus-accent-600-40 placeholder:text-fg-n400"
 							placeholder="Mínimo 6 caracteres"
 							bind:value={password}
 							autocomplete="new-password"
@@ -175,7 +175,7 @@
 						/>
 						<button
 							type="button"
-							class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-3 py-2 text-xs font-semibold text-neutral-100 transition hover:bg-white/10"
+							class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-3 py-2 text-xs font-semibold text-fg-n100 transition hover:bg-fill-10"
 							onclick={() => (showPassword = !showPassword)}
 						>
 							{showPassword ? 'Ocultar' : 'Ver'}
@@ -184,11 +184,11 @@
 				</div>
 
 				<div class="space-y-3">
-					<label class="text-sm font-medium text-white" for="confirm">Confirmar contraseña</label>
+					<label class="text-sm font-medium text-fg" for="confirm">Confirmar contraseña</label>
 					<input
 						id="confirm"
 						type={showPassword ? 'text' : 'password'}
-						class="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white shadow-sm outline-none transition focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/40 placeholder:text-neutral-400"
+						class="w-full rounded-2xl border border-line bg-fill-10 px-4 py-3 text-fg shadow-sm outline-none transition focus:border-accent-600 focus:ring-2 focus:ring-focus-accent-600-40 placeholder:text-fg-n400"
 						placeholder="Repetí tu contraseña"
 						bind:value={confirmPassword}
 						autocomplete="new-password"
@@ -197,14 +197,14 @@
 				</div>
 
 				{#if message}
-					<p class="rounded-xl bg-red-500/15 px-4 py-3 text-sm font-semibold text-red-200">{message}</p>
+					<p class="rounded-xl bg-danger-500-15 px-4 py-3 text-sm font-semibold text-danger">{message}</p>
 				{/if}
 
 				<button
 					type="submit"
 					disabled={saving}
 					aria-busy={saving}
-					class="flex w-full items-center justify-center rounded-2xl bg-[#7c3aed] px-4 py-3 text-base font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed]"
+					class="flex w-full items-center justify-center rounded-2xl bg-accent-strong px-4 py-3 text-base font-semibold text-on-accent shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-accent-600"
 				>
 					{saving ? 'Guardando…' : 'Guardar nueva contraseña'}
 				</button>
