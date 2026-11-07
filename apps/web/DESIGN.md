@@ -272,6 +272,7 @@ Verde comunica éxito; ámbar, advertencia o cambios pendientes; rojo, error o a
 - El servidor arma cada página ya en el modo elegido: pone `dark` o `theme-system` en `<html>` y el color de la barra del navegador (`hooks.server.ts`, `src/lib/theme/preference.ts`). No hay parpadeo y no hace falta JavaScript.
 - Automático sigue al dispositivo sólo con CSS, también si cambia con la página abierta.
 - El cambio se aplica al instante y todos los elementos cambian a la vez: la clase `theme-switching` apaga las transiciones durante el cambio.
+- El selector marca siempre el modo que muestra la página, que es la clase de `<html>` (`src/lib/theme/shown.svelte.ts`), también cuando el menú se vuelve a abrir o después de navegar. El modo que carga el servidor sólo sirve para dibujar el selector en el servidor: no vuelve a cargarse al navegar ni al cambiar de modo.
 - La apariencia Natalia de la reserva pública no depende de este modo: alterna claro y oscuro según el modo que indica su sitio (`color_mode` o el puente de la integración). Dentro de su ámbito, las variables de la app que ella no redefine quedan fijas en su valor oscuro, así su reserva se ve como antes del modo claro. Sus reglas apuntan a las marcas `bk-*` de los componentes de reserva.
 - El visor de radiografías e imágenes clínicas es siempre oscuro, en los dos modos, para conservar el contraste de las zonas oscuras de la imagen.
 

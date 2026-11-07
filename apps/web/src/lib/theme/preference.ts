@@ -28,6 +28,13 @@ export function themeClass(preference: ThemePreference): string {
 	return '';
 }
 
+/** The mode the classes of <html> show: the inverse of themeClass. Any other class is ignored. */
+export function preferenceShownBy(classes: Pick<DOMTokenList, 'contains'>): ThemePreference {
+	if (classes.contains('dark')) return 'dark';
+	if (classes.contains('theme-system')) return 'system';
+	return 'light';
+}
+
 type ThemeColorTag = { content: string; media?: string };
 
 /** Browser bar color on phones: the page background of the mode in use. */

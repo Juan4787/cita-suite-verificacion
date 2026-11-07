@@ -5,21 +5,18 @@
 		applyThemePreference,
 		type ThemePreference
 	} from '$lib/theme/preference';
+	import { shownThemePreference } from '$lib/theme/shown.svelte';
 
 	// The color mode of this device: Claro (default), Oscuro or Automático (follows the device).
+	// `value`: the mode of the request, for the render on the server. In the browser the checked option
+	// is the mode the page shows, also when the menu opens again or after a navigation.
 	// `menu`: options inside the account menu (role="menu"), as menuitemradio.
 	// `fieldset`: native radio buttons, for the navigation sheet on phones.
 	// Both are rows, like the other menu items: «Automático» never has to fit a narrow column.
 	let { value = 'light', variant = 'fieldset' }: { value?: ThemePreference; variant?: 'menu' | 'fieldset' } = $props();
 
 	const id = $props.id();
-	let chosen = $state<ThemePreference | null>(null);
-	const current = $derived(chosen ?? value);
-
-	function choose(preference: ThemePreference) {
-		chosen = preference;
-		applyThemePreference(preference);
-	}
+	const current = $derived(shownThemePreference(value));
 
 	const rowClass = (option: ThemePreference) =>
 		`flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-4 py-2 text-left text-sm font-semibold transition ${
@@ -35,7 +32,7 @@
 	<div role="group" aria-labelledby={`${id}-label`} class="py-1">
 		<p id={`${id}-label`} class="px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-fg-n300">Modo de color</p>
 		{#each THEME_PREFERENCES as option (option)}
-			<button type="button" role="menuitemradio" aria-checked={current === option} class={rowClass(option)} onclick={() => choose(option)}>
+			<button type="button" role="menuitemradio" aria-checked={current === option} class={rowClass(option)} onclick={() => applyThemePreference(option)}>
 				<span>{THEME_LABELS[option]}</span>
 				{#if current === option}{@render check()}{/if}
 			</button>
@@ -47,7 +44,7 @@
 		<div class="mt-2 grid gap-1">
 			{#each THEME_PREFERENCES as option (option)}
 				<label class={`${rowClass(option)} has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring`}>
-					<input class="sr-only" type="radio" name={`${id}-theme`} value={option} checked={current === option} onchange={() => choose(option)} />
+					<input class="sr-only" type="radio" name={`${id}-theme`} value={option} checked={current === option} onchange={() => applyThemePreference(option)} />
 					<span>{THEME_LABELS[option]}</span>
 					{#if current === option}{@render check()}{/if}
 				</label>
