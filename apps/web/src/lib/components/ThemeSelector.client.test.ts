@@ -72,6 +72,8 @@ describe('the color mode selector', () => {
 	});
 
 	it('is a group of menuitemradio inside the account menu', async () => {
+		// The server paints <html> and loads the value from the same cookie.
+		document.documentElement.className = 'theme-system';
 		render(ThemeSelector, { value: 'system', variant: 'menu' });
 		const group = screen.getByRole('group', { name: 'Modo de color' });
 		const items = within(group).getAllByRole('menuitemradio');
@@ -92,5 +94,52 @@ describe('the color mode selector', () => {
 		render(ThemeSelector, { value: 'dark' });
 		const names = new Set(screen.getAllByRole('radio').map((radio) => radio.getAttribute('name')));
 		expect(names.size).toBe(2);
+	});
+});
+
+// Reported by Juan on 7 November 2026: a dark page with «Claro» checked in the account menu. Each menu
+// creates its selector when it opens, and the loaded value is the one of the last full load: the root
+// layout does not load again on a navigation, nor when the mode changes.
+describe('the color mode selector shows the mode the page is in', () => {
+	const checkedItem = () =>
+		screen.getAllByRole('menuitemradio').filter((item) => item.getAttribute('aria-checked') === 'true').map((item) => item.textContent?.trim());
+
+	it('when the account menu opens again after a choice', async () => {
+		const first = render(ThemeSelector, { value: 'light', variant: 'menu' });
+		await fireEvent.click(screen.getByRole('menuitemradio', { name: 'Oscuro' }));
+		expect(document.documentElement.classList.contains('dark')).toBe(true);
+		first.unmount();
+
+		render(ThemeSelector, { value: 'light', variant: 'menu' });
+		expect(checkedItem()).toEqual(['Oscuro']);
+	});
+
+	it('when the phone sheet opens again after a choice', async () => {
+		const first = render(ThemeSelector, { value: 'light' });
+		await fireEvent.click(screen.getByRole('radio', { name: 'Automático' }));
+		first.unmount();
+
+		render(ThemeSelector, { value: 'light' });
+		expect(screen.getByRole('radio', { name: 'Automático' })).toBeChecked();
+		expect(screen.getByRole('radio', { name: 'Claro' })).not.toBeChecked();
+	});
+
+	it('in every selector open at once, whichever of them chose', async () => {
+		render(ThemeSelector, { value: 'light', variant: 'menu' });
+		render(ThemeSelector, { value: 'light' });
+		await fireEvent.click(screen.getByRole('radio', { name: 'Oscuro' }));
+		expect(checkedItem()).toEqual(['Oscuro']);
+
+		await fireEvent.click(screen.getByRole('menuitemradio', { name: 'Automático' }));
+		expect(screen.getByRole('radio', { name: 'Automático' })).toBeChecked();
+		expect(screen.getByRole('radio', { name: 'Oscuro' })).not.toBeChecked();
+	});
+
+	it('even when the loaded value is another, like after a choice in another tab', () => {
+		// The server painted this tab dark. Another tab chose light later, and a reload of the data read
+		// that cookie: this page is still dark, and the selector says so.
+		document.documentElement.className = 'dark';
+		render(ThemeSelector, { value: 'light', variant: 'menu' });
+		expect(checkedItem()).toEqual(['Oscuro']);
 	});
 });

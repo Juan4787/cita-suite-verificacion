@@ -1,10 +1,35 @@
 # Publicación y reversión
 
-## Último estado comprobado — quinta versión de E: 6 de noviembre de 2026, 18:00 hora argentina (21:00 UTC)
+## Último estado comprobado — P1, P2 y P3: 7 de noviembre de 2026, 08:06 hora argentina (11:06 UTC)
 
 **La única vuelta atrás vigente es la de este apartado.** Las de los apartados siguientes son historia.
 
-**Producción sirve** la instantánea `93b711a13fd107ef1d4cd5ecfde064fe37c52259` de `main` `f459b95c`, Worker `app`, versión de Cloudflare **`eb1e8cf8-a8bd-4964-bfc0-66bd6c63a1f2`**. 164 migraciones, sin cambios de base ni del programador.
+**Producción sirve** la instantánea `cabd8ae4012749907d7bdb80b90f75bc0119f2a3` de `main` `2f81c7ef`, Worker `app`, versión de Cloudflare **`ecec47cb-93f2-49d6-be09-dfa94091810a`**. 165 migraciones. Programador `0debec79-cadd-47e3-8bf6-47a46e6ba182`, con los mismos cinco cron. Interruptores sin cambios.
+
+**Qué trae:**
+- P1, cancelar desde recepción, con la migración `20261106040000_staff_cancel_before_start.sql`: el comando rechaza cancelar un turno que ya empezó.
+- P2, todos los controles y superficies estilados en claro y oscuro, y la revisión de diseño y experiencia de toda la app.
+- P3, el aviso interno de horarios liberados.
+- Además: el cartel al guardar la información del paciente, la hora del consultorio en las pantallas internas, el aviso visible en Safari después de una acción, y volver atrás en la reserva sin mover la página bajo el dedo.
+
+Detalle en [tareas posteriores a E](../plans/tareas-posteriores-a-e-20261103.md).
+
+**Verificación sobre la revisión exacta:**
+- paquete 42362009024, `fast` 42362019500 y SQL 42365877784;
+- Chromium 42365013991 y Firefox 42363631730, con 81 de 81 cada uno;
+- WebKit 42362424031, con 79 de 79 y las 2 omisiones declaradas del entorno. Ese trabajo figura fallido sólo porque `assertBrowserReport` exige cero omitidas;
+- staging migrado a 165 (42366406312) antes del ensayo, porque le faltaba la correctiva `20261106030000`;
+- ensayo contra producción sin fallas, con el mismo catálogo que las migraciones salvo los 4 disparadores de plataforma de `storage.buckets`;
+- respaldo `production-2026-11-07T11-02-41-655Z`: 128 tablas, 4.392 filas y 26 archivos;
+- `verify-production-release.mjs` aprobado: 151 archivos idénticos y 78 relaciones sin exposición anónima.
+
+**Publicación:** programador sin cron a las 11:04:35 UTC, migración 165 a las 11:04:50 en 756 ms, app a las 11:05:27, verificación a las 11:05:49 y programador con sus cinco cron a las 11:06:30.
+
+**Vuelta atrás:** `wrangler rollback eb1e8cf8-a8bd-4964-bfc0-66bd6c63a1f2`, la quinta versión de E. La migración 165 es compatible con ella y no se revierte: sólo agrega al comando la regla de no cancelar un turno ya empezado, y esa versión no ofrecía cancelar desde recepción. No se ensayó. Nunca una versión anterior a E.
+
+## Estado anterior — quinta versión de E: 6 de noviembre de 2026, 18:00 hora argentina (21:00 UTC)
+
+**Sirvió** la instantánea `93b711a13fd107ef1d4cd5ecfde064fe37c52259` de `main` `f459b95c`, Worker `app`, versión de Cloudflare **`eb1e8cf8-a8bd-4964-bfc0-66bd6c63a1f2`**. 164 migraciones, sin cambios de base ni del programador.
 
 **Qué corrige:** el lector de eventos de Zoho reconoce `email_delivery` y `fbl_compliant`, y toma `processed_time` cuando el evento no trae hora propia.
 

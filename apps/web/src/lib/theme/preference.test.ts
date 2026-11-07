@@ -6,6 +6,7 @@ import {
 	THEME_PREFERENCES,
 	applyThemeToDocument,
 	parseThemePreference,
+	preferenceShownBy,
 	themeClass,
 	themeColorTags
 } from './preference';
@@ -26,6 +27,16 @@ describe('color mode preference (light mode plan, 6.2)', () => {
 		expect(themeClass('light')).toBe('');
 		expect(themeClass('dark')).toBe('dark');
 		expect(themeClass('system')).toBe('theme-system');
+	});
+
+	it('reads back the mode from the classes of <html>, whatever other classes it has', () => {
+		const classes = (...names: string[]) => ({ contains: (name: string) => names.includes(name) });
+		for (const preference of THEME_PREFERENCES) {
+			expect(preferenceShownBy(classes(themeClass(preference))), preference).toBe(preference);
+			// While switching, and with any class of someone else.
+			expect(preferenceShownBy(classes('theme-switching', themeClass(preference), 'otra-clase')), preference).toBe(preference);
+		}
+		expect(preferenceShownBy(classes())).toBe('light');
 	});
 
 	it('paints the browser bar with the page background of the mode', () => {

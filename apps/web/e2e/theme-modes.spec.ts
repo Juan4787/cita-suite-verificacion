@@ -231,6 +231,92 @@ test.describe('color modes', () => {
 		await expect(bottomNavigation).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.95)');
 	});
 
+	// Reported by Juan on 7 November 2026: a dark page with «Claro» checked in the account menu. Each menu
+	// creates its selector when it opens, and the mode it was given was the one of the last full load: the
+	// root layout does not load again on a navigation, nor when the mode changes.
+	test('the selector always shows the mode the page is in, without reloading', async ({ page }) => {
+		test.setTimeout(180_000);
+		const f = ownedAppointmentFixture();
+		await loginWithSharedSession(page, { email: f.email, password: f.password });
+		await page.setViewportSize({ width: 1280, height: 900 });
+		await page.goto('/odonto/agenda');
+		await expectRenderedTheme(page, 'light');
+		// Nothing below may load the page again: a full load would hide the defect.
+		await page.evaluate(() => Object.assign(window, { citaSinRecarga: true }));
+
+		const accountButton = page.locator('header button[aria-expanded]').last();
+		const accountMenu = page.locator('header [role="menu"]');
+		const checkedInMenu = accountMenu.locator('[role="menuitemradio"][aria-checked="true"]');
+		const openAccountMenu = async () => {
+			await accountButton.click();
+			await expect(accountMenu.getByRole('group', { name: 'Modo de color' })).toBeVisible();
+		};
+		const closeAccountMenu = async () => {
+			await page.keyboard.press('Escape');
+			await expect(accountMenu).toBeHidden();
+		};
+		const sheet = page.getByRole('dialog', { name: 'Menú de navegación' });
+		const checkedInSheet = sheet.locator('input[type="radio"]:checked');
+		const openSheet = async () => {
+			await page.getByRole('button', { name: 'Abrir menú' }).last().click();
+			await expect(sheet.getByRole('group', { name: 'Modo de color' })).toBeVisible();
+		};
+		const closeSheet = async () => {
+			await sheet.getByRole('button', { name: 'Cerrar menú' }).click();
+			await expect(sheet).toBeHidden();
+		};
+
+		// The account menu, closed and opened again after a choice.
+		await openAccountMenu();
+		await expect(checkedInMenu).toHaveText('Claro');
+		await accountMenu.getByRole('menuitemradio', { name: 'Oscuro' }).click();
+		await expectRenderedTheme(page, 'dark');
+		await expect(checkedInMenu).toHaveText('Oscuro');
+		await closeAccountMenu();
+		await openAccountMenu();
+		await expect(checkedInMenu).toHaveText('Oscuro');
+		await closeAccountMenu();
+
+		// After a navigation inside the app.
+		await page.locator('header').getByRole('link', { name: 'Pacientes', exact: true }).click();
+		await expect(page).toHaveURL(/\/odonto\/pacientes$/);
+		await expectRenderedTheme(page, 'dark');
+		await openAccountMenu();
+		await expect(checkedInMenu).toHaveText('Oscuro');
+		await closeAccountMenu();
+
+		// The phone sheet, at every phone width, opens with the mode in use and keeps its own choice.
+		for (const [width, height] of [[320, 568], [390, 844], [740, 360]]) {
+			await page.setViewportSize({ width, height });
+			await openSheet();
+			await expect(checkedInSheet, `${width}x${height}`).toHaveValue('dark');
+			await closeSheet();
+		}
+		await openSheet();
+		await sheet.locator('label').filter({ hasText: 'Automático' }).click();
+		await expect(checkedInSheet).toHaveValue('system');
+		expect(await page.evaluate(() => document.documentElement.classList.contains('theme-system'))).toBe(true);
+		await closeSheet();
+		await openSheet();
+		await expect(checkedInSheet).toHaveValue('system');
+		await closeSheet();
+
+		// The account menu, at every computer width, follows the choice made on the sheet.
+		for (const [width, height] of [[768, 1024], [1024, 768], [1366, 768], [1920, 1080], [2560, 1440]]) {
+			await page.setViewportSize({ width, height });
+			await openAccountMenu();
+			await expect(checkedInMenu, `${width}x${height}`).toHaveText('Automático');
+			await closeAccountMenu();
+		}
+		expect(await page.evaluate(() => 'citaSinRecarga' in window)).toBe(true);
+
+		// A full load paints the same mode from the cookie, and the selector agrees with it.
+		await page.reload();
+		expect(await page.evaluate(() => document.documentElement.classList.contains('theme-system'))).toBe(true);
+		await openAccountMenu();
+		await expect(checkedInMenu).toHaveText('Automático');
+	});
+
 	test('every screen of the app and of the patient meets WCAG contrast in both modes', async ({ page }, info) => {
 		test.setTimeout(900_000);
 		const f = ownedAppointmentFixture();
