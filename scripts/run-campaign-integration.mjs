@@ -175,7 +175,7 @@ try {
 		'--grep-invert', browserGrepInvert(rollback), ...(diagnostic ? ['--grep', diagnostic] : [])],
 		{ cwd: join(root, 'apps/web'), env });
 	const report = JSON.parse(readFileSync(env.PLAYWRIGHT_JSON_OUTPUT_NAME, 'utf8'));
-	assertBrowserReport(report);
+	assertBrowserReport(report, { engine: process.env.E2E_ENGINE || 'chromium' });
 	if (!artifact && !sharedPlatformStateExisted && existsSync(sharedPlatformState))
 		throw new Error('The dev platform proxy persisted shared local state; overlapping proxies would abort workerd on SQLITE_BUSY.');
 	if (diagnostic) console.log('Diagnostic selection passed; this is not full integration verification.');

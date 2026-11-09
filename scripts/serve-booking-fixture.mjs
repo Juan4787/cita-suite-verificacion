@@ -607,6 +607,17 @@ try {
       }
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
+    // wrangler dev's proxy keeps a GET whose connection to the worker broke in a queue it only
+    // processes when another request arrives: ProxyWorker.js compares the whole address with one
+    // that holds only the root. A page waiting on that request stalls until the next test begins
+    // (measured: a module after 36 s, a document after 63 s). One light request every two seconds
+    // makes the proxy process the queue in time. Production has no such proxy.
+    if (artifact)
+      setInterval(() => {
+        fetch(`http://127.0.0.1:${appPort}/robots.txt`, { signal: AbortSignal.timeout(5_000) })
+          .then((response) => response.body?.cancel())
+          .catch(() => {});
+      }, 2_000);
   }
   await new Promise(() => {});
 } catch (error) {

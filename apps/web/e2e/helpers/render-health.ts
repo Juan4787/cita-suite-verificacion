@@ -117,7 +117,9 @@ export async function observeRenderHealth(
 			// Firefox also words a dropped load this way. A load that really fails stays in networkFailures.
 			: /^\[JavaScript Warning: "Loading failed for the (<script>|module) with source /.test(text) ||
 					/^\[JavaScript Error: "downloadable font: download failed .*status=2152398850/.test(text) ||
-					/^\[JavaScript Error: "TypeError: error loading dynamically imported module: /.test(text)
+					/^\[JavaScript Error: "TypeError: error loading dynamically imported module: /.test(text) ||
+					// WebKit's words for a module load cut by leaving; one that really fails is a failed response too.
+					text === 'TypeError: Importing a module script failed.'
 				? 'dropped-load-warning'
 			// Firefox asks for the tab icon by itself, outside the page: the app declares no such file.
 			: text.includes('FaviconLoader.sys.mjs')

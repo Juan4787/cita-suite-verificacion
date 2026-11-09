@@ -45,7 +45,7 @@ Contenedores y redes incluyen el identificador aleatorio de la corrida. La limpi
 
 Los recibos actuales están en `.verification/fast.json`, `full.json` y `release.json`. Se escriben como fallidos al inicio y se reemplazan atómicamente después de cada paso; sólo el cierre completo establece `ok: true`. Las nuevas corridas también conservan su recibo en `.verification/runs/<id>/result.json`. La integración/navegador guarda evidencia bajo esa corrida; `latest-integration.json` indica su directorio. No confundir un recibo anterior con el proceso actual.
 
-Se rechazan suites vacías, omitidas, interrumpidas, fallidas o que sólo aprueban con reintentos. Las pruebas del ejecutor introducen importaciones prohibidas y fallos deliberados en procesos descartables; comprueban rechazo, cancelación y exclusión reales. No modifican código de producción para efectuar esas comprobaciones.
+Se rechazan suites vacías, omitidas, interrumpidas, fallidas o que sólo aprueban con reintentos. La única excepción son las omisiones declaradas de un motor en `DECLARED_SKIPS` (`scripts/lib/browser-report.mjs`): hoy, dos de WebKit en Linux, cada una omitida por su propia condición y con su motivo. Cualquier otra omisión sigue haciendo fallar la corrida. Las pruebas del ejecutor introducen importaciones prohibidas y fallos deliberados en procesos descartables; comprueban rechazo, cancelación y exclusión reales. No modifican código de producción para efectuar esas comprobaciones.
 
 ## Diagnóstico y límites
 

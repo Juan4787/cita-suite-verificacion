@@ -5,6 +5,7 @@ import { ownedAppointmentFixture } from './helpers/owned-appointment-fixture';
 import { layoutIssues, type LayoutIssue } from './helpers/layout-usability';
 import { alignTaskForCapture } from './helpers/task-capture';
 import { observeRenderHealth } from './helpers/render-health';
+import { pastDevProxy } from './helpers/dev-proxy';
 
 // Browser plugin not available: use the existing sequential CI Playwright
 // harness, real isolated Auth/PostgREST/SQL, and synthetic owned businesses.
@@ -152,7 +153,8 @@ for (const brand of ['cita-suite', 'natalia'] as const) {
    expect(f.sql(`select count(*) from public.appointment_deposit_requirements where appointment_id='${appointmentId}' and status='paid' and allocation='forfeited';`)).toBe('1');
    expect(f.sql(`select count(*) from public.appointment_deposit_requirements where appointment_id='${appointmentId}' and is_current and status='pending' and amount=40000;`)).toBe('1');
    const afterMove = state();
-   const replay = await request.post(`${path}?/reschedule`, { form: submitted, headers: { origin: appOrigin } });
+   // The replay is idempotent by contract: the assertions below prove that it changes nothing.
+   const replay = await pastDevProxy(() => request.post(`${path}?/reschedule`, { form: submitted, headers: { origin: appOrigin } }));
    expect(replay.status()).toBe(200); expect(state()).toBe(afterMove);
    await page.getByRole('link', { name: 'Cancelar turno', exact: true }).click();
    await page.getByRole('button', { name: 'Sí, cancelar turno', exact: true }).click();

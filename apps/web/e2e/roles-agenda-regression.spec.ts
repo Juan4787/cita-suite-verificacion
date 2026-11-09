@@ -392,7 +392,12 @@ const confirmInvitedSignup = async (page: Page, email: string) => {
 	await expect.poll(async () => (await capturedSignupMessages(confirmation.mail, email)).length, { timeout: 15_000 }).toBe(1);
 	const link = await capturedSignupUrl(confirmation.mail, email, confirmation.origin, confirmation.site,
 		[confirmation.site + '/confirmar-correo', confirmation.site, confirmation.site + '/']);
-	try { await page.goto(link); } catch { throw new Error('Could not follow the invited account confirmation link.'); }
+	// WebKit can hand a page still loading its modules their cancellation before it goes, and SvelteKit answers by
+	// reloading that page, which interrupts this navigation. Whether the address got confirmed is Auth's answer, below.
+	await page.goto(link).catch((error: unknown) => {
+		if (!/interrupted by another navigation/.test(String(error)))
+			throw new Error('Could not follow the invited account confirmation link: ' + String(error).split('\n')[0]);
+	});
 	const confirmed = await confirmation.auth.auth.signInWithPassword({ email, password });
 	if (confirmed.error || !confirmed.data.user?.email_confirmed_at) throw new Error('Invited account email was not confirmed by Auth.');
 	return confirmed.data.user.id;
