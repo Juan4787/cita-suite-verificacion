@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
-const mocks = vi.hoisted(() => ({ rpc: vi.fn() }));
+const mocks = vi.hoisted(() => ({ rpc: vi.fn(), from: vi.fn() }));
 vi.mock('$env/dynamic/private', () => ({ env: { BOOKING_INFORMATION_ENABLED: 'true', RATE_LIMIT_SALT: 'isolated-test-only' } }));
-vi.mock('$lib/server/platform/supabase', () => ({ createSupabaseAdminClient: async () => ({ rpc: mocks.rpc }) }));
+vi.mock('$lib/server/platform/supabase', () => ({ createSupabaseAdminClient: async () => ({ rpc: mocks.rpc, from: mocks.from }) }));
 import { createPublicInformationPage } from './booking-information-page';
 const token = 'a'.repeat(64);
 const information = { theme: 'cita-suite', schema: [{ id: 'coverage', label: 'Cobertura', kind: 'text', required: false, maxLength: 100, patientField: 'insurance' }],
@@ -31,6 +31,15 @@ describe('Clinical information explicit access channel', () => {
     p_request_key: form.get('request_key'), p_answers: { coverage: 'Current coverage' } }));
   });
  }
+ it('names the practice for the tab, and still opens when the name cannot be read (plan 12.35)', async () => {
+  mocks.rpc.mockImplementation(async (name: string) => ({ data: name === 'consume_booking_integration_read_limit' ? true
+   : name === 'resolve_appointment_management_access' ? { business_id: '50000000-0000-4000-8000-000000000009' } : information, error: null }));
+  mocks.from.mockReturnValue({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { name: ' Consultorio Ramirez ' }, error: null }) }) }) });
+  await expect(createPublicInformationPage(false).load(event(false))).resolves.toMatchObject({ businessName: 'Consultorio Ramirez', info: { version: 'initial' } });
+  expect(mocks.rpc).toHaveBeenCalledWith('resolve_appointment_management_access', { p_token: token, p_legacy: false });
+  mocks.from.mockImplementation(() => { throw new Error('unavailable'); });
+  await expect(createPublicInformationPage(false).load(event(false))).resolves.toMatchObject({ businessName: null, info: { version: 'initial' } });
+ });
  it('preserves the exact operation and entered values after an uncertain RPC response, also for native form rendering', async () => {
   mocks.rpc.mockImplementation(async (name: string) => name === 'submit_public_booking_information'
    ? { data: null, error: new Error('Response lost after possible commit') }

@@ -1,10 +1,33 @@
 # Publicación y reversión
 
-## Último estado comprobado — selector de modo de color: 8 de noviembre de 2026, 04:50 hora argentina (07:50 UTC)
+## Último estado comprobado — correos que no se responden: 9 de noviembre de 2026, 19:48 hora argentina (22:48 UTC)
 
 **La única vuelta atrás vigente es la de este apartado.** Las de los apartados siguientes son historia.
 
-**Producción sirve** la instantánea `9c8f6f7315afa61777b1d579c5f4b34e094b8299` de `main` `ec971743`, Worker `app`, versión de Cloudflare **`b8179d21-11b7-47f4-b753-96c665a1a982`**. 165 migraciones, sin cambios de base. Programador `0debec79-cadd-47e3-8bf6-47a46e6ba182`, sin tocar, con los mismos cinco cron. Interruptores sin cambios.
+**Producción sirve** la instantánea `1382f5feeff962fc9895ebc0d97378fc7dbf5061` de `main` `4dfc9f66`, Worker `app`, versión de Cloudflare **`a77821fa-45cb-43a1-8aa1-cccf204eaf09`**. 166 migraciones. Programador `e79d5660-645a-4606-b481-7c143e7931f1`, con los mismos cinco cron. Interruptores sin cambios.
+
+**Qué trae** ([plan 12.35](../plans/propuesta-senas-avisos-natalia.md#correo-sin-respuesta-20261109)):
+- los correos de turnos no reciben respuestas: no llevan `Reply-To`, y el pie dice «Este correo es automático y no recibe respuestas.»;
+- la migración `20261109010000_email_no_reply.sql`: un dominio verificado alcanza para enviar, sin correo de respuesta;
+- la configuración del consultorio ya no pide ese correo.
+
+**Remitente de Consultorio Ramirez**, preparado el mismo día: `ramirez.cita-suite.com.ar` verificado en Zoho, sus dos registros en Cloudflare y `turnos@ramirez.cita-suite.com.ar` registrado en producción. Con esta versión es el único consultorio que envía.
+
+**Verificación sobre la revisión exacta:**
+- paquete 42703834473, `fast` 42703864339 y SQL 42712818034;
+- Chromium 42708032413 y Firefox 42710456991, con 82 de 82 cada uno;
+- WebKit 42704795637: 80 aprobadas y las 2 omisiones declaradas, ahora aceptadas por el control;
+- staging migrado a 166 (42709196938) y ensayo contra producción sin fallas, con el mismo catálogo que las migraciones salvo los 4 disparadores de plataforma de `storage.buckets`;
+- respaldo `production-2026-11-09T22-40-45-146Z`: 128 tablas, 4.440 filas y 26 archivos;
+- `verify-production-release.mjs` aprobado: 151 archivos idénticos y 78 relaciones sin exposición anónima.
+
+**Publicación:** programador sin cron a las 22:43:31 UTC, migración 166 a las 22:43:46 en 1,4 s, app a las 22:44:23, verificación a las 22:48:01 y programador con sus cinco cron a las 22:48:29. El guion de instalación de la app terminó con error: espera 60 s a que cambie `version.json`, y Cloudflare tardó unos 3 minutos en propagar ese archivo. El despliegue ya estaba activo y el HTML ya apuntaba al código nuevo.
+
+**Vuelta atrás:** `wrangler rollback b8179d21-11b7-47f4-b753-96c665a1a982`, la versión del selector de modo de color. La migración 166 es compatible con ella: el reparto le sigue entregando una dirección donde espera la de respuesta, la de envío, y los correos saldrían con el pie anterior. No se ensayó. Nunca una versión anterior a E.
+
+## Estado anterior — selector de modo de color: 8 de noviembre de 2026, 04:50 hora argentina (07:50 UTC)
+
+**Sirvió** la instantánea `9c8f6f7315afa61777b1d579c5f4b34e094b8299` de `main` `ec971743`, Worker `app`, versión de Cloudflare **`b8179d21-11b7-47f4-b753-96c665a1a982`**. 165 migraciones, sin cambios de base. Programador `0debec79-cadd-47e3-8bf6-47a46e6ba182`, sin tocar, con los mismos cinco cron. Interruptores sin cambios.
 
 **Qué corrige:** el selector de modo de color marcaba el modo de la última carga completa de la página, no el que mostraba. Después de elegir un modo, al reabrir el menú de la cuenta o la hoja del teléfono, o después de navegar dentro de la app, podía marcar «Claro» sobre una página oscura. Ahora marca la clase de `<html>`, que es lo que decide los colores. Detalle en el [registro del modo claro, E10](../plans/registro-modo-claro-20261102.md).
 

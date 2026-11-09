@@ -54,12 +54,13 @@ if (target === 'app') {
 		no_bundle: true,
 		assets: { ...config.assets, directory: join(artifact, 'apps/web/.svelte-kit/cloudflare') }
 	}, ['--message', `Cita Suite ${revision}`]);
-	// The served build names its revision; propagation can take a few seconds.
+	// The served build names its revision. Static files can take minutes to propagate: on 9 November the
+	// worker already served the new code while /_app/version.json kept the old revision for about three.
 	for (let attempt = 1; ; attempt++) {
 		const response = await fetch(`${PRODUCTION_APP_ORIGIN}/_app/version.json`).catch(() => null);
 		const served = response?.ok ? (await response.json().catch(() => null))?.version : null;
 		if (served === revision) break;
-		if (attempt === 12) throw new Error(`Production serves ${served ?? 'no version'} instead of ${revision}.`);
+		if (attempt === 48) throw new Error(`Production serves ${served ?? 'no version'} instead of ${revision}.`);
 		await new Promise((done) => setTimeout(done, 5_000));
 	}
 	console.log(JSON.stringify({ deployed: 'app', revision, origin: PRODUCTION_APP_ORIGIN }));

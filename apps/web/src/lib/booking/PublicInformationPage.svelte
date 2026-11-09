@@ -60,6 +60,7 @@
   });
 </script>
 
+<svelte:head><title>{data.businessName ? `Información para tu consulta · ${data.businessName}` : 'Información para tu consulta'}</title></svelte:head>
 <BookingAppearance theme={data.info.theme}>
 <main class="min-h-screen bg-fill-06111f px-4 py-6 text-fg sm:py-10 bk-text">
 <div class="mx-auto max-w-2xl space-y-6">

@@ -9,6 +9,8 @@ export type PublicInformation = {
 
 export type PublicInformationPageData = {
  info: PublicInformation; token: string; requestKey: string; managementUrl: string; documentsUrl: string;
+ /** The practice, for the tab title. Absent when it could not be read. */
+ businessName?: string | null;
 };
 export type PublicInformationFeedback = {
  saved: boolean; message: string;

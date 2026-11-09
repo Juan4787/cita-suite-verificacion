@@ -15,6 +15,10 @@
 	const timezone = $derived(appointment?.business?.timezone ?? 'America/Argentina/Cordoba');
 </script>
 
+<svelte:head>
+	<title>{appointment && data.active ? (appointment.business?.name ? `Tu turno actualizado · ${appointment.business.name}` : 'Tu turno actualizado') : 'Enlace no disponible'}</title>
+</svelte:head>
+
 <main class="min-h-screen bg-fill-06111f px-4 py-6 text-fg sm:py-10 bk-text">
 	<div class="mx-auto flex w-full max-w-2xl flex-col gap-5">
 		{#if appointment && data.active}
