@@ -11,7 +11,7 @@ type Data = ComponentProps<typeof Page>['data'];
 const policy = { email_enabled: true, require_email: true, show_cancel: true, show_reschedule: true, require_deposit_on_reschedule: true,
 	previous_deposit_disposition: 'forfeit' as const, revision: 1, sender_verified: true };
 type Status = NonNullable<Data['status']>;
-const ready: Status = { domainState: 'verified', fromAddress: 'turnos@consultorio.cita-suite.com.ar', replyTo: 'contacto@example.test',
+const ready: Status = { domainState: 'verified', fromAddress: 'turnos@consultorio.cita-suite.com.ar',
 	ready: true, producerEnabled: true, paused: false, used24h: 3, dailyLimit: 100, needsReview: 0, failed7d: 0 };
 const page = (status: Partial<Status> | null, policyChanges: Partial<typeof policy> = {}) =>
 	render(Page, { data: { demo: false, context: {}, policy: { ...policy, ...policyChanges }, status: status && { ...ready, ...status } } as unknown as Data });
@@ -24,7 +24,6 @@ describe('estado del envío de correos', () => {
 		[{ domainState: 'unprovisioned' as const, ready: false }, {}, 'Todavía no se preparó el dominio de envío de este consultorio. No salen correos.'],
 		[{ domainState: 'dns_pending' as const, ready: false }, {}, 'Estamos preparando el dominio de envío del consultorio. Todavía no salen correos.'],
 		[{ domainState: 'failed' as const, ready: false }, {}, 'El proveedor rechazó el dominio de envío. Los correos están detenidos hasta revisarlo.'],
-		[{ ready: false, replyTo: null }, {}, 'El dominio de envío está listo, pero falta el correo donde recibir las respuestas. Hasta completarlo no salen correos.'],
 		[{ paused: true }, {}, 'Los envíos están en pausa por un problema con el proveedor. Se retoman solos cuando se resuelve.'],
 		[{ producerEnabled: false }, {}, 'El remitente está listo. El envío automático todavía no está activado.'],
 		[{}, { email_enabled: false }, 'El remitente turnos@consultorio.cita-suite.com.ar está listo, pero los envíos están apagados en las preferencias de abajo.']
@@ -35,11 +34,17 @@ describe('estado del envío de correos', () => {
 		expect(container.textContent).not.toContain('Listo. Los correos salen');
 	});
 
-	it('sólo con dominio, contacto, envío activado y preferencia encendida dice que salen', () => {
+	it('sólo con dominio, envío activado y preferencia encendida dice que salen, y que no reciben respuestas', () => {
 		const { container } = page({});
-		expect(readiness(container)).toHaveTextContent('Listo. Los correos salen desde turnos@consultorio.cita-suite.com.ar.');
+		expect(readiness(container)).toHaveTextContent('Listo. Los correos salen desde turnos@consultorio.cita-suite.com.ar y no reciben respuestas.');
 		expect(readiness(container)).toHaveClass('ux-alert-success');
 		expect(screen.getByText('Enviados en las últimas 24 horas: 3 de 100.')).toBeInTheDocument();
+	});
+
+	it('no pide un correo para recibir respuestas: los correos no se responden (plan 12.35)', () => {
+		const { container } = page({});
+		expect(screen.queryByLabelText(/respuestas/i)).toBeNull();
+		expect(container.querySelector('form[action="?/contact"]')).toBeNull();
 	});
 
 	it('sin el estado legible, la preferencia sola no se presenta como envío posible', () => {

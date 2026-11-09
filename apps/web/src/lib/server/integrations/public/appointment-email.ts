@@ -45,7 +45,6 @@ const deliver = async (job: ScheduledJobRun, apiKey: string, siteUrl: string, wo
 			reference: work.deliveryId,
 			from: { address: work.sender.fromAddress, name: built.fromName },
 			to: work.recipient,
-			replyTo: { address: work.sender.replyTo, name: built.fromName },
 			subject: headerText(built.subject),
 			html: built.html,
 			text: built.text,

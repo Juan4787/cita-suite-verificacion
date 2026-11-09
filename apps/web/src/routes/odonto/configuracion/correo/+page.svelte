@@ -3,7 +3,7 @@
  import BackLink from '$lib/components/BackLink.svelte';
  import type { PageData } from './$types';
  import type { AppointmentEmailPreferences } from '$lib/scheduling/email-policy';
- type FormState = { success?: boolean; message?: string; values?: AppointmentEmailPreferences; expectedRevision?: number; changed?: boolean; replyTo?: string };
+ type FormState = { success?: boolean; message?: string; values?: AppointmentEmailPreferences; expectedRevision?: number; changed?: boolean };
  let { data, form }: { data: PageData; form?: FormState | null } = $props();
  let saving = $state(false);
  const values = $derived(form?.values ?? data.policy);
@@ -21,11 +21,10 @@
    case 'verified': break;
    default: return { ok: false, message: 'Todavía no se preparó el dominio de envío de este consultorio. No salen correos.' };
   }
-  if (!status.ready) return { ok: false, message: 'El dominio de envío está listo, pero falta el correo donde recibir las respuestas. Hasta completarlo no salen correos.' };
   if (status.paused) return { ok: false, message: 'Los envíos están en pausa por un problema con el proveedor. Se retoman solos cuando se resuelve.' };
   if (!status.producerEnabled) return { ok: false, message: 'El remitente está listo. El envío automático todavía no está activado.' };
   if (!data.policy.email_enabled) return { ok: false, message: `El remitente ${status.fromAddress} está listo, pero los envíos están apagados en las preferencias de abajo.` };
-  return { ok: true, message: `Listo. Los correos salen desde ${status.fromAddress}.` };
+  return { ok: true, message: `Listo. Los correos salen desde ${status.fromAddress} y no reciben respuestas.` };
  });
 </script>
 
@@ -40,15 +39,6 @@
   <section class="ux-card grid gap-4" aria-labelledby="email-readiness-title">
    <h2 id="email-readiness-title" class="ux-section-title">Estado del envío</h2>
    {#if readiness}<p class={readiness.ok ? 'ux-alert ux-alert-success' : 'ux-alert'} role="status" data-email-readiness>{readiness.message}</p>{/if}
-   <form method="post" action="?/contact" class="grid gap-2" use:enhance={() => {
-    saving = true;
-    return async ({ update }) => { try { await update({ reset: false }); } finally { saving = false; } };
-   }}>
-    <label class="ux-label" for="email-reply-to">Correo donde recibir las respuestas de los pacientes</label>
-    <input id="email-reply-to" class="ux-input" type="email" name="reply_to" maxlength="254" autocomplete="email" value={form?.replyTo ?? status.replyTo ?? ''} disabled={saving || data.demo} />
-    <p class="text-sm text-copy-subtle">Sin este dato no se envían correos: los pacientes no tendrían a dónde responder.</p>
-    <div><button class="ux-btn-secondary" disabled={saving || data.demo}>Guardar contacto</button></div>
-   </form>
    <p class="text-sm text-copy-subtle">Enviados en las últimas 24&nbsp;horas: {status.used24h}&nbsp;de&nbsp;{status.dailyLimit}.</p>
    {#if status.needsReview > 0}<p class="ux-alert" role="status">Hay {status.needsReview === 1 ? 'un correo' : `${status.needsReview} correos`} en comprobación. Se revisa en el detalle de cada turno.</p>{/if}
    {#if status.failed7d > 0}<p class="text-sm text-copy-subtle">Correos sin entregar en los últimos 7 días: {status.failed7d}.</p>{/if}

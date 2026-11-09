@@ -72,13 +72,11 @@ test('@candidate-behavior isolated email preferences: independent settings, stal
   await expect(noJsPage.getByRole('status').filter({ hasText: 'Se guardaron' })).toBeVisible();
   expect(policy()).toMatchObject({ email_enabled: false, require_email: true, sender_verified: false });
   expect(audits()).toBe(3);
-  // These two run as the person against real SQL: both reached production failing for everyone,
-  // because every test above them stopped at a mocked call.
+  // Appointment emails are not answered (plan 12.35): the page asks for no reply contact.
   await page.goto('/odonto/configuracion/correo');
-  await page.getByLabel('Correo donde recibir las respuestas de los pacientes').fill('respuestas@example.test');
-  await page.getByRole('button', { name: 'Guardar contacto', exact: true }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Se guardó el correo de contacto' })).toBeVisible();
-  expect(f.sql(`select reply_to_email from private.business_email_senders where business_id='${businessId}';`)).toBe('respuestas@example.test');
+  await expect(page.getByLabel('Correo donde recibir las respuestas de los pacientes')).toHaveCount(0);
+  // This runs as the person against real SQL: it reached production failing for everyone,
+  // because every test above it stopped at a mocked call.
   const appointmentId = randomUUID(), deliveryId = randomUUID();
   f.sql(`begin;
    do $$ declare p uuid; s uuid; r uuid; begin

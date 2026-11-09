@@ -10,7 +10,6 @@ export type EmailMessage = {
 	reference: string;
 	from: { address: string; name: string };
 	to: string;
-	replyTo: { address: string; name: string };
 	subject: string;
 	html: string;
 	text: string;
@@ -69,7 +68,6 @@ export const classifyZohoResponse = (status: number, body: unknown): EmailSendOu
 export const zohoEmailBody = (message: EmailMessage) => ({
 	from: message.from,
 	to: [{ email_address: { address: message.to } }],
-	reply_to: [message.replyTo],
 	subject: message.subject,
 	htmlbody: message.html,
 	textbody: message.text,

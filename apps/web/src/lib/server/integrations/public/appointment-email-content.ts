@@ -1,6 +1,7 @@
 // The content of an appointment email, built from the current snapshot that claiming read. Pure, so
 // a preview and the real message cannot differ. The identity is the practice's: nothing here names
 // the software. No clinical detail either: not even the service, which can reveal a health matter.
+// Nobody reads replies (plan 12.35): the message has no Reply-To and its footer says it is not answered.
 import {
 	isRecord,
 	readBoolean,
@@ -25,7 +26,7 @@ export type AppointmentEmailWork = {
 	recipient: string;
 	token: string | null;
 	unsubscribeToken: string;
-	sender: { fromAddress: string; replyTo: string };
+	sender: { fromAddress: string };
 	preferences: { showCancel: boolean; showReschedule: boolean };
 	snapshot: Record<string, unknown>;
 };
@@ -41,10 +42,7 @@ export const parseAppointmentEmailWork = (value: unknown): AppointmentEmailWork 
 		recipient: readText(row.recipient, 'email.work.recipient'),
 		token: readNullableText(row.token, 'email.work.token'),
 		unsubscribeToken: readText(row.unsubscribe_token, 'email.work.unsubscribe'),
-		sender: {
-			fromAddress: readText(sender.from_address, 'email.work.from'),
-			replyTo: readText(sender.reply_to, 'email.work.replyTo')
-		},
+		sender: { fromAddress: readText(sender.from_address, 'email.work.from') },
 		preferences: {
 			showCancel: readBoolean(preferences.show_cancel, 'email.work.showCancel'),
 			showReschedule: readBoolean(preferences.show_reschedule, 'email.work.showReschedule')
@@ -186,7 +184,7 @@ export const buildAppointmentEmail = (
 		`Recibís este correo porque tenés un turno en ${businessName}.`,
 		address && !virtual ? address : null,
 		phone ? `Teléfono: ${phone}` : null,
-		'Para consultas, respondé este correo.'
+		'Este correo es automático y no recibe respuestas.'
 	].filter((line): line is string => line !== null);
 
 	const text = [

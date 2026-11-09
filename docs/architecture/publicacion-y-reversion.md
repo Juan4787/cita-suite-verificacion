@@ -1,10 +1,28 @@
 # Publicación y reversión
 
-## Último estado comprobado — P1, P2 y P3: 7 de noviembre de 2026, 08:06 hora argentina (11:06 UTC)
+## Último estado comprobado — selector de modo de color: 8 de noviembre de 2026, 04:50 hora argentina (07:50 UTC)
 
 **La única vuelta atrás vigente es la de este apartado.** Las de los apartados siguientes son historia.
 
-**Producción sirve** la instantánea `cabd8ae4012749907d7bdb80b90f75bc0119f2a3` de `main` `2f81c7ef`, Worker `app`, versión de Cloudflare **`ecec47cb-93f2-49d6-be09-dfa94091810a`**. 165 migraciones. Programador `0debec79-cadd-47e3-8bf6-47a46e6ba182`, con los mismos cinco cron. Interruptores sin cambios.
+**Producción sirve** la instantánea `9c8f6f7315afa61777b1d579c5f4b34e094b8299` de `main` `ec971743`, Worker `app`, versión de Cloudflare **`b8179d21-11b7-47f4-b753-96c665a1a982`**. 165 migraciones, sin cambios de base. Programador `0debec79-cadd-47e3-8bf6-47a46e6ba182`, sin tocar, con los mismos cinco cron. Interruptores sin cambios.
+
+**Qué corrige:** el selector de modo de color marcaba el modo de la última carga completa de la página, no el que mostraba. Después de elegir un modo, al reabrir el menú de la cuenta o la hoja del teléfono, o después de navegar dentro de la app, podía marcar «Claro» sobre una página oscura. Ahora marca la clase de `<html>`, que es lo que decide los colores. Detalle en el [registro del modo claro, E10](../plans/registro-modo-claro-20261102.md).
+
+**Verificación sobre la revisión exacta:**
+- la prueba de navegador nueva falló con el código anterior (42413590220), donde debía;
+- paquete 42413904658 y `fast` 42413691829;
+- Chromium 42414349838 y Firefox 42414363996, con 82 de 82 cada uno;
+- WebKit 42415352456: 79 aprobadas, las 2 omisiones declaradas del entorno y 1 falla ajena al selector, en la confirmación de un administrador invitado. Repetida sola sobre el mismo paquete, aprobó (42418301745);
+- `verify-production-release.mjs` aprobado: 151 archivos idénticos, la política de la página admite sólo el proyecto de producción de Supabase y 78 relaciones sin exposición anónima;
+- en producción, con navegador real y la cuenta de prueba, en Chromium, Firefox y WebKit: 0 desacuerdos entre el selector y la página en los 8 pasos del recorrido, y 0 en 61 observaciones del barrido de 15 anchos, de 320 a 2560 px. El detalle está en el registro, E10.
+
+**Publicación:** sólo la app. La instalación empezó a las 07:49:35 UTC y terminó a las 07:50:02, con los dos orígenes sirviendo `9c8f6f73`. La verificación terminó a las 07:50:29, con su recibo en `.verification/production-release-2026-11-08T07-50-29-375Z.json`. No hubo respaldo ni ensayo de base porque no hay migraciones: es el criterio de `AGENTS.md` para una entrega de interfaz.
+
+**Vuelta atrás:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback ecec47cb-93f2-49d6-be09-dfa94091810a --name app --message "<motivo>" --yes`, la versión de P1, P2 y P3. Tiene el mismo esquema y no necesita pasos de datos; con ella vuelve el defecto del selector. Después, los dos `/_app/version.json` deben decir `cabd8ae4012749907d7bdb80b90f75bc0119f2a3`. No se ensayó. Nunca una versión anterior a E.
+
+## Estado anterior — P1, P2 y P3: 7 de noviembre de 2026, 08:06 hora argentina (11:06 UTC)
+
+**Sirvió** la instantánea `cabd8ae4012749907d7bdb80b90f75bc0119f2a3` de `main` `2f81c7ef`, Worker `app`, versión de Cloudflare **`ecec47cb-93f2-49d6-be09-dfa94091810a`**. 165 migraciones. Programador `0debec79-cadd-47e3-8bf6-47a46e6ba182`, con los mismos cinco cron. Interruptores sin cambios.
 
 **Qué trae:**
 - P1, cancelar desde recepción, con la migración `20261106040000_staff_cancel_before_start.sql`: el comando rechaza cancelar un turno que ya empezó.

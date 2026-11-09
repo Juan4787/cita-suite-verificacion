@@ -45,6 +45,15 @@ describe('sendAppointmentEmailBatch', () => {
 		expect(recorded(rpc).map((result) => result.delivery_id)).toEqual(['delivery-1', 'delivery-2', 'delivery-3', 'delivery-4', 'delivery-5']);
 	});
 
+	it('sends no Reply-To, although the claim still names an address for an earlier app (plan 12.35)', async () => {
+		const provider = vi.fn(async (_url: string, _init: RequestInit) => accepted());
+		const { run } = runWith([claimItem(1)], provider as unknown as typeof fetch);
+		await sendAppointmentEmailBatch(run);
+		const body = JSON.parse(String(provider.mock.calls[0][1].body));
+		expect(body).not.toHaveProperty('reply_to');
+		expect(body.from).toEqual({ address: 'turnos@rojas.cita-suite.com.ar', name: 'Consultorio' });
+	});
+
 	it('stays within the budget of its chain', async () => {
 		const provider = vi.fn(async () => accepted());
 		const { run } = runWith([1, 2, 3, 4, 5, 6, 7, 8].map(claimItem), run_fetch(provider));

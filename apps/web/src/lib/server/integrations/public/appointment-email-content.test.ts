@@ -13,7 +13,7 @@ const snapshot = (over: Record<string, unknown> = {}) => ({
 });
 const work = (purpose: AppointmentEmailWork['purpose'], over: Partial<AppointmentEmailWork> = {}, snap: Record<string, unknown> = {}): AppointmentEmailWork => ({
 	deliveryId: 'd1', leaseToken: 'l1', purpose, recipient: 'paciente@example.test', token: purpose === 'cancellation_receipt' ? null : token, unsubscribeToken: 'b'.repeat(64),
-	sender: { fromAddress: 'turnos@rojas.cita-suite.com.ar', replyTo: 'contacto@example.test' }, preferences: { showCancel: true, showReschedule: true }, snapshot: snapshot(snap), ...over
+	sender: { fromAddress: 'turnos@rojas.cita-suite.com.ar' }, preferences: { showCancel: true, showReschedule: true }, snapshot: snapshot(snap), ...over
 });
 const build = (input: AppointmentEmailWork) => {
 	const built = buildAppointmentEmail(input, { siteUrl, now });
@@ -118,6 +118,15 @@ describe('truthful content (RM06, UI08)', () => {
 		expect(built.headers['List-Unsubscribe']).toBe(`<${siteUrl}/correo/baja/${'b'.repeat(64)}>`);
 		expect(built.headers['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');
 		expect(built.text).toContain(`/correo/baja/${'b'.repeat(64)}`);
+	});
+	it('says it is not answered and never asks for a reply (plan 12.35)', () => {
+		for (const purpose of ['booking_receipt', 'cancellation_receipt'] as const) {
+			const built = build(work(purpose, {}, purpose === 'cancellation_receipt' ? { status: 'cancelled' } : {}));
+			for (const body of [built.text, built.html]) {
+				expect(body).toContain('Este correo es automático y no recibe respuestas.');
+				expect(body).not.toMatch(/respond[eé] este correo/i);
+			}
+		}
 	});
 	it('has a plain-text version with the same actions', () => {
 		const built = build(work('booking_receipt'));

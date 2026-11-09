@@ -6,7 +6,7 @@ import { logServerFailure } from '$lib/server/platform/logging';
 import { isRecord } from '$lib/contracts/json';
 import { DEFAULT_APPOINTMENT_EMAIL_PREFERENCES } from '$lib/scheduling/email-policy';
 import { loadAppointmentEmailPolicy, parseAppointmentEmailPolicyForm, saveAppointmentEmailPolicy } from '$lib/server/scheduling/public/email-policy';
-import { loadBusinessEmailStatus, saveBusinessEmailContact, type BusinessEmailStatus } from '$lib/server/scheduling/public/email-status';
+import { loadBusinessEmailStatus, type BusinessEmailStatus } from '$lib/server/scheduling/public/email-status';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
@@ -28,24 +28,6 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 };
 
 export const actions: Actions = {
- contact: async ({ locals, fetch, cookies, request }) => {
-  if (!locals.auth) redirect(303, '/login');
-  if (env.DEMO_MODE === 'true') return fail(400, { message: 'No disponible en modo demo.' });
-  const supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);
-  const context = await resolveActiveBusiness({ supabase, accessToken: locals.auth.access_token, cookies });
-  if (!context?.canManage) error(403, 'Sólo la dueña o la administración pueden configurar los correos del consultorio.');
-  const value = (await request.formData()).get('reply_to');
-  const replyTo = typeof value === 'string' ? value.trim() : '';
-  try {
-   await saveBusinessEmailContact(supabase, context.business.id, replyTo);
-   return { success: true, message: 'Se guardó el correo de contacto.' };
-  } catch (cause) {
-   const raw = isRecord(cause) && typeof cause.message === 'string' ? cause.message : '';
-   if (/\bEMAIL_CONTACT_INVALID\b/.test(raw)) return fail(400, { message: 'Revisá el correo de contacto: no parece una dirección válida.', replyTo });
-   logServerFailure('Error guardando el contacto de correo', cause);
-   return fail(503, { message: 'No pudimos confirmar el cambio. Volvé a guardar o recargá para comprobarlo.', replyTo });
-  }
- },
  save: async ({ locals, fetch, cookies, request }) => {
   if (!locals.auth) redirect(303, '/login');
   if (env.DEMO_MODE === 'true') return fail(400, { message: 'No disponible en modo demo.' });

@@ -4,7 +4,7 @@ import { classifyZohoResponse, parseZohoEmailEvents, sendZohoEmail, verifyZohoSi
 
 const message: EmailMessage = {
 	reference: 'delivery-1', from: { address: 'turnos@prueba.cita-suite.com.ar', name: 'Consultorio' }, to: 'paciente@example.test',
-	replyTo: { address: 'contacto@example.test', name: 'Consultorio' }, subject: 'Asunto', html: '<p>x</p>', text: 'x', headers: { 'List-Unsubscribe': '<https://x>' }
+	subject: 'Asunto', html: '<p>x</p>', text: 'x', headers: { 'List-Unsubscribe': '<https://x>' }
 };
 const refusal = (code: string) => ({ error: { code: 'TM_4001', details: [{ code, message: 'x' }], message: 'Access Denied' } });
 
@@ -54,7 +54,9 @@ describe('sendZohoEmail', () => {
 		await expect(sendZohoEmail(fetchFn, 'key', message)).resolves.toEqual({ outcome: 'uncertain', code: 'http_302' });
 	});
 	it('asks for no open or click tracking and sends the reference', () => {
-		expect(zohoEmailBody(message)).toMatchObject({ track_opens: false, track_clicks: false, client_reference: 'delivery-1', reply_to: [message.replyTo] });
+		expect(zohoEmailBody(message)).toMatchObject({ track_opens: false, track_clicks: false, client_reference: 'delivery-1' });
+		// Nobody reads replies (plan 12.35): without Reply-To an answer goes to the sending address, which receives nothing.
+		expect(zohoEmailBody(message)).not.toHaveProperty('reply_to');
 	});
 	it('marks a lost answer as uncertain, never as failed', async () => {
 		const fetchFn = vi.fn().mockRejectedValue(new DOMException('aborted', 'TimeoutError'));

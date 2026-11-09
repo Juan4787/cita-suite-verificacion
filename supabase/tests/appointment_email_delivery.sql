@@ -1,7 +1,7 @@
 -- Email delivery contracts. Everything is synthetic and rolls back; no provider is contacted, so
 -- this proves decisions and persistence, never that a message reached a mailbox.
 begin;
-select extensions.plan(36);
+select extensions.plan(37);
 create temporary table mail_fixture(label text primary key,id uuid not null);
 create function pg_temp.mid(label text) returns uuid language sql as $$select id from mail_fixture f where f.label=$1$$;
 create function pg_temp.base() returns timestamptz language sql as $$select date_trunc('hour',clock_timestamp())$$;
@@ -80,9 +80,9 @@ select extensions.ok(jsonb_array_length(pg_temp.claim()->'items')=0 and pg_temp.
 select extensions.throws_ok($$select public.operator_set_business_email_sender(pg_temp.mid('business'),'avisos.cita-suite.com.ar','verified')$$,'23514',null,'5a. Infrastructure names cannot become a practice sender');
 select extensions.throws_ok($$select public.operator_set_business_email_sender(pg_temp.mid('business'),'consultorio.ejemplo.com','verified')$$,'23514',null,'5b. Only a subdomain of the product domain is accepted');
 select public.operator_set_business_email_sender(pg_temp.mid('business'),'consultorio-prueba.cita-suite.com.ar','verified','domain-key');
-select extensions.ok(not (select sender_verified from public.appointment_email_policies where business_id=pg_temp.mid('business')),'6. A verified domain without a reply contact is not ready: responses would go nowhere');
+select extensions.ok((select sender_verified from public.appointment_email_policies where business_id=pg_temp.mid('business')),'6. A verified domain is ready without a reply contact: these emails are not answered (plan 12.35)');
 select public.operator_set_business_email_sender(pg_temp.mid('business'),'consultorio-prueba.cita-suite.com.ar','verified',null,'contacto@example.test');
-select public.operator_set_business_email_sender(pg_temp.mid('business2'),'segundo-consultorio.cita-suite.com.ar','verified',null,'segundo@example.test');
+select public.operator_set_business_email_sender(pg_temp.mid('business2'),'segundo-consultorio.cita-suite.com.ar','verified');
 select extensions.ok((select sender_verified from public.appointment_email_policies where business_id=pg_temp.mid('business')),'7. Readiness is mirrored to the preference row without a second activation');
 
 create temporary table mail_claim(label text primary key,value jsonb not null);
@@ -168,6 +168,8 @@ select extensions.ok(pg_temp.state(pg_temp.mid('a8'),'booking_receipt')='discard
  and (select count(*)=1 from private.email_suppressions)
  and (select pg_temp.items_for(value,pg_temp.mid('b1'))#>>'{0,sender,from_address}'='turnos@segundo-consultorio.cita-suite.com.ar' from mail_claim where label='after-unsub'),
  '20. EM10/ZH13: a removal applies to that practice and address only, and repeating it changes nothing');
+select extensions.ok((select pg_temp.items_for(value,pg_temp.mid('b1'))#>>'{0,sender,reply_to}'='turnos@segundo-consultorio.cita-suite.com.ar' from mail_claim where label='after-unsub'),
+ '20b. A practice with no reply contact sends too, and the claim names its sending address where an earlier app expects a reply address');
 select pg_temp.settle((select value from mail_claim where label='after-unsub'));
 delete from private.email_suppressions;
 

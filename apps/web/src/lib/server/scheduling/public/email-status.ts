@@ -13,7 +13,6 @@ export const parseBusinessEmailStatus = (value: unknown) => {
  return {
   domainState: readChoice(row.domain_state, EMAIL_DOMAIN_STATES, 'email.status.domain'),
   fromAddress: readNullableText(row.from_address, 'email.status.from'),
-  replyTo: readNullableText(row.reply_to, 'email.status.replyTo'),
   ready: readBoolean(row.ready, 'email.status.ready'),
   producerEnabled: readBoolean(row.producer_enabled, 'email.status.producer'),
   paused: readBoolean(row.paused, 'email.status.paused'),
@@ -29,11 +28,6 @@ export const loadBusinessEmailStatus = async (supabase: CitaSupabaseClient, busi
  const { data, error } = await supabase.rpc('get_business_email_status', { p_business_id: businessId });
  if (error) throw error;
  return parseBusinessEmailStatus(data);
-};
-
-export const saveBusinessEmailContact = async (supabase: CitaSupabaseClient, businessId: string, replyTo: string) => {
- const { error } = await supabase.rpc('save_business_email_contact', { p_business_id: businessId, p_reply_to: replyTo });
- if (error) throw error;
 };
 
 export const parseAppointmentEmailDeliveries = (value: unknown): AppointmentEmailDelivery[] => {
