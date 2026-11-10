@@ -113,15 +113,18 @@ export const DEPOSIT_SECTIONS: ReadonlyArray<{ id: DepositListSection; title: st
 	{ id: 'cancelled', title: 'Canceladas por falta de seña, últimos 7 días', folded: false }
 ];
 
-/** «recién», «hace 12 min», «hace 3 h» or «hace 2 días»: how long ago something happened. */
+/**
+ * «recién», «hace 12 min», «hace 3 h» or «hace 2 días»: how long ago something happened. A
+ * non-breaking space keeps each number with its unit: at 320 px «hace 2 min.» broke between them.
+ */
 export const formatElapsed = (iso: string, now: Date): string => {
 	const minutes = Math.max(0, Math.floor((now.getTime() - Date.parse(iso)) / 60_000));
 	if (minutes < 1) return 'recién';
-	if (minutes < 60) return `hace ${minutes} min`;
+	if (minutes < 60) return `hace ${minutes}\u00a0min`;
 	const hours = Math.floor(minutes / 60);
-	if (hours < 24) return `hace ${hours} h`;
+	if (hours < 24) return `hace ${hours}\u00a0h`;
 	const days = Math.floor(hours / 24);
-	return days === 1 ? 'hace 1 día' : `hace ${days} días`;
+	return days === 1 ? 'hace 1\u00a0día' : `hace ${days}\u00a0días`;
 };
 
 export type DepositAutomationNotice = { tone: 'ok' | 'warning' | 'info'; text: string };

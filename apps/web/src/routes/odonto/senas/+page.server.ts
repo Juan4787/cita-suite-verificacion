@@ -117,7 +117,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			sections: groupRows(demoRows(now, timezone)),
 			truncated: false,
 			page: 1,
-			automation: { tone: 'ok', text: 'Última revisión automática: hace 3 min.' } as DepositAutomationNotice
+			automation: { tone: 'ok', text: 'Última revisión automática: hace 3\u00a0min.' } as DepositAutomationNotice
 		};
 	}
 

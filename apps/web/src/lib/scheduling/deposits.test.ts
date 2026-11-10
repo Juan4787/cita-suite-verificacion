@@ -284,10 +284,11 @@ describe('página de señas', () => {
 
 	it('dice cuánto pasó con palabras simples', () => {
 		expect(formatElapsed(ago(0), now)).toBe('recién');
-		expect(formatElapsed(ago(12), now)).toBe('hace 12 min');
-		expect(formatElapsed(ago(180), now)).toBe('hace 3 h');
-		expect(formatElapsed(ago(60 * 24), now)).toBe('hace 1 día');
-		expect(formatElapsed(ago(60 * 24 * 3), now)).toBe('hace 3 días');
+		// Each number stays with its unit (non-breaking space): a narrow screen never splits them.
+		expect(formatElapsed(ago(12), now)).toBe('hace 12\u00a0min');
+		expect(formatElapsed(ago(180), now)).toBe('hace 3\u00a0h');
+		expect(formatElapsed(ago(60 * 24), now)).toBe('hace 1\u00a0día');
+		expect(formatElapsed(ago(60 * 24 * 3), now)).toBe('hace 3\u00a0días');
 		expect(formatElapsed(new Date(now.getTime() + 60_000).toISOString(), now)).toBe('recién');
 	});
 
@@ -295,12 +296,12 @@ describe('página de señas', () => {
 		const status = (minutes: number) => ({ enabled: true, lastRunFinishedAt: ago(minutes) });
 		expect(describeDepositAutomation({ practiceAutoCancel: true, status: status(3), now })).toEqual({
 			tone: 'ok',
-			text: 'Última revisión automática: hace 3 min.'
+			text: 'Última revisión automática: hace 3\u00a0min.'
 		});
 		expect(describeDepositAutomation({ practiceAutoCancel: true, status: status(20), now }).tone).toBe('ok');
 		expect(describeDepositAutomation({ practiceAutoCancel: true, status: status(21), now })).toEqual({
 			tone: 'warning',
-			text: 'La revisión automática no corre desde hace 21 min. Revisá a mano las señas vencidas.'
+			text: 'La revisión automática no corre desde hace 21\u00a0min. Revisá a mano las señas vencidas.'
 		});
 	});
 
