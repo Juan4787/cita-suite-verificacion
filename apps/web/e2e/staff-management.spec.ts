@@ -81,6 +81,9 @@ test('@candidate-behavior staff management: coherent observation, stale write, u
   await expect(page.getByRole('alert')).toBeFocused();
   await expect(page.getByRole('alert')).toBeInViewport(); expect(state()).toBe(concurrent);
   await page.reload();
+  // A click on «Reprogramar» before the page hydrates is lost: the browser opens the section and
+  // `bind:open` closes it again without asking for slots (run 42916668842, 10 November 2026).
+  await page.waitForLoadState('networkidle');
   const slot = await choose(), original = await observed();
   const path = `**/odonto/turnos/${appointmentId}?/reschedule`;
   let interrupted = false;
