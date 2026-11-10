@@ -40,10 +40,10 @@ create function pg_temp.aliases_of(p_id uuid) returns text language sql as $$
 
 -- 1. The address a name gives. Same vectors as apps/web/src/lib/booking/booking-link.test.ts.
 select extensions.is(
- (select array_agg(private.business_slug_from_text(input) order by position) from unnest(array[
+ (select array_agg(private.business_slug_from_text(input) order by ord) from unnest(array[
   'Consultorio Ramírez','  Dra. Natalia   Frutos  ','Ñandú & Peña','ODONTOLOGÍA INTEGRAL','Clínica Dental 24/7',
   'D''Angelo Sonrisas','Øresund Smile','😀 Sonrisas','Caf´e','---','',repeat('a',79)||' b'
- ]) with ordinality vector(input,position)),
+ ]) with ordinality v(input,ord)),
  array['consultorio-ramirez','dra-natalia-frutos','nandu-pena','odontologia-integral','clinica-dental-24-7',
   'd-angelo-sonrisas','resund-smile','sonrisas','caf-e','','',repeat('a',79)],
  'a name gives the address the app shows while it is typed');
@@ -104,14 +104,15 @@ select extensions.is(
  'a name with the same address keeps it');
 
 -- 7. An address resolves to its practice: current, typed differently, used before; nothing else.
+-- concat_ws writes a boolean as t or f: each one goes through ::text, which writes true or false.
 select extensions.is(
  concat_ws(' ',
-  public.resolve_public_business_slug('odontologia-enlace-prueba')=(select id from link_fixture where label='self_practice'),
-  public.resolve_public_business_slug('ODONTOLOGIA-ENLACE-PRUEBA')=(select id from link_fixture where label='self_practice'),
-  public.resolve_public_business_slug(' Odontología Enlace Prueba ')=(select id from link_fixture where label='self_practice'),
-  public.resolve_public_business_slug((select slug from self_before))=(select id from link_fixture where label='self_practice'),
-  coalesce(public.resolve_public_business_slug('enlace-que-nadie-tiene-'||gen_random_uuid()),'00000000-0000-0000-0000-000000000000'::uuid)='00000000-0000-0000-0000-000000000000',
-  coalesce(public.resolve_public_business_slug(repeat('odontologia-enlace-prueba',9)),'00000000-0000-0000-0000-000000000000'::uuid)='00000000-0000-0000-0000-000000000000'),
+  (public.resolve_public_business_slug('odontologia-enlace-prueba')=(select id from link_fixture where label='self_practice'))::text,
+  (public.resolve_public_business_slug('ODONTOLOGIA-ENLACE-PRUEBA')=(select id from link_fixture where label='self_practice'))::text,
+  (public.resolve_public_business_slug(' Odontología Enlace Prueba ')=(select id from link_fixture where label='self_practice'))::text,
+  (public.resolve_public_business_slug((select slug from self_before))=(select id from link_fixture where label='self_practice'))::text,
+  (coalesce(public.resolve_public_business_slug('enlace-que-nadie-tiene-'||gen_random_uuid()),'00000000-0000-0000-0000-000000000000'::uuid)='00000000-0000-0000-0000-000000000000')::text,
+  (coalesce(public.resolve_public_business_slug(repeat('odontologia-enlace-prueba',9)),'00000000-0000-0000-0000-000000000000'::uuid)='00000000-0000-0000-0000-000000000000')::text),
  'true true true true true true',
  'an address resolves to its practice whether current, typed differently or used before');
 
@@ -138,7 +139,7 @@ select extensions.is(
 update public.businesses set slug='mi-enlace-elegido' where id=(select id from link_fixture where label='second');
 update public.businesses set name='Otro nombre del segundo' where id=(select id from link_fixture where label='second');
 select extensions.is(
- (select concat_ws(' ',slug,slug_follows_name,pg_temp.aliases_of(id)) from public.businesses where id=(select id from link_fixture where label='second')),
+ (select concat_ws(' ',slug,slug_follows_name::text,pg_temp.aliases_of(id)) from public.businesses where id=(select id from link_fixture where label='second')),
  'mi-enlace-elegido false consultorio-enlace-nandu-2',
  'an address written explicitly stays when the name changes');
 

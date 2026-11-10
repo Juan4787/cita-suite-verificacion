@@ -5,7 +5,8 @@
 begin;
 select extensions.plan(2);
 select extensions.is(
- (select string_agg(format('%s %s %s %s', right(b.id::text,2), b.slug, b.slug_follows_name,
+ -- format writes a boolean as t or f; ::text writes true or false.
+ (select string_agg(format('%s %s %s %s', right(b.id::text,2), b.slug, b.slug_follows_name::text,
    coalesce((select string_agg(a.slug,',' order by a.slug) from private.business_slug_aliases a where a.business_id=b.id),'-')), ' | ' order by b.id)
   from public.businesses b where b.id::text like '6d1a0000-0000-4000-8000-0000000000%'),
  '01 consultorio-sintetico-enlaces true synth-legacy-one-a1110001'
