@@ -173,6 +173,9 @@ test.describe('color modes', () => {
 		await loginWithSharedSession(page, { email: f.email, password: f.password });
 		await page.setViewportSize({ width: 1280, height: 900 });
 		await page.goto('/odonto/agenda');
+		// A key pressed or a click made before the page hydrates is lost and the menu does not open
+		// (run 42921870091, 10 November 2026): the page loads before anything is pressed.
+		await page.waitForLoadState('networkidle');
 		await expectRenderedTheme(page, 'light');
 		// The fixed bars keep the exact opacity they had: content passes behind them (plan, 12.4).
 		const header = page.locator('header').first();
@@ -199,6 +202,7 @@ test.describe('color modes', () => {
 		// Phone: the sheet opens with Enter; the options are native radio buttons moved with the arrows.
 		await page.setViewportSize({ width: 390, height: 844 });
 		await page.goto('/odonto/agenda');
+		await page.waitForLoadState('networkidle');
 		const bottomNavigation = page.getByRole('navigation', { name: 'Navegación principal' });
 		await expect(bottomNavigation).toHaveCSS('background-color', 'rgba(11, 29, 50, 0.95)');
 		await page.getByRole('button', { name: 'Abrir menú' }).last().focus();
@@ -240,6 +244,9 @@ test.describe('color modes', () => {
 		await loginWithSharedSession(page, { email: f.email, password: f.password });
 		await page.setViewportSize({ width: 1280, height: 900 });
 		await page.goto('/odonto/agenda');
+		// A key pressed or a click made before the page hydrates is lost and the menu does not open
+		// (run 42921870091, 10 November 2026): the page loads before anything is pressed.
+		await page.waitForLoadState('networkidle');
 		await expectRenderedTheme(page, 'light');
 		// Nothing below may load the page again: a full load would hide the defect.
 		await page.evaluate(() => Object.assign(window, { citaSinRecarga: true }));
@@ -312,6 +319,7 @@ test.describe('color modes', () => {
 
 		// A full load paints the same mode from the cookie, and the selector agrees with it.
 		await page.reload();
+		await page.waitForLoadState('networkidle');
 		expect(await page.evaluate(() => document.documentElement.classList.contains('theme-system'))).toBe(true);
 		await openAccountMenu();
 		await expect(checkedInMenu).toHaveText('Automático');
