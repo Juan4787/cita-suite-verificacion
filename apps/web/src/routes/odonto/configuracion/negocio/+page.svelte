@@ -171,8 +171,11 @@
 		>
 			<h3 id="enlace-de-reserva-titulo" class="font-semibold">Enlace de reserva</h3>
 			<p class="mt-1 text-sm text-fg-70">Es la dirección que compartís con tus pacientes.</p>
-			<p class="mt-3 break-words">
-				<span class="text-fg-70">{bookingHost}/reservar/</span><strong class="font-semibold">{previewSlug || 'consultorio'}</strong>
+			<!-- Chromium does not wrap a web address after a slash: <wbr> lets the address move to the next
+			     line whole instead of breaking one of its words at 320 px. The smaller size on phones keeps
+			     app.cita-suite.com.ar/reservar/ on one line there. -->
+			<p class="mt-3 text-sm sm:text-base">
+				<span class="text-fg-70">{bookingHost}/reservar/</span><wbr /><strong class="font-semibold">{previewSlug || 'consultorio'}</strong>
 			</p>
 			<label class="mt-4 block">
 				<span class="ux-label">Dirección personalizada (opcional)</span>
