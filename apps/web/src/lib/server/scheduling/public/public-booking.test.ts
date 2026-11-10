@@ -10,6 +10,7 @@ import {
 	createPublicBooking,
 	getPublicBookingErrorCode,
 	getPublicBookingErrorMessage,
+	getPublicBusinessBySlug,
 	loadPublicBookingState,
 	PUBLIC_BOOKING_ERROR_MESSAGES,
 	summarizeSlotsByDate,
@@ -609,6 +610,67 @@ const createSupabaseMock = (overrides: {
  });
  return { client, tableReads, requests, source };
 };
+
+// The booking link names the practice (migration 20261110010000). Real typed SDK with simulated
+// HTTP: which requests a reference costs, and what each answer gives.
+describe('getPublicBusinessBySlug (dirección del enlace)', () => {
+	const practice = { ...business, slug: 'consultorio-ramirez' };
+	const synthetic = (rows: Record<string, unknown[]>, resolved: { status?: number; body: unknown } = { body: null }) => {
+		const calls: string[] = [];
+		const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
+			const url = new URL(input instanceof Request ? input.url : String(input));
+			if (url.pathname.endsWith('/rpc/resolve_public_business_slug')) {
+				calls.push('resolve:' + String(readRecord(JSON.parse(String(init?.body)), 'synthetic.resolveBody').p_reference));
+				return Response.json(resolved.body, { status: resolved.status ?? 200 });
+			}
+			const [column, value] = [...url.searchParams.entries()].find(([key]) => key === 'id' || key === 'slug') ?? [];
+			calls.push(`businesses:${column}=${value}`);
+			return Response.json(rows[`${column}=${value}`] ?? []);
+		});
+		const client = createClient<CitaDatabase>('https://synthetic.example.test', 'synthetic-key', {
+			auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch }
+		});
+		return { client, calls };
+	};
+
+	it('lee la dirección actual en una sola consulta, sin preguntar por las anteriores', async () => {
+		const { client, calls } = synthetic({ 'slug=eq.consultorio-ramirez': [practice] });
+		await expect(getPublicBusinessBySlug(client, 'consultorio-ramirez')).resolves.toMatchObject({ id: practice.id, slug: 'consultorio-ramirez' });
+		expect(calls).toEqual(['businesses:slug=eq.consultorio-ramirez']);
+	});
+
+	it('lee el identificador sin preguntar por direcciones', async () => {
+		const { client, calls } = synthetic({ [`id=eq.${practice.id}`]: [practice] });
+		await expect(getPublicBusinessBySlug(client, practice.id)).resolves.toMatchObject({ slug: 'consultorio-ramirez' });
+		expect(calls).toEqual([`businesses:id=eq.${practice.id}`]);
+	});
+
+	it('una dirección anterior, o la actual escrita distinto, lleva al consultorio que nombra', async () => {
+		for (const reference of ['cuentaprueba3-855fc174', 'Consultorio Ramírez']) {
+			const { client, calls } = synthetic({ [`id=eq.${practice.id}`]: [practice] }, { body: practice.id });
+			await expect(getPublicBusinessBySlug(client, reference)).resolves.toMatchObject({ id: practice.id, slug: 'consultorio-ramirez' });
+			expect(calls).toEqual([`businesses:slug=eq.${reference}`, `resolve:${reference}`, `businesses:id=eq.${practice.id}`]);
+		}
+	});
+
+	it('una dirección que no nombra a ningún consultorio no encuentra ninguno', async () => {
+		const { client, calls } = synthetic({});
+		await expect(getPublicBusinessBySlug(client, 'enlace-de-nadie')).resolves.toBeNull();
+		expect(calls).toEqual(['businesses:slug=eq.enlace-de-nadie', 'resolve:enlace-de-nadie']);
+	});
+
+	it('no pregunta a la base por una referencia más larga que cualquier dirección', async () => {
+		const reference = 'a'.repeat(201);
+		const { client, calls } = synthetic({});
+		await expect(getPublicBusinessBySlug(client, reference)).resolves.toBeNull();
+		expect(calls).toEqual([`businesses:slug=eq.${reference}`]);
+	});
+
+	it('si no puede resolver la dirección lo informa como falla, no como consultorio inexistente', async () => {
+		const { client } = synthetic({}, { status: 400, body: { code: 'XX000', message: 'synthetic failure', details: null, hint: null } });
+		await expect(getPublicBusinessBySlug(client, 'consultorio-viejo')).rejects.toMatchObject({ message: 'synthetic failure' });
+	});
+});
 
 describe('loadPublicBookingState (performance del flujo público)', () => {
 	beforeEach(() => {

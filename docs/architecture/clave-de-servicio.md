@@ -16,7 +16,7 @@ La credencial es un token o una clave de integración, no un usuario. La clave d
 
 | Módulo | Uso |
 |---|---|
-| `routes/reservar/[businessSlug]` y `lib/server/scheduling/public/public-booking-page.ts` | Integración por defecto, recuperación de reserva y creación pública con su límite. |
+| `routes/reservar/[businessSlug]` y `lib/server/scheduling/public/public-booking-page.ts` | Integración por defecto, recuperación de reserva y creación pública con su límite. La dirección del enlace que no es la actual se resuelve con `resolve_public_business_slug`, exclusiva de `service_role`. |
 | `routes/turno/[token]/*` (incluye `reprogramado`, `documentos`) y `lib/server/scheduling/public/appointment-token.ts` | Turno por su token: ver, confirmar, cancelar, reprogramar, avisos y documentos. |
 | `routes/embed/v1/[integrationKey]/turno/[token]` | Lo mismo, dentro de un sitio integrado. |
 | `routes/api/public/contacto/[integrationKey]`, `routes/api/public/reservas/[integrationKey]/catalogo` y `lib/server/sites/public/booking-integration-request.ts` | Lecturas públicas con el límite `consume_booking_integration_read_limit` y orígenes permitidos. |

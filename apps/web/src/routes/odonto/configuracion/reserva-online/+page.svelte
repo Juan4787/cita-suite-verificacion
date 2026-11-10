@@ -7,6 +7,7 @@
   import { untrack } from "svelte";
   import BackLink from "$lib/components/BackLink.svelte";
   import BookingShareLink from "$lib/booking/BookingShareLink.svelte";
+  import { publicBookingPath } from "$lib/booking/booking-link";
   let { data, form }: PageProps = $props();
   let saving = $state("");
   let dirty = $state(false);
@@ -90,7 +91,11 @@
       >
     </div>
     <div class="mt-5">
-      <BookingShareLink url={`${data.baseURL}/reservar/${data.business.id}`} />
+      <BookingShareLink url={`${data.baseURL}${publicBookingPath(data.business)}`} />
+      <a
+        class="inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4"
+        href="/odonto/configuracion/negocio#enlace-de-reserva">Cambiar la dirección del enlace</a
+      >
     </div>
     <form
       method="POST"

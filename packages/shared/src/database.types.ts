@@ -1776,6 +1776,7 @@ export type Database = {
           public_booking_enabled: boolean
           public_contact_enabled: boolean
           slug: string
+          slug_follows_name: boolean
           timezone: string
           updated_at: string
           whatsapp_contact_enabled: boolean
@@ -1804,6 +1805,7 @@ export type Database = {
           public_booking_enabled?: boolean
           public_contact_enabled?: boolean
           slug: string
+          slug_follows_name?: boolean
           timezone?: string
           updated_at?: string
           whatsapp_contact_enabled?: boolean
@@ -1832,6 +1834,7 @@ export type Database = {
           public_booking_enabled?: boolean
           public_contact_enabled?: boolean
           slug?: string
+          slug_follows_name?: boolean
           timezone?: string
           updated_at?: string
           whatsapp_contact_enabled?: boolean
@@ -5902,6 +5905,10 @@ export type Database = {
       resolve_appointment_management_access: {
         Args: { p_legacy?: boolean; p_token: string }
         Returns: Json
+      }
+      resolve_public_business_slug: {
+        Args: { p_reference: string }
+        Returns: string
       }
       restore_patient_radiograph: {
         Args: {

@@ -28,15 +28,8 @@ export const isBusinessRole = (value: string): value is BusinessRole =>
 export const isBusinessIndustry = (value: string): value is BusinessIndustry =>
 	(BUSINESS_INDUSTRIES as readonly string[]).includes(value);
 
-export const normalizeSlug = (value: string) =>
-	value
-		.trim()
-		.toLowerCase()
-		.normalize('NFD')
-		.replace(/\p{Diacritic}/gu, '')
-		.replace(/[^a-z0-9]+/g, '-')
-		.replace(/^-+|-+$/g, '')
-		.slice(0, 80);
+// One rule for a booking address, shared with the settings page and equal to the database's.
+export { normalizeSlug } from '$lib/booking/booking-link';
 
 const canManageRole = (role: BusinessRole) => role === 'owner' || role === 'admin';
 const canOperateRole = (role: BusinessRole) =>

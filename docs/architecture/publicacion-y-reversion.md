@@ -1,10 +1,32 @@
 # Publicación y reversión
 
-## Último estado comprobado — correos que no se responden: 9 de noviembre de 2026, 19:48 hora argentina (22:48 UTC)
+## Último estado comprobado — títulos de pestaña con el nombre del consultorio: 9 de noviembre de 2026, 21:03 hora argentina (00:03 UTC del 10)
 
 **La única vuelta atrás vigente es la de este apartado.** Las de los apartados siguientes son historia.
 
-**Producción sirve** la instantánea `1382f5feeff962fc9895ebc0d97378fc7dbf5061` de `main` `4dfc9f66`, Worker `app`, versión de Cloudflare **`a77821fa-45cb-43a1-8aa1-cccf204eaf09`**. 166 migraciones. Programador `e79d5660-645a-4606-b481-7c143e7931f1`, con los mismos cinco cron. Interruptores sin cambios.
+**Producción sirve** la instantánea `aed1ddc1dd3634bb8e621c538e59d48cd46db439` de `main` `3034e45a`, Worker `app`, versión de Cloudflare **`57358b08-92ac-4218-afc8-396f3a89466e`**. 166 migraciones, sin cambios de base. Programador `e79d5660-645a-4606-b481-7c143e7931f1`, sin tocar, con los mismos cinco cron. Interruptores sin cambios.
+
+**Qué trae** ([plan 12.35](../plans/propuesta-senas-avisos-natalia.md#correo-sin-respuesta-20261109)):
+- la página de información para la consulta y la del turno actualizado nombran al consultorio en la pestaña, por ejemplo «Información para tu consulta · Consultorio Ramirez», como ya lo hacían las demás páginas del paciente. Antes decían «Cita Suite»;
+- si el nombre no se puede leer, la pestaña dice sólo «Información para tu consulta» o «Tu turno actualizado», sin nombrar a nadie, y la página se abre igual;
+- el guion de instalación espera hasta 4 minutos a que se propague `version.json`.
+
+Juan lo aprobó como publicación aparte: «2 si». El ícono de la pestaña y las propiedades del PDF quedan como estaban, por su decisión.
+
+**Verificación sobre la revisión exacta:**
+- paquete 42715483891, `fast` 42715511317 y SQL 42724057172;
+- Chromium 42719418730 y Firefox 42721420609, con 82 de 82 cada uno;
+- WebKit 42716382740: 80 aprobadas y las 2 omisiones declaradas;
+- `verify-production-release.mjs` aprobado: 151 archivos idénticos y 78 relaciones sin exposición anónima, con su recibo en `.verification/production-release-2026-11-10T00-04-16-267Z.json`;
+- en producción, con un turno sintético de Consultorio Ramirez reservado desde su página pública a las 00:10:48 UTC: las tres páginas de su enlace, que son el turno, la información y el turno actualizado, nombran al consultorio en la pestaña. Se comprobó en Chromium, Firefox y WebKit, a 390 y a 1440 px, y también en el HTML que entrega el servidor. El turno se canceló desde su gestión a las 00:14:57. Su comprobante de reserva fue el primer correo real de Ramírez y quedó entregado a la casilla de pruebas.
+
+**Publicación:** sólo la app. La instalación empezó a las 00:03:15 UTC y terminó a las 00:03:42, con `version.json` ya cambiado dentro de la espera del guion. La verificación terminó a las 00:04:16. No hubo respaldo ni ensayo de base porque no hay migraciones: es el criterio de `AGENTS.md` para una entrega de interfaz.
+
+**Vuelta atrás:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback a77821fa-45cb-43a1-8aa1-cccf204eaf09 --name app --message "<motivo>" --yes`, la versión de los correos que no se responden. Tiene el mismo esquema y no necesita pasos de datos; con ella esas dos pestañas vuelven a decir «Cita Suite». Después, los dos `/_app/version.json` deben decir `1382f5feeff962fc9895ebc0d97378fc7dbf5061`. No se ensayó. Nunca una versión anterior a E.
+
+## Estado anterior — correos que no se responden: 9 de noviembre de 2026, 19:48 hora argentina (22:48 UTC)
+
+**Sirvió** la instantánea `1382f5feeff962fc9895ebc0d97378fc7dbf5061` de `main` `4dfc9f66`, Worker `app`, versión de Cloudflare **`a77821fa-45cb-43a1-8aa1-cccf204eaf09`**. 166 migraciones. Programador `e79d5660-645a-4606-b481-7c143e7931f1`, con los mismos cinco cron. Interruptores sin cambios.
 
 **Qué trae** ([plan 12.35](../plans/propuesta-senas-avisos-natalia.md#correo-sin-respuesta-20261109)):
 - los correos de turnos no reciben respuestas: no llevan `Reply-To`, y el pie dice «Este correo es automático y no recibe respuestas.»;

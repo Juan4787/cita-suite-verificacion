@@ -245,7 +245,8 @@ test('the public generator reads both entry points, books once every four minute
 	const bookings = calls.filter(call => call.method === 'POST');
 	assert.equal(bookings.length, Math.floor((12 * 60_000 - 30_000) / PUBLIC_WRITE_INTERVAL_MS) + 1);
 	assert.equal(new Set(bookings.map(call => call.body.get('patient_phone'))).size, bookings.length);
-	assert.ok(bookings.every(call => /^\/reservar\/[0-9a-f-]{36}\?\/create_booking$/.test(call.path) && call.body.get('slot_starts_at') === '2026-10-27T13:30:00.000Z'));
+	// The page is /reservar/<slug>: the practice id is an old link that only redirects to it.
+	assert.ok(bookings.every(call => /^\/reservar\/capacity-\d{2}\?\/create_booking$/.test(call.path) && call.body.get('slot_starts_at') === '2026-10-27T13:30:00.000Z'));
 	// Each booking follows the day list and then the page of the day the system offered.
 	for (const booking of bookings) {
 		const index = calls.indexOf(booking);
@@ -257,6 +258,7 @@ test('the public generator reads both entry points, books once every four minute
 	assert.deepEqual(result.failures, [{ type: 'failure', status: 400, message: TAKEN, reason: 'failure-400' }]);
 	const reads = calls.filter(call => call.method === 'GET');
 	assert.ok(reads.some(call => call.path.startsWith('/embed/v1/')) && reads.some(call => call.path.startsWith('/reservar/')));
+	assert.ok(reads.every(call => !call.path.startsWith('/reservar/') || /^\/reservar\/capacity-\d{2}\/__data\.json\?/.test(call.path)));
 	assert.ok(reads.length / 12 <= 41, 'public reads stay far below 120 per minute');
 	assert.deepEqual(records.filter(sample => sample.outcome !== 'ok').map(sample => sample.operation), ['public_booking']);
 });

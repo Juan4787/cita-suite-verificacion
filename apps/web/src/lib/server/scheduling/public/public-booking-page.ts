@@ -18,10 +18,12 @@ import {
 	createPublicBooking,
 	getPublicBookingErrorMessage,
 	getPublicBookingErrorCode,
+	getPublicBusinessBySlug,
 	loadPublicBookingState,
 	publicHash,
 	verifyTurnstileIfConfigured
 } from '$lib/server/scheduling/public/public-booking';
+import { publicBookingPath, publicBookingReference } from '$lib/booking/booking-link';
 import { error as httpError, fail, redirect, isRedirect, isHttpError } from '@sveltejs/kit';
 import { loadPatientManagementView } from './patient-management';
 import { loadPublicBookingPolicy } from './email-policy';
@@ -167,8 +169,13 @@ export const loadPublicBookingPage = async ({ params, fetch, url, setHeaders }: 
             throw redirect(303, next.pathname + next.search);
         }
 
-		if ((!integration || entryPoint === 'public_page') && state.business && params.businessSlug !== state.business.id) {
-			throw redirect(302, `/reservar/${state.business.id}${url.search}`);
+		// The link names the practice (/reservar/consultorio-ramirez). Its id, an address it used
+		// before and the current one typed differently all lead there, keeping the selection.
+		// Temporary: the address follows the name, so where an id or an old address leads changes.
+		// The route parameter is compared, never url.pathname: reading the pathname would make
+		// SvelteKit rerun this load on every change of the URL, choosing a time included.
+		if ((!integration || entryPoint === 'public_page') && state.business && params.businessSlug !== publicBookingReference(state.business)) {
+			throw redirect(302, `${publicBookingPath(state.business)}${url.search}`);
 		}
 
         if (state.business && state.services.length) {
@@ -356,9 +363,10 @@ export const submitPublicBookingPage = async ({ request, params, fetch, url, get
             if (bookingInformationEnabled()) {
                 let businessId = integration?.businessId;
                 if (!businessId) {
-                    const lookup = await supabase.from('businesses').select('id').eq(isUuid(params.businessSlug) ? 'id' : 'slug', params.businessSlug ?? '').maybeSingle();
-                    if (lookup.error || !lookup.data) throw new Error('PUBLIC_BOOKING_UNAVAILABLE');
-                    businessId = lookup.data.id;
+                    // The same reading as the page, so an address the practice used before still books.
+                    const business = await getPublicBusinessBySlug(supabase, params.businessSlug ?? '').catch(() => null);
+                    if (!business) throw new Error('PUBLIC_BOOKING_UNAVAILABLE');
+                    businessId = business.id;
                 }
                 patientSchema = await loadProfessionalBookingSchema(supabase, businessId!, professionalIds, integration?.id, idempotencyKey);
             }

@@ -2,6 +2,7 @@ import { logServerFailure } from '$lib/server/platform/logging';
 import { env } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
 import { PUBLIC_SITE_URL_FALLBACK } from '$lib/constants';
+import { publicBookingPath } from '$lib/booking/booking-link';
 import crypto from 'crypto';
 import type { CitaSupabaseClient, CitaUpdate } from '$lib/types/database';
 import { readJson, readRecord, readArray, isRecord, readChoice, readText, readNullableText, readBoolean, readFiniteNumber } from '$lib/contracts/json';
@@ -206,7 +207,8 @@ export const publicAppointmentUrl = (token: string) => `${getPublicSiteUrl()}/tu
 export const publicRescheduleUrl = (token: string) =>
 	`${getPublicSiteUrl()}/turno/${token}/reprogramado`;
 
-export const bookingUrl = (businessId: string) => `${getPublicSiteUrl()}/reservar/${businessId}`;
+// The link patients open names the practice: /reservar/consultorio-ramirez.
+export const bookingUrl = (business: { id: string; slug: string }) => `${getPublicSiteUrl()}${publicBookingPath(business)}`;
 
 export const resolveMessagingSecret = (secretName?: string | null) => {
 	const key = secretName?.trim() || 'WHATSAPP_ACCESS_TOKEN';
@@ -904,13 +906,13 @@ export const applyProviderMessageStatus = async (
 export const isHumanRequest = (text?: string | null) =>
 	/\b(asesor|humano|persona|recepci[oó]n|secretar[ií]a|hablar|ayuda)\b/i.test(text ?? '');
 
-export const renderBotReplyBody = (body: string, business: { id: string; name: string }) =>
+export const renderBotReplyBody = (body: string, business: { id: string; name: string; slug: string }) =>
 	body
 		.replaceAll('{{business_name}}', business.name)
-		.replaceAll('{{booking_url}}', bookingUrl(business.id));
+		.replaceAll('{{booking_url}}', bookingUrl(business));
 
 export const buildBotReplyText = (
-	business: { id: string; name: string },
+	business: { id: string; name: string; slug: string },
 	body = DEFAULT_BOT_REPLY_TEMPLATE_BODY
 ) => renderBotReplyBody(body, business);
 

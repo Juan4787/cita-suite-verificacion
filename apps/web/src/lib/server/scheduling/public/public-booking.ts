@@ -180,17 +180,35 @@ const countPublicAttempts = async (
 	return count ?? 0;
 };
 
+// Longer than any address a practice can have: the database is not asked about it.
+const MAX_BOOKING_REFERENCE_LENGTH = 200;
+
+/**
+ * The practice a booking link names: by its id, or by its address. An address that is not the
+ * current one may still name a practice: one it used before, or the current one typed with
+ * capitals, accents or spaces. The booking page redirects those to the current address.
+ */
 export const getPublicBusinessBySlug = async (
 	supabase: CitaSupabaseClient,
 	slug: string
 ): Promise<PublicBookingBusiness | null> => {
 	const isBusinessId = isUuid(slug);
-	const { data, error } = await supabase
-		.from('businesses')
-		.select(PUBLIC_BUSINESS_SELECT)
-		.eq(isBusinessId ? 'id' : 'slug', slug)
-		.maybeSingle();
-	if (error) throw error;
+	const read = async (column: 'id' | 'slug', value: string) => {
+		const { data, error } = await supabase
+			.from('businesses')
+			.select(PUBLIC_BUSINESS_SELECT)
+			.eq(column, value)
+			.maybeSingle();
+		if (error) throw error;
+		return data;
+	};
+	let data = await read(isBusinessId ? 'id' : 'slug', slug);
+	// The length goes first: isUuid narrows a reference that is not an id to `never`.
+	if (!data && slug.length <= MAX_BOOKING_REFERENCE_LENGTH && !isBusinessId) {
+		const { data: businessId, error } = await supabase.rpc('resolve_public_business_slug', { p_reference: slug });
+		if (error) throw error;
+		if (isUuid(businessId)) data = await read('id', businessId);
+	}
 	if (!data) return null;
 	return {
 		...data,

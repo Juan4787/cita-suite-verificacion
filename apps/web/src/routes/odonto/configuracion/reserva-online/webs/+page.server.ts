@@ -1,6 +1,6 @@
 import { isRedirect } from '@sveltejs/kit';
+import { getPublicSiteUrl } from "$lib/server/integrations/public/messaging";
 import { fail, error, redirect } from "@sveltejs/kit";
-import { env } from "$env/dynamic/private";
 import { getOdontoContext } from "$lib/server/access/public/odonto-context";
 import { bookingInformationEnabled } from "$lib/server/patients/public/booking-information";
 import { bookingProfileConfig } from "$lib/server/sites/public/booking-profile-config";
@@ -22,7 +22,8 @@ export const load: PageServerLoad = async (event) => {
     services: [],
     assignments: [],
     selectedId: "",
-    baseURL: env.PUBLIC_SITE_URL || event.url.origin,
+    // The official domain, as in emails: the private environment never holds PUBLIC_SITE_URL.
+    baseURL: getPublicSiteUrl(),
     isNew: false,
   };
   if (!enabled) return empty;

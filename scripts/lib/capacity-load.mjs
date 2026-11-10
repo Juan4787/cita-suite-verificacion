@@ -85,7 +85,7 @@ export function practiceData(practice) {
 		practice,
 		email: `capacity-owner-${tag}@example.test`,
 		slug: `capacity-${tag}`,
-		// The shared link /reservar/<slug> redirects here: the canonical public page.
+		// The canonical public page is /reservar/<slug>; /reservar/<business> redirects to it.
 		business: uuidFrom(`capacity-practice-${practice}`),
 		integrationKey: createHash('md5').update(`capacity-integration-${practice}`).digest('hex'),
 		professionals: [1, 2, 3].map(k => uuidFrom(`capacity-professional-${practice}-${k}`)),
@@ -443,11 +443,11 @@ const publicQuery = (data, random, now) => {
  */
 export async function findPublicSlot({ origin, data, random, unflatten, fetchFn = fetch, read = request => exchange(request) }) {
 	const selection = `service_id=${data.services[Math.floor(random() * 5)]}&professional_id=${data.professionals[Math.floor(random() * 3)]}`;
-	const listed = pageData((await read(signal => fetchFn(`${origin}/reservar/${data.business}/__data.json?${selection}`, { signal }))).body, unflatten);
+	const listed = pageData((await read(signal => fetchFn(`${origin}/reservar/${data.slug}/__data.json?${selection}`, { signal }))).body, unflatten);
 	const days = Array.isArray(listed?.state?.days) ? listed.state.days : [];
 	if (!days.length) return null;
 	const query = `${selection}&date=${days[Math.floor(random() * Math.min(days.length, 5))].date}`;
-	const page = pageData((await read(signal => fetchFn(`${origin}/reservar/${data.business}/__data.json?${query}`, { signal }))).body, unflatten);
+	const page = pageData((await read(signal => fetchFn(`${origin}/reservar/${data.slug}/__data.json?${query}`, { signal }))).body, unflatten);
 	const slots = Array.isArray(page?.state?.slots) ? page.state.slots : [];
 	const slot = slots[Math.floor(random() * Math.min(slots.length, 6))];
 	return slot?.starts_at ? { query, page, slot } : null;
@@ -465,7 +465,7 @@ function bookingAnswer(result, parse) {
 }
 
 /** The confirmation of a found slot, as the public page submits it; `exchange` performs it. */
-export const submitPublicBooking = (origin, data, found, name, phone, fetchFn = fetch) => signal => fetchFn(`${origin}/reservar/${data.business}?/create_booking`, {
+export const submitPublicBooking = (origin, data, found, name, phone, fetchFn = fetch) => signal => fetchFn(`${origin}/reservar/${data.slug}?/create_booking`, {
 	method: 'POST', redirect: 'manual', headers: actionHeaders(origin, new CookieJar()),
 	body: new URLSearchParams(publicBookingForm(found.page, found.query, found.slot, name, phone)), signal
 });
@@ -500,7 +500,7 @@ export async function runPublicGenerator({ origin, practices, random, measureFro
 			const query = publicQuery(data, random, new Date());
 			const embed = random() < 0.5;
 			await timed(embed ? PUBLIC_OPERATIONS.embed : PUBLIC_OPERATIONS.page, signal =>
-				fetchFn(embed ? `${origin}/embed/v1/${data.integrationKey}/__data.json?${query}` : `${origin}/reservar/${data.business}/__data.json?${query}`, { signal }));
+				fetchFn(embed ? `${origin}/embed/v1/${data.integrationKey}/__data.json?${query}` : `${origin}/reservar/${data.slug}/__data.json?${query}`, { signal }));
 		}
 		await sleep(PUBLIC_READ_INTERVAL_MS);
 	}

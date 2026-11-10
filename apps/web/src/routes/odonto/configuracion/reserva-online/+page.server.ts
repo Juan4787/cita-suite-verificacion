@@ -1,5 +1,5 @@
 import { fail, error, redirect } from "@sveltejs/kit";
-import { env } from "$env/dynamic/private";
+import { getPublicSiteUrl } from "$lib/server/integrations/public/messaging";
 import { getOdontoContext } from "$lib/server/access/public/odonto-context";
 import { bookingInformationEnabled } from "$lib/server/patients/public/booking-information";
 import { readBoundedBookingForm } from "$lib/server/platform/form-data";
@@ -34,7 +34,8 @@ export const load: PageServerLoad = async (event) => {
     business: context.business.business,
     enabled: bookingInformationEnabled(),
     connectedSites: count.count ?? 0,
-    baseURL: env.PUBLIC_SITE_URL || event.url.origin,
+    // The official domain, as in emails: the private environment never holds PUBLIC_SITE_URL.
+    baseURL: getPublicSiteUrl(),
     canBook: context.business.access.allowedCapabilities.canUsePublicBooking,
   };
 };

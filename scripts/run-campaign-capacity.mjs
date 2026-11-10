@@ -256,7 +256,8 @@ async function measurePublic(practices, profiler) {
 		const response = await fetch(appOrigin + path).catch(() => null);
 		return describePublicPage(response?.status ?? 0, await response?.json().catch(() => null), devalue.unflatten);
 	};
-	const entries = { link: await describe(`/reservar/${data.slug}/__data.json?${query}`), page: await describe(`/reservar/${data.business}/__data.json?${query}`),
+	// The page is /reservar/<slug>; the practice id is an old link that redirects to it.
+	const entries = { page: await describe(`/reservar/${data.slug}/__data.json?${query}`), id: await describe(`/reservar/${data.business}/__data.json?${query}`),
 		embed: await describe(`/embed/v1/${data.integrationKey}/__data.json?${query}`) };
 	console.log(`capacity-public-entries ${practices} ` + JSON.stringify(entries));
 	const repetitions = [];

@@ -61,24 +61,25 @@ describe('messaging helpers', () => {
 
 	it('construye una respuesta reactiva con el enlace público de reserva', () => {
 		const businessId = '11111111-1111-4111-8111-111111111111';
-		const text = buildBotReplyText({ id: businessId, name: 'Consultorio Sonrisa' });
+		const text = buildBotReplyText({ id: businessId, name: 'Consultorio Sonrisa', slug: 'consultorio-sonrisa' });
 
 		expect(text).toContain('Consultorio Sonrisa');
-		expect(text).toContain(`/reservar/${businessId}`);
-		expect(text).not.toContain('sonrisa');
+		// The link names the practice (Juan, 10 November 2026), never its id.
+		expect(text).toContain('/reservar/consultorio-sonrisa');
+		expect(text).not.toContain(businessId);
 		expect(text).toContain('asesor');
 	});
 
 	it('renderiza el mensaje automático configurable del bot', () => {
 		const businessId = '11111111-1111-4111-8111-111111111111';
 		const text = buildBotReplyText(
-			{ id: businessId, name: 'Consultorio Norte' },
+			{ id: businessId, name: 'Consultorio Norte', slug: 'consultorio-norte' },
 			'Hola, somos {{business_name}}. Reservá acá: {{booking_url}}'
 		);
 
 		expect(DEFAULT_BOT_REPLY_TEMPLATE_BODY).toContain('{{booking_url}}');
 		expect(text).toContain('Hola, somos Consultorio Norte.');
-		expect(text).toContain(`/reservar/${businessId}`);
+		expect(text).toMatch(/Reservá acá: https?:\/\/[^/\s]+\/reservar\/consultorio-norte$/);
 	});
 
 	it('traduce errores técnicos a mensajes operativos', () => {

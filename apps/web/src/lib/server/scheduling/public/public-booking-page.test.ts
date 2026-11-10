@@ -58,7 +58,7 @@ const SLOTS = ['2026-11-20T12:00:00.000Z', '2026-11-20T13:00:00.000Z'].map((star
 }));
 
 const state = (overrides: Record<string, unknown> = {}) => ({
-	business: { id: BUSINESS_ID, name: 'Consultorio', timezone: 'America/Argentina/Cordoba', address: null, maps_url: null },
+	business: { id: BUSINESS_ID, name: 'Consultorio', slug: 'consultorio', timezone: 'America/Argentina/Cordoba', address: null, maps_url: null },
 	services: [{ id: SERVICE_ID, name: 'Consulta', description: null, duration_minutes: 60, price_label: null }],
 	professionals: [{ id: PROFESSIONAL_ID, name: 'Dra. Frutos', specialty: null }],
 	days: [{ date: '2026-11-20', label: 'Viernes', count: 2 }],
@@ -67,13 +67,14 @@ const state = (overrides: Record<string, unknown> = {}) => ({
 	...overrides
 });
 
-const event = (search = `?service_id=${SERVICE_ID}&professional_id=${PROFESSIONAL_ID}&date=2026-11-20`) =>
-	({
-		params: { businessSlug: BUSINESS_ID },
-		fetch: vi.fn(),
-		url: new URL(`http://localhost/reservar/${BUSINESS_ID}${search}`),
-		setHeaders: vi.fn()
-	}) as never;
+const SELECTION = `?service_id=${SERVICE_ID}&professional_id=${PROFESSIONAL_ID}&date=2026-11-20`;
+const eventAt = (reference: string, search = SELECTION) => ({
+	params: { businessSlug: reference },
+	fetch: vi.fn(),
+	url: new URL(`http://localhost/reservar/${encodeURIComponent(reference)}${search}`),
+	setHeaders: vi.fn()
+});
+const event = (search = SELECTION) => eventAt('consultorio', search) as never;
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -83,6 +84,34 @@ beforeEach(() => {
 	);
 	mocks.loadDepositTermsForSlots.mockResolvedValue({
 		'2026-11-20T13:00:00.000Z': { amount: 40000, dueAt: '2026-11-18T13:00:00+00:00', autoCancel: true }
+	});
+});
+
+// The link names the practice (migration 20261110010000): /reservar/consultorio.
+describe('dirección del enlace de reserva', () => {
+	it('lleva el identificador, una dirección anterior y la actual escrita distinto a la actual, con la selección', async () => {
+		for (const reference of [BUSINESS_ID, 'cuentaprueba3-855fc174', 'Consultorio']) {
+			await expect(loadPublicBookingPage(eventAt(reference) as never, undefined, 'public_page')).rejects.toMatchObject({
+				status: 302,
+				location: `/reservar/consultorio${SELECTION}`
+			});
+		}
+	});
+
+	it('enlaza por su identificador a un consultorio cuya dirección tiene forma de identificador', async () => {
+		mocks.loadPublicBookingState.mockResolvedValue(state({ business: { ...state().business, slug: BUSINESS_ID } }));
+		await expect(loadPublicBookingPage(eventAt(BUSINESS_ID) as never, undefined, 'public_page')).resolves.toMatchObject({
+			state: { business: { id: BUSINESS_ID } }
+		});
+	});
+
+	it('sin redirección no lee la dirección completa, porque SvelteKit volvería a correr la carga al elegir un horario', async () => {
+		const tracked = eventAt('consultorio');
+		for (const property of ['href', 'pathname', 'search'])
+			Object.defineProperty(tracked.url, property, { get: () => { throw new Error(`url.${property} read`); } });
+		await expect(loadPublicBookingPage(tracked as never, undefined, 'public_page')).resolves.toMatchObject({
+			state: { business: { slug: 'consultorio' }, issue: null }
+		});
 	});
 });
 

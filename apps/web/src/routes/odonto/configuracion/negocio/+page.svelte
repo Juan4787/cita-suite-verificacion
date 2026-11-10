@@ -1,12 +1,16 @@
 <script lang="ts">
   import { styledSelect } from "$lib/ui/styled-controls";
+	import { untrack } from 'svelte';
 	import BackLink from '$lib/components/BackLink.svelte';
+	import { normalizeSlug } from '$lib/booking/booking-link';
 	import type { BusinessContext, BusinessIndustry } from '$lib/access/contracts';
 
 	let { data, form }: {
 		data: {
 			context: BusinessContext;
 			industries: readonly BusinessIndustry[];
+			slugFollowsName: boolean;
+			bookingOrigin: string;
 			demo: boolean;
 		};
 		form?: { success?: boolean; message?: string; values?: Record<string, unknown> };
@@ -29,6 +33,18 @@
 		other: 'Otro'
 	};
 	const industryLabel = (industry: BusinessIndustry) => industryLabels[industry] ?? industry;
+
+	// The booking link. An empty address means «the name's»: the database gives it, adds a number when
+	// another practice uses it or used it, and changes it with the name. The preview shows what saving
+	// gives, and the address saved when the name has not changed.
+	let nameValue = $state(untrack(() => valueOf('name')));
+	let slugValue = $state(untrack(() => (form?.values ? String(form.values.slug ?? '') : data.slugFollowsName ? '' : business.slug)));
+	const typedSlug = $derived(normalizeSlug(slugValue));
+	const nameSlug = $derived(
+		data.slugFollowsName && nameValue.trim() === business.name.trim() ? business.slug : normalizeSlug(nameValue)
+	);
+	const previewSlug = $derived(typedSlug || nameSlug);
+	const bookingHost = $derived(data.bookingOrigin.replace(/^https?:\/\//, ''));
 	const timezoneOptions = [
 		'America/Argentina/Buenos_Aires',
 		'America/Argentina/Cordoba',
@@ -60,7 +76,7 @@
 		<div class="mt-6 grid gap-4 md:grid-cols-2">
 			<label>
 				<span class="ux-label">Nombre</span>
-				<input name="name" required value={valueOf('name')} disabled={!canManage} class="ux-input" />
+				<input name="name" required bind:value={nameValue} disabled={!canManage} class="ux-input" />
 			</label>
 			<label>
 				<span class="ux-label">Rubro</span>
@@ -147,13 +163,39 @@
 		{#if !canManage}
 			<p class="ux-empty mt-5">Tu permiso actual no permite editar esta configuración.</p>
 		{/if}
-		<details class="mt-6 border-t border-line pt-4">
-			<summary class="min-h-11 cursor-pointer font-semibold">Dirección personalizada</summary>
-			<label class="mt-3 block">
-				<span class="ux-label">Última parte de la dirección</span>
-				<input name="slug" required value={valueOf('slug')} disabled={!canManage} class="ux-input mt-2" />
+		<!-- «Cambiar la dirección del enlace», in Reserva online, opens the page here. -->
+		<section
+			id="enlace-de-reserva"
+			class="mt-6 scroll-mt-28 border-t border-line pt-5"
+			aria-labelledby="enlace-de-reserva-titulo"
+		>
+			<h3 id="enlace-de-reserva-titulo" class="font-semibold">Enlace de reserva</h3>
+			<p class="mt-1 text-sm text-fg-70">Es la dirección que compartís con tus pacientes.</p>
+			<p class="mt-3 break-words">
+				<span class="text-fg-70">{bookingHost}/reservar/</span><strong class="font-semibold">{previewSlug || 'consultorio'}</strong>
+			</p>
+			<label class="mt-4 block">
+				<span class="ux-label">Dirección personalizada (opcional)</span>
+				<input
+					name="slug"
+					bind:value={slugValue}
+					disabled={!canManage}
+					placeholder={nameSlug || 'consultorio'}
+					autocomplete="off"
+					autocapitalize="none"
+					spellcheck="false"
+					maxlength="120"
+					class="ux-input mt-2"
+				/>
 			</label>
-			<p class="mt-2 text-sm text-fg-70">/reservar/{valueOf('slug')}</p>
-		</details>
+			<p class="mt-2 text-sm text-copy-subtle">
+				{#if slugValue.trim()}
+					Elegida por vos: no cambia si cambiás el nombre. Para volver a armarla con el nombre, dejá el campo vacío.
+				{:else}
+					Vacía, se arma con el nombre del consultorio y cambia con él. Si otro consultorio ya la usa, se le agrega un número.
+				{/if}
+				Si la dirección cambia, el enlace anterior sigue funcionando.
+			</p>
+		</section>
 	</form>
 </section>

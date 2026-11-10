@@ -22,6 +22,13 @@
 - Las menciones históricas a D en pausa son del antiguo push al celular del consultorio, **reemplazado**, no un trabajo de push pendiente de retomar. La nueva D interna se hace como P3. No cambia el push/calendario del paciente ni el correo E.
 
 
+## Enlace de reserva con el nombre del consultorio (10 de noviembre)
+
+- Pedido de Juan: que el enlace diga `https://app.cita-suite.com.ar/reservar/consultorio-ramirez` y que el enlace limpio aparezca por defecto para todos los consultorios nuevos. Literal, decisiones, pruebas y punto exacto: [plan, registro y traspaso](docs/plans/enlace-de-reserva-20261110.md). **Publicarlo se pide aparte.**
+- La dirección sale del nombre y lo sigue (`businesses.slug_follows_name`). Una dirección escrita a mano es una elección y no cambia sola. Lo que escriben un operador o un dato de prueba tampoco: los scripts de producción buscan y borran sus consultorios por dirección.
+- Ninguna dirección deja de funcionar: el identificador y las direcciones anteriores (`private.business_slug_aliases`) redirigen a la actual, y ningún otro consultorio puede tomar una dirección ajena.
+- La carga de `/reservar/[businessSlug]` compara el parámetro de la ruta y nunca lee `url.pathname`: SvelteKit la volvería a correr al elegir un horario.
+
 ## Criterio vigente: rigor y controles según el contexto de esta app
 
 - **Corrección expresa del usuario (30 de octubre, hora argentina):** no pidió reducir auditorías, exigencia ni cobertura de inconsistencias. Busca ese rigor. El problema es la sobreingeniería que duplica trabajo para proteger turnos de pacientes ficticios o impone procedimientos ajenos a la situación real de esta app.

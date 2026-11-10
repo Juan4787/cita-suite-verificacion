@@ -9,6 +9,7 @@ import {
 import { createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { isValidMapsUrl } from '$lib/sites/location';
 import { isAllowedPublicImageUrl } from '$lib/server/sites/public/public-image';
+import { getPublicSiteUrl } from '$lib/server/integrations/public/messaging';
 import { env } from '$env/dynamic/private';
 import { error as kitError, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -21,6 +22,8 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 		return {
 			context: demoBusinessContext(),
 			industries: BUSINESS_INDUSTRIES,
+			slugFollowsName: true,
+			bookingOrigin: getPublicSiteUrl(),
 			demo: true
 		};
 	}
@@ -38,9 +41,23 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 	if (context.role === 'professional') throw redirect(303, '/odonto/mis-turnos');
 	if (context.role !== 'owner' && context.role !== 'admin') throw redirect(303, '/odonto/agenda');
 
+	// Whether the booking address follows the name: the active practice's context does not carry it.
+	// Without it the page would show a followed address as chosen, and saving would fix it.
+	const { data: link, error: linkError } = await supabase
+		.from('businesses')
+		.select('slug_follows_name')
+		.eq('id', context.business.id)
+		.maybeSingle();
+	if (linkError || typeof link?.slug_follows_name !== 'boolean') {
+		if (linkError) logServerFailure('Error leyendo la dirección del enlace de reserva', linkError);
+		throw kitError(503, 'No pudimos cargar los datos del consultorio. Volvé a intentar en unos segundos.');
+	}
+
 	return {
 		context,
 		industries: BUSINESS_INDUSTRIES,
+		slugFollowsName: link.slug_follows_name,
+		bookingOrigin: getPublicSiteUrl(),
 		demo: false
 	};
 };
@@ -68,7 +85,9 @@ export const actions: Actions = {
 
 		const form = await request.formData();
 		const name = String(form.get('name') ?? '').trim();
-		const slug = normalizeSlug(String(form.get('slug') ?? ''));
+		// An empty address means «the name's»: the database gives it and keeps it following the name.
+		const typedSlug = String(form.get('slug') ?? '').trim();
+		const slug = normalizeSlug(typedSlug);
 		const industry = String(form.get('industry') ?? '').trim();
 		const phone = String(form.get('phone') ?? '').trim();
 		const email = String(form.get('email') ?? '').trim();
@@ -81,13 +100,16 @@ export const actions: Actions = {
 		if (!name) {
 			return fail(400, { message: 'El nombre del consultorio es obligatorio.', values: Object.fromEntries(form) });
 		}
-		if (!slug) {
-			return fail(400, { message: 'El nombre del enlace público es obligatorio.', values: Object.fromEntries(form) });
+		if (typedSlug && !slug) {
+			return fail(400, {
+				message: 'La dirección del enlace necesita letras o números. Dejala vacía para armarla con el nombre del consultorio.',
+				values: Object.fromEntries(form)
+			});
 		}
 		// The booking link reads an identifier-shaped value as the practice id.
 		if (isUuid(slug)) {
 			return fail(400, {
-				message: 'El nombre del enlace público no puede tener forma de código. Usá palabras, como el nombre del consultorio.',
+				message: 'La dirección del enlace no puede tener forma de código. Usá palabras, como el nombre del consultorio.',
 				values: Object.fromEntries(form)
 			});
 		}
@@ -157,7 +179,7 @@ export const actions: Actions = {
 			.from('businesses')
 			.update({
 				name,
-				slug,
+				...(slug ? { slug, slug_follows_name: false } : { slug_follows_name: true }),
 				industry,
 				phone: phone || null,
 				email: email || null,
@@ -178,7 +200,7 @@ export const actions: Actions = {
 			logServerFailure('Error actualizando negocio', error);
 			const message =
 				error?.code === '23505'
-					? 'Ese nombre de enlace público ya está en uso. Elegí otro y volvé a guardar.'
+					? 'Esa dirección del enlace ya la usa, o la usó antes, otro consultorio. Elegí otra y volvé a guardar.'
 					: 'No pudimos guardar los datos del consultorio. Volvé a abrirlo desde el panel maestro e intentá nuevamente.';
 			return fail(500, { message, values: Object.fromEntries(form) });
 		}
