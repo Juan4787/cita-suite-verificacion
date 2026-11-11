@@ -98,6 +98,9 @@ try{
   await page.locator('[name="patient_name"]').fill('Paciente Prueba '+name);
   // Staging keeps its bookings: a new synthetic phone per run keeps each one a new patient.
   await page.locator('[name="patient_phone"]').fill(staging?'3415'+String(randomInt(1e6)).padStart(6,'0'):name==='desktop'?'3415551001':'3415551002');
+  // Public bookings ask for an email by default since stage E (6 November 2026). A reserved .test
+  // address never reaches a mailbox.
+  if(await page.locator('[name="patient_email"]').count())await page.locator('[name="patient_email"]').fill('paciente-prueba-'+name+'@example.test');
   for(const input of await page.locator('input[name^="intake_"][required], textarea[name^="intake_"][required]').all()){
    const field=await input.getAttribute('name');
    await input.fill(field.includes('age')?'35':'Particular de prueba');
