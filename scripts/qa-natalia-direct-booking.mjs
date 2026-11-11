@@ -105,7 +105,15 @@ try{
   if(await page.locator('[name="intake_medication"]').count())await page.locator('[name="intake_medication"]').fill('Declaración sintética para la prueba');
   await page.screenshot({path:output+'/'+name+'-form.png'});
   await page.getByRole('button',{name:'Confirmar reserva',exact:true}).click();
-  await page.waitForURL(url=>url.origin===f.appOrigin&&/^\/turno\/[a-f0-9]{64}$/.test(url.pathname),{timeout:30000});
+  try{
+   await page.waitForURL(url=>url.origin===f.appOrigin&&/^\/turno\/[a-f0-9]{64}$/.test(url.pathname),{timeout:30000});
+  }catch(error){
+   // What the page showed instead of the receipt: a bare timeout left no cause (run 42925043007).
+   const alerts=await page.getByRole('alert').allTextContents().catch(()=>[]);
+   result.errors.push(`${name}: the confirmation did not reach the receipt; page ${new URL(page.url()).pathname}, alerts ${JSON.stringify(alerts)}`);
+   await page.screenshot({path:output+'/'+name+'-after-confirm.png',fullPage:true}).catch(()=>{});
+   throw error;
+  }
   await expect(page.getByRole('heading',{name:'Tu turno quedó reservado',exact:true})).toBeVisible();
   await expect(page.getByText('Cancelar turno',{exact:true}).first()).toBeVisible();
   await expect.poll(()=>page.evaluate(()=>document.documentElement.dataset.bookingColorMode)).toBe('light');
