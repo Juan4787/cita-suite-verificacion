@@ -107,8 +107,9 @@ test.describe('Reserva pública - modo demo', () => {
 		await expect(page.locator('summary').filter({ hasText: 'Agregar al calendario' })).toBeVisible();
 		await expect(page.locator('summary').filter({ hasText: 'Copiar detalles del turno' })).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Confirmo que voy' })).toBeEnabled();
-		await expect(page.getByText('Necesito reprogramar')).toBeVisible();
-		await expect(page.locator('summary').filter({ hasText: 'Cancelar turno' })).toBeVisible();
+		// Since stage E (3 November 2026) the patient reschedules and cancels from the turn page itself.
+		await expect(page.getByRole('link', { name: 'Reprogramar turno', exact: true })).toHaveAttribute('href', '/turno/demo-token?accion=reprogramar');
+		await expect(page.getByRole('link', { name: 'Cancelar turno', exact: true })).toHaveAttribute('href', '/turno/demo-token?accion=cancelar');
 
 		await page.goto('/confirmar/demo-token');
 		await expect(page).toHaveURL(/\/turno\/demo-token\?accion=confirmar$/);
