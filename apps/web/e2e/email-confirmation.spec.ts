@@ -89,12 +89,13 @@ test('email confirmation: closing the other open account from the confirmation p
 		await signInWithPassword(page, openEmail, openPassword);
 		await follow(page, generated.data.properties.action_link);
 		await expect(page.getByRole('heading', { name: 'Correo confirmado', exact: true })).toBeVisible();
+		// La salud se mide en la confirmación: el ingreso, adonde lleva el botón, no tiene región principal.
+		await health.assertAndAttach(info, 'email-confirmation-close-other-session-health');
 		const logout = page.waitForResponse(response => new URL(response.url()).pathname === '/logout' && response.request().method() === 'POST');
 		await page.getByRole('button', { name: 'Cerrar sesión e ingresar' }).click();
 		expect((await logout).status()).toBe(303);
 		await page.waitForURL(url => url.pathname === '/login');
 		await noAppSession(page);
-		await health.assertAndAttach(info, 'email-confirmation-close-other-session-health');
 	} finally {
 		if (generated.data.user) await write(f.admin.auth.admin.deleteUser(generated.data.user.id));
 		await write(f.admin.auth.admin.deleteUser(opened.data.user.id));
