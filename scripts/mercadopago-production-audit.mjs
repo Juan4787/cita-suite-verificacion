@@ -1,7 +1,9 @@
 // Auditoría de Mercado Pago en producción, sólo de lectura: una transacción `read only` que imprime
 // conteos, fechas y comprobaciones de esquema. No imprime correos, nombres, identificadores de
 // consultorios ni de pagos. Uso: node scripts/mercadopago-production-audit.mjs [--puerto 6543]
-// El puerto 6543 (agrupador en modo transacción) sirve cuando una VPN bloquea el 5432.
+// [--consultorio <uuid>]: además, el estado comercial de ese consultorio (fechas, origen, precio propio y
+// suscripciones), sin nombres ni correos. El puerto 6543 (agrupador en modo transacción) sirve cuando una
+// VPN bloquea el 5432.
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { productionEnvironment, productionPsql } from './lib/production-database.mjs';
@@ -10,6 +12,12 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const portIndex = process.argv.indexOf('--puerto');
 const port = portIndex === -1 ? '5432' : process.argv[portIndex + 1];
 if (!['5432', '6543'].includes(port)) throw new Error('El puerto tiene que ser 5432 o 6543. No se intentó ninguna conexión.');
+
+const businessIndex = process.argv.indexOf('--consultorio');
+const business = businessIndex === -1 ? null : process.argv[businessIndex + 1];
+if (business !== null && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(business ?? '')) {
+	throw new Error('--consultorio necesita un identificador UUID. No se intentó ninguna conexión.');
+}
 
 const { database } = productionEnvironment(root);
 database.port = port;
@@ -45,7 +53,7 @@ select 'avisos_mp', coalesce(topic, '(sin tópico)'), coalesce(action, '(sin acc
 select 'acreditaciones_mp_total', count(*) from public.access_grants where source = 'mercado_pago';
 select 'acreditaciones_mp', operation, count(*), max(created_at)::date from public.access_grants where source = 'mercado_pago' group by 2 order by 2;
 select 'migraciones_mp_aplicadas', version from supabase_migrations.schema_migrations
-  where version in ('20260704120000', '20260704130000', '20260705150000', '20261021010000', '20261021060000', '20261118010000') order by version;
+  where version in ('20260704120000', '20260704130000', '20260705150000', '20261021010000', '20261021060000', '20261118010000', '20261118020000') order by version;
 select 'acreditacion_mensual_en_la_funcion', 'mes_calendario=' || (position('+ interval ''1 month''' in d) > 0), 'gracia_10_dias=' || (position('interval ''10 days''' in d) > 0),
   'gracia_5_dias=' || (position('5 days' in d) > 0)
   from (select pg_get_functiondef('public.grant_business_access(uuid,text,integer,text,boolean,numeric,text,text,uuid,text,text)'::regprocedure) d) f;
@@ -55,12 +63,21 @@ select 'columnas_nuevas', table_name, string_agg(column_name, ',' order by colum
   where table_schema = 'public' and ((table_name = 'mp_webhook_events' and column_name in ('resolved_at', 'resolved_by'))
     or (table_name = 'mp_subscriptions' and column_name like 'last_charge_%')) group by 2 order by 2;
 select 'avisos_con_atencion_sin_resolver', count(*) from public.mp_webhook_events where requires_attention and resolved_at is null;
+select 'acceso_provisorio_en_la_funcion', position('provisional_access' in pg_get_functiondef('public.grant_business_access(uuid,text,integer,text,boolean,numeric,text,text,uuid,text,text)'::regprocedure)) > 0;
+select 'accesos_provisorios', count(*), coalesce(max(created_at)::text, '-') from public.access_grants where operation = 'provisional_access';
+select 'precio_por_consultorio', 'con_precio_propio=' || count(*) filter (where mp_price_ars is not null), 'precios=' || coalesce(string_agg(distinct mp_price_ars::text, ','), '-')
+  from public.business_subscriptions;
 select 'rls_activa', relname, relrowsecurity from pg_class where relnamespace = 'public'::regnamespace and relname in ('mp_subscriptions', 'mp_webhook_events') order by relname;
 select 'politicas_rls', tablename, count(*) from pg_policies where schemaname = 'public' and tablename in ('mp_subscriptions', 'mp_webhook_events') group by tablename;
 select 'privilegios_api', table_name, grantee, string_agg(privilege_type, ',' order by privilege_type) from information_schema.role_table_grants
   where table_schema = 'public' and table_name in ('mp_subscriptions', 'mp_webhook_events') and grantee in ('anon', 'authenticated') group by 2, 3 order by 2, 3;
 select 'borrado_de_consultorio_con_suscripcion', confdeltype from pg_constraint where conname = 'mp_subscriptions_business_id_fkey';
 select 'retencion_de_avisos', jobname, schedule, active from cron.job where jobname = 'cita-suite-webhook-events-retention';
+${business ? `select 'consultorio_estado', public.compute_business_subscription_status(commercial_access_enabled, is_permanent, paid_until, grace_until, restricted_until, archived_at),
+  'fuente=' || coalesce(access_source, '-'), 'permanente=' || is_permanent, 'habilitado=' || commercial_access_enabled,
+  'vence=' || coalesce(paid_until::text, '-'), 'precio_propio=' || coalesce(mp_price_ars::text, '-')
+  from public.business_subscriptions where business_id = '${business}';
+select 'consultorio_suscripciones_mp', coalesce(status, '(vacío)'), count(*) from public.mp_subscriptions where business_id = '${business}' group by 2 order by 2;` : ''}
 commit;
 `;
 

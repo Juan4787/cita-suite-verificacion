@@ -1342,3 +1342,45 @@ describe('precio fijo de quien ya contrató (decisión de Juan del 18-nov-2026)'
 		expect(data.mpPriceLocked).toBe(false);
 	});
 });
+
+describe('plan pagado aparte (decisión de Juan del 18-nov-2026)', () => {
+	it('no crea ninguna suscripción mientras el plan manual está vigente', async () => {
+		const server = createDbMock();
+		const admin = createDbMock({ mp_subscriptions: [{ data: [], error: null }] });
+		mocks.createSupabaseServerClient.mockResolvedValue(server.client);
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		const context = ownerContext();
+		mocks.resolveActiveBusiness.mockResolvedValue({
+			...context,
+			access: { ...context.access, subscription: { access_source: 'manual' } }
+		});
+		const { fetchMock, requests } = createMpFetch([]);
+
+		const result = (await actions.subscribe(makeEvent({ fetchMock }) as never)) as { status: number; data: { message?: string } };
+
+		expect(result.status).toBe(409);
+		expect(result.data.message).toContain('Tu plan ya está pago');
+		expect(requests).toHaveLength(0);
+		expect(admin.client.from).not.toHaveBeenCalled();
+	});
+
+	it('vencido el plan manual, permite suscribirse', async () => {
+		const server = createDbMock();
+		const admin = createDbMock({ mp_subscriptions: [{ data: [], error: null }, { error: null }] });
+		mocks.createSupabaseServerClient.mockResolvedValue(server.client);
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		const context = ownerContext({ commercialStatus: 'grace' });
+		mocks.resolveActiveBusiness.mockResolvedValue({
+			...context,
+			access: { ...context.access, subscription: { access_source: 'manual' } }
+		});
+		const { fetchMock } = createMpFetch([
+			['/preapproval', { status: 201, body: { id: 'pre-renovar', status: 'pending', init_point: 'https://mp.test/init/pre-renovar' } }]
+		]);
+
+		await expect(actions.subscribe(makeEvent({ fetchMock }) as never)).rejects.toMatchObject({
+			status: 303,
+			location: 'https://mp.test/init/pre-renovar'
+		});
+	});
+});

@@ -41,6 +41,16 @@
 		)
 	);
 	const isManualBlock = $derived(!access.commercialAccessEnabled || Boolean(access.archivedAt));
+	// Plan pagado aparte, por ejemplo por transferencia (decisión de Juan del 18-nov-2026): mientras esté vigente
+	// no se ofrece Mercado Pago, para que nadie pague dos veces. Una suscripción de Mercado Pago que ya existe se
+	// sigue mostrando, para poder gestionarla o cancelarla.
+	const manualPlanInForce = $derived(
+		!access.isPermanent &&
+			access.commercialStatus === 'active' &&
+			subscription.access_source === 'manual' &&
+			mpSub?.status !== 'authorized' &&
+			mpSub?.status !== 'paused'
+	);
 	const canActivateWithMp = $derived(
 		!access.isPermanent && access.commercialAccessEnabled && !access.archivedAt
 	);
@@ -62,6 +72,7 @@
 		if (isInitialActivation) {
 			return 'Tu cuenta ya está creada. Activá tu suscripción para comenzar a gestionar turnos, pacientes y tu agenda.';
 		}
+		if (manualPlanInForce) return 'Gestioná el acceso del consultorio.';
 		if (access.commercialStatus === 'active' || access.commercialStatus === 'grace') {
 			return 'Gestioná el acceso del consultorio y la suscripción mensual.';
 		}
@@ -93,6 +104,7 @@
 	const howToContinue = $derived.by(() => {
 		if (access.isPermanent) return 'Contactá soporte del sistema.';
 		if (isManualBlock) return 'Contactá soporte.';
+		if (manualPlanInForce) return 'Tu plan está pago: no necesitás suscribirte ahora.';
 		if (mpSub?.status === 'authorized') return 'Tu suscripción se renueva sola cada mes con Mercado Pago.';
 		if (mpSub?.status === 'paused') return 'Tu suscripción está pausada en Mercado Pago.';
 		return 'Activá la suscripción con Mercado Pago más abajo.';
@@ -180,7 +192,15 @@
 		{/if}
 	</div>
 
-	{#if !access.isPermanent}
+	{#if manualPlanInForce}
+		<div class="ux-card">
+			<h2 class="ux-section-title">Tu plan</h2>
+			<p class="mt-2 text-sm text-fg-55">
+				Tu plan está pago hasta el {formatDateTime(access.paidUntil, 'vencimiento de tu plan')}. No necesitás
+				suscribirte ahora: cuando venza, acá vas a ver cómo renovarlo.
+			</p>
+		</div>
+	{:else if !access.isPermanent}
 		<div class="ux-card">
 			<h2 class="ux-section-title">Suscripción con Mercado Pago</h2>
 			<p class="mt-2 text-sm text-fg-55">

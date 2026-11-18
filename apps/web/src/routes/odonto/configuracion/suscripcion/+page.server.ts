@@ -224,6 +224,14 @@ export const actions: Actions = {
 			});
 		}
 
+		// Plan pagado aparte y vigente, por ejemplo por transferencia (decisión de Juan del 18-nov-2026): la
+		// página no ofrece Mercado Pago, y una página vieja o un pedido armado a mano tampoco cobran dos veces.
+		if (context.access.commercialStatus === 'active' && context.access.subscription?.access_source === 'manual') {
+			return fail(409, {
+				message: 'Tu plan ya está pago. No hace falta suscribirte ahora: cuando venza, vas a poder renovarlo desde acá.'
+			});
+		}
+
 		// El correo de la cuenta de Mercado Pago con la que se va a pagar. Si el formulario no lo trae
 		// (una página vieja abierta), vale el correo de ingreso, verificado por los hooks con Auth.
 		const form = await request.formData().catch(() => null);
