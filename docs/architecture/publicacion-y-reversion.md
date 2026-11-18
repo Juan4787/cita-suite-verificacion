@@ -1,10 +1,38 @@
 # Publicación y reversión
 
-## Último estado comprobado — enlace de reserva con el nombre del consultorio: 10 de noviembre de 2026, 22:58 hora argentina (01:58 UTC del 11)
+## Último estado comprobado — cobros automáticos con Mercado Pago: 18 de noviembre de 2026, 14:02 hora argentina (17:02 UTC)
 
 **La única vuelta atrás vigente es la de este apartado.** Las de los apartados siguientes son historia.
 
-**Producción sirve** la instantánea `a18b7364aba6a4534f4f14e830ebe35c9c1c006f` de `main` `e127841a`, Worker `app`, versión de Cloudflare **`6cf5a14c-cd2c-44e9-8389-f9d7efb38817`**. 167 migraciones: la última es `20261110010000_business_booking_links.sql`. Programador `328b3dba-7ceb-4995-b993-befb86a48184`, reinstalado con los mismos cinco cron. Interruptores sin cambios.
+**Producción sirve** la instantánea `7f7ff06389c506fee574812eeb090d0fe72637d1` de `main` `66ed73d0`, Worker `app`, versión de Cloudflare **`f592843a-3592-4f19-b2fd-bf7777428179`**. 168 migraciones: la última es `20261118010000_mercadopago_billing_fixes.sql`. Programador `3d3fefce-55d2-4fc7-beef-e6d7dd51765c`, reinstalado con los mismos cinco cron. Interruptores sin cambios.
+
+**Qué trae** ([plan, registro y traspaso](../plans/cobros-mercadopago-20261118.md)):
+- cada cobro automático suma un mes calendario, con 10 días de gracia para los reintentos de Mercado Pago;
+- la búsqueda de cobros paginada de a 15: antes Mercado Pago la rechazaba siempre y sólo el aviso podía acreditar;
+- el formulario pide el correo de la cuenta de Mercado Pago del pagador;
+- los avisos que piden atención se resuelven desde el panel maestro, que además muestra la configuración vigente;
+- el último cobro de cada suscripción, con aviso si Mercado Pago no pudo cobrar;
+- `MP_ENVIRONMENT=production` y el precio de 90.000 pesos por mes como variables versionadas, en lugar de secretos ilegibles.
+
+Juan lo autorizó: «Publicalo».
+
+**Verificación sobre la revisión exacta:**
+- completa 44336625015: tipos, pruebas unitarias (2.208 de servidor y 356 de componentes), todas las suites SQL y de concurrencia, comparación exacta de tipos, Chromium con 82 de 82, las reservas directas de Natalia, la demostración y la medición de Natalia;
+- paquete 44336661039 y Chromium sobre el paquete 44340532929, con 82 de 82;
+- `verify-production-release.mjs` aprobado a las 17:02:52 UTC: 152 archivos idénticos y 78 relaciones sin exposición anónima. Los dos `/_app/version.json` dicen `7f7ff06389c506fee574812eeb090d0fe72637d1`.
+
+**Publicación:**
+- ensayo a las 16:57 UTC, sin fallas. Las diferencias de catálogo con staging son las de esta migración (6 columnas, 1 índice y los cuerpos de las 2 funciones), las de la del 10 de noviembre, porque staging no tiene ninguna de las dos, y los 4 disparadores de almacenamiento de Supabase de siempre;
+- respaldo `~/.local/share/cita-suite/backups/production-2026-11-18T16-58-22-402Z`: 129 tablas, 4.492 filas, 167 migraciones, 26 objetos, sin fallas;
+- programador sin cron (`06539450-cc01-455e-aca2-86449ee3cf9b`); migración a las 17:01:12, en 1,3 s; borrado de los secretos `MP_ENVIRONMENT` y `MP_SUBSCRIPTION_AMOUNT_ARS` a las 17:01; app a las 17:02; verificación a las 17:02:52, y programador con cron.
+
+**Pendiente de Juan:** cargar el token productivo de Mercado Pago (`npx wrangler secret put MP_ACCESS_TOKEN --name app`, en `apps/web`). Hasta entonces nadie puede suscribirse: el control de configuración se niega con el token de prueba en producción.
+
+**Vuelta atrás:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback 6cf5a14c-cd2c-44e9-8389-f9d7efb38817 --name app --message "<motivo>" --yes`, la versión del enlace de reserva. Funciona con el esquema nuevo: la migración sólo agrega columnas y reemplaza dos funciones con la misma firma. Sin los dos secretos borrados, esa versión no cobra a un precio equivocado: con el token productivo su control de configuración se niega a suscribir, porque le falta el entorno, y con el de prueba vuelve al modo prueba. **No verificado:** si la vuelta atrás de Cloudflare restaura también los secretos de esa versión. Después, los dos `/_app/version.json` deben decir `a18b7364aba6a4534f4f14e830ebe35c9c1c006f`. La migración no se revierte: sólo agrega. No se ensayó. Nunca una versión anterior a E.
+
+## Estado anterior — enlace de reserva con el nombre del consultorio: 10 de noviembre de 2026, 22:58 hora argentina (01:58 UTC del 11)
+
+**Sirvió hasta el 18 de noviembre** la instantánea `a18b7364aba6a4534f4f14e830ebe35c9c1c006f` de `main` `e127841a`, Worker `app`, versión de Cloudflare **`6cf5a14c-cd2c-44e9-8389-f9d7efb38817`**. 167 migraciones: la última es `20261110010000_business_booking_links.sql`. Programador `328b3dba-7ceb-4995-b993-befb86a48184`, reinstalado con los mismos cinco cron. Interruptores sin cambios.
 
 **Qué trae** ([plan, registro y traspaso](../plans/enlace-de-reserva-20261110.md)):
 - el enlace de reserva nombra al consultorio, por ejemplo `https://app.cita-suite.com.ar/reservar/consultorio-ramirez`. La dirección sale del nombre y lo sigue. El identificador y las direcciones anteriores redirigen a la actual, y ningún otro consultorio puede tomar una dirección ajena;
@@ -24,7 +52,7 @@ Juan lo autorizó: «PUBLICALO».
 - respaldo `~/.local/share/cita-suite/backups/production-2026-11-11T01-55-43-360Z`: 128 tablas, 4.463 filas, 26 objetos, sin fallas;
 - programador sin cron, migración a las 01:57:52 en 1,7 s, app a las 01:58, verificación a las 01:58:50 y programador con cron.
 
-**Vuelta atrás:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback 57358b08-92ac-4218-afc8-396f3a89466e --name app --message "<motivo>" --yes`, la versión de los títulos de pestaña. Funciona con el esquema nuevo: enlaza por identificador, «Datos del consultorio» devuelve la dirección que muestra y las dos funciones de alta conservan su firma. Mientras esté instalada, las direcciones viejas que la migración reemplazó (por ejemplo `cuentaprueba3-855fc174`) no abren. Después, los dos `/_app/version.json` deben decir `aed1ddc1dd3634bb8e621c538e59d48cd46db439`. La migración no se revierte: sólo agrega. No se ensayó. Nunca una versión anterior a E.
+**Vuelta atrás de entonces, ya no vigente:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback 57358b08-92ac-4218-afc8-396f3a89466e --name app --message "<motivo>" --yes`, la versión de los títulos de pestaña. Funciona con el esquema nuevo: enlaza por identificador, «Datos del consultorio» devuelve la dirección que muestra y las dos funciones de alta conservan su firma. Mientras esté instalada, las direcciones viejas que la migración reemplazó (por ejemplo `cuentaprueba3-855fc174`) no abren. Después, los dos `/_app/version.json` deben decir `aed1ddc1dd3634bb8e621c538e59d48cd46db439`. La migración no se revierte: sólo agrega. No se ensayó. Nunca una versión anterior a E.
 
 ## Estado anterior — títulos de pestaña con el nombre del consultorio: 9 de noviembre de 2026, 21:03 hora argentina (00:03 UTC del 10)
 

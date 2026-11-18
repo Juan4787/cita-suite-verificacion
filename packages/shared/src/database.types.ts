@@ -1573,6 +1573,7 @@ export type Database = {
           last_grant_duration_seconds: number | null
           last_payment_amount: number | null
           last_payment_at: string | null
+          mp_price_ars: number | null
           paid_until: string | null
           restricted_until: string | null
           subscription_status: string
@@ -1594,6 +1595,7 @@ export type Database = {
           last_grant_duration_seconds?: number | null
           last_payment_amount?: number | null
           last_payment_at?: string | null
+          mp_price_ars?: number | null
           paid_until?: string | null
           restricted_until?: string | null
           subscription_status?: string
@@ -1615,6 +1617,7 @@ export type Database = {
           last_grant_duration_seconds?: number | null
           last_payment_amount?: number | null
           last_payment_at?: string | null
+          mp_price_ars?: number | null
           paid_until?: string | null
           restricted_until?: string | null
           subscription_status?: string

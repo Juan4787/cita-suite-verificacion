@@ -24,13 +24,14 @@
 
 ## Cobros automáticos con Mercado Pago (18 de noviembre)
 
-- Pedido de Juan: auditar con rigor extremo los cobros automáticos con Mercado Pago, hacer la prueba de punta a punta y después corregir todo lo encontrado. Precio decidido: **90.000 pesos por mes**. Literal, hallazgos con evidencia, plan y punto exacto: [plan, registro y traspaso](docs/plans/cobros-mercadopago-20261118.md). Publicar se pide aparte («publicalo»).
+- Pedido de Juan: auditar con rigor extremo los cobros automáticos con Mercado Pago, hacer la prueba de punta a punta y después corregir todo lo encontrado. Precio decidido: **90.000 pesos por mes**. Literal, hallazgos con evidencia, plan y punto exacto: [plan, registro y traspaso](docs/plans/cobros-mercadopago-20261118.md). **Correcciones publicadas el 18 de noviembre a las 14:02 hora argentina** (Juan: «Publicalo»), con la migración `20261118010000`; versión y vuelta atrás en `docs/ESTADO-VIGENTE.md`.
 - Hallazgos críticos del 18-nov:
   - producción funciona con **credenciales de prueba** de Mercado Pago;
   - la búsqueda de cobros pide un límite que Mercado Pago rechaza, así que sólo el aviso puede acreditar;
   - el webhook productivo no tenía dirección; se le cargó ese mismo día.
 
-  Hasta corregirlo, ningún consultorio real puede suscribirse.
+  Los tres quedaron corregidos. Falta que Juan cargue el token productivo: hasta entonces nadie puede suscribirse.
+- Decisiones de Juan del 18-nov: acceso provisorio al quedar autorizada la suscripción (P2, sí); **quien contrató a un precio lo conserva para siempre**, y un precio nuevo es sólo para quien nunca contrató; Natalia tiene una suscripción anual pagada por transferencia, no un pago único. Las dos primeras están en `main` sin publicar (migración `20261118020000`, plan, sección 8).
 - Los secretos de Mercado Pago los carga Juan en Cloudflare: nunca pasan por el chat ni por el repositorio. Falta sólo el token de acceso productivo; la clave secreta del webhook es una sola por aplicación y la del Worker ya es la correcta (comprobado el 18-nov).
 
 ## Enlace de reserva con el nombre del consultorio (10 de noviembre)

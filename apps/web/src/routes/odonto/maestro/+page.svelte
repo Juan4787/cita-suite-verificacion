@@ -103,7 +103,8 @@
 		manual_correction: 'Corrección manual',
 		payment_registered: 'Pago registrado',
 		payment_cancelled: 'Pago cancelado',
-		sessions_revoked: 'Sesiones cerradas'
+		sessions_revoked: 'Sesiones cerradas',
+		provisional_access: 'Acceso provisorio'
 	};
 
 	let activeFilter = $state<DirectoryView>('all');

@@ -45,8 +45,16 @@ select 'avisos_mp', coalesce(topic, '(sin tópico)'), coalesce(action, '(sin acc
 select 'acreditaciones_mp_total', count(*) from public.access_grants where source = 'mercado_pago';
 select 'acreditaciones_mp', operation, count(*), max(created_at)::date from public.access_grants where source = 'mercado_pago' group by 2 order by 2;
 select 'migraciones_mp_aplicadas', version from supabase_migrations.schema_migrations
-  where version in ('20260704120000', '20260704130000', '20260705150000', '20261021010000', '20261021060000') order by version;
-select 'gracia_automatica_5_dias_en_la_funcion', position('5 days' in pg_get_functiondef('public.grant_business_access(uuid,text,integer,text,boolean,numeric,text,text,uuid,text,text)'::regprocedure)) > 0;
+  where version in ('20260704120000', '20260704130000', '20260705150000', '20261021010000', '20261021060000', '20261118010000') order by version;
+select 'acreditacion_mensual_en_la_funcion', 'mes_calendario=' || (position('+ interval ''1 month''' in d) > 0), 'gracia_10_dias=' || (position('interval ''10 days''' in d) > 0),
+  'gracia_5_dias=' || (position('5 days' in d) > 0)
+  from (select pg_get_functiondef('public.grant_business_access(uuid,text,integer,text,boolean,numeric,text,text,uuid,text,text)'::regprocedure) d) f;
+select 'ruta_de_busqueda_de_la_funcion', array_to_string(proconfig, ',')
+  from pg_proc where oid = 'public.grant_business_access(uuid,text,integer,text,boolean,numeric,text,text,uuid,text,text)'::regprocedure;
+select 'columnas_nuevas', table_name, string_agg(column_name, ',' order by column_name) from information_schema.columns
+  where table_schema = 'public' and ((table_name = 'mp_webhook_events' and column_name in ('resolved_at', 'resolved_by'))
+    or (table_name = 'mp_subscriptions' and column_name like 'last_charge_%')) group by 2 order by 2;
+select 'avisos_con_atencion_sin_resolver', count(*) from public.mp_webhook_events where requires_attention and resolved_at is null;
 select 'rls_activa', relname, relrowsecurity from pg_class where relnamespace = 'public'::regnamespace and relname in ('mp_subscriptions', 'mp_webhook_events') order by relname;
 select 'politicas_rls', tablename, count(*) from pg_policies where schemaname = 'public' and tablename in ('mp_subscriptions', 'mp_webhook_events') group by tablename;
 select 'privilegios_api', table_name, grantee, string_agg(privilege_type, ',' order by privilege_type) from information_schema.role_table_grants

@@ -18,6 +18,7 @@ import {
 	getPayment,
 	getPreapproval,
 	getSubscriptionAmountArs,
+	isFreshAuthorization,
 	logMpWebhookEvent,
 	logMpWebhookEventOnce,
 	MP_PAYMENT_IDEMPOTENCY_PREFIX,
@@ -25,6 +26,8 @@ import {
 	payerEmailIssue,
 	pickRelevantMpSubscription,
 	processMpWebhookEvent,
+	PROVISIONAL_ACCESS_SECONDS,
+	readLockedSubscriptionPrice,
 	reconcileMercadoPago,
 	RECONCILE_CHARGE_CALLS,
 	RECONCILE_SUBSCRIPTION_CALLS,
@@ -32,6 +35,8 @@ import {
 	searchAuthorizedPayments,
 	settleApprovedChargesForPreapproval,
 	SUBSCRIPTION_DURATION_SECONDS,
+	subscriptionAmountFor,
+	upsertMpSubscription,
 	verifyMpWebhookSignature
 } from '$lib/server/integrations/public/mercadopago';
 
@@ -975,7 +980,8 @@ describe('confirmMpSubscriptionForBusiness (retorno)', () => {
 		expect(summary).toEqual({
 			subscriptionStatus: 'authorized',
 			creditedNow: true,
-			accessBlocked: false
+			accessBlocked: false,
+			provisionalUntil: null
 		});
 		expect(upsertCalls.some((c) => c.table === 'mp_subscriptions')).toBe(true);
 		expect(rpcCalls[0].args.p_idempotency_key).toBe('mp:payment:701');
@@ -1001,7 +1007,8 @@ describe('confirmMpSubscriptionForBusiness (retorno)', () => {
 		expect(summary).toEqual({
 			subscriptionStatus: 'pending',
 			creditedNow: false,
-			accessBlocked: false
+			accessBlocked: false,
+			provisionalUntil: null
 		});
 		expect(rpcCalls).toHaveLength(0);
 		expect(calls.some((url) => url.includes('/authorized_payments/search'))).toBe(false);
@@ -1054,7 +1061,7 @@ describe('confirmMpSubscriptionForBusiness (retorno)', () => {
 
 		const summary = await confirmMpSubscriptionForBusiness(admin, fetchMock, BUSINESS_ID);
 
-		expect(summary).toEqual({ subscriptionStatus: null, creditedNow: false, accessBlocked: false });
+		expect(summary).toEqual({ subscriptionStatus: null, creditedNow: false, accessBlocked: false, provisionalUntil: null });
 		expect(rpcCalls).toHaveLength(0);
 	});
 
@@ -1992,5 +1999,165 @@ describe('correo del pagador y resumen de configuración (18-nov-2026)', () => {
 
 		delete envState.privateEnv.MP_ACCESS_TOKEN;
 		expect(getMercadoPagoConfigSummary()).toMatchObject({ tokenKind: 'sin cargar', configIssue: 'MP_ACCESS_TOKEN' });
+	});
+});
+
+describe('acceso provisorio y precio fijo (decisiones de Juan del 18 de noviembre de 2026)', () => {
+	const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60 * 1000).toISOString();
+	const freshPreapproval = (overrides: Record<string, unknown> = {}) => ({
+		id: 'pre-provisorio',
+		status: 'authorized',
+		external_reference: BUSINESS_ID,
+		date_created: minutesAgo(5),
+		auto_recurring: { transaction_amount: 90000, currency_id: 'ARS' },
+		...overrides
+	});
+	const provisionalApplied = (paidUntilAfter: string) => ({
+		data: [{ applied: true, grant_id: 'grant-provisorio', status_after: 'active', paid_until_after: paidUntilAfter }],
+		error: null
+	});
+
+	it('sólo una suscripción autorizada creada en las últimas 24 horas es reciente', () => {
+		const now = Date.parse('2026-11-18T12:00:00.000Z');
+		const created = (iso: string | undefined, status = 'authorized') =>
+			isFreshAuthorization({ id: 'pre', status, date_created: iso }, now);
+		expect(created('2026-11-18T11:00:00.000Z')).toBe(true);
+		expect(created('2026-11-17T12:00:00.000Z')).toBe(true);
+		expect(created('2026-11-17T11:59:59.000Z')).toBe(false);
+		// El reloj de Mercado Pago puede ir unos minutos adelantado; más que eso, no.
+		expect(created('2026-11-18T12:04:00.000Z')).toBe(true);
+		expect(created('2026-11-18T12:06:00.000Z')).toBe(false);
+		expect(created('2026-11-18T11:00:00.000Z', 'pending')).toBe(false);
+		expect(created('2026-11-18T11:00:00.000Z', 'paused')).toBe(false);
+		expect(created(undefined)).toBe(false);
+		expect(created('no es una fecha')).toBe(false);
+	});
+
+	it('al sincronizar una autorización reciente pide un día de acceso provisorio, automático y una vez por suscripción', async () => {
+		const { admin, rpcCalls, upsertCalls } = createAdminMock({
+			rpcQueue: [provisionalApplied('2026-11-19T12:00:00.000Z')]
+		});
+
+		const result = await upsertMpSubscription(admin, freshPreapproval());
+
+		expect(upsertCalls.filter((call) => call.table === 'mp_subscriptions')).toHaveLength(1);
+		expect(rpcCalls).toHaveLength(1);
+		expect(rpcCalls[0]).toMatchObject({
+			fn: 'grant_business_access',
+			args: {
+				p_business_id: BUSINESS_ID,
+				p_operation: 'provisional_access',
+				p_duration_seconds: PROVISIONAL_ACCESS_SECONDS,
+				p_duration_unit: 'day',
+				p_is_permanent: false,
+				p_amount: null,
+				p_source: 'mercado_pago',
+				p_admin_id: null,
+				p_admin_email: null,
+				p_idempotency_key: 'mp:provisional:pre-provisorio'
+			}
+		});
+		expect(PROVISIONAL_ACCESS_SECONDS).toBe(86400);
+		expect(result.provisionalUntil).toBe('2026-11-19T12:00:00.000Z');
+	});
+
+	it('no lo pide para una suscripción vieja, pendiente, pausada o sin fecha de creación', async () => {
+		for (const preapproval of [
+			freshPreapproval({ date_created: minutesAgo(25 * 60) }),
+			freshPreapproval({ status: 'pending' }),
+			freshPreapproval({ status: 'paused' }),
+			freshPreapproval({ date_created: undefined })
+		]) {
+			const { admin, rpcCalls } = createAdminMock();
+			const result = await upsertMpSubscription(admin, preapproval);
+			expect(rpcCalls).toHaveLength(0);
+			expect(result.provisionalUntil).toBeNull();
+		}
+	});
+
+	it('si la base no lo asienta, no informa acceso provisorio', async () => {
+		const { admin, rpcCalls } = createAdminMock({
+			rpcQueue: [{ data: [{ applied: false, grant_id: null, status_after: 'active', paid_until_after: '2026-12-21T12:00:00.000Z' }], error: null }]
+		});
+		const result = await upsertMpSubscription(admin, freshPreapproval());
+		expect(rpcCalls).toHaveLength(1);
+		expect(result.provisionalUntil).toBeNull();
+	});
+
+	it('si la base falla, la sincronización sigue y la falla queda registrada', async () => {
+		const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			const { admin, upsertCalls } = createAdminMock({
+				rpcQueue: [{ data: null, error: { message: 'base caída' } }]
+			});
+			const result = await upsertMpSubscription(admin, freshPreapproval());
+			expect(result.businessId).toBe(BUSINESS_ID);
+			expect(result.provisionalUntil).toBeNull();
+			expect(upsertCalls.filter((call) => call.table === 'mp_subscriptions')).toHaveLength(1);
+			expect(errorLog).toHaveBeenCalledWith('No se pudo dar el acceso provisorio de Mercado Pago', expect.anything());
+		} finally {
+			errorLog.mockRestore();
+		}
+	});
+
+	it('la lectura de la solicitud trae su fecha de creación', async () => {
+		const { fetchMock } = createFetchMock([
+			['/preapproval/pre-fecha', { body: { id: 'pre-fecha', status: 'authorized', date_created: '2026-11-18T12:00:00.000-04:00' } }]
+		]);
+		const result = await getPreapproval('pre-fecha', fetchMock);
+		expect(result.ok).toBe(true);
+		expect(result.data?.date_created).toBe('2026-11-18T12:00:00.000-04:00');
+	});
+
+	it('el retorno informa hasta cuándo quedó el acceso provisorio, sin anunciarlo como pago', async () => {
+		const { admin, rpcCalls } = createAdminMock({
+			tables: { mp_subscriptions: [{ data: [{ preapproval_id: 'pre-provisorio', status: 'pending' }], error: null }] },
+			rpcQueue: [provisionalApplied('2026-11-19T12:00:00.000Z')]
+		});
+		const { fetchMock } = createFetchMock([
+			['/preapproval/pre-provisorio', { body: freshPreapproval() }],
+			['/authorized_payments/search', { body: { results: [], paging: { total: 0 } } }]
+		]);
+
+		const summary = await confirmMpSubscriptionForBusiness(admin, fetchMock, BUSINESS_ID);
+
+		expect(summary).toEqual({
+			subscriptionStatus: 'authorized',
+			creditedNow: false,
+			accessBlocked: false,
+			provisionalUntil: '2026-11-19T12:00:00.000Z'
+		});
+		expect(rpcCalls.map((call) => call.args.p_operation)).toEqual(['provisional_access']);
+	});
+
+	it('el precio del consultorio manda; vacío, cero o inválido, rige el general', () => {
+		expect(subscriptionAmountFor(null)).toBe(getSubscriptionAmountArs());
+		expect(subscriptionAmountFor(undefined)).toBe(getSubscriptionAmountArs());
+		expect(subscriptionAmountFor(100)).toBe(100);
+		expect(subscriptionAmountFor('120000.00')).toBe(120000);
+		expect(subscriptionAmountFor(0)).toBe(getSubscriptionAmountArs());
+		expect(subscriptionAmountFor(-5)).toBe(getSubscriptionAmountArs());
+		expect(subscriptionAmountFor('')).toBe(getSubscriptionAmountArs());
+		expect(subscriptionAmountFor('no')).toBe(getSubscriptionAmountArs());
+		envState.privateEnv.MP_SUBSCRIPTION_AMOUNT_ARS = '150000';
+		expect(subscriptionAmountFor(null)).toBe(150000);
+		expect(subscriptionAmountFor(90000)).toBe(90000);
+	});
+
+	it('lee el precio propio del consultorio', async () => {
+		const { admin } = createAdminMock({
+			tables: {
+				business_subscriptions: [
+					{ data: { mp_price_ars: 100 }, error: null },
+					{ data: { mp_price_ars: null }, error: null },
+					{ data: null, error: null },
+					{ data: null, error: { message: 'sin conexión' } }
+				]
+			}
+		});
+		await expect(readLockedSubscriptionPrice(admin, BUSINESS_ID)).resolves.toBe(100);
+		await expect(readLockedSubscriptionPrice(admin, BUSINESS_ID)).resolves.toBeNull();
+		await expect(readLockedSubscriptionPrice(admin, BUSINESS_ID)).resolves.toBeNull();
+		await expect(readLockedSubscriptionPrice(admin, BUSINESS_ID)).rejects.toThrow('sin conexión');
 	});
 });

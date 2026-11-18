@@ -13,7 +13,9 @@ import {
 	isPayerRejection,
 	payerEmailIssue,
 	pickRelevantMpSubscription,
+	readLockedSubscriptionPrice,
 	settleApprovedChargesForPreapproval,
+	subscriptionAmountFor,
 	upsertMpSubscription,
 	type MpApiResult,
 	type MpPreapproval,
@@ -70,6 +72,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			mpSubscription: null,
 			mpSubscriptionUnavailable: false,
 			mpAmount: getSubscriptionAmountArs(),
+			mpPriceLocked: false,
 			mpEnvironment: getMercadoPagoEnvironment(),
 			mpReturn: null as MpReturnSummary | null,
 			mpReturnFailed: false,
@@ -135,7 +138,16 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			return { subscription: null, unavailable: true };
 		}
 	};
-	const [{ data: grants, error }, mp] = await Promise.all([
+	// El precio que se le muestra al consultorio es el que va a pagar: el suyo si ya contrató.
+	const readPrice = async () => {
+		try {
+			return await readLockedSubscriptionPrice(admin ?? supabase, context.business.id);
+		} catch (cause) {
+			logServerFailure('No se pudo leer el precio del consultorio', cause);
+			return null;
+		}
+	};
+	const [{ data: grants, error }, mp, lockedPrice] = await Promise.all([
 		supabase
 			.from('access_grants')
 			.select(
@@ -144,7 +156,8 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			.eq('business_id', context.business.id)
 			.order('created_at', { ascending: false })
 			.limit(30),
-		readMpSubscription()
+		readMpSubscription(),
+		readPrice()
 	]);
 
 	if (error) {
@@ -157,7 +170,8 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 		demo: false,
 		mpSubscription: mp.subscription,
 		mpSubscriptionUnavailable: mp.unavailable,
-		mpAmount: getSubscriptionAmountArs(),
+		mpAmount: subscriptionAmountFor(lockedPrice),
+		mpPriceLocked: lockedPrice !== null,
 		mpEnvironment: getMercadoPagoEnvironment(),
 		mpReturn,
 		mpReturnFailed: mpReturnFailed || (!admin && url.searchParams.get('mp') === 'retorno'),
@@ -221,7 +235,6 @@ export const actions: Actions = {
 			return fail(400, { message: emailIssue, payerEmail });
 		}
 
-		const amount = getSubscriptionAmountArs();
 		const backUrl = `${getExternalCallbackSiteUrl()}/odonto/pago/procesando?mp=retorno`;
 		const mpConfigIssue = getMercadoPagoApiConfigIssue();
 		if (mpConfigIssue) {
@@ -239,6 +252,16 @@ export const actions: Actions = {
 			admin = await createSupabaseAdminClient('odonto', fetch);
 		} catch (error) {
 			logServerFailure('No se pudo crear el cliente admin para suscribir', error);
+			return fail(503, { message: SUBSCRIPTION_PREPARATION_UNAVAILABLE });
+		}
+
+		// El precio de este consultorio: el que fijó su primer cobro si ya contrató, o el que cargó el
+		// operador; si no, el general (decisión de Juan del 18-nov-2026). Sin leerlo no se crea nada.
+		let amount: number;
+		try {
+			amount = subscriptionAmountFor(await readLockedSubscriptionPrice(admin, context.business.id));
+		} catch (error) {
+			logServerFailure('No se pudo leer el precio del consultorio para suscribir', error);
 			return fail(503, { message: SUBSCRIPTION_PREPARATION_UNAVAILABLE });
 		}
 
@@ -369,7 +392,10 @@ export const actions: Actions = {
 					Number.isFinite(reusable.createdAt) &&
 					Date.now() - reusable.createdAt <= PENDING_PREAPPROVAL_REUSE_MS
 			);
-			if (reusable && reusable.preapproval.init_point && reusableIsRecent) {
+			// Una solicitud con otro monto (el precio del consultorio cambió) no se reutiliza: se cancela abajo.
+			const reusableHasAmount =
+				Number(reusable?.preapproval.auto_recurring?.transaction_amount ?? Number.NaN) === amount;
+			if (reusable && reusable.preapproval.init_point && reusableIsRecent && reusableHasAmount) {
 				throw redirect(303, reusable.preapproval.init_point);
 			}
 

@@ -3,7 +3,8 @@ import { env } from '$env/dynamic/private';
 import { resolveActiveBusiness } from '$lib/server/access/public/business';
 import {
 	confirmMpSubscriptionForBusiness,
-	getSubscriptionAmountArs,
+	readLockedSubscriptionPrice,
+	subscriptionAmountFor,
 	type MpReturnSummary
 } from '$lib/server/integrations/public/mercadopago';
 import { createSupabaseAdminClient, createSupabaseServerClient } from '$lib/server/platform/supabase';
@@ -46,16 +47,47 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 		}
 	}
 
+	// El precio que se muestra es el del consultorio si ya contrató (decisión de Juan del 18-nov-2026).
+	let lockedPrice: number | null = null;
+	try {
+		lockedPrice = await readLockedSubscriptionPrice(supabase, context.business.id);
+	} catch (error) {
+		logServerFailure('No se pudo leer el precio del consultorio', error);
+	}
+
 	const activated = context.access.canUseBusiness;
+	// Acceso provisorio en curso: el último movimiento del historial es el provisorio. Hasta el primer
+	// cobro no hay pago, y la pantalla no lo confirma como tal (20261118020000).
+	let provisionalUntil: string | null = null;
+	let provisionalUnknown = false;
+	if (activated) {
+		try {
+			const { data: latest, error: latestError } = await supabase
+				.from('access_grants')
+				.select('operation')
+				.eq('business_id', context.business.id)
+				.order('created_at', { ascending: false })
+				.limit(1)
+				.maybeSingle();
+			if (latestError) throw latestError;
+			if (latest?.operation === 'provisional_access') provisionalUntil = context.access.paidUntil;
+		} catch (error) {
+			// Sin el dato, la pantalla no afirma un pago que no vio: sólo lo confirma si se acreditó en este retorno.
+			provisionalUnknown = true;
+			logServerFailure('No se pudo leer el último movimiento del acceso', error);
+		}
+	}
 	const manualBlock = !context.access.commercialAccessEnabled || Boolean(context.access.archivedAt);
 
 	return {
 		context,
-		mpAmount: getSubscriptionAmountArs(),
+		mpAmount: subscriptionAmountFor(lockedPrice),
 		mpReturn,
 		mpReturnFailed,
 		mpReturnRequested,
 		activated,
+		provisionalUntil,
+		provisionalUnknown,
 		manualBlock
 	};
 };

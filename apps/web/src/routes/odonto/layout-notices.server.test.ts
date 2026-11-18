@@ -7,7 +7,8 @@ const mocks = vi.hoisted(() => ({
 	loadAccountAssistanceView: vi.fn(),
 	isMasterEmail: vi.fn(),
 	loadDepositPolicyEnabled: vi.fn(),
-	loadSlotReleaseNotice: vi.fn()
+	loadSlotReleaseNotice: vi.fn(),
+	readLockedSubscriptionPrice: vi.fn()
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
@@ -35,7 +36,11 @@ vi.mock('$lib/server/access/public/account-assistance', () => ({
 	loadAccountAssistanceView: mocks.loadAccountAssistanceView,
 	loadActiveMasterAccountAssistanceRequests: mocks.loadActiveMasterAccountAssistanceRequests
 }));
-vi.mock('$lib/server/integrations/public/mercadopago', () => ({ getSubscriptionAmountArs: () => 0 }));
+vi.mock('$lib/server/integrations/public/mercadopago', () => ({
+	getSubscriptionAmountArs: () => 90000,
+	readLockedSubscriptionPrice: mocks.readLockedSubscriptionPrice,
+	subscriptionAmountFor: (locked: number | null) => locked ?? 90000
+}));
 vi.mock('$lib/server/patients/public/patient-permissions', () => ({ canExportPatientData: () => false }));
 vi.mock('$lib/server/scheduling/public/deposits', () => ({ loadDepositPolicyEnabled: mocks.loadDepositPolicyEnabled }));
 vi.mock('$lib/server/scheduling/public/slot-releases', () => ({ loadSlotReleaseNotice: mocks.loadSlotReleaseNotice }));
@@ -77,6 +82,26 @@ describe('shell notices', () => {
 		mocks.loadActiveMasterAccountAssistanceRequests.mockResolvedValue([{ id: 'grant-1' }]);
 		mocks.loadAccountAssistanceView.mockResolvedValue(assistanceView);
 		mocks.loadDepositPolicyEnabled.mockResolvedValue(false);
+		mocks.readLockedSubscriptionPrice.mockResolvedValue(null);
+	});
+
+	it('la pantalla de bloqueo ofrece el precio propio del consultorio que ya contrató', async () => {
+		mocks.readLockedSubscriptionPrice.mockResolvedValue(75000);
+		mocks.resolveActiveBusiness.mockResolvedValue({ ...business, role: 'owner', canOperate: false, access: { canUseBusiness: false } });
+		await expect(load(event())).resolves.toMatchObject({ mpAmount: 75000 });
+		expect(mocks.readLockedSubscriptionPrice).toHaveBeenCalledWith(expect.anything(), 'business-1');
+	});
+
+	it('un consultorio que opera no consulta el precio en cada página', async () => {
+		mocks.resolveActiveBusiness.mockResolvedValue({ ...business, role: 'owner' });
+		await expect(load(event())).resolves.toMatchObject({ mpAmount: 90000 });
+		expect(mocks.readLockedSubscriptionPrice).not.toHaveBeenCalled();
+	});
+
+	it('si no puede leer el precio, la pantalla de bloqueo ofrece el general', async () => {
+		mocks.readLockedSubscriptionPrice.mockRejectedValue(new Error('sin conexión'));
+		mocks.resolveActiveBusiness.mockResolvedValue({ ...business, role: 'owner', canOperate: false, access: { canUseBusiness: false } });
+		await expect(load(event())).resolves.toMatchObject({ mpAmount: 90000, businessError: null });
 	});
 
 	it('passes the follow-up reminders and the help requests it read', async () => {

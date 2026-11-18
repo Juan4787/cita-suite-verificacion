@@ -7,6 +7,7 @@
 //   node scripts/mercadopago-e2e.mjs crear --produccion       consultorio y dueño sintéticos, restringidos
 //   node scripts/mercadopago-e2e.mjs estado                   acceso, asientos, suscripciones y avisos
 //   node scripts/mercadopago-e2e.mjs autorizar --produccion [--titular APRO|OTHE|FUND]
+//   node scripts/mercadopago-e2e.mjs precio <pesos> --produccion | precio --quitar --produccion
 //   node scripts/mercadopago-e2e.mjs archivar --produccion
 //
 // El correo y la contraseña del dueño sintético se guardan sólo en
@@ -131,7 +132,7 @@ const commands = {
 		const state = readState();
 		if (!state) fail('No hay consultorio sintético registrado.');
 		const db = admin();
-		const sub = await must(db.from('business_subscriptions').select('commercial_access_enabled, is_permanent, subscription_status, paid_until, grace_until, restricted_until, archived_at, last_payment_at, last_payment_amount, access_source').eq('business_id', state.businessId).maybeSingle(), 'Suscripción comercial');
+		const sub = await must(db.from('business_subscriptions').select('commercial_access_enabled, is_permanent, subscription_status, paid_until, grace_until, restricted_until, archived_at, last_payment_at, last_payment_amount, access_source, mp_price_ars').eq('business_id', state.businessId).maybeSingle(), 'Suscripción comercial');
 		console.log(`consultorio ${state.businessId} | creado ${state.createdAt}${state.archivedAt ? ` | archivado ${state.archivedAt}` : ''}`);
 		console.log('acceso comercial:', JSON.stringify(sub));
 		const grants = await must(db.from('access_grants').select('created_at, operation, source, amount, duration_seconds, idempotency_key, paid_until_before, paid_until_after, status_before, status_after, note').eq('business_id', state.businessId).order('created_at'), 'Asientos');
@@ -250,6 +251,25 @@ const commands = {
 		await must(db.from('businesses').update({ email }).eq('id', state.businessId), 'No se cambió el correo del consultorio');
 		writeState({ ...state, previousEmail: state.email, email });
 		console.log('correo del dueño sintético cambiado (sin mostrarlo); el anterior quedó deshabilitado');
+	},
+	// Precio propio del consultorio sintético, para la prueba con dinero real a un precio simbólico
+	// (decisión de Juan del 18-nov-2026). Sólo ese consultorio, cuyo identificador sale del estado privado,
+	// y sólo un precio simbólico: no sirve para fijar el precio de un consultorio real.
+	async precio() {
+		requireProduction();
+		const state = readState();
+		if (!state || state.archivedAt) fail('No hay consultorio sintético activo.');
+		const value = rest.find((item) => !item.startsWith('--'));
+		const clear = flag('--quitar');
+		if (clear === Boolean(value)) fail('Uso: precio <pesos> --produccion | precio --quitar --produccion');
+		const amount = clear ? null : Number(value);
+		if (!clear && !(Number.isFinite(amount) && amount > 0 && amount <= 1000)) {
+			fail('El precio de prueba tiene que ser mayor que 0 y de 1.000 pesos como máximo.');
+		}
+		const db = admin();
+		const updated = await must(db.from('business_subscriptions').update({ mp_price_ars: amount }).eq('business_id', state.businessId).select('business_id, mp_price_ars'), 'No se cargó el precio');
+		if (!Array.isArray(updated) || updated.length !== 1) fail('El precio no quedó cargado en exactamente un consultorio.');
+		console.log(`consultorio ${state.businessId}: ${clear ? 'sin precio propio (rige el general)' : `precio propio ${updated[0].mp_price_ars} pesos por mes`}`);
 	},
 	async archivar() {
 		requireProduction();

@@ -170,6 +170,8 @@ export type MpAuthorizedPayment = {
 export type MpPreapproval = {
 	id: string;
 	status?: string;
+	// Cuándo se creó la solicitud: el acceso provisorio sólo se da a una suscripción recién autorizada.
+	date_created?: string | null;
 	external_reference?: string | null;
 	payer_email?: string | null;
 	next_payment_date?: string | null;
@@ -219,6 +221,7 @@ function parseMpPreapproval(value: unknown): MpPreapproval {
 	const recurring = row.auto_recurring == null ? null : readRecord(row.auto_recurring, 'mercadoPago.recurring');
 	return { id: readText(row.id, 'mercadoPago.preapproval.id'),
 		status: row.status == null ? undefined : readText(row.status, 'mercadoPago.status'),
+		date_created: optionalText(row.date_created, 'dateCreated'),
 		external_reference: optionalText(row.external_reference, 'reference'), payer_email: optionalText(row.payer_email, 'email'),
 		next_payment_date: optionalText(row.next_payment_date, 'nextDate'), init_point: optionalText(row.init_point, 'initPoint'),
 		auto_recurring: recurring === null ? null : { transaction_amount: optionalNumber(recurring.transaction_amount, 'amount'), currency_id: optionalText(recurring.currency_id, 'currency') } };
@@ -466,7 +469,7 @@ const businessIsPermanent = async (
 
 type GrantCallOverrides = {
 	businessId: string;
-	operation: 'payment_registered' | 'payment_cancelled';
+	operation: 'payment_registered' | 'payment_cancelled' | 'provisional_access';
 	durationSeconds: number | null;
 	durationUnit: string | null;
 	amount: number | null;
@@ -495,7 +498,8 @@ const callGrantAccess = async (admin: CitaSupabaseClient, opts: GrantCallOverrid
 	return {
 		applied: Boolean(row?.applied),
 		grantId: row?.grant_id ?? null,
-		statusAfter: row?.status_after ?? null
+		statusAfter: row?.status_after ?? null,
+		paidUntilAfter: row?.paid_until_after ?? null
 	};
 };
 
@@ -556,6 +560,68 @@ export const recordCancelledPayment = async (
 	};
 };
 
+// Acceso provisorio (decisión de Juan del 18-nov-2026, P2): al quedar autorizada una suscripción recién
+// creada, el consultorio puede operar un día mientras Mercado Pago procesa el primer cobro, que tarda
+// hasta una hora. Una vez por suscripción (clave `mp:provisional:{id}`). La base no lo asienta si no daría
+// nada: consultorio permanente, pausado o archivado, acceso que ya cubre el día, o un provisorio anterior
+// sin un cobro acreditado después (20261118020000).
+export const PROVISIONAL_ACCESS_SECONDS = 24 * 60 * 60;
+export const PROVISIONAL_ACCESS_WINDOW_MS = 24 * 60 * 60 * 1000;
+const PROVISIONAL_CLOCK_SKEW_MS = 5 * 60 * 1000;
+export const MP_PROVISIONAL_IDEMPOTENCY_PREFIX = 'mp:provisional:';
+
+export const isFreshAuthorization = (preapproval: MpPreapproval, now = Date.now()) => {
+	if ((preapproval.status ?? '') !== 'authorized' || !preapproval.date_created) return false;
+	const created = Date.parse(preapproval.date_created);
+	if (!Number.isFinite(created)) return false;
+	const age = now - created;
+	return age >= -PROVISIONAL_CLOCK_SKEW_MS && age <= PROVISIONAL_ACCESS_WINDOW_MS;
+};
+
+// Devuelve hasta cuándo quedó el acceso provisorio, o null si la base no lo dio.
+export const grantProvisionalAccess = async (
+	admin: CitaSupabaseClient,
+	businessId: string,
+	preapprovalId: string
+): Promise<string | null> => {
+	const result = await callGrantAccess(admin, {
+		businessId,
+		operation: 'provisional_access',
+		durationSeconds: PROVISIONAL_ACCESS_SECONDS,
+		durationUnit: 'day',
+		amount: null,
+		note: 'Acceso provisorio mientras Mercado Pago procesa el primer cobro.',
+		idempotencyKey: `${MP_PROVISIONAL_IDEMPOTENCY_PREFIX}${preapprovalId}`
+	});
+	return result.applied ? result.paidUntilAfter : null;
+};
+
+// Precio fijo de quien contrató (decisión de Juan del 18-nov-2026): business_subscriptions.mp_price_ars,
+// que fija el primer cobro automático, manda sobre el precio general. Vacío: rige el general.
+export const subscriptionAmountFor = (lockedPrice: number | string | null | undefined): number => {
+	const parsed = lockedPrice == null || lockedPrice === '' ? Number.NaN : Number(lockedPrice);
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : getSubscriptionAmountArs();
+};
+
+export const readLockedSubscriptionPrice = async (
+	client: CitaSupabaseClient,
+	businessId: string
+): Promise<number | null> => {
+	const { data, error } = await client
+		.from('business_subscriptions')
+		.select('mp_price_ars')
+		.eq('business_id', businessId)
+		.maybeSingle()
+		.retry(false);
+	if (error) {
+		throw new Error(`No se pudo leer el precio del consultorio ${businessId}: ${error.message}`);
+	}
+	const value = data?.mp_price_ars;
+	if (value == null) return null;
+	const parsed = Number(value);
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
 // ---------------------------------------------------------------------------
 // Sincronización de mp_subscriptions
 // ---------------------------------------------------------------------------
@@ -563,7 +629,7 @@ export const recordCancelledPayment = async (
 export const upsertMpSubscription = async (
 	admin: CitaSupabaseClient,
 	preapproval: MpPreapproval
-): Promise<{ businessId: string | null; detail: string }> => {
+): Promise<{ businessId: string | null; detail: string; provisionalUntil?: string | null }> => {
 	const businessId = preapproval.external_reference?.trim() ?? '';
 	if (!isUuid(businessId)) {
 		return {
@@ -628,9 +694,22 @@ export const upsertMpSubscription = async (
 		}
 	}
 
+	// Cualquiera de los caminos que vea primero la autorización (aviso, retorno o conciliación) da el acceso
+	// provisorio; la clave por suscripción hace que sea una sola vez. Si falla, la sincronización sigue: el
+	// próximo aviso o la conciliación lo reintentan mientras la autorización siga siendo reciente.
+	let provisionalUntil: string | null = null;
+	if (isFreshAuthorization(preapproval)) {
+		try {
+			provisionalUntil = await grantProvisionalAccess(admin, businessId, preapproval.id);
+		} catch (cause) {
+			logServerFailure('No se pudo dar el acceso provisorio de Mercado Pago', cause);
+		}
+	}
+
 	return {
 		businessId,
-		detail: `Suscripción ${preapproval.id} sincronizada (${preapproval.status ?? 'pending'}).`
+		detail: `Suscripción ${preapproval.id} sincronizada (${preapproval.status ?? 'pending'}).`,
+		provisionalUntil
 	};
 };
 
@@ -1068,6 +1147,8 @@ export type MpReturnSummary = {
 	subscriptionStatus: string | null;
 	creditedNow: boolean;
 	accessBlocked: boolean;
+	// Hasta cuándo quedó el acceso provisorio dado en este retorno, o null.
+	provisionalUntil: string | null;
 };
 
 // La función serverless tiene un presupuesto acotado: la confirmación deja de
@@ -1094,13 +1175,15 @@ export const confirmMpSubscriptionForBusiness = async (
 	let subscriptionStatus: string | null = null;
 	let creditedNow = false;
 	let accessBlocked = false;
+	let provisionalUntil: string | null = null;
 
 	for (const row of rows ?? []) {
 		if (Date.now() > deadline) break;
 		const preapprovalId = row.preapproval_id;
 		const { ok, data: preapproval } = await getPreapproval(preapprovalId, fetchFn);
 		if (!ok || !preapproval) continue;
-		await upsertMpSubscription(admin, preapproval);
+		const synced = await upsertMpSubscription(admin, preapproval);
+		if (synced.provisionalUntil) provisionalUntil = synced.provisionalUntil;
 
 		const status = preapproval.status ?? 'pending';
 		if (status === 'authorized') {
@@ -1137,7 +1220,7 @@ export const confirmMpSubscriptionForBusiness = async (
 		break;
 	}
 
-	return { subscriptionStatus, creditedNow, accessBlocked };
+	return { subscriptionStatus, creditedNow, accessBlocked, provisionalUntil };
 };
 
 // Antes de cancelar un preapproval hay que asentar cualquier cobro ya aprobado

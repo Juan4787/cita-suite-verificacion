@@ -17,9 +17,19 @@
 	const confirmedByReturn = $derived(
 		Boolean(
 			data.mpReturn &&
+				!data.provisionalUntil &&
 				(data.mpReturn.creditedNow ||
-					(data.mpReturn.subscriptionStatus === 'authorized' && data.activated))
+					(!data.provisionalUnknown && data.mpReturn.subscriptionStatus === 'authorized' && data.activated))
 		)
+	);
+	const provisionalDeadline = $derived(
+		data.provisionalUntil
+			? new Date(data.provisionalUntil).toLocaleString('es-AR', {
+					timeZone: data.context.business.timezone || 'America/Argentina/Buenos_Aires',
+					dateStyle: 'short',
+					timeStyle: 'short'
+				})
+			: null
 	);
 	const refreshHref = $derived(
 		data.mpReturnRequested ? '/odonto/pago/procesando?mp=retorno' : '/odonto/pago/procesando'
@@ -47,6 +57,15 @@
 					<a href={refreshHref} class="ux-btn-secondary text-center">Actualizar estado</a>
 					<a href="/odonto/configuracion/suscripcion" class="ux-btn-primary text-center">Ir a mi suscripción</a>
 				</div>
+			{:else if data.activated && provisionalDeadline}
+				<h1 class="ux-title">Suscripción autorizada</h1>
+				<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-fg-65">
+					Mientras Mercado Pago procesa el primer cobro, que puede tardar hasta una hora, tenés acceso
+					provisorio hasta el {provisionalDeadline}. Cuando se acredite, el acceso se extiende solo.
+				</p>
+				<a href="/odonto/disponibilidad" class="ux-btn-primary mt-7 inline-flex">
+					Configurar mi agenda
+				</a>
 			{:else if data.activated}
 				<h1 class="ux-title">Suscripción activada</h1>
 				<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-fg-65">

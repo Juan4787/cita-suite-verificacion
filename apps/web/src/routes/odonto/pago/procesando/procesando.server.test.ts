@@ -8,7 +8,8 @@ const mocks = vi.hoisted(() => ({
 	createSupabaseServerClient: vi.fn(),
 	createSupabaseAdminClient: vi.fn(),
 	resolveActiveBusiness: vi.fn(),
-	confirmMpSubscriptionForBusiness: vi.fn()
+	confirmMpSubscriptionForBusiness: vi.fn(),
+	readLockedSubscriptionPrice: vi.fn()
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: envState.privateEnv }));
@@ -21,7 +22,8 @@ vi.mock('$lib/server/access/public/business', () => ({
 }));
 vi.mock('$lib/server/integrations/public/mercadopago', () => ({
 	confirmMpSubscriptionForBusiness: mocks.confirmMpSubscriptionForBusiness,
-	getSubscriptionAmountArs: () => 50000
+	readLockedSubscriptionPrice: mocks.readLockedSubscriptionPrice,
+	subscriptionAmountFor: (locked: number | null) => locked ?? 50000
 }));
 
 const { load } = await import('./+page.server');
@@ -35,17 +37,26 @@ const ownerContext = (overrides?: {
 	commercialStatus?: string;
 	archivedAt?: string | null;
 }) => ({
-	business: { id: BUSINESS_ID, name: 'Consultorio Test' },
+	business: { id: BUSINESS_ID, name: 'Consultorio Test', timezone: 'America/Argentina/Buenos_Aires' },
 	role: 'owner',
 	canManage: true,
 	canOperate: overrides?.canUseBusiness ?? false,
 	access: {
+		paidUntil: '2026-11-19T15:00:00.000Z',
 		canUseBusiness: overrides?.canUseBusiness ?? false,
 		commercialAccessEnabled: overrides?.commercialAccessEnabled ?? true,
 		commercialStatus: overrides?.commercialStatus ?? 'restricted',
 		archivedAt: overrides?.archivedAt ?? null
 	}
 });
+
+// Cliente del usuario: el último movimiento del historial, o una falla al leerlo.
+const serverClient = (latestOperation: string | null, error: { message: string } | null = null) => {
+	const query: Record<string, unknown> = {};
+	for (const method of ['select', 'eq', 'order', 'limit']) query[method] = vi.fn(() => query);
+	query.maybeSingle = vi.fn(async () => ({ data: latestOperation ? { operation: latestOperation } : null, error }));
+	return { auth: {}, from: vi.fn(() => query) };
+};
 
 const makeEvent = (url = PAGE_URL) => ({
 	locals: { auth: { access_token: 'token', refresh_token: 'r' } },
@@ -57,12 +68,14 @@ const makeEvent = (url = PAGE_URL) => ({
 beforeEach(() => {
 	vi.clearAllMocks();
 	for (const key of Object.keys(envState.privateEnv)) delete envState.privateEnv[key];
-	mocks.createSupabaseServerClient.mockResolvedValue({ auth: {} });
+	mocks.createSupabaseServerClient.mockResolvedValue(serverClient(null));
+	mocks.readLockedSubscriptionPrice.mockResolvedValue(null);
 	mocks.createSupabaseAdminClient.mockResolvedValue({ from: vi.fn() });
 	mocks.confirmMpSubscriptionForBusiness.mockResolvedValue({
 		subscriptionStatus: 'authorized',
 		creditedNow: true,
-		accessBlocked: false
+		accessBlocked: false,
+		provisionalUntil: null
 	});
 });
 
@@ -104,5 +117,56 @@ describe('/odonto/pago/procesando', () => {
 		expect(mocks.confirmMpSubscriptionForBusiness).not.toHaveBeenCalled();
 		expect(data.activated).toBe(false);
 		expect(data.manualBlock).toBe(true);
+	});
+
+	it('con acceso provisorio informa hasta cuándo y no lo presenta como pago', async () => {
+		mocks.createSupabaseServerClient.mockResolvedValue(serverClient('provisional_access'));
+		mocks.resolveActiveBusiness.mockResolvedValue(ownerContext({ canUseBusiness: true, commercialStatus: 'active' }));
+
+		const data = (await load(makeEvent(`${PAGE_URL}?mp=retorno`) as never)) as {
+			activated: boolean;
+			provisionalUntil: string | null;
+			provisionalUnknown: boolean;
+		};
+
+		expect(data.activated).toBe(true);
+		expect(data.provisionalUntil).toBe('2026-11-19T15:00:00.000Z');
+		expect(data.provisionalUnknown).toBe(false);
+	});
+
+	it('con el primer cobro ya acreditado no habla de acceso provisorio', async () => {
+		mocks.createSupabaseServerClient.mockResolvedValue(serverClient('payment_registered'));
+		mocks.resolveActiveBusiness.mockResolvedValue(ownerContext({ canUseBusiness: true, commercialStatus: 'active' }));
+
+		const data = (await load(makeEvent(`${PAGE_URL}?mp=retorno`) as never)) as { provisionalUntil: string | null };
+
+		expect(data.provisionalUntil).toBeNull();
+	});
+
+	it('si no puede leer el historial no inventa un acceso provisorio ni afirma un pago', async () => {
+		const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			mocks.createSupabaseServerClient.mockResolvedValue(serverClient(null, { message: 'sin conexión' }));
+			mocks.resolveActiveBusiness.mockResolvedValue(ownerContext({ canUseBusiness: true, commercialStatus: 'active' }));
+
+			const data = (await load(makeEvent(`${PAGE_URL}?mp=retorno`) as never)) as {
+				provisionalUntil: string | null;
+				provisionalUnknown: boolean;
+			};
+
+			expect(data.provisionalUntil).toBeNull();
+			expect(data.provisionalUnknown).toBe(true);
+		} finally {
+			errorLog.mockRestore();
+		}
+	});
+
+	it('muestra el precio propio del consultorio', async () => {
+		mocks.readLockedSubscriptionPrice.mockResolvedValue(75000);
+		mocks.resolveActiveBusiness.mockResolvedValue(ownerContext());
+
+		const data = (await load(makeEvent() as never)) as { mpAmount: number };
+
+		expect(data.mpAmount).toBe(75000);
 	});
 });

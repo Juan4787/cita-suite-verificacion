@@ -397,7 +397,7 @@ describe('action subscribe', () => {
 						external_reference: BUSINESS_ID,
 						init_point: 'https://mp.test/init/pre-pending',
 						payer_email: 'duena@mail.com',
-						auto_recurring: { transaction_amount: 50000, currency_id: 'ARS' }
+						auto_recurring: { transaction_amount: 90000, currency_id: 'ARS' }
 					}
 				}
 			]
@@ -998,7 +998,7 @@ describe('load', () => {
 		const data = (await load(
 			makeEvent({ fetchMock, url: `${PAGE_URL}?mp=retorno` }) as never
 		)) as {
-			mpReturn: { subscriptionStatus: string | null; creditedNow: boolean; accessBlocked: boolean };
+			mpReturn: { subscriptionStatus: string | null; creditedNow: boolean; accessBlocked: boolean; provisionalUntil: string | null };
 			mpSubscription: { status: string } | null;
 		};
 
@@ -1011,7 +1011,8 @@ describe('load', () => {
 		expect(data.mpReturn).toEqual({
 			subscriptionStatus: 'authorized',
 			creditedNow: true,
-			accessBlocked: false
+			accessBlocked: false,
+			provisionalUntil: null
 		});
 		expect(data.mpSubscription?.status).toBe('authorized');
 		// Tras acreditar se refresca el contexto para mostrar el acceso al día.
@@ -1219,5 +1220,125 @@ describe('action subscribe: correo del pagador y fallas de Mercado Pago (18-nov-
 		});
 		const marked = admin.calls.find((c) => c.table === 'mp_subscriptions' && c.method === 'update');
 		expect(marked?.args[0]).toMatchObject({ status: 'not_found' });
+	});
+});
+
+describe('precio fijo de quien ya contrató (decisión de Juan del 18-nov-2026)', () => {
+	it('cobra el precio propio del consultorio en lugar del general', async () => {
+		const server = createDbMock();
+		const admin = createDbMock({
+			business_subscriptions: [{ data: { mp_price_ars: 75000 }, error: null }],
+			mp_subscriptions: [{ data: [], error: null }, { error: null }]
+		});
+		mocks.createSupabaseServerClient.mockResolvedValue(server.client);
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		mocks.resolveActiveBusiness.mockResolvedValue(ownerContext());
+		const { fetchMock, requests } = createMpFetch([
+			['/preapproval', { status: 201, body: { id: 'pre-fijo', status: 'pending', init_point: 'https://mp.test/init/pre-fijo' } }]
+		]);
+
+		await expect(actions.subscribe(makeEvent({ fetchMock }) as never)).rejects.toMatchObject({
+			status: 303,
+			location: 'https://mp.test/init/pre-fijo'
+		});
+		expect(requests).toHaveLength(1);
+		expect(requests[0].body).toMatchObject({ auto_recurring: { transaction_amount: 75000, currency_id: 'ARS' } });
+		const upsert = admin.calls.find((c) => c.table === 'mp_subscriptions' && c.method === 'upsert');
+		expect(upsert!.args[0]).toMatchObject({ preapproval_id: 'pre-fijo', transaction_amount: 75000 });
+	});
+
+	it('no reutiliza una solicitud pendiente con otro monto: la cancela y crea otra con el precio del consultorio', async () => {
+		const server = createDbMock();
+		const admin = createDbMock({
+			business_subscriptions: [{ data: { mp_price_ars: 100 }, error: null }],
+			mp_subscriptions: [
+				{ data: [{ preapproval_id: 'pre-viejo', status: 'pending', created_at: new Date().toISOString() }], error: null },
+				{ error: null },
+				{ error: null },
+				{ error: null },
+				{ error: null }
+			],
+			businesses: [
+				{ data: { id: BUSINESS_ID }, error: null },
+				{ data: { id: BUSINESS_ID }, error: null }
+			]
+		});
+		mocks.createSupabaseServerClient.mockResolvedValue(server.client);
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		mocks.resolveActiveBusiness.mockResolvedValue(ownerContext());
+		const pending = {
+			id: 'pre-viejo',
+			status: 'pending',
+			external_reference: BUSINESS_ID,
+			init_point: 'https://mp.test/init/pre-viejo',
+			payer_email: 'duena@mail.com',
+			auto_recurring: { transaction_amount: 90000, currency_id: 'ARS' }
+		};
+		const { fetchMock, requests } = createMpFetch([
+			['/preapproval/pre-viejo', { method: 'GET', body: pending }],
+			['/preapproval/pre-viejo', { method: 'PUT', body: { ...pending, status: 'cancelled' } }],
+			['/preapproval', { method: 'POST', status: 201, body: { id: 'pre-nuevo', status: 'pending', init_point: 'https://mp.test/init/pre-nuevo' } }]
+		]);
+
+		await expect(actions.subscribe(makeEvent({ fetchMock }) as never)).rejects.toMatchObject({
+			status: 303,
+			location: 'https://mp.test/init/pre-nuevo'
+		});
+		expect(requests.map((request) => request.method)).toEqual(['GET', 'PUT', 'POST']);
+		expect(requests[2].body).toMatchObject({ auto_recurring: { transaction_amount: 100 } });
+	});
+
+	it('no crea nada si no puede leer el precio del consultorio', async () => {
+		const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			const server = createDbMock();
+			const admin = createDbMock({
+				business_subscriptions: [{ data: null, error: { message: 'sin conexión' } }],
+				mp_subscriptions: [{ data: [], error: null }]
+			});
+			mocks.createSupabaseServerClient.mockResolvedValue(server.client);
+			mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+			mocks.resolveActiveBusiness.mockResolvedValue(ownerContext());
+			const { fetchMock, requests } = createMpFetch([]);
+
+			const result = (await actions.subscribe(makeEvent({ fetchMock }) as never)) as { status: number; data: { message?: string } };
+
+			expect(result.status).toBe(503);
+			expect(result.data.message).toContain('No se generó ningún cobro');
+			expect(requests).toHaveLength(0);
+		} finally {
+			errorLog.mockRestore();
+		}
+	});
+
+	it('la página muestra el precio propio y avisa que se conserva', async () => {
+		const server = createDbMock({ access_grants: [{ data: [], error: null }] });
+		const admin = createDbMock({
+			business_subscriptions: [{ data: { mp_price_ars: 75000 }, error: null }],
+			mp_subscriptions: [{ data: [], error: null }]
+		});
+		mocks.createSupabaseServerClient.mockResolvedValue(server.client);
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		mocks.resolveActiveBusiness.mockResolvedValue(ownerContext());
+		const { fetchMock } = createMpFetch([]);
+
+		const data = (await load(makeEvent({ fetchMock }) as never)) as { mpAmount: number; mpPriceLocked: boolean };
+
+		expect(data.mpAmount).toBe(75000);
+		expect(data.mpPriceLocked).toBe(true);
+	});
+
+	it('sin precio propio la página muestra el general', async () => {
+		const server = createDbMock({ access_grants: [{ data: [], error: null }] });
+		const admin = createDbMock({ mp_subscriptions: [{ data: [], error: null }] });
+		mocks.createSupabaseServerClient.mockResolvedValue(server.client);
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		mocks.resolveActiveBusiness.mockResolvedValue(ownerContext());
+		const { fetchMock } = createMpFetch([]);
+
+		const data = (await load(makeEvent({ fetchMock }) as never)) as { mpAmount: number; mpPriceLocked: boolean };
+
+		expect(data.mpAmount).toBe(90000);
+		expect(data.mpPriceLocked).toBe(false);
 	});
 });

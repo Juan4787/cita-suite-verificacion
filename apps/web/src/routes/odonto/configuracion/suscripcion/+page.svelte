@@ -27,9 +27,15 @@
 	const lastChargeRejected = $derived(
 		mpSub?.status === 'authorized' && mpSub.last_charge_status === 'rejected'
 	);
+	// Acceso provisorio en curso: el último movimiento es el provisorio y el acceso sigue activo. Hasta
+	// el primer cobro no hay pago: la página no lo anuncia como acreditado (20261118020000).
+	const provisionalInForce = $derived(
+		data.grants?.[0]?.operation === 'provisional_access' && access.commercialStatus === 'active'
+	);
 	const mpPaid = $derived(
 		Boolean(
 			mpReturn &&
+				!provisionalInForce &&
 				(mpReturn.creditedNow ||
 					(mpReturn.subscriptionStatus === 'authorized' && access.commercialStatus === 'active'))
 		)
@@ -80,6 +86,7 @@
 		if (grant.operation === 'grant_access' || grant.operation === 'extend_access') return 'Acceso actualizado';
 		if (grant.operation === 'payment_registered') return grant.source === 'mercado_pago' ? 'Pago de Mercado Pago' : 'Pago registrado';
 		if (grant.operation === 'payment_cancelled') return 'Reembolso o contracargo';
+		if (grant.operation === 'provisional_access') return 'Acceso provisorio';
 		return 'Cambio registrado';
 	};
 
@@ -181,6 +188,19 @@
 				Serás redirigido a Mercado Pago para completar el pago de forma segura. Los medios
 				de pago disponibles los muestra Mercado Pago al momento de autorizar.
 			</p>
+			{#if data.mpPriceLocked}
+				<p class="mt-2 text-sm text-fg-55">
+					Es el precio de tu suscripción: lo conservás aunque el precio general cambie, también si
+					cancelás y volvés a suscribirte.
+				</p>
+			{/if}
+			{#if provisionalInForce}
+				<p class="ux-alert ux-alert-success mt-4">
+					Tenés acceso provisorio hasta el {formatDateTime(access.paidUntil, 'momento del primer cobro')}, mientras
+					Mercado Pago procesa el primer cobro, que puede tardar hasta una hora. Cuando se acredite, el acceso
+					se extiende solo.
+				</p>
+			{/if}
 			{#if data.mpEnvironment === 'test'}
 				<div class="ux-alert ux-alert-warning mt-4">
 					<p class="font-bold">Mercado Pago está en modo de prueba.</p>
@@ -215,10 +235,14 @@
 					<p class="ux-alert ux-alert-success mt-4">
 						¡Pago acreditado! Tu acceso ya está activo y se renueva automáticamente cada mes.
 					</p>
-				{:else if mpReturn.subscriptionStatus === 'authorized'}
+				{:else if mpReturn.subscriptionStatus === 'authorized' && !provisionalInForce}
 					<p class="ux-alert ux-alert-success mt-4">
 						Suscripción autorizada. Mercado Pago puede tardar hasta una hora en procesar el
 						primer cobro; tu acceso se acredita solo. Podés actualizar esta página para verlo.
+					</p>
+				{:else if mpReturn.subscriptionStatus === 'authorized'}
+					<p class="ux-alert ux-alert-success mt-4">
+						Suscripción autorizada. Ya podés usar Cita Suite con el acceso provisorio de arriba.
 					</p>
 				{:else if mpReturn.subscriptionStatus === 'pending'}
 					<p class="ux-alert ux-alert-warning mt-4">

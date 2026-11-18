@@ -24,7 +24,11 @@ import {
 	type AccountAssistanceView,
 	type MasterAccountAssistanceRequest
 } from '$lib/server/access/public/account-assistance';
-import { getSubscriptionAmountArs } from '$lib/server/integrations/public/mercadopago';
+import {
+	getSubscriptionAmountArs,
+	readLockedSubscriptionPrice,
+	subscriptionAmountFor
+} from '$lib/server/integrations/public/mercadopago';
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import { env } from '$env/dynamic/private';
@@ -74,6 +78,8 @@ export const load: LayoutServerLoad = async ({
 	let depositsEnabled = false;
 	let slotReleases: SlotReleaseNotice = buildSlotReleaseNotice([], false);
 	const unavailableNotices: UnavailableNotice[] = [];
+	// El precio de la pantalla de bloqueo: el del consultorio si ya contrató (decisión del 18-nov-2026).
+	let mpAmount = getSubscriptionAmountArs();
 
 	if (env.DEMO_MODE === 'true') {
 		activeBusiness = demoBusinessContext();
@@ -193,6 +199,19 @@ export const load: LayoutServerLoad = async ({
 			followUpsTodayISO = nextFollowUps.todayISO;
 			depositsEnabled = nextDepositsEnabled;
 			slotReleases = nextSlotReleases;
+			// Sólo cuando la pantalla de bloqueo puede aparecer y ofrecer suscribirse: no suma una consulta
+			// a cada página de un consultorio que opera.
+			if (
+				activeBusiness &&
+				!activeBusiness.access.canUseBusiness &&
+				(activeBusiness.role === 'owner' || activeBusiness.role === 'admin')
+			) {
+				try {
+					mpAmount = subscriptionAmountFor(await readLockedSubscriptionPrice(supabase, activeBusiness.business.id));
+				} catch (priceError) {
+					logServerFailure('No se pudo leer el precio del consultorio', priceError);
+				}
+			}
 		} catch (err) {
 			if (isDefaultBusinessPendingManualSetupError(err)) {
 				if (!pathname.startsWith('/odonto/pendiente')) {
@@ -238,6 +257,6 @@ export const load: LayoutServerLoad = async ({
 		depositsEnabled,
 		slotReleases,
 		unavailableNotices,
-		mpAmount: getSubscriptionAmountArs()
+		mpAmount
 	};
 };
