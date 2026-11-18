@@ -18,6 +18,8 @@ declare
 	v_near uuid;
 	v_manual uuid;
 	v_short uuid;
+	-- El panel maestro pasa un administrador real: business_subscriptions.updated_by tiene clave foránea a auth.users.
+	v_admin uuid := gen_random_uuid();
 	r record;
 	s business_subscriptions%rowtype;
 	month_secs constant integer := 30 * 24 * 60 * 60;
@@ -73,17 +75,19 @@ begin
 	end if;
 
 	-- e. Pago registrado a mano por el panel maestro (con administrador): 30 días fijos y 48 horas.
+	-- Los casos manuales suman segundos, como la función: se comparan en segundos, sin depender del huso de la sesión.
+	insert into auth.users (id, email) values (v_admin, 'mp-mes-maestro-' || v_admin || '@example.test');
 	select * into r from public.grant_business_access(v_manual, 'payment_registered', month_secs, 'month', false, 90000,
-		'mercado_pago', 'Pago registrado a mano.', gen_random_uuid(), 'maestro@example.test', 'test:mp-mes:e:' || gen_random_uuid()::text);
+		'mercado_pago', 'Pago registrado a mano.', v_admin, 'maestro@example.test', 'test:mp-mes:e:' || gen_random_uuid()::text);
 	select * into s from business_subscriptions where business_id = v_manual;
-	if s.paid_until is distinct from v_now + interval '30 days' or s.grace_until is distinct from s.paid_until + interval '48 hours' then
+	if s.paid_until is distinct from v_now + make_interval(secs => month_secs) or s.grace_until is distinct from s.paid_until + interval '48 hours' then
 		raise exception 'TEST_E_MANUAL_PAYMENT_EXPECTED_30_DAYS_AND_48_HOURS';
 	end if;
 
 	-- f. Un mes manual sigue siendo 30 días fijos con 48 horas de gracia.
 	select * into r from public.grant_business_access(v_manual, 'grant_access', month_secs, 'month', false, null,
 		'manual', 'Mes manual.', null, 'test@example.test', 'test:mp-mes:f:' || gen_random_uuid()::text);
-	if r.paid_until_after is distinct from r.paid_until_before + interval '30 days' then
+	if r.paid_until_after is distinct from r.paid_until_before + make_interval(secs => month_secs) then
 		raise exception 'TEST_F_MANUAL_MONTH_EXPECTED_30_DAYS';
 	end if;
 
@@ -91,7 +95,7 @@ begin
 	select * into r from public.grant_business_access(v_short, 'payment_registered', 86400, 'day', false, 1,
 		'mercado_pago', 'Cobro de un día.', null, null, 'test:mp-mes:g:' || gen_random_uuid()::text);
 	select * into s from business_subscriptions where business_id = v_short;
-	if s.paid_until is distinct from v_now + interval '1 day' or s.grace_until is distinct from s.paid_until then
+	if s.paid_until is distinct from v_now + make_interval(secs => 86400) or s.grace_until is distinct from s.paid_until then
 		raise exception 'TEST_G_SHORT_AUTOMATIC_GRANT_EXPECTED_ONE_DAY_WITHOUT_GRACE';
 	end if;
 
