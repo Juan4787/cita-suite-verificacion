@@ -48,7 +48,6 @@ const data = (overrides: Record<string, unknown> = {}, accessState = access()) =
 		mpEnvironment: 'production',
 		mpReturn: null,
 		mpReturnFailed: false,
-		payerEmailDefault: 'duena@example.test',
 		...overrides
 	}) as never;
 
@@ -134,5 +133,28 @@ describe('acceso provisorio y precio propio (20261118020000)', () => {
 		expect(screen.getByText(/\$\s10/)).toBeInTheDocument();
 		expect(screen.getByText(/Es el precio de tu suscripción/)).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: BUTTON })).toBeInTheDocument();
+	});
+});
+
+describe('correo del pagador (18-nov-2026)', () => {
+	it('el campo empieza vacío: no propone el correo de ingreso', () => {
+		render(Page, { params: {}, form: null, data: data({}, access({}, { access_source: 'mercado_pago' })) });
+		expect(screen.getByLabelText('Correo de tu cuenta de Mercado Pago')).toHaveValue('');
+		expect(screen.getByText(/puede ser distinto del que usás en\s+Cita Suite/)).toBeInTheDocument();
+	});
+
+	it('con una solicitud pendiente dice para qué correo quedó y que se confirma entrando con esa cuenta', () => {
+		render(Page, {
+			params: {},
+			form: null,
+			data: data({ mpSubscription: { ...authorizedSubscription, status: 'pending', payer_email: 'otra@example.test' } }, access({}, { access_source: 'mercado_pago' }))
+		});
+		expect(screen.getByText(/para «otra@example.test»/)).toBeInTheDocument();
+		expect(screen.getByText(/sólo se puede confirmar entrando con esa cuenta/)).toBeInTheDocument();
+	});
+
+	it('después de un error conserva lo que se escribió', () => {
+		render(Page, { params: {}, form: { message: 'Mercado Pago no aceptó la solicitud.', payerEmail: 'escrita@example.test' } as never, data: data({}, access({}, { access_source: 'mercado_pago' })) });
+		expect(screen.getByLabelText('Correo de tu cuenta de Mercado Pago')).toHaveValue('escrita@example.test');
 	});
 });

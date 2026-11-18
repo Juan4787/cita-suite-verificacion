@@ -166,7 +166,8 @@ const makeEvent = (opts: {
 	url: new URL(opts.url ?? PAGE_URL),
 	request: new Request(PAGE_URL, {
 		method: 'POST',
-		body: new URLSearchParams(opts.formEntries ?? {})
+		// Lo que escribe el consultorio en «Correo de tu cuenta de Mercado Pago» (desde el 18-nov-2026 no se completa solo).
+		body: new URLSearchParams(opts.formEntries ?? { payer_email: 'duena@mail.com' })
 	})
 });
 
@@ -179,24 +180,21 @@ beforeEach(() => {
 });
 
 describe('action subscribe', () => {
-	it('usa como pagador la identidad que hooks ya verificó, sin volver a pedirla a Auth', async () => {
+	it('sin el correo de Mercado Pago escrito no usa el de ingreso: lo pide y no llama a Mercado Pago', async () => {
+		// El 18-nov-2026 se avanzó dos veces con el correo de ingreso propuesto y Mercado Pago no dejaba confirmar.
 		const server = createDbMock();
-		const admin = createDbMock({
-			mp_subscriptions: [{ data: [], error: null }, { error: null }]
-		});
+		const admin = createDbMock({ mp_subscriptions: [{ data: [], error: null }, { error: null }] });
 		mocks.createSupabaseServerClient.mockResolvedValue(server.client);
 		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
 		mocks.resolveActiveBusiness.mockResolvedValue(ownerContext());
-		const { fetchMock, requests } = createMpFetch([
-			[
-				'/preapproval',
-				{ status: 201, body: { id: 'pre-9', status: 'pending', init_point: 'https://mp.test/init/pre-9' } }
-			]
-		]);
+		const { fetchMock, requests } = createMpFetch([]);
 
-		await expect(actions.subscribe(makeEvent({ fetchMock }) as never)).rejects.toMatchObject({ status: 303 });
+		const result = (await actions.subscribe(makeEvent({ fetchMock, formEntries: {} }) as never)) as { status: number; data: { message: string; payerEmail: string } };
 
-		expect(requests[0].body).toMatchObject({ payer_email: 'duena@mail.com' });
+		expect(result.status).toBe(400);
+		expect(result.data.message).toBe('Escribí el correo de tu cuenta de Mercado Pago.');
+		expect(result.data.payerEmail).toBe('');
+		expect(requests).toHaveLength(0);
 		expect(server.client.auth.getUser).not.toHaveBeenCalled();
 	});
 
@@ -1423,5 +1421,55 @@ describe('solicitud pendiente con otro pagador (18-nov-2026)', () => {
 		).rejects.toMatchObject({ status: 303, location: 'https://mp.test/init/pre-pagador-nuevo' });
 		expect(requests.map((request) => request.method)).toEqual(['GET', 'PUT', 'POST']);
 		expect(requests[2].body).toMatchObject({ payer_email: 'pagadora@mail.com' });
+	});
+});
+
+describe('rechazos de Mercado Pago al crear la suscripción (18-nov-2026)', () => {
+	const rejectWith = async (status: number, body: Record<string, unknown>) => {
+		const server = createDbMock();
+		const admin = createDbMock({ mp_subscriptions: [{ data: [], error: null }] });
+		mocks.createSupabaseServerClient.mockResolvedValue(server.client);
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		mocks.resolveActiveBusiness.mockResolvedValue(ownerContext());
+		const { fetchMock } = createMpFetch([['/preapproval', { method: 'POST', status, body }]]);
+		const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			const result = (await actions.subscribe(
+				makeEvent({ fetchMock, formEntries: { payer_email: 'pagadora@mail.com' } }) as never
+			)) as { status: number; data: { message: string; payerEmail: string } };
+			return { result, logs: errorLog.mock.calls.map((call) => String(call[0])) };
+		} finally {
+			errorLog.mockRestore();
+		}
+	};
+
+	it('un rechazo sin categoría conocida conserva el correo escrito y no guarda el texto de Mercado Pago', async () => {
+		const { result, logs } = await rejectWith(400, { message: 'texto con pagadora@mail.com', error: 'bad_request', status: 400, cause: [{ code: 1234, description: 'algo' }] });
+		expect(result.status).toBe(502);
+		expect(result.data.payerEmail).toBe('pagadora@mail.com');
+		expect(result.data.message).toContain('No se generó ningún cobro');
+		expect(logs).toContain('Mercado Pago rechazó el preapproval: other (códigos 1234)');
+		expect(logs.join(' ')).not.toContain('pagadora@mail.com');
+	});
+
+	it('si el pagador es la cuenta que cobra, lo dice en palabras simples', async () => {
+		const { result, logs } = await rejectWith(400, { message: 'Payer and collector cannot be the same user', error: 'bad_request', status: 400 });
+		expect(result.status).toBe(400);
+		expect(result.data.message).toContain('es el correo de la cuenta de Mercado Pago que cobra Cita Suite');
+		expect(result.data.payerEmail).toBe('pagadora@mail.com');
+		expect(logs).toContain('Mercado Pago rechazó el preapproval: payer_is_seller');
+	});
+
+	it('un monto que Mercado Pago no acepta se informa como tal', async () => {
+		const { result, logs } = await rejectWith(400, { message: 'Cannot pay an amount lower than $ 15.00', error: 'bad_request', status: 400 });
+		expect(result.status).toBe(502);
+		expect(result.data.message).toContain('no aceptó el monto');
+		expect(logs).toContain('Mercado Pago rechazó el preapproval: amount');
+	});
+
+	it('el pagador que Mercado Pago no reconoce sigue con su mensaje propio', async () => {
+		const { result } = await rejectWith(400, { message: 'User bad request', error: 'bad_request', status: 400 });
+		expect(result.status).toBe(400);
+		expect(result.data.message).toContain('Mercado Pago no aceptó «pagadora@mail.com» como correo del pagador');
 	});
 });

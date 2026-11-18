@@ -22,6 +22,8 @@ import {
 	logMpWebhookEvent,
 	logMpWebhookEventOnce,
 	MP_PAYMENT_IDEMPOTENCY_PREFIX,
+	mpRejectionCodes,
+	mpRejectionKind,
 	parseSignatureHeader,
 	payerEmailIssue,
 	pickRelevantMpSubscription,
@@ -2159,5 +2161,53 @@ describe('acceso provisorio y precio fijo (decisiones de Juan del 18 de noviembr
 		await expect(readLockedSubscriptionPrice(admin, BUSINESS_ID)).resolves.toBeNull();
 		await expect(readLockedSubscriptionPrice(admin, BUSINESS_ID)).resolves.toBeNull();
 		await expect(readLockedSubscriptionPrice(admin, BUSINESS_ID)).rejects.toThrow('sin conexión');
+	});
+});
+
+describe('rechazos de Mercado Pago y correo guardado (18-nov-2026)', () => {
+	const rejection = async (status: number, body: Record<string, unknown>) => {
+		const { fetchMock } = createFetchMock([['/preapproval', { status, body }]]);
+		return createPreapproval(fetchMock, { businessId: BUSINESS_ID, payerEmail: 'pagadora@mail.com', amount: 15, backUrl: 'https://app.test/odonto/pago/procesando?mp=retorno' });
+	};
+
+	it('lee las causas del rechazo y lo clasifica sin depender del texto exacto', async () => {
+		const seller = await rejection(400, { message: 'Payer and collector cannot be the same user', error: 'bad_request', status: 400 });
+		expect(seller.ok).toBe(false);
+		expect(mpRejectionKind(seller)).toBe('payer_is_seller');
+
+		const invalidUsers = await rejection(400, { message: 'Invalid users involved', error: 'bad_request', status: 400 });
+		expect(mpRejectionKind(invalidUsers)).toBe('payer_is_seller');
+
+		const amount = await rejection(400, { message: 'Cannot pay an amount lower than $ 15.00', error: 'bad_request', status: 400 });
+		expect(mpRejectionKind(amount)).toBe('amount');
+
+		const payer = await rejection(400, { message: 'User bad request', error: 'bad_request', status: 400 });
+		expect(mpRejectionKind(payer)).toBe('payer');
+
+		const credentials = await rejection(401, { message: 'invalid access token', error: 'unauthorized', status: 401 });
+		expect(mpRejectionKind(credentials)).toBe('credentials');
+
+		const other = await rejection(400, { message: 'algo distinto', error: 'bad_request', status: 400, cause: [{ code: 1234, description: 'x' }, { code: 'bad code with spaces' }, { code: 'X-9.z_' }] });
+		expect(mpRejectionKind(other)).toBe('other');
+		expect(mpRejectionCodes(other)).toEqual(['1234', 'X-9.z_']);
+	});
+
+	it('una causa sin mensaje alcanza para clasificar', async () => {
+		const result = await rejection(400, { cause: [{ code: 'x', description: 'The payer and the collector must be different users: same user' }] });
+		expect(result.error?.causes?.length).toBe(1);
+		expect(mpRejectionKind(result)).toBe('payer_is_seller');
+	});
+
+	it('sincronizar una respuesta sin correo, como la de una cancelación, no borra el correo guardado', async () => {
+		const { admin, upsertCalls } = createAdminMock();
+		await upsertMpSubscription(admin, { id: 'pre-cancelada', status: 'cancelled', external_reference: BUSINESS_ID, auto_recurring: { transaction_amount: 15, currency_id: 'ARS' } });
+		const payload = upsertCalls.find((call) => call.table === 'mp_subscriptions')?.payload;
+		expect(payload).toBeDefined();
+		expect(payload).not.toHaveProperty('payer_email');
+		expect(payload).toMatchObject({ status: 'cancelled', transaction_amount: 15 });
+
+		const { admin: second, upsertCalls: secondCalls } = createAdminMock();
+		await upsertMpSubscription(second, { id: 'pre-con-correo', status: 'pending', external_reference: BUSINESS_ID, payer_email: 'pagadora@mail.com' });
+		expect(secondCalls.find((call) => call.table === 'mp_subscriptions')?.payload).toMatchObject({ payer_email: 'pagadora@mail.com' });
 	});
 });

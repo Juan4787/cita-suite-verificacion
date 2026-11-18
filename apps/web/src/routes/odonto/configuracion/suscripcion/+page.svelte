@@ -21,8 +21,10 @@
 	// Cancelar no tiene vuelta atrás en Mercado Pago: se pide una confirmación explícita.
 	let confirmingCancel = $state(false);
 	// Tras un rechazo, el correo escrito; si no, el de ingreso.
+	// Vacío al empezar: el consultorio escribe el correo de la cuenta de Mercado Pago con la que va a pagar, que puede
+	// ser otro que el de ingreso (18-nov-2026). Tras un error, lo que escribió.
 	const payerEmailValue = $derived(
-		String((form && 'payerEmail' in form ? form.payerEmail : undefined) ?? data.payerEmailDefault ?? '')
+		String((form && 'payerEmail' in form ? form.payerEmail : undefined) ?? '')
 	);
 	const lastChargeRejected = $derived(
 		mpSub?.status === 'authorized' && mpSub.last_charge_status === 'rejected'
@@ -356,8 +358,9 @@
 			{:else if canActivateWithMp}
 				{#if mpSub?.status === 'pending'}
 					<p class="mt-4 text-sm text-fg-55">
-						Hay una autorización pendiente sin completar. Podés retomarla iniciando la
-						suscripción de nuevo.
+						Hay una autorización pendiente sin completar{mpSub.payer_email ? ` para «${mpSub.payer_email}»` : ''}.
+						En Mercado Pago sólo se puede confirmar entrando con esa cuenta; si vas a pagar con otra, escribí su
+						correo abajo y activá de nuevo.
 					</p>
 				{:else if mpSub?.status === 'cancelled'}
 					<p class="mt-4 text-sm text-fg-55">
@@ -372,13 +375,14 @@
 							type="email"
 							required
 							autocomplete="email"
+							placeholder="El correo con el que entrás a Mercado Pago"
 							value={payerEmailValue}
 							class="ux-input"
 						/>
 					</label>
 					<p class="mt-2 max-w-xl text-sm text-copy-subtle">
-						En Mercado Pago vas a tener que usar exactamente este correo: si pagás con otro,
-						Mercado Pago rechaza el pago. No se aceptan correos con «+».
+						Escribí el correo con el que entrás a Mercado Pago para pagar; puede ser distinto del que usás en
+						Cita Suite. Mercado Pago sólo deja pagar con ese correo. No se aceptan correos con «+».
 					</p>
 					<button type="submit" disabled={mpSubmitting} class="ux-btn-primary mt-4">
 						{mpSubmitting ? 'Creando enlace seguro en Mercado Pago…' : 'Activar suscripción con Mercado Pago'}

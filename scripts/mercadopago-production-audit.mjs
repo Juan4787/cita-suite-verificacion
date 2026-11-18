@@ -79,7 +79,16 @@ ${business ? `select 'consultorio_estado', public.compute_business_subscription_
   'fuente=' || coalesce(access_source, '-'), 'permanente=' || is_permanent, 'habilitado=' || commercial_access_enabled,
   'vence=' || coalesce(paid_until::text, '-'), 'precio_propio=' || coalesce(mp_price_ars::text, '-')
   from public.business_subscriptions where business_id = '${business}';
-select 'consultorio_suscripciones_mp', coalesce(status, '(vacío)'), count(*) from public.mp_subscriptions where business_id = '${business}' group by 2 order by 2;` : ''}
+select 'consultorio_suscripciones_mp', coalesce(status, '(vacío)'), count(*) from public.mp_subscriptions where business_id = '${business}' group by 2 order by 2;
+select 'consultorio_ultimas_suscripciones', m.created_at, left(m.preapproval_id, 8), m.status, m.transaction_amount, m.currency_id,
+  coalesce(left(m.payer_email, 1) || '…@' || split_part(m.payer_email, '@', 2), '-'), coalesce(m.raw->>'date_created', '-'), m.last_synced_at,
+  coalesce(m.last_charge_status, '-'), coalesce(m.last_charge_detail, '-'),
+  -- El formulario propone el correo de ingreso: si el pagador es ése, en Mercado Pago hay que entrar con esa cuenta.
+  'pagador_es_el_correo_de_ingreso_del_dueno=' || coalesce((select bool_or(lower(u.email) = lower(m.payer_email)) from public.business_users bu
+    join auth.users u on u.id = bu.user_id where bu.business_id = m.business_id and bu.role = 'owner'), false)
+  from public.mp_subscriptions m where m.business_id = '${business}' order by m.created_at desc limit 4;
+select 'consultorio_avisos_recientes', received_at, coalesce(topic, '-'), coalesce(action, '-'), processing_status, requires_attention, left(coalesce(processing_detail, ''), 160)
+  from public.mp_webhook_events where business_id = '${business}' and received_at > now() - interval '6 hours' order by received_at;` : ''}
 commit;
 `;
 

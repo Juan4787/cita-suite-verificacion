@@ -31,7 +31,7 @@
   - el webhook productivo no tenía dirección; se le cargó ese mismo día.
 
   Los tres quedaron corregidos, y Juan cargó el token productivo el 18-nov: **cada suscripción cobra de verdad**. Las pruebas con dinero van en el consultorio sintético, a su precio simbólico de 15 pesos (Mercado Pago rechaza 10).
-- Decisiones de Juan del 18-nov: acceso provisorio al quedar autorizada la suscripción (P2, sí); **quien contrató a un precio lo conserva para siempre**, y un precio nuevo es sólo para quien nunca contrató; Natalia tiene una suscripción anual pagada por transferencia, no un pago único. Las dos primeras se publicaron a las 15:57. Ocultarle a Natalia la sección de Mercado Pago mientras su año pagado esté vigente (Juan: «si ocultalo») está en curso (plan, sección 8.8).
+- Decisiones de Juan del 18-nov: acceso provisorio al quedar autorizada la suscripción (P2, sí); **quien contrató a un precio lo conserva para siempre**, y un precio nuevo es sólo para quien nunca contrató; Natalia tiene una suscripción anual pagada por transferencia, no un pago único. Las dos primeras se publicaron a las 15:57. Ocultarle a Natalia la sección de Mercado Pago mientras su año pagado esté vigente (Juan: «si ocultalo») se publicó a las 18:27, como regla general para todo plan manual vigente (plan, sección 8.8), junto con las correcciones del alta de cuenta y de la confirmación del correo (sección 9).
 - Los secretos de Mercado Pago los carga Juan en Cloudflare: nunca pasan por el chat ni por el repositorio. Juan cargó el token productivo el 18-nov; la clave secreta del webhook es una sola por aplicación y la del Worker ya es la correcta.
 
 ## Enlace de reserva con el nombre del consultorio (10 de noviembre)

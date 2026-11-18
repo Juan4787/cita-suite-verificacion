@@ -1318,12 +1318,13 @@
 								type="email"
 								required
 								autocomplete="email"
-								value={data?.email ?? ''}
+								placeholder="El correo con el que entrás a Mercado Pago"
 								class="ux-input mt-2"
 							/>
 						</label>
 						<p class="mx-auto mt-2 max-w-sm text-left text-sm font-semibold text-warning-50-75">
-							En Mercado Pago vas a tener que usar exactamente este correo. No se aceptan correos con «+».
+							Escribí el correo con el que entrás a Mercado Pago para pagar; puede ser distinto del de Cita Suite.
+							Mercado Pago sólo deja pagar con ese correo. No se aceptan correos con «+».
 						</p>
 						<button
 							type="submit"

@@ -98,15 +98,25 @@ export const verifyMpWebhookSignature = (
 
 // `error` trae el motivo que da Mercado Pago cuando rechaza un pedido («User bad request», «Invalid
 // value for limit»...): sin él, un rechazo quedaba registrado sólo con su código de estado.
-export type MpApiError = { message: string | null; error: string | null };
+// `causes`: los códigos y descripciones de `cause` que agrega Mercado Pago a algunos rechazos. Sirven para
+// clasificar el rechazo (mpRejectionKind); el registro guarda sólo la categoría y los códigos, nunca textos.
+export type MpApiError = { message: string | null; error: string | null; causes?: Array<{ code: string | null; description: string | null }> };
 export type MpApiResult<T> = { ok: boolean; status: number; data: T | null; error?: MpApiError };
 
 const providerError = (payload: unknown): MpApiError | undefined => {
 	if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return undefined;
 	const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim().slice(0, 200) : null);
 	const row = payload as Record<string, unknown>;
-	const result = { message: text(row.message), error: text(row.error) };
-	return result.message || result.error ? result : undefined;
+	const causes = (Array.isArray(row.cause) ? row.cause : [])
+		.slice(0, 5)
+		.map((cause: unknown) => {
+			const item = cause && typeof cause === 'object' ? (cause as Record<string, unknown>) : {};
+			const code = typeof item.code === 'number' || typeof item.code === 'string' ? String(item.code).trim().slice(0, 40) : null;
+			return { code: code || null, description: text(item.description) };
+		})
+		.filter((cause) => cause.code || cause.description);
+	const result: MpApiError = { message: text(row.message), error: text(row.error), ...(causes.length ? { causes } : {}) };
+	return result.message || result.error || causes.length ? result : undefined;
 };
 
 const mpResult = async <T>(response: Response, decode: (value: unknown) => T): Promise<MpApiResult<T>> => {
@@ -389,6 +399,25 @@ export const isPayerRejection = (result: MpApiResult<unknown>) =>
 	result.status === 400 &&
 	['User bad request', 'Payer is associated with a different site'].includes(result.error?.message ?? '');
 
+// Por qué Mercado Pago rechazó crear una suscripción, en categorías fijas: la pantalla lo explica y el registro
+// lo guarda sin el texto del proveedor, que puede traer el correo del pagador. El 18-nov-2026 un rechazo por el
+// monto y otro por el pagador mostraban el mismo cartel genérico, y el registro sólo tenía el código HTTP.
+export type MpRejectionKind = 'payer' | 'payer_is_seller' | 'amount' | 'credentials' | 'other';
+export const mpRejectionKind = (result: MpApiResult<unknown>): MpRejectionKind => {
+	if (isPayerRejection(result)) return 'payer';
+	const text = [result.error?.message, result.error?.error, ...(result.error?.causes ?? []).map((cause) => cause.description)]
+		.filter(Boolean)
+		.join(' ')
+		.toLowerCase();
+	if (/same user|yourself|invalid users|payer.{0,20}collector|collector.{0,20}payer|seller.{0,20}payer|payer.{0,20}seller/.test(text)) return 'payer_is_seller';
+	if (/amount|monto|lower than|minimum|mínimo/.test(text)) return 'amount';
+	if (result.status === 401 || result.status === 403 || /unauthorized|invalid (access )?token|forbidden/.test(text)) return 'credentials';
+	return 'other';
+};
+// Los códigos de `cause`, saneados: sólo letras, números, punto, guion y guion bajo.
+export const mpRejectionCodes = (result: MpApiResult<unknown>): string[] =>
+	(result.error?.causes ?? []).map((cause) => cause.code ?? '').filter((code) => /^[A-Za-z0-9_.-]{1,40}$/.test(code)).slice(0, 5);
+
 // Preapproval "sin plan asociado": el cliente autoriza una vez en Mercado Pago
 // (redirect a init_point) y MP cobra solo cada mes. Sin prueba gratuita y sin
 // exclusiones de medios de pago: MP muestra lo que la cuenta tenga habilitado.
@@ -648,7 +677,8 @@ export const upsertMpSubscription = async (
 			business_id: businessId,
 			preapproval_id: preapproval.id,
 			status: preapproval.status ?? 'pending',
-			payer_email: preapproval.payer_email ?? null,
+			// La respuesta de una cancelación no trae el correo: no se borra el guardado (18-nov-2026).
+			...(preapproval.payer_email ? { payer_email: preapproval.payer_email } : {}),
 			transaction_amount: preapproval.auto_recurring?.transaction_amount ?? null,
 			currency_id: preapproval.auto_recurring?.currency_id ?? null,
 			next_charge_at: preapproval.next_payment_date ?? null,

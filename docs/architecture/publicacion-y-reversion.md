@@ -1,10 +1,31 @@
 # Publicación y reversión
 
-## Último estado comprobado — acceso provisorio y precio fijo de Mercado Pago: 18 de noviembre de 2026, 15:57 hora argentina (18:57 UTC)
+## Último estado comprobado — plan pagado aparte y correcciones del alta: 18 de noviembre de 2026, 18:27 hora argentina (21:27 UTC)
 
 **La única vuelta atrás vigente es la de este apartado.** Las de los apartados siguientes son historia.
 
-**Producción sirve** la instantánea `b0c64f88d68b455b62ffd898d0aa7daca276a709` de `main` `8861ebbd`, Worker `app`, versión de Cloudflare **`cb46bffc-35bf-439b-8115-682adfa909de`**. 169 migraciones: la última es `20261118020000_mercadopago_provisional_access_and_price.sql`. Programador `0f77c160-ccf0-46e9-bac7-dce4051accf1`, reinstalado con los mismos cinco cron. Interruptores sin cambios.
+**Producción sirve** la instantánea `189ea81fe9029341ab475d016500480bf2aaa5c8` de `main` `bf7cc2ab`, Worker `app`, versión de Cloudflare **`3d6d34af-b35b-40de-8fca-ecacbae95d72`**. 169 migraciones, sin cambios de base. Programador `0f77c160-ccf0-46e9-bac7-dce4051accf1`, sin cambios.
+
+**Qué trae** ([plan, registro y traspaso](../plans/cobros-mercadopago-20261118.md), secciones 8.8 y 9):
+- con un plan manual vigente, como el año de Natalia pagado por transferencia, la página de suscripción no ofrece Mercado Pago y suscribirse se niega;
+- el botón de crear cuenta e ingresar se bloquea mientras espera, y el registro lleva a «Revisá tu correo» si el correo de esa cuenta acaba de salir;
+- `/confirmar-correo` usa la política `same-origin`: «Cerrar sesión e ingresar» dejó de fallar con «Cross-site POST form submissions are forbidden»;
+- una solicitud pendiente de Mercado Pago se reutiliza sólo con el mismo pagador.
+
+Juan lo autorizó: «publicalo».
+
+**Verificación sobre la revisión exacta:**
+- completa 44395433577: 2.235 pruebas de servidor y 365 de componentes, todas las suites SQL, Chromium con 83 de 83, las reservas de Natalia, la demostración y la medición de Natalia;
+- paquete 44395466254 y Chromium sobre el paquete 44398954906, con 83 de 83;
+- `verify-production-release.mjs` aprobado a las 21:27:40 UTC: 152 archivos idénticos y 78 relaciones sin exposición anónima. Los dos `/_app/version.json` dicen `189ea81fe9029341ab475d016500480bf2aaa5c8`, y `/confirmar-correo` responde con `referrer-policy: same-origin`.
+
+**Publicación:** sin migración, así que no hubo ensayo ni respaldo nuevo: sirve el de las 18:54 UTC, de dos horas y media antes. App a las 21:27, verificación a las 21:27:40. El programador no cambió.
+
+**Vuelta atrás:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback cb46bffc-35bf-439b-8115-682adfa909de --name app --message "<motivo>" --yes`, la versión de las 15:57, con el mismo esquema. Después, los dos `/_app/version.json` deben decir `b0c64f88d68b455b62ffd898d0aa7daca276a709`. No se ensayó. Nunca una versión anterior a E.
+
+## Estado anterior — acceso provisorio y precio fijo de Mercado Pago: 18 de noviembre de 2026, 15:57 hora argentina (18:57 UTC)
+
+**Sirvió hasta las 18:27 del mismo día** la instantánea `b0c64f88d68b455b62ffd898d0aa7daca276a709` de `main` `8861ebbd`, Worker `app`, versión de Cloudflare **`cb46bffc-35bf-439b-8115-682adfa909de`**. 169 migraciones: la última es `20261118020000_mercadopago_provisional_access_and_price.sql`. Programador `0f77c160-ccf0-46e9-bac7-dce4051accf1`, reinstalado con los mismos cinco cron. Interruptores sin cambios.
 
 **Qué trae** ([plan, registro y traspaso](../plans/cobros-mercadopago-20261118.md), sección 8):
 - un día de acceso provisorio cuando una suscripción recién creada queda autorizada, mientras Mercado Pago procesa el primer cobro;
@@ -23,7 +44,7 @@ Juan lo autorizó: «publicalo». Antes, ese mismo día, cargó el token product
 - respaldo `~/.local/share/cita-suite/backups/production-2026-11-18T18-54-36-619Z`: 129 tablas, 4.509 filas, 168 migraciones, 26 objetos, sin fallas;
 - programador sin cron (`f63e08a0-f9f0-4410-91f9-1c45441e7aa4`); migración a las 18:56:27, en 1,1 s; app a las 18:57; verificación a las 18:57:18, y programador con cron.
 
-**Vuelta atrás:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback f592843a-3592-4f19-b2fd-bf7777428179 --name app --message "<motivo>" --yes`, la versión de las 14:02. Funciona con el esquema nuevo: no usa la operación nueva ni la columna. Mientras esté instalada no hay acceso provisorio y el precio que cobra es siempre el general. Después, los dos `/_app/version.json` deben decir `7f7ff06389c506fee574812eeb090d0fe72637d1`. La migración no se revierte: sólo agrega. No se ensayó. Nunca una versión anterior a E.
+**Vuelta atrás de entonces, ya no vigente:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback f592843a-3592-4f19-b2fd-bf7777428179 --name app --message "<motivo>" --yes`, la versión de las 14:02. Funciona con el esquema nuevo: no usa la operación nueva ni la columna. Mientras esté instalada no hay acceso provisorio y el precio que cobra es siempre el general. Después, los dos `/_app/version.json` deben decir `7f7ff06389c506fee574812eeb090d0fe72637d1`. La migración no se revierte: sólo agrega. No se ensayó. Nunca una versión anterior a E.
 
 ## Estado anterior — cobros automáticos con Mercado Pago: 18 de noviembre de 2026, 14:02 hora argentina (17:02 UTC)
 
