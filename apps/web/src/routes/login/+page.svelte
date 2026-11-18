@@ -17,6 +17,9 @@
 	let confirmPassword = $state('');
 	let acceptedTerms = $state(false);
 	let googleSubmitting = $state(false);
+	// Crear la cuenta tarda unos segundos (Supabase manda el correo de confirmación antes de responder). Sin un
+	// estado visible, un segundo clic reemplazaba la respuesta buena del primero (18-nov-2026).
+	let credentialsSubmitting = $state(false);
 	let localMessage = $state('');
 	const message = $derived(localMessage || serverMessage);
 
@@ -39,10 +42,23 @@
 
 	const handleCredentialsSubmit = (event: SubmitEvent) => {
 		localMessage = '';
-		if (mode !== 'register') return;
-		if (password !== confirmPassword) {
+		if (credentialsSubmitting) {
+			event.preventDefault();
+			return;
+		}
+		if (mode === 'register' && password !== confirmPassword) {
 			event.preventDefault();
 			localMessage = 'Las contraseñas no coinciden.';
+			return;
+		}
+		credentialsSubmitting = true;
+	};
+
+	// Volver con «Atrás» puede restaurar la página tal como quedó, con el botón bloqueado.
+	const handlePageShow = (event: PageTransitionEvent) => {
+		if (event.persisted) {
+			credentialsSubmitting = false;
+			googleSubmitting = false;
 		}
 	};
 
@@ -61,6 +77,8 @@
 		}
 	});
 </script>
+
+<svelte:window onpageshow={handlePageShow} />
 
 <div class="flex min-h-screen items-center justify-center bg-gradient-to-br from-canvas via-surface to-canvas px-4 py-10">
 	<div class="w-full max-w-md rounded-3xl border border-line bg-fill-04 p-6 shadow-2xl backdrop-blur sm:p-8">
@@ -187,8 +205,12 @@
 				</label>
 			{/if}
 
-			<button type="submit" class="ux-btn-primary w-full text-base">
-				{mode === 'register' ? 'Crear cuenta' : 'Ingresar'}
+			<button type="submit" class="ux-btn-primary w-full text-base" disabled={credentialsSubmitting} aria-busy={credentialsSubmitting}>
+				{#if credentialsSubmitting}
+					{mode === 'register' ? 'Creando tu cuenta…' : 'Ingresando…'}
+				{:else}
+					{mode === 'register' ? 'Crear cuenta' : 'Ingresar'}
+				{/if}
 			</button>
 
 			{#if mode === 'login'}

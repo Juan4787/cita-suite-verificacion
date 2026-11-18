@@ -73,6 +73,34 @@ test('email confirmation compatibility: confirming another address preserves the
 	} finally { await write(f.admin.auth.admin.deleteUser(generated.data.user.id)); }
 });
 
+// «Cerrar sesión e ingresar» es un formulario nativo: con la política «no-referrer» de esta pantalla el navegador
+// mandaba `Origin: null` y la app lo rechazaba con «Cross-site POST form submissions are forbidden» (18-nov-2026).
+// El cierre de sesión es global: la cuenta abierta es propia de esta prueba, no la compartida.
+test('email confirmation: closing the other open account from the confirmation page signs out and leads to sign-in', { tag: '@candidate-behavior' }, async ({ page }, info) => {
+	const f = fixture();
+	const openEmail = `confirmation-open-${randomUUID()}@example.test`, openPassword = `Synthetic!${randomUUID()}`;
+	const email = `confirmation-close-${randomUUID()}@example.test`, password = `Synthetic!${randomUUID()}`;
+	const opened = await f.admin.auth.admin.createUser({ email: openEmail, password: openPassword, email_confirm: true });
+	if (opened.error || !opened.data.user) throw new Error('Owned open account was not created.');
+	const generated = await f.admin.auth.admin.generateLink({ type: 'signup', email, password, options: { redirectTo: f.site + '/confirmar-correo' } });
+	const health = await observeRenderHealth(page);
+	try {
+		if (generated.error || !generated.data.user || !generated.data.properties?.action_link) throw new Error('Owned second account link was not generated.');
+		await signInWithPassword(page, openEmail, openPassword);
+		await follow(page, generated.data.properties.action_link);
+		await expect(page.getByRole('heading', { name: 'Correo confirmado', exact: true })).toBeVisible();
+		const logout = page.waitForResponse(response => new URL(response.url()).pathname === '/logout' && response.request().method() === 'POST');
+		await page.getByRole('button', { name: 'Cerrar sesión e ingresar' }).click();
+		expect((await logout).status()).toBe(303);
+		await page.waitForURL(url => url.pathname === '/login');
+		await noAppSession(page);
+		await health.assertAndAttach(info, 'email-confirmation-close-other-session-health');
+	} finally {
+		if (generated.data.user) await write(f.admin.auth.admin.deleteUser(generated.data.user.id));
+		await write(f.admin.auth.admin.deleteUser(opened.data.user.id));
+	}
+});
+
 test('email confirmation: signup, SMTP resend, new browser, password login and reused link', { tag: '@candidate-behavior' }, async ({ page, browser }, info) => {
 	test.setTimeout(180_000);
 	const f = fixture();

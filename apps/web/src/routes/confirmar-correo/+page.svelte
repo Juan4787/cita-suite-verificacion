@@ -74,7 +74,8 @@
 <svelte:head>
 	<title>{confirmed ? 'Correo confirmado' : 'Confirmá tu correo'} · Cita Suite</title>
 	<meta name="robots" content="noindex, nofollow" />
-	<meta name="referrer" content="no-referrer" />
+	<!-- FORM_PAGE_REFERRER_POLICY: nada a otros sitios, y el origen real en los formularios propios (18-nov-2026). -->
+	<meta name="referrer" content="same-origin" />
 </svelte:head>
 
 <main class="confirmation-page">

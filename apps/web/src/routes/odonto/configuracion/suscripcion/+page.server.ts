@@ -400,10 +400,13 @@ export const actions: Actions = {
 					Number.isFinite(reusable.createdAt) &&
 					Date.now() - reusable.createdAt <= PENDING_PREAPPROVAL_REUSE_MS
 			);
-			// Una solicitud con otro monto (el precio del consultorio cambió) no se reutiliza: se cancela abajo.
+			// Una solicitud con otro monto (el precio del consultorio cambió) o con otro pagador no se reutiliza: se
+			// cancela abajo. Mercado Pago sólo deja pagar con el correo de la solicitud («Tu e-mail no coincide con
+			// el de la suscripción»): reutilizarla con otro correo dejaba al consultorio sin poder pagar (18-nov-2026).
 			const reusableHasAmount =
 				Number(reusable?.preapproval.auto_recurring?.transaction_amount ?? Number.NaN) === amount;
-			if (reusable && reusable.preapproval.init_point && reusableIsRecent && reusableHasAmount) {
+			const reusableHasPayer = (reusable?.preapproval.payer_email ?? '').trim().toLowerCase() === payerEmail;
+			if (reusable && reusable.preapproval.init_point && reusableIsRecent && reusableHasAmount && reusableHasPayer) {
 				throw redirect(303, reusable.preapproval.init_point);
 			}
 

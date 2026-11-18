@@ -1,4 +1,4 @@
-import { isForbiddenCrossSiteForm } from '$lib/server/platform/cross-site-form';
+import { FORM_PAGE_REFERRER_POLICY, isForbiddenCrossSiteForm } from '$lib/server/platform/cross-site-form';
 import { authUnavailableResponse } from '$lib/server/access/public/auth-unavailable';
 import { THEME_COOKIE, applyThemeToDocument, parseThemePreference, themeClass } from '$lib/theme/preference';
 import { dev } from '$app/environment';
@@ -241,7 +241,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 		'strict-transport-security': 'max-age=31536000',
 		'x-content-type-options': 'nosniff',
 		...(event.locals.bookingFrameAncestors?.length ? {} : { 'x-frame-options': 'DENY' }),
-		'referrer-policy': event.url.pathname === '/confirmar-correo' ? 'no-referrer' : 'strict-origin-when-cross-origin',
+		// /confirmar-correo tiene formularios: con «no-referrer» el navegador manda `Origin: null` y el control de
+		// formularios entre sitios los rechazaba, como «Cerrar sesión e ingresar» (18-nov-2026).
+		'referrer-policy': event.url.pathname === '/confirmar-correo' ? FORM_PAGE_REFERRER_POLICY : 'strict-origin-when-cross-origin',
 		'permissions-policy': 'camera=(), microphone=(), geolocation=()'
 	};
 	for (const [name, value] of Object.entries(securityHeaders)) {

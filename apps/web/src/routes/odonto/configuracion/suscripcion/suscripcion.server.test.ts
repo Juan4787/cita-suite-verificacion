@@ -1384,3 +1384,44 @@ describe('plan pagado aparte (decisión de Juan del 18-nov-2026)', () => {
 		});
 	});
 });
+
+describe('solicitud pendiente con otro pagador (18-nov-2026)', () => {
+	it('no la reutiliza: Mercado Pago sólo deja pagar con su correo; la cancela y crea otra con el correo escrito', async () => {
+		const server = createDbMock();
+		const admin = createDbMock({
+			mp_subscriptions: [
+				{ data: [{ preapproval_id: 'pre-otro-pagador', status: 'pending', created_at: new Date().toISOString() }], error: null },
+				{ error: null },
+				{ error: null },
+				{ error: null },
+				{ error: null }
+			],
+			businesses: [
+				{ data: { id: BUSINESS_ID }, error: null },
+				{ data: { id: BUSINESS_ID }, error: null }
+			]
+		});
+		mocks.createSupabaseServerClient.mockResolvedValue(server.client);
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		mocks.resolveActiveBusiness.mockResolvedValue(ownerContext());
+		const pending = {
+			id: 'pre-otro-pagador',
+			status: 'pending',
+			external_reference: BUSINESS_ID,
+			init_point: 'https://mp.test/init/pre-otro-pagador',
+			payer_email: 'otra-cuenta@mail.com',
+			auto_recurring: { transaction_amount: 90000, currency_id: 'ARS' }
+		};
+		const { fetchMock, requests } = createMpFetch([
+			['/preapproval/pre-otro-pagador', { method: 'GET', body: pending }],
+			['/preapproval/pre-otro-pagador', { method: 'PUT', body: { ...pending, status: 'cancelled' } }],
+			['/preapproval', { method: 'POST', status: 201, body: { id: 'pre-pagador-nuevo', status: 'pending', init_point: 'https://mp.test/init/pre-pagador-nuevo' } }]
+		]);
+
+		await expect(
+			actions.subscribe(makeEvent({ fetchMock, formEntries: { payer_email: 'pagadora@mail.com' } }) as never)
+		).rejects.toMatchObject({ status: 303, location: 'https://mp.test/init/pre-pagador-nuevo' });
+		expect(requests.map((request) => request.method)).toEqual(['GET', 'PUT', 'POST']);
+		expect(requests[2].body).toMatchObject({ payer_email: 'pagadora@mail.com' });
+	});
+});

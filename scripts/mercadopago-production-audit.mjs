@@ -65,6 +65,8 @@ select 'columnas_nuevas', table_name, string_agg(column_name, ',' order by colum
 select 'avisos_con_atencion_sin_resolver', count(*) from public.mp_webhook_events where requires_attention and resolved_at is null;
 select 'acceso_provisorio_en_la_funcion', position('provisional_access' in pg_get_functiondef('public.grant_business_access(uuid,text,integer,text,boolean,numeric,text,text,uuid,text,text)'::regprocedure)) > 0;
 select 'accesos_provisorios', count(*), coalesce(max(created_at)::text, '-') from public.access_grants where operation = 'provisional_access';
+select 'intentos_de_suscripcion_24h', left(subject_hash, 8), count(*), min(created_at), max(created_at) from public.server_rate_limit_events
+  where action = 'mp_subscription_create_by_business' and created_at > now() - interval '24 hours' group by 2 order by 4;
 select 'precio_por_consultorio', 'con_precio_propio=' || count(*) filter (where mp_price_ars is not null), 'precios=' || coalesce(string_agg(distinct mp_price_ars::text, ','), '-')
   from public.business_subscriptions;
 select 'rls_activa', relname, relrowsecurity from pg_class where relnamespace = 'public'::regnamespace and relname in ('mp_subscriptions', 'mp_webhook_events') order by relname;

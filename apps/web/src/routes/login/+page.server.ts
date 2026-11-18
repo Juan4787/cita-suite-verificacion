@@ -258,6 +258,14 @@ export const actions: Actions = {
 					acceptedTerms
 				);
 			}
+			// Supabase responde «For security purposes, you can only request this after N seconds» cuando la
+			// cuenta ya existe sin confirmar y su correo de confirmación salió hace menos de un minuto: típico de
+			// un segundo clic mientras el primero terminaba (18-nov-2026). La cuenta existe y el correo va en
+			// camino: es la pantalla de «Revisá tu correo», la misma que recibe un registro nuevo, no un error.
+			if (status === 429 && /for security purposes, you can only request this/i.test(error?.message ?? '')) {
+				writeEmailConfirmation(cookies, email, 'pending', true);
+				throw redirect(303, EMAIL_CONFIRMATION_PATH);
+			}
 			if (status === 429) {
 				return registerFail(
 					429,

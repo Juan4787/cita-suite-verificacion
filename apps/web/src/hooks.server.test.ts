@@ -365,6 +365,21 @@ describe('hooks auth validation', () => {
 		expect(response.headers.get('cache-control')).toBe('no-store');
 	});
 
+	it('la confirmación de correo usa una política de referencia que conserva el origen de sus formularios', async () => {
+		// Con «no-referrer» el navegador manda `Origin: null` y el control de formularios entre sitios rechazaba
+		// «Cerrar sesión e ingresar» (18-nov-2026). «same-origin» tampoco manda nada a otros sitios.
+		const event = makeEvent();
+		event.url = new URL('https://app.test/confirmar-correo');
+		(event.cookies.get as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		const response = new Response('<html></html>', { headers: { 'content-type': 'text/html', 'x-sveltekit-page': 'true' } });
+		const resolve = vi.fn(async () => response);
+
+		await handle({ event, resolve } as never);
+
+		expect(response.headers.get('referrer-policy')).toBe('same-origin');
+		expect(response.headers.get('cache-control')).toBe('no-store');
+	});
+
 	it('no deja HTML SSR sin cache-control aunque no tenga sesión', async () => {
 		const event = makeEvent();
 		event.url = new URL('https://app.test/login');

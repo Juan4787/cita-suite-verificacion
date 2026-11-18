@@ -303,3 +303,31 @@ describe('login/register server actions', () => {
 		expect(mocks.createSupabaseServerClient).not.toHaveBeenCalled();
 	});
 });
+
+describe('registro con un segundo clic mientras el primero terminaba (18-nov-2026)', () => {
+	const authError = (message: string, code: string) => Object.assign(new Error(message), { status: 429, code, name: 'AuthApiError' });
+
+	it('si el correo de confirmación de esa cuenta salió hace segundos, lleva a «Revisá tu correo» en lugar de un error', async () => {
+		mocks.createSupabaseServerClient.mockResolvedValue({ auth: {
+			signUp: vi.fn().mockResolvedValue({ data: { user: null, session: null }, error: authError('For security purposes, you can only request this after 56 seconds.', 'over_email_send_rate_limit') })
+		} });
+		const event = makeEvent({ email: 'Ya.Creada@example.com', password: 'secret123', confirm_password: 'secret123', accepted_terms: 'true' });
+
+		await expect(actions.register(event as never)).rejects.toMatchObject({ status: 303, location: '/confirmar-correo' });
+		expect(event.cookies.set).toHaveBeenCalledWith('cita-email-confirmation', expect.stringContaining('ya.creada@example.com'), expect.objectContaining({ httpOnly: true }));
+		expect(event.cookies.set).not.toHaveBeenCalledWith('sb-access-token', expect.anything(), expect.anything());
+	});
+
+	it('el límite general de correos de Auth sigue siendo un aviso de demasiados intentos', async () => {
+		mocks.createSupabaseServerClient.mockResolvedValue({ auth: {
+			signUp: vi.fn().mockResolvedValue({ data: { user: null, session: null }, error: authError('Email rate limit exceeded', 'over_email_send_rate_limit') })
+		} });
+		const event = makeEvent({ email: 'nueva@example.com', password: 'secret123', confirm_password: 'secret123', accepted_terms: 'true' });
+
+		const result = (await actions.register(event as never)) as { status: number; data: { message: string } };
+
+		expect(result.status).toBe(429);
+		expect(result.data.message).toContain('Hay demasiados intentos de registro');
+		expect(event.cookies.set).not.toHaveBeenCalledWith('cita-email-confirmation', expect.anything(), expect.anything());
+	});
+});
