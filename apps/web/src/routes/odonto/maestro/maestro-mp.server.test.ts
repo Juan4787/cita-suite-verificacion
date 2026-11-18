@@ -46,7 +46,7 @@ const createDbMock = (
 					calls.push({ table, method, args });
 					return q;
 				};
-			for (const method of ['select', 'eq', 'in', 'order', 'limit', 'upsert', 'update', 'insert', 'delete', 'retry']) {
+			for (const method of ['select', 'eq', 'in', 'order', 'limit', 'upsert', 'update', 'insert', 'delete', 'retry', 'is']) {
 				q[method] = vi.fn(chain(method));
 			}
 			// Like the SDK, the single-row builders can be awaited or configured further.
@@ -340,5 +340,49 @@ describe('action adjust_business_access (maestro)', () => {
 				p_is_permanent: false
 			})
 		});
+	});
+});
+
+describe('action mp_resolve_event (maestro, 18-nov-2026)', () => {
+	const EVENT_ID = '55555555-5555-4555-8555-555555555555';
+
+	it('marca resuelto un evento pendiente y deja quién y cuándo lo resolvió', async () => {
+		const admin = createDbMock({ mp_webhook_events: [{ data: [{ id: EVENT_ID }], error: null }] });
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		const { fetchMock } = createMpFetch([]);
+
+		const result = await actions.mp_resolve_event(makeEvent({ fetchMock, formEntries: { event_id: EVENT_ID } }) as never);
+
+		expect(result).toMatchObject({ success: true });
+		const update = admin.calls.find((c) => c.table === 'mp_webhook_events' && c.method === 'update');
+		expect(update?.args[0]).toMatchObject({ resolved_by: 'master-user-id' });
+		expect(typeof (update?.args[0] as { resolved_at?: unknown }).resolved_at).toBe('string');
+		const filters = admin.calls.filter((c) => c.table === 'mp_webhook_events' && ['eq', 'is'].includes(c.method)).map((c) => [c.method, ...c.args]);
+		expect(filters).toEqual([
+			['eq', 'id', EVENT_ID],
+			['eq', 'requires_attention', true],
+			['is', 'resolved_at', null]
+		]);
+	});
+
+	it('rechaza un identificador inválido sin tocar la base', async () => {
+		const admin = createDbMock();
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		const { fetchMock } = createMpFetch([]);
+
+		const result = (await actions.mp_resolve_event(makeEvent({ fetchMock, formEntries: { event_id: 'no-es-un-id' } }) as never)) as { status: number };
+
+		expect(result.status).toBe(400);
+		expect(admin.calls).toEqual([]);
+	});
+
+	it('avisa si el evento ya estaba resuelto', async () => {
+		const admin = createDbMock({ mp_webhook_events: [{ data: [], error: null }] });
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		const { fetchMock } = createMpFetch([]);
+
+		const result = (await actions.mp_resolve_event(makeEvent({ fetchMock, formEntries: { event_id: EVENT_ID } }) as never)) as { status: number };
+
+		expect(result.status).toBe(409);
 	});
 });

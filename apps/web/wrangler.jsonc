@@ -16,7 +16,9 @@
 		"PUBLIC_SITE_URL": "https://app.cita-suite.com.ar",
 		"BOOKING_CONTEXTS_AVAILABLE": "true",
 		"BOOKING_INTEGRATIONS_ENABLED": "true",
-		"BOOKING_INFORMATION_ENABLED": "true"
+		"BOOKING_INFORMATION_ENABLED": "true",
+		"MP_ENVIRONMENT": "production",
+		"MP_SUBSCRIPTION_AMOUNT_ARS": "90000"
 	},
 	"keep_vars": true
 }

@@ -420,6 +420,10 @@
 							<time class="text-sm text-copy-subtle">{dateTime(event.received_at)}</time>
 						</div>
 						<p class="mt-2 text-sm text-fg-65">{event.processing_detail}</p>
+						<form method="post" action="?/mp_resolve_event" class="mt-3">
+							<input type="hidden" name="event_id" value={event.id} />
+							<button class="ux-btn-secondary">Marcar como resuelto</button>
+						</form>
 					</div>
 				{/each}
 			</div>
@@ -483,6 +487,37 @@
 					<p class="mt-2 text-sm leading-relaxed text-fg-55">
 						La conciliación automática corre aproximadamente cada 6 horas. Forzala sólo si un pago no aparece.
 					</p>
+					{#if data.mpConfig}
+						{@const mp = data.mpConfig}
+						<!-- La configuración vigente, sin secretos: el 18-nov-2026 producción usaba credenciales de prueba y no se veía. -->
+						<dl class="mt-4 grid gap-2 text-sm">
+							<div class="flex flex-wrap items-center justify-between gap-2">
+								<dt class="text-fg-55">Entorno</dt>
+								<dd><span class={mp.environment === 'production' ? 'ux-badge ux-badge-success' : 'ux-badge ux-badge-warning'}>{mp.environment === 'production' ? 'Producción' : 'Prueba'}</span></dd>
+							</div>
+							<div class="flex flex-wrap items-center justify-between gap-2">
+								<dt class="text-fg-55">Precio</dt>
+								<dd class="font-bold text-fg">{money(mp.amountArs)} por mes</dd>
+							</div>
+							<div class="flex flex-wrap items-center justify-between gap-2">
+								<dt class="text-fg-55">Token de acceso</dt>
+								<dd><span class={mp.tokenKind === 'APP_USR-' ? 'ux-badge ux-badge-success' : 'ux-badge ux-badge-warning'}>{mp.tokenKind === 'APP_USR-' ? 'Productivo o de usuario (APP_USR-)' : mp.tokenKind === 'TEST-' ? 'De prueba (TEST-)' : mp.tokenKind === 'sin cargar' ? 'Sin cargar' : 'Formato desconocido'}</span></dd>
+							</div>
+							<div class="flex flex-wrap items-center justify-between gap-2">
+								<dt class="text-fg-55">Clave de los avisos</dt>
+								<dd><span class={mp.webhookSecretConfigured ? 'ux-badge ux-badge-success' : 'ux-badge ux-badge-warning'}>{mp.webhookSecretConfigured ? 'Cargada' : 'Falta'}</span></dd>
+							</div>
+							<div class="flex flex-wrap items-center justify-between gap-2">
+								<dt class="text-fg-55">Último aviso recibido</dt>
+								<dd class="font-bold text-fg">{mp.lastNotificationAt ? dateTime(mp.lastNotificationAt) : 'Ninguno'}</dd>
+							</div>
+						</dl>
+						{#if mp.configIssue}
+							<p class="ux-alert ux-alert-warning mt-3">
+								La configuración de Mercado Pago está incompleta o no coincide ({mp.configIssue}): no se pueden crear suscripciones.
+							</p>
+						{/if}
+					{/if}
 					<form method="post" action="?/mp_reconcile_now" class="mt-4" onsubmit={() => (mpReconciling = true)}>
 						<button class="ux-btn-secondary" disabled={mpReconciling}>
 							{mpReconciling ? 'Conciliando…' : 'Conciliar ahora'}

@@ -22,9 +22,20 @@
 - Las menciones históricas a D en pausa son del antiguo push al celular del consultorio, **reemplazado**, no un trabajo de push pendiente de retomar. La nueva D interna se hace como P3. No cambia el push/calendario del paciente ni el correo E.
 
 
+## Cobros automáticos con Mercado Pago (18 de noviembre)
+
+- Pedido de Juan: auditar con rigor extremo los cobros automáticos con Mercado Pago, hacer la prueba de punta a punta y después corregir todo lo encontrado. Precio decidido: **90.000 pesos por mes**. Literal, hallazgos con evidencia, plan y punto exacto: [plan, registro y traspaso](docs/plans/cobros-mercadopago-20261118.md). Publicar se pide aparte («publicalo»).
+- Hallazgos críticos del 18-nov:
+  - producción funciona con **credenciales de prueba** de Mercado Pago;
+  - la búsqueda de cobros pide un límite que Mercado Pago rechaza, así que sólo el aviso puede acreditar;
+  - el webhook productivo no tenía dirección; se le cargó ese mismo día.
+
+  Hasta corregirlo, ningún consultorio real puede suscribirse.
+- El token de acceso y la clave secreta del webhook productivos los carga Juan en Cloudflare: nunca pasan por el chat ni por el repositorio.
+
 ## Enlace de reserva con el nombre del consultorio (10 de noviembre)
 
-- Pedido de Juan: que el enlace diga `https://app.cita-suite.com.ar/reservar/consultorio-ramirez` y que el enlace limpio aparezca por defecto para todos los consultorios nuevos. Literal, decisiones, pruebas y punto exacto: [plan, registro y traspaso](docs/plans/enlace-de-reserva-20261110.md). **Publicarlo se pide aparte.**
+- Pedido de Juan: que el enlace diga `https://app.cita-suite.com.ar/reservar/consultorio-ramirez` y que el enlace limpio aparezca por defecto para todos los consultorios nuevos. Literal, decisiones, pruebas y punto exacto: [plan, registro y traspaso](docs/plans/enlace-de-reserva-20261110.md). **Publicado el 10 de noviembre a las 22:58 hora argentina** (Juan: «PUBLICALO»), con la migración `20261110010000`; versión, vuelta atrás y comprobaciones en `docs/ESTADO-VIGENTE.md` y en la [guía de publicación](docs/architecture/publicacion-y-reversion.md).
 - La dirección sale del nombre y lo sigue (`businesses.slug_follows_name`). Una dirección escrita a mano es una elección y no cambia sola. Lo que escriben un operador o un dato de prueba tampoco: los scripts de producción buscan y borran sus consultorios por dirección.
 - Ninguna dirección deja de funcionar: el identificador y las direcciones anteriores (`private.business_slug_aliases`) redirigen a la actual, y ningún otro consultorio puede tomar una dirección ajena.
 - La carga de `/reservar/[businessSlug]` compara el parámetro de la ruta y nunca lee `url.pathname`: SvelteKit la volvería a correr al elegir un horario.

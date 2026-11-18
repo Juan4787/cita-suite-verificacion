@@ -7,6 +7,7 @@ import {
 } from '$lib/access/commercial-access';
 import {
 	cancelPreapproval,
+	getMercadoPagoConfigSummary,
 	pickRelevantMpSubscription,
 	reconcileMercadoPago,
 	settleApprovedChargesForPreapproval,
@@ -157,6 +158,7 @@ const buildMasterData = async (
 		grantsRes,
 		mpSubsRes,
 		mpAttentionRes,
+		mpLastNoticeRes,
 		assistanceRes,
 		emailsByUserId
 	] = await Promise.all([
@@ -189,8 +191,18 @@ const buildMasterData = async (
 			.from('mp_webhook_events')
 			.select('id, received_at, topic, action, resource_id, processing_status, processing_detail, business_id')
 			.eq('requires_attention', true)
+			// Sólo lo que sigue pendiente: lo resuelto deja de ocupar la lista (hallazgo M2).
+			.is('resolved_at', null)
 			.order('received_at', { ascending: false })
 			.limit(20),
+		// El último aviso firmado de Mercado Pago, para ver de un vistazo si los avisos llegan.
+		admin
+			.from('mp_webhook_events')
+			.select('received_at')
+			.in('topic', ['payment', 'subscription_preapproval', 'subscription_authorized_payment'])
+			.eq('signature_valid', true)
+			.order('received_at', { ascending: false })
+			.limit(1),
 		admin
 			.from('account_assistance_grants')
 			.select('id, business_id, requested_by_user_id, support_user_id, status, kind, starts_at, expires_at, revoked_at, business:businesses(id, name, slug)')
@@ -205,7 +217,7 @@ const buildMasterData = async (
 	if (businessesRes.error) throw businessesRes.error;
 	// Every table exists since its migration: a failed read is an error the panel shows,
 	// not practices listed without their commercial state, grants or payments.
-	for (const result of [subscriptionsRes, membershipsRes, grantsRes, mpSubsRes, mpAttentionRes, assistanceRes])
+	for (const result of [subscriptionsRes, membershipsRes, grantsRes, mpSubsRes, mpAttentionRes, mpLastNoticeRes, assistanceRes])
 		if (result.error) throw result.error;
 
 	const subscriptionsByBusinessId = new Map(
@@ -307,7 +319,8 @@ const buildMasterData = async (
 		businesses,
 		statuses: COMMERCIAL_STATUSES,
 		assistance,
-		mpAttention
+		mpAttention,
+		mpConfig: { ...getMercadoPagoConfigSummary(), lastNotificationAt: mpLastNoticeRes.data?.[0]?.received_at ?? null }
 	};
 };
 
@@ -341,6 +354,7 @@ export const load: PageServerLoad = async ({ locals, fetch }) => {
 			statuses: COMMERCIAL_STATUSES,
 			assistance: [],
 			mpAttention: [],
+			mpConfig: { ...getMercadoPagoConfigSummary(), lastNotificationAt: null },
 			emailWarnings: await emailWarningsFor(admin),
 			masterEmail: master.email,
 			loadError: 'No se pudo cargar el panel maestro. Revisá la conexión y las migraciones.'
@@ -771,6 +785,33 @@ export const actions: Actions = {
 			success: true,
 			message: 'Suscripción de Mercado Pago cancelada: no se generarán más cobros. El acceso vigente no se modificó.'
 		};
+	},
+	// Marca resuelto un evento que pide atención (hallazgo M2): deja de ocupar la lista y, si la condición
+	// vuelve, «una sola vez» avisa de nuevo. Queda quién lo resolvió y cuándo.
+	mp_resolve_event: async ({ request, locals, fetch }) => {
+		if (!locals.auth) throw redirect(303, '/login');
+		const master = ensureMaster(locals);
+		const form = await request.formData();
+		const eventId = String(form.get('event_id') ?? '').trim();
+		if (!isUuid(eventId)) {
+			return fail(400, { message: 'Falta el evento a marcar como resuelto.' });
+		}
+		const admin = await createSupabaseAdminClient('odonto', fetch);
+		const { data, error } = await admin
+			.from('mp_webhook_events')
+			.update({ resolved_at: new Date().toISOString(), resolved_by: master.userId })
+			.eq('id', eventId)
+			.eq('requires_attention', true)
+			.is('resolved_at', null)
+			.select('id');
+		if (error) {
+			logServerFailure('No se pudo marcar resuelto un evento de Mercado Pago', error);
+			return fail(500, { message: 'No se pudo marcar el evento como resuelto.' });
+		}
+		if (!data?.length) {
+			return fail(409, { message: 'El evento ya estaba resuelto o no requiere atención.' });
+		}
+		return { success: true, message: 'Evento de Mercado Pago marcado como resuelto.' };
 	},
 	mp_reconcile_now: async ({ locals, fetch }) => {
 		if (!locals.auth) throw redirect(303, '/login');

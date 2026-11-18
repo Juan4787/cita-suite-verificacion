@@ -24,12 +24,30 @@
 	const refreshHref = $derived(
 		data.mpReturnRequested ? '/odonto/pago/procesando?mp=retorno' : '/odonto/pago/procesando'
 	);
+	// Un consultorio con tiempo vigente que vuelve de Mercado Pago sin haber autorizado no está suscripto:
+	// el título depende del estado de la suscripción, no de si puede usar la app (hallazgo M5).
+	const subscribed = $derived(
+		Boolean(data.mpReturn && (data.mpReturn.creditedNow || data.mpReturn.subscriptionStatus === 'authorized'))
+	);
+	const returnedWithoutSubscription = $derived(
+		data.activated && data.mpReturnRequested && !subscribed && !data.mpReturnFailed
+	);
 </script>
 
 <section class="ux-page">
 	<div class="mx-auto max-w-2xl">
 		<div class="ux-card text-center">
-			{#if data.activated}
+			{#if returnedWithoutSubscription}
+				<h1 class="ux-title">Tu acceso sigue vigente</h1>
+				<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-fg-65">
+					No vemos una suscripción autorizada en Mercado Pago{data.mpReturn?.subscriptionStatus ? ` (estado: ${data.mpReturn.subscriptionStatus})` : ''}.
+					Si cerraste la página de pago sin confirmar, podés intentarlo de nuevo.
+				</p>
+				<div class="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+					<a href={refreshHref} class="ux-btn-secondary text-center">Actualizar estado</a>
+					<a href="/odonto/configuracion/suscripcion" class="ux-btn-primary text-center">Ir a mi suscripción</a>
+				</div>
+			{:else if data.activated}
 				<h1 class="ux-title">Suscripción activada</h1>
 				<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-fg-65">
 					Ahora configurá tu agenda para empezar a recibir turnos.
@@ -54,7 +72,8 @@
 			{:else}
 				<h1 class="ux-title">Estamos confirmando tu pago</h1>
 				<p class="mx-auto mt-4 max-w-lg text-base font-semibold text-fg-65">
-					Esto suele demorar solo unos segundos. Tu cuenta y tus datos ya están guardados.
+					Mercado Pago puede tardar hasta una hora en procesar el primer cobro. Tu cuenta y tus datos
+					ya están guardados; no hace falta pagar de nuevo.
 				</p>
 
 				<div class="mx-auto mt-7 max-w-sm rounded-2xl border border-line bg-fill-04 p-5 text-left">

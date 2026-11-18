@@ -7,16 +7,19 @@ import { readJson, readRecord, readArray, readText, readBoolean, readFiniteNumbe
 
 export const MP_API_BASE = 'https://api.mercadopago.com';
 
-// Duración acreditada por cada cobro mensual aprobado. El preapproval se crea
-// con frequency 1 month; se acreditan 30 días por cobro.
+// Duración declarada de cada cobro mensual aprobado (unidad 'month'). Desde la migración
+// 20261118010000, grant_business_access acredita un mes calendario por cobro automático: este valor
+// queda en el asiento como duración declarada, que la idempotencia compara.
 export const SUBSCRIPTION_DURATION_SECONDS = 30 * 24 * 60 * 60;
 
 export const MP_PAYMENT_IDEMPOTENCY_PREFIX = 'mp:payment:';
 
-// Ventana de frescura del ts de la firma: fuera de esto la notificación se
-// rechaza aunque el HMAC sea correcto (anti-replay; MP reenvía con firma
-// nueva, así que los reintentos legítimos no se ven afectados).
-export const SIGNATURE_TS_TOLERANCE_SECONDS = 600;
+// Ventana de frescura del ts de la firma. Mercado Pago reintenta cada 15 minutos y después espacia
+// los reintentos; no está documentado si cada reintento lleva una marca nueva. Con 10 minutos, un
+// reintento con la marca original se rechazaba siempre. Repetir un aviso legítimo no tiene efecto,
+// porque procesar es idempotente y siempre vuelve a consultar a Mercado Pago: la ventana sólo acota
+// cuánto tiempo sirve un aviso capturado.
+export const SIGNATURE_TS_TOLERANCE_SECONDS = 24 * 60 * 60;
 
 type FetchLike = typeof fetch;
 
@@ -93,7 +96,31 @@ export const verifyMpWebhookSignature = (
 // Cliente API de Mercado Pago
 // ---------------------------------------------------------------------------
 
-export type MpApiResult<T> = { ok: boolean; status: number; data: T | null };
+// `error` trae el motivo que da Mercado Pago cuando rechaza un pedido («User bad request», «Invalid
+// value for limit»...): sin él, un rechazo quedaba registrado sólo con su código de estado.
+export type MpApiError = { message: string | null; error: string | null };
+export type MpApiResult<T> = { ok: boolean; status: number; data: T | null; error?: MpApiError };
+
+const providerError = (payload: unknown): MpApiError | undefined => {
+	if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return undefined;
+	const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim().slice(0, 200) : null);
+	const row = payload as Record<string, unknown>;
+	const result = { message: text(row.message), error: text(row.error) };
+	return result.message || result.error ? result : undefined;
+};
+
+const mpResult = async <T>(response: Response, decode: (value: unknown) => T): Promise<MpApiResult<T>> => {
+	let data: T | null = null;
+	let error: MpApiError | undefined;
+	try {
+		const payload: unknown = await response.json();
+		if (response.ok) data = decode(payload);
+		else error = providerError(payload);
+	} catch {
+		data = null;
+	}
+	return { ok: response.ok && data !== null, status: response.status, data, ...(error ? { error } : {}) };
+};
 
 const mpGet = async <T>(path: string, fetchFn: FetchLike, decode: (value: unknown) => T): Promise<MpApiResult<T>> => {
 	const token = env.MP_ACCESS_TOKEN?.trim();
@@ -106,14 +133,7 @@ const mpGet = async <T>(path: string, fetchFn: FetchLike, decode: (value: unknow
 		// necesitar hasta dos llamadas a MP más las queries a Supabase.
 		signal: AbortSignal.timeout(5000)
 	});
-	let data: T | null = null;
-	try {
-		const payload: unknown = await response.json();
-		data = response.ok ? decode(payload) : null;
-	} catch {
-		data = null;
-	}
-	return { ok: response.ok && data !== null, status: response.status, data };
+	return mpResult(response, decode);
 };
 
 export type MpPayment = {
@@ -125,6 +145,11 @@ export type MpPayment = {
 	currency_id?: string | null;
 	metadata?: Record<string, unknown> | null;
 	live_mode?: boolean;
+	transaction_amount_refunded?: number | null;
+	// Un pago generado por una suscripción trae point_of_interaction.type = 'SUBSCRIPTIONS' y
+	// transaction_data.subscription_id = la suscripción (medido el 18-nov-2026).
+	point_of_interaction_type?: string | null;
+	subscription_id?: string | null;
 };
 
 export type MpAuthorizedPayment = {
@@ -134,6 +159,11 @@ export type MpAuthorizedPayment = {
 	transaction_amount?: number | null;
 	currency_id?: string | null;
 	external_reference?: string | null;
+	debit_date?: string | null;
+	date_created?: string | null;
+	last_modified?: string | null;
+	retry_attempt?: number | null;
+	next_retry_date?: string | null;
 	payment?: { id?: number | string; status?: string; status_detail?: string } | null;
 };
 
@@ -164,14 +194,22 @@ function paymentFields(row: Record<string, unknown>) {
 }
 function parseMpPayment(value: unknown): MpPayment {
 	const row = readRecord(value, 'mercadoPago.payment');
+	const poi = row.point_of_interaction == null ? null : readRecord(row.point_of_interaction, 'mercadoPago.pointOfInteraction');
+	const transaction = poi?.transaction_data == null ? null : readRecord(poi.transaction_data, 'mercadoPago.transactionData');
 	return { ...paymentFields(row), status_detail: row.status_detail == null ? undefined : readText(row.status_detail, 'mercadoPago.statusDetail'),
 		metadata: row.metadata == null ? row.metadata : readRecord(row.metadata, 'mercadoPago.metadata'),
-		live_mode: row.live_mode === undefined ? undefined : readBoolean(row.live_mode, 'mercadoPago.liveMode') };
+		live_mode: row.live_mode === undefined ? undefined : readBoolean(row.live_mode, 'mercadoPago.liveMode'),
+		transaction_amount_refunded: optionalNumber(row.transaction_amount_refunded, 'refunded'),
+		point_of_interaction_type: poi === null ? null : optionalText(poi.type, 'pointOfInteractionType'),
+		subscription_id: transaction === null ? null : optionalText(transaction.subscription_id, 'subscriptionId') };
 }
 function parseMpAuthorizedPayment(value: unknown): MpAuthorizedPayment {
 	const row = readRecord(value, 'mercadoPago.authorizedPayment');
 	const nested = row.payment == null ? null : readRecord(row.payment, 'mercadoPago.nestedPayment');
 	return { ...paymentFields(row), preapproval_id: optionalText(row.preapproval_id, 'preapprovalId'),
+		debit_date: optionalText(row.debit_date, 'debitDate'), date_created: optionalText(row.date_created, 'dateCreated'),
+		last_modified: optionalText(row.last_modified, 'lastModified'), retry_attempt: optionalNumber(row.retry_attempt, 'retryAttempt'),
+		next_retry_date: optionalText(row.next_retry_date, 'nextRetryDate'),
 		payment: nested === null ? null : { id: nested.id === undefined ? undefined : providerId(nested.id),
 			status: nested.status == null ? undefined : readText(nested.status, 'mercadoPago.nestedStatus'),
 			status_detail: nested.status_detail == null ? undefined : readText(nested.status_detail, 'mercadoPago.nestedDetail') } };
@@ -195,14 +233,53 @@ export const getAuthorizedPayment = (id: string, fetchFn: FetchLike) =>
 export const getPreapproval = (id: string, fetchFn: FetchLike) =>
 	mpGet(`/preapproval/${encodeURIComponent(id)}`, fetchFn, parseMpPreapproval);
 
-export const searchAuthorizedPayments = (preapprovalId: string, fetchFn: FetchLike) =>
-	// limit explícito: el default de MP es más chico y una suscripción de años
-	// no debe dejar cobros viejos fuera de la página que revisa la conciliación.
-	mpGet<{ results?: MpAuthorizedPayment[] }>(
-		`/authorized_payments/search?preapproval_id=${encodeURIComponent(preapprovalId)}&limit=50`,
-		fetchFn,
-		value => { const row = readRecord(value, 'mercadoPago.search'); return { results: row.results === undefined ? undefined : readArray(row.results, 'mercadoPago.results').map(parseMpAuthorizedPayment) }; }
-	);
+// Contrato medido contra Mercado Pago el 18-nov-2026 (docs/plans/cobros-mercadopago-20261118.md,
+// sección 5): la búsqueda admite como máximo 15 resultados por página (16 o más responde 400
+// «Invalid value for limit»), sin límite trae 12, y pagina con offset y paging.total. Hasta esa
+// fecha se pedían 50 y la búsqueda fallaba siempre. El orden no está documentado: se recorren todas
+// las páginas, con un tope de 12 (180 cobros, 15 años de una suscripción mensual).
+export const MP_AUTHORIZED_PAYMENTS_PAGE_LIMIT = 15;
+export const MP_AUTHORIZED_PAYMENTS_MAX_PAGES = 12;
+
+export type MpAuthorizedPaymentsSearch = { results: MpAuthorizedPayment[]; complete: boolean };
+
+const decodeAuthorizedPaymentsPage = (value: unknown) => {
+	const row = readRecord(value, 'mercadoPago.search');
+	const paging = row.paging == null ? null : readRecord(row.paging, 'mercadoPago.paging');
+	return {
+		results: row.results === undefined ? [] : readArray(row.results, 'mercadoPago.results').map(parseMpAuthorizedPayment),
+		total: paging?.total == null ? undefined : readFiniteNumber(paging.total, 'mercadoPago.paging.total')
+	};
+};
+
+// Sin la primera página no hay nada que revisar: falla. Una página posterior que falla, o una que el
+// presupuesto no admite (`admitsPage`), deja lo leído marcado incompleto, porque acreditar es idempotente
+// y lo que falte se revisa en la próxima pasada.
+export const searchAuthorizedPayments = async (
+	preapprovalId: string,
+	fetchFn: FetchLike,
+	opts?: { admitsPage?: () => boolean }
+): Promise<MpApiResult<MpAuthorizedPaymentsSearch>> => {
+	const results: MpAuthorizedPayment[] = [];
+	for (let page = 0; page < MP_AUTHORIZED_PAYMENTS_MAX_PAGES; page += 1) {
+		if (page > 0 && opts?.admitsPage && !opts.admitsPage()) {
+			return { ok: true, status: 200, data: { results, complete: false } };
+		}
+		const { ok, status, data } = await mpGet(
+			`/authorized_payments/search?preapproval_id=${encodeURIComponent(preapprovalId)}&limit=${MP_AUTHORIZED_PAYMENTS_PAGE_LIMIT}&offset=${results.length}`,
+			fetchFn,
+			decodeAuthorizedPaymentsPage
+		);
+		if (!ok || !data) {
+			return page === 0 ? { ok: false, status, data: null } : { ok: true, status, data: { results, complete: false } };
+		}
+		results.push(...data.results);
+		if (data.results.length < MP_AUTHORIZED_PAYMENTS_PAGE_LIMIT || (data.total !== undefined && results.length >= data.total)) {
+			return { ok: true, status, data: { results, complete: true } };
+		}
+	}
+	return { ok: true, status: 200, data: { results, complete: false } };
+};
 
 const mpSend = async <T>(
 	method: 'POST' | 'PUT',
@@ -228,14 +305,7 @@ const mpSend = async <T>(
 		body: JSON.stringify(body),
 		signal: AbortSignal.timeout(8000)
 	});
-	let data: T | null = null;
-	try {
-		const payload: unknown = await response.json();
-		data = response.ok ? decode(payload) : null;
-	} catch {
-		data = null;
-	}
-	return { ok: response.ok && data !== null, status: response.status, data };
+	return mpResult(response, decode);
 };
 
 export const MP_SUBSCRIPTION_REASON = 'Cita Suite — Suscripción mensual';
@@ -266,12 +336,55 @@ export const getMercadoPagoApiConfigIssue = (): string | null => {
 	return null;
 };
 
-// Precio global de la suscripción; configurable por env, con el valor acordado
-// como respaldo para que un env faltante nunca genere un cobro en cero.
+// Lo que el panel maestro muestra de la configuración vigente, sin ningún secreto: el 18-nov-2026
+// producción usaba credenciales de prueba y nadie podía verlo, porque los valores eran secretos.
+export type MercadoPagoConfigSummary = {
+	environment: MercadoPagoEnvironment;
+	amountArs: number;
+	tokenKind: 'TEST-' | 'APP_USR-' | 'otro' | 'sin cargar';
+	webhookSecretConfigured: boolean;
+	configIssue: string | null;
+};
+
+export const getMercadoPagoConfigSummary = (): MercadoPagoConfigSummary => {
+	const token = env.MP_ACCESS_TOKEN?.trim() ?? '';
+	return {
+		environment: getMercadoPagoEnvironment(),
+		amountArs: getSubscriptionAmountArs(),
+		tokenKind: !token ? 'sin cargar' : token.startsWith('TEST-') ? 'TEST-' : token.startsWith('APP_USR-') ? 'APP_USR-' : 'otro',
+		webhookSecretConfigured: Boolean(env.MP_WEBHOOK_SECRET?.trim()),
+		configIssue: getMercadoPagoApiConfigIssue()
+	};
+};
+
+// Precio decidido por Juan el 18 de noviembre de 2026: 90.000 pesos por mes. La variable versionada
+// MP_SUBSCRIPTION_AMOUNT_ARS (apps/web/wrangler.jsonc) lo fija; este valor de respaldo evita que una
+// variable faltante genere un cobro en cero.
+export const DEFAULT_SUBSCRIPTION_AMOUNT_ARS = 90000;
+
 export const getSubscriptionAmountArs = (): number => {
 	const parsed = Number(env.MP_SUBSCRIPTION_AMOUNT_ARS?.trim() ?? '');
-	return Number.isFinite(parsed) && parsed > 0 ? parsed : 50000;
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_SUBSCRIPTION_AMOUNT_ARS;
 };
+
+// Mercado Pago exige que en su página de pago se use exactamente el correo enviado como pagador
+// («Tu e-mail no coincide con el de la suscripción»), y al crear la suscripción rechaza un correo con
+// «+» o de un dominio sin correo («User bad request»): medido el 18-nov-2026
+// (docs/plans/cobros-mercadopago-20261118.md, sección 5). Por eso el consultorio escribe el correo de
+// su cuenta de Mercado Pago, y se valida antes de pedirle nada a Mercado Pago.
+const PAYER_EMAIL_PATTERN = /^[^\s@+]+@[^\s@]+\.[^\s@]+$/;
+export const payerEmailIssue = (email: string): string | null => {
+	if (!email) return 'Escribí el correo de tu cuenta de Mercado Pago.';
+	if (email.includes('+'))
+		return 'Mercado Pago no acepta correos con «+». Escribí el correo de tu cuenta de Mercado Pago sin el «+» ni lo que le sigue.';
+	if (email.length > 254 || !PAYER_EMAIL_PATTERN.test(email)) return 'Revisá el correo: no parece una dirección válida.';
+	return null;
+};
+
+// Los motivos con que Mercado Pago rechaza el correo del pagador al crear la suscripción.
+export const isPayerRejection = (result: MpApiResult<unknown>) =>
+	result.status === 400 &&
+	['User bad request', 'Payer is associated with a different site'].includes(result.error?.message ?? '');
 
 // Preapproval "sin plan asociado": el cliente autoriza una vez en Mercado Pago
 // (redirect a init_point) y MP cobra solo cada mes. Sin prueba gratuita y sin
@@ -386,7 +499,7 @@ const callGrantAccess = async (admin: CitaSupabaseClient, opts: GrantCallOverrid
 	};
 };
 
-// Acredita 30 días por un pago aprobado. Idempotente: la clave
+// Acredita un mes por un pago aprobado (grant_business_access, unidad 'month'). Idempotente: la clave
 // `mp:payment:{id}` hace que webhook, retorno del checkout y conciliación
 // puedan intentarlo sin duplicar. Pre-chequea existencia y permanencia del
 // negocio para que un mapeo roto o un negocio permanente no terminen en un
@@ -407,7 +520,8 @@ export const creditApprovedPayment = async (
 		durationSeconds: SUBSCRIPTION_DURATION_SECONDS,
 		durationUnit: 'month',
 		amount: opts.amount,
-		note: `Pago de Mercado Pago ${opts.paymentId} acreditado automáticamente (${opts.origin}).`,
+		// La nota la ve el consultorio en su historial: sin el camino técnico, que queda en mp_webhook_events.
+		note: `Pago de Mercado Pago ${opts.paymentId} acreditado automáticamente.`,
 		idempotencyKey: `${MP_PAYMENT_IDEMPOTENCY_PREFIX}${opts.paymentId}`
 	});
 	return {
@@ -592,7 +706,7 @@ const creditOutcomeResult = (
 		};
 	}
 	const blocked = outcome.statusAfter !== null && BLOCKED_STATUSES.has(outcome.statusAfter);
-	const base = outcome.kind === 'duplicated' ? `${what} ya estaba acreditado (idempotente).` : `${what} acreditado: +30 días.`;
+	const base = outcome.kind === 'duplicated' ? `${what} ya estaba acreditado (idempotente).` : `${what} acreditado: +1 mes.`;
 	return {
 		status: 'processed',
 		detail: blocked
@@ -612,6 +726,38 @@ const resolvePaymentBusinessId = (payment: MpPayment): string | null => {
 	return null;
 };
 
+// Un aviso con atención que se registra una sola vez por recurso mientras siga sin resolver.
+const attentionOnce = (
+	admin: CitaSupabaseClient,
+	opts: { topic: string; action: string; resourceId: string; businessId: string | null; detail: string }
+) =>
+	logMpWebhookEventOnce(admin, {
+		topic: opts.topic,
+		action: opts.action,
+		resource_id: opts.resourceId,
+		request_id: null,
+		live_mode: null,
+		signature_valid: true,
+		processing_status: 'processed',
+		processing_detail: opts.detail,
+		business_id: opts.businessId,
+		requires_attention: true
+	});
+
+// El consultorio de una suscripción: el vínculo local o, si falta, el que se reconstruye desde
+// Mercado Pago (external_reference), que queda guardado para la próxima.
+const subscriptionBusinessOf = async (
+	admin: CitaSupabaseClient,
+	fetchFn: FetchLike,
+	preapprovalId: string
+): Promise<string | null> => {
+	const mapped = await findBusinessByPreapproval(admin, preapprovalId);
+	if (mapped) return mapped;
+	const { ok, data } = await getPreapproval(preapprovalId, fetchFn);
+	if (!ok || !data) return null;
+	return (await upsertMpSubscription(admin, data)).businessId;
+};
+
 const processPaymentTopic = async (
 	admin: CitaSupabaseClient,
 	fetchFn: FetchLike,
@@ -623,26 +769,80 @@ const processPaymentTopic = async (
 		return apiFailureResult(status, `el pago ${resourceId}`);
 	}
 
-	const businessId = resolvePaymentBusinessId(payment);
+	const referenceBusinessId = resolvePaymentBusinessId(payment);
 	const paymentStatus = payment.status ?? 'desconocido';
+	const paymentId = String(payment.id);
+	const subscriptionId =
+		payment.point_of_interaction_type === 'SUBSCRIPTIONS' ? payment.subscription_id?.trim() || null : null;
 
 	if (paymentStatus === 'approved') {
-		if (!businessId) {
-			return {
-				status: 'skipped',
-				detail: `Pago ${resourceId} aprobado pero sin external_reference mapeable a un negocio.`,
-				businessId: null,
-				grantId: null,
-				requiresAttention: true
-			};
+		// Sólo se acredita un pago en pesos de una suscripción conocida del consultorio (hallazgo B3):
+		// con la referencia sola, cualquier pago aprobado con el identificador de un consultorio sumaba un mes.
+		const unverified = (detail: string, businessId: string | null): MpProcessResult => ({
+			status: 'skipped',
+			detail,
+			businessId,
+			grantId: null,
+			requiresAttention: true
+		});
+		if (payment.currency_id && payment.currency_id !== 'ARS') {
+			return unverified(`Pago ${resourceId} aprobado en ${payment.currency_id}: sólo se acreditan pagos en pesos. Revisar.`, referenceBusinessId);
+		}
+		if (!subscriptionId) {
+			return unverified(
+				`Pago ${resourceId} aprobado que no proviene de una suscripción de Mercado Pago: no se acredita automáticamente. Revisar.`,
+				referenceBusinessId
+			);
+		}
+		const subscriptionBusinessId = await subscriptionBusinessOf(admin, fetchFn, subscriptionId);
+		if (!subscriptionBusinessId) {
+			return unverified(
+				`Pago ${resourceId} aprobado de la suscripción ${subscriptionId}, que no corresponde a ningún consultorio. Revisar.`,
+				referenceBusinessId
+			);
+		}
+		if (referenceBusinessId && referenceBusinessId !== subscriptionBusinessId) {
+			return unverified(
+				`Pago ${resourceId} aprobado: su referencia (${referenceBusinessId}) no coincide con el consultorio de la suscripción ${subscriptionId} (${subscriptionBusinessId}). No se acredita. Revisar.`,
+				subscriptionBusinessId
+			);
 		}
 		const outcome = await creditApprovedPayment(admin, {
-			businessId,
-			paymentId: String(payment.id),
+			businessId: subscriptionBusinessId,
+			paymentId,
 			amount: payment.transaction_amount ?? null,
 			origin
 		});
-		return creditOutcomeResult(outcome, businessId, `Pago ${resourceId}`);
+		if ((payment.transaction_amount_refunded ?? 0) > 0) {
+			await attentionOnce(admin, {
+				topic: 'payment',
+				action: 'payment_partially_refunded',
+				resourceId: paymentId,
+				businessId: subscriptionBusinessId,
+				detail: `Pago ${resourceId} aprobado con un reembolso parcial de $${payment.transaction_amount_refunded}. El acceso no se modificó: revisar y decidir manualmente.`
+			});
+		}
+		return creditOutcomeResult(outcome, subscriptionBusinessId, `Pago ${resourceId}`);
+	}
+
+	const businessId =
+		referenceBusinessId ?? (subscriptionId ? await subscriptionBusinessOf(admin, fetchFn, subscriptionId) : null);
+
+	if (paymentStatus === 'in_mediation') {
+		await attentionOnce(admin, {
+			topic: 'payment',
+			action: 'payment_in_mediation',
+			resourceId: paymentId,
+			businessId,
+			detail: `Pago ${resourceId} con una disputa abierta en Mercado Pago. El acceso no se modificó: revisar.`
+		});
+		return {
+			status: 'processed',
+			detail: `Pago ${resourceId} en disputa; aviso registrado.`,
+			businessId,
+			grantId: null,
+			requiresAttention: false
+		};
 	}
 
 	if (CANCELLED_PAYMENT_STATUSES.has(paymentStatus)) {
@@ -682,6 +882,37 @@ const processPaymentTopic = async (
 	};
 };
 
+// Un cobro rechazado o en reintento: Mercado Pago reintenta hasta 4 veces en 10 días y, después de 3
+// cuotas rechazadas, cancela la suscripción (documentación oficial, leída el 18-nov-2026).
+const isRejectedCharge = (charge: MpAuthorizedPayment) =>
+	charge.payment?.status === 'rejected' || charge.status === 'recycling';
+
+const chargeRejectedDetail = (charge: MpAuthorizedPayment, preapprovalId: string) =>
+	`Mercado Pago no pudo cobrar la cuota ${charge.id} de la suscripción ${preapprovalId || 'desconocida'}` +
+	(charge.payment?.status_detail ? ` (${charge.payment.status_detail})` : '') +
+	'. Reintenta hasta 4 veces en 10 días' +
+	(charge.next_retry_date ? `; próximo intento: ${charge.next_retry_date}` : '') +
+	'. Si sigue fallando, el consultorio tiene que actualizar su medio de pago en Mercado Pago; tras 3 cuotas rechazadas, Mercado Pago cancela la suscripción.';
+
+// El último cobro de una suscripción, para avisar en su página cuando Mercado Pago no pudo cobrar.
+// Los avisos pueden llegar desordenados: se guarda sólo si no es anterior al que ya está.
+const recordLastCharge = async (admin: CitaSupabaseClient, preapprovalId: string, charge: MpAuthorizedPayment) => {
+	const moment = charge.debit_date ?? charge.date_created;
+	const parsed = moment ? Date.parse(moment) : Number.NaN;
+	const at = new Date(Number.isFinite(parsed) ? parsed : Date.now()).toISOString();
+	const { error } = await admin
+		.from('mp_subscriptions')
+		.update({
+			last_charge_id: String(charge.id),
+			last_charge_status: charge.payment?.status ?? charge.status ?? null,
+			last_charge_detail: charge.payment?.status_detail ?? null,
+			last_charge_at: at
+		})
+		.eq('preapproval_id', preapprovalId)
+		.or(`last_charge_at.is.null,last_charge_at.lte."${at}"`);
+	if (error) logServerFailure('No se pudo guardar el último cobro de la suscripción', error);
+};
+
 const processAuthorizedPaymentTopic = async (
 	admin: CitaSupabaseClient,
 	fetchFn: FetchLike,
@@ -694,17 +925,8 @@ const processAuthorizedPaymentTopic = async (
 	}
 
 	const preapprovalId = authorized.preapproval_id?.trim() ?? '';
-	let businessId = preapprovalId ? await findBusinessByPreapproval(admin, preapprovalId) : null;
-
-	// Sin mapeo local: se reconstruye desde el preapproval (external_reference)
-	// y se deja la fila creada para la próxima.
-	if (!businessId && preapprovalId) {
-		const { ok: preOk, data: preapproval } = await getPreapproval(preapprovalId, fetchFn);
-		if (preOk && preapproval) {
-			const upsert = await upsertMpSubscription(admin, preapproval);
-			businessId = upsert.businessId;
-		}
-	}
+	// Sin vínculo local, se reconstruye desde el preapproval (external_reference) y queda guardado.
+	let businessId = preapprovalId ? await subscriptionBusinessOf(admin, fetchFn, preapprovalId) : null;
 
 	if (!businessId && isUuid(authorized.external_reference?.trim())) {
 		businessId = authorized.external_reference!.trim();
@@ -712,6 +934,7 @@ const processAuthorizedPaymentTopic = async (
 
 	const paymentId = authorized.payment?.id != null ? String(authorized.payment.id) : null;
 	const paymentStatus = authorized.payment?.status ?? authorized.status ?? 'desconocido';
+	if (preapprovalId) await recordLastCharge(admin, preapprovalId, authorized);
 
 	if (paymentStatus === 'approved') {
 		if (!businessId || !paymentId) {
@@ -732,6 +955,17 @@ const processAuthorizedPaymentTopic = async (
 			origin
 		});
 		return creditOutcomeResult(outcome, businessId, `Cobro ${resourceId} (pago ${paymentId})`);
+	}
+
+	if (isRejectedCharge(authorized)) {
+		// Una alerta por cuota, no por reintento: cada reintento manda otro aviso del mismo cobro.
+		await attentionOnce(admin, {
+			topic: 'subscription_charge',
+			action: 'charge_rejected',
+			resourceId: String(authorized.id),
+			businessId,
+			detail: chargeRejectedDetail(authorized, preapprovalId)
+		});
 	}
 
 	return {
@@ -876,7 +1110,9 @@ export const confirmMpSubscriptionForBusiness = async (
 		}
 		if (status !== 'authorized') continue;
 
-		const { ok: searchOk, data: page } = await searchAuthorizedPayments(preapprovalId, fetchFn);
+		const { ok: searchOk, data: page } = await searchAuthorizedPayments(preapprovalId, fetchFn, {
+			admitsPage: () => Date.now() <= deadline
+		});
 		if (searchOk) {
 			for (const charge of page?.results ?? []) {
 				const paymentId = charge.payment?.id != null ? String(charge.payment.id) : null;
@@ -918,8 +1154,8 @@ export const settleApprovedChargesForPreapproval = async (
 	let credited = 0;
 	try {
 		const { ok, status, data: page } = await searchAuthorizedPayments(preapprovalId, fetchFn);
-		if (!ok) throw new Error(`Mercado Pago respondió HTTP ${status} al buscar los cobros.`);
-		for (const charge of page?.results ?? []) {
+		if (!ok || !page) throw new Error(`Mercado Pago respondió HTTP ${status} al buscar los cobros.`);
+		for (const charge of page.results) {
 			const paymentId = charge.payment?.id != null ? String(charge.payment.id) : null;
 			if (!paymentId || charge.payment?.status !== 'approved') continue;
 			const outcome = await creditApprovedPayment(admin, {
@@ -930,6 +1166,8 @@ export const settleApprovedChargesForPreapproval = async (
 			});
 			if (outcome.kind === 'credited') credited += 1;
 		}
+		// Lo encontrado ya quedó asentado; si faltaron páginas, el resto se revisa a mano.
+		if (!page.complete) throw new Error('Mercado Pago no devolvió todas las páginas de cobros.');
 		return { credited, checked: true };
 	} catch (error) {
 		logServerFailure('No se pudo asentar el cobro final antes de cancelar', error);
@@ -991,11 +1229,14 @@ export const logMpWebhookEventOnce = async (
 	admin: CitaSupabaseClient,
 	row: MpWebhookEventRow & { action: string; resource_id: string }
 ): Promise<boolean> => {
+	// Sólo cuenta un aviso que siga sin resolver: si la condición vuelve después de resolverla (una
+	// segunda doble suscripción, un cobro rechazado otra vez), avisa de nuevo.
 	const { data: existing, error } = await admin
 		.from('mp_webhook_events')
 		.select('id')
 		.eq('action', row.action)
 		.eq('resource_id', row.resource_id)
+		.is('resolved_at', null)
 		.limit(1)
 		.maybeSingle()
 		.retry(false);
@@ -1054,22 +1295,49 @@ export type MpReconcileSummary = {
 const RECONCILE_BUDGET_MS = 6500;
 /**
  * Worst case of one subscription before its charges: the preapproval, its sync with
- * the duplicate check and a one-time alert, a status alert, the charge search and the
- * credited ledger. Each new approved charge adds its business checks, credit and log.
+ * the duplicate check and a one-time alert, a status alert, the first page of the charge
+ * search, the last charge record, the reversal ledger and the credited ledger. Each extra
+ * page, each rejected-charge alert (2) and each new approved or reversed charge (4) is
+ * admitted on its own.
  */
-export const RECONCILE_SUBSCRIPTION_CALLS = 9;
+export const RECONCILE_SUBSCRIPTION_CALLS = 11;
 export const RECONCILE_CHARGE_CALLS = 4;
 
-/** Payments already credited, read from the ledger in one trip instead of retried one by one. */
-const creditedPayments = async (admin: CitaSupabaseClient, paymentIds: string[]): Promise<Set<string>> => {
-	if (!paymentIds.length) return new Set();
+/** A request nobody completed in this time is cancelled in Mercado Pago (finding M10). */
+export const ABANDONED_PENDING_MS = 7 * 24 * 60 * 60 * 1000;
+/** Only charges this recent raise a rejected-charge alert: older ones are history, not news. */
+const RECENT_CHARGE_MS = 15 * 24 * 60 * 60 * 1000;
+
+const chargeTime = (charge: MpAuthorizedPayment): number | null => {
+	const time = Date.parse(charge.debit_date ?? charge.date_created ?? '');
+	return Number.isFinite(time) ? time : null;
+};
+const isRecentCharge = (charge: MpAuthorizedPayment) => {
+	const time = chargeTime(charge);
+	return time !== null && Date.now() - time <= RECENT_CHARGE_MS;
+};
+const latestCharge = (charges: MpAuthorizedPayment[]) =>
+	charges.reduce<MpAuthorizedPayment | null>(
+		(best, charge) => (!best || (chargeTime(charge) ?? -Infinity) >= (chargeTime(best) ?? -Infinity) ? charge : best),
+		null
+	);
+
+/** Ledger keys that already exist, read in one trip instead of retried one by one. */
+const ledgerKeys = async (admin: CitaSupabaseClient, keys: string[]): Promise<Set<string>> => {
+	if (!keys.length) return new Set();
 	const { data, error } = await admin
 		.from('access_grants')
 		.select('idempotency_key')
-		.in('idempotency_key', paymentIds.map((id) => MP_PAYMENT_IDEMPOTENCY_PREFIX + id))
+		.in('idempotency_key', keys)
 		.retry(false);
-	if (error) throw new Error(`No se pudieron leer los pagos acreditados: ${error.message}`);
-	return new Set(data.map((row) => row.idempotency_key.slice(MP_PAYMENT_IDEMPOTENCY_PREFIX.length)));
+	if (error) throw new Error(`No se pudieron leer los asientos: ${error.message}`);
+	return new Set(data.map((row) => row.idempotency_key));
+};
+
+/** Payments already credited. */
+const creditedPayments = async (admin: CitaSupabaseClient, paymentIds: string[]): Promise<Set<string>> => {
+	const keys = await ledgerKeys(admin, paymentIds.map((id) => MP_PAYMENT_IDEMPOTENCY_PREFIX + id));
+	return new Set([...keys].map((key) => key.slice(MP_PAYMENT_IDEMPOTENCY_PREFIX.length)));
 };
 
 export const reconcileMercadoPago = async (
@@ -1093,7 +1361,7 @@ export const reconcileMercadoPago = async (
 	// aunque cada corrida procese de a `limit`.
 	const { data: rows, error } = await admin
 		.from('mp_subscriptions')
-		.select('business_id, preapproval_id, status')
+		.select('business_id, preapproval_id, status, created_at')
 		.in('status', ['pending', 'authorized', 'paused'])
 		.order('last_synced_at', { ascending: true })
 		.limit(limit)
@@ -1114,6 +1382,26 @@ export const reconcileMercadoPago = async (
 				fetchFn
 			);
 			if (!ok || !preapproval) {
+				if (httpStatus === 404) {
+					// Mercado Pago ya no la encuentra (otro entorno, de prueba o de producción, o borrada):
+					// deja de revisarse cada 6 horas y avisa una sola vez (hallazgo M3).
+					await admin
+						.from('mp_subscriptions')
+						.update({ status: 'not_found', last_synced_at: new Date().toISOString() })
+						.eq('preapproval_id', row.preapproval_id);
+					const alerted = await attentionOnce(admin, {
+						topic: 'reconciliation',
+						action: 'preapproval_not_found',
+						resourceId: row.preapproval_id,
+						businessId: row.business_id,
+						detail: `Conciliación: Mercado Pago no encuentra la suscripción ${row.preapproval_id}, que figuraba ${row.status}. Puede ser de otro entorno (prueba o producción). Deja de revisarse; si era una suscripción real, revisarla en Mercado Pago.`
+					});
+					if (alerted) {
+						summary.attention += 1;
+						summary.details.push(`Suscripción ${row.preapproval_id}: Mercado Pago no la encuentra.`);
+					}
+					continue;
+				}
 				summary.errors += 1;
 				summary.details.push(`Preapproval ${row.preapproval_id}: MP respondió HTTP ${httpStatus}.`);
 				// La fila igual rota al fondo de la cola: una suscripción que
@@ -1148,17 +1436,39 @@ export const reconcileMercadoPago = async (
 			// no cobró jamás). Clave: una suscripción recién cancelada/pausada
 			// sale del filtro en la próxima corrida, así que este es su último
 			// barrido — si el webhook perdió su cobro final, se acredita acá.
-			if (freshStatus === 'pending') continue;
+			if (freshStatus === 'pending') {
+				// Una solicitud que nadie completó en 7 días se cancela en Mercado Pago (hallazgo M10): deja de
+				// revisarse y su enlace de pago ya no puede autorizar un débito.
+				const createdAt = Date.parse(String(row.created_at ?? ''));
+				if (Number.isFinite(createdAt) && Date.now() - createdAt > ABANDONED_PENDING_MS && fits(1)) {
+					const cancelled = await cancelPreapproval(fetchFn, row.preapproval_id);
+					if (cancelled.ok && cancelled.data) {
+						await upsertMpSubscription(admin, {
+							...preapproval,
+							...cancelled.data,
+							external_reference: cancelled.data.external_reference ?? preapproval.external_reference ?? row.business_id
+						});
+						summary.details.push(`Solicitud ${row.preapproval_id} sin completar desde hace más de 7 días: cancelada.`);
+					} else {
+						summary.errors += 1;
+						summary.details.push(`Solicitud ${row.preapproval_id}: no se pudo cancelar (HTTP ${cancelled.status}).`);
+					}
+				}
+				continue;
+			}
 			if (Date.now() > deadline) {
 				summary.details.push('Presupuesto de tiempo agotado; continúa en la próxima corrida.');
 				break;
 			}
 
+			// La primera página entra en el peor caso de la suscripción; cada página más se admite aparte.
 			const {
 				ok: searchOk,
 				status: searchStatus,
 				data: page
-			} = await searchAuthorizedPayments(row.preapproval_id, fetchFn);
+			} = await searchAuthorizedPayments(row.preapproval_id, fetchFn, {
+				admitsPage: () => Date.now() <= deadline && fits(1)
+			});
 			if (!searchOk) {
 				summary.errors += 1;
 				summary.details.push(
@@ -1167,7 +1477,59 @@ export const reconcileMercadoPago = async (
 				continue;
 			}
 
-			const approved = (page?.results ?? []).flatMap((charge) =>
+			const charges = page?.results ?? [];
+			// El último cobro (M6) y los rechazos recientes: una alerta por cuota mientras siga sin resolver.
+			const latest = latestCharge(charges);
+			if (latest) await recordLastCharge(admin, row.preapproval_id, latest);
+			for (const charge of charges) {
+				if (!isRejectedCharge(charge) || !isRecentCharge(charge) || !fits(2)) continue;
+				const alerted = await attentionOnce(admin, {
+					topic: 'subscription_charge',
+					action: 'charge_rejected',
+					resourceId: String(charge.id),
+					businessId: row.business_id,
+					detail: chargeRejectedDetail(charge, row.preapproval_id)
+				});
+				if (alerted) {
+					summary.attention += 1;
+					summary.details.push(`Cuota ${charge.id}: Mercado Pago no pudo cobrar.`);
+				}
+			}
+			// Reembolsos y contracargos de los cobros (B4): el aviso los asienta; acá se curan los que se perdió.
+			const reversed = charges.flatMap((charge) =>
+				charge.payment?.id != null && CANCELLED_PAYMENT_STATUSES.has(charge.payment.status ?? '')
+					? [{ paymentId: String(charge.payment.id), status: String(charge.payment.status), amount: charge.transaction_amount ?? null }]
+					: []
+			);
+			const reversalKey = (paymentId: string) => `${MP_PAYMENT_IDEMPOTENCY_PREFIX}${paymentId}:cancelled`;
+			const recordedReversals = await ledgerKeys(admin, reversed.map((charge) => reversalKey(charge.paymentId)));
+			for (const charge of reversed) {
+				if (recordedReversals.has(reversalKey(charge.paymentId)) || !fits(RECONCILE_CHARGE_CALLS)) continue;
+				const outcome = await recordCancelledPayment(admin, {
+					businessId: row.business_id,
+					paymentId: charge.paymentId,
+					amount: charge.amount,
+					status: charge.status
+				});
+				if (outcome.kind !== 'credited') continue;
+				summary.attention += 1;
+				summary.details.push(`Pago ${charge.paymentId}: ${charge.status}.`);
+				await logMpWebhookEvent(admin, {
+					topic: 'reconciliation',
+					action: 'payment_reversed',
+					resource_id: charge.paymentId,
+					request_id: null,
+					live_mode: null,
+					signature_valid: true,
+					processing_status: 'processed',
+					processing_detail: `Conciliación: el pago ${charge.paymentId} pasó a ${charge.status}; quedó asentado y el acceso no se modificó. Revisar.`,
+					business_id: row.business_id,
+					credited_grant_id: outcome.grantId,
+					requires_attention: true
+				});
+			}
+
+			const approved = charges.flatMap((charge) =>
 				charge.payment?.id != null && charge.payment.status === 'approved'
 					? [{ paymentId: String(charge.payment.id), amount: charge.transaction_amount ?? null }]
 					: []
@@ -1191,7 +1553,7 @@ export const reconcileMercadoPago = async (
 					const blocked =
 						outcome.statusAfter !== null && BLOCKED_STATUSES.has(outcome.statusAfter);
 					if (blocked) summary.attention += 1;
-					summary.details.push(`Pago ${paymentId} acreditado (+30 días).`);
+					summary.details.push(`Pago ${paymentId} acreditado (+1 mes).`);
 					await logMpWebhookEvent(admin, {
 						topic: 'reconciliation',
 						action: 'payment_credited',
@@ -1202,7 +1564,7 @@ export const reconcileMercadoPago = async (
 						processing_status: 'processed',
 						processing_detail: blocked
 							? `Conciliación: pago ${paymentId} acreditado pero el negocio queda "${outcome.statusAfter}" (override manual o alta sin configurar). Revisar.`
-							: `Conciliación: pago ${paymentId} acreditado (+30 días); webhook y retorno no lo habían registrado.`,
+							: `Conciliación: pago ${paymentId} acreditado (+1 mes); webhook y retorno no lo habían registrado.`,
 						business_id: row.business_id,
 						credited_grant_id: outcome.grantId,
 						requires_attention: blocked
@@ -1233,6 +1595,12 @@ export const reconcileMercadoPago = async (
 					}
 				}
 				// 'duplicated' es el caso normal (ya acreditado): silencio.
+			}
+			// Lo leído ya se acreditó; lo que faltó se revisa en la próxima corrida, porque la fila
+			// quedó sincronizada recién y rota al fondo de la cola.
+			if (page && !page.complete) {
+				summary.errors += 1;
+				summary.details.push(`Cobros de ${row.preapproval_id}: revisión incompleta; sigue en la próxima corrida.`);
 			}
 		} catch (err) {
 			summary.errors += 1;

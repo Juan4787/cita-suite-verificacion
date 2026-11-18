@@ -10,6 +10,8 @@ import {
 	getMercadoPagoApiConfigIssue,
 	getPreapproval,
 	getSubscriptionAmountArs,
+	isPayerRejection,
+	payerEmailIssue,
 	pickRelevantMpSubscription,
 	settleApprovedChargesForPreapproval,
 	upsertMpSubscription,
@@ -34,6 +36,9 @@ export type MpSubscriptionView = {
 	transaction_amount: number | null;
 	next_charge_at: string | null;
 	updated_at: string | null;
+	last_charge_status: string | null;
+	last_charge_detail: string | null;
+	last_charge_at: string | null;
 };
 
 const PENDING_PREAPPROVAL_REUSE_MS = 15 * 60 * 1000;
@@ -46,7 +51,7 @@ const loadMpSubscription = async (
 ): Promise<MpSubscriptionView | null> => {
 	const { data, error } = await admin
 		.from('mp_subscriptions')
-		.select('preapproval_id, status, payer_email, transaction_amount, next_charge_at, updated_at')
+		.select('preapproval_id, status, payer_email, transaction_amount, next_charge_at, updated_at, last_charge_status, last_charge_detail, last_charge_at')
 		.eq('business_id', businessId)
 		.order('created_at', { ascending: false })
 		.limit(5);
@@ -67,7 +72,8 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			mpAmount: getSubscriptionAmountArs(),
 			mpEnvironment: getMercadoPagoEnvironment(),
 			mpReturn: null as MpReturnSummary | null,
-			mpReturnFailed: false
+			mpReturnFailed: false,
+			payerEmailDefault: ''
 		};
 	}
 
@@ -154,12 +160,15 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 		mpAmount: getSubscriptionAmountArs(),
 		mpEnvironment: getMercadoPagoEnvironment(),
 		mpReturn,
-		mpReturnFailed: mpReturnFailed || (!admin && url.searchParams.get('mp') === 'retorno')
+		mpReturnFailed: mpReturnFailed || (!admin && url.searchParams.get('mp') === 'retorno'),
+		// El correo que se propone como pagador: el de ingreso, que el consultorio puede cambiar por el
+		// de su cuenta de Mercado Pago.
+		payerEmailDefault: locals.verifiedUser?.email?.trim().toLowerCase() ?? ''
 	};
 };
 
 export const actions: Actions = {
-	subscribe: async ({ locals, fetch, cookies }) => {
+	subscribe: async ({ request, locals, fetch, cookies }) => {
 		if (!locals.auth) throw redirect(303, '/login');
 		if (env.DEMO_MODE === 'true') {
 			return fail(400, { message: 'No disponible en modo demo.' });
@@ -201,14 +210,15 @@ export const actions: Actions = {
 			});
 		}
 
-		// Hooks already verified this request's identity with Auth: no second round trip.
-		const authEmail = locals.verifiedUser?.email?.trim() ?? '';
-		const payerEmail =
-			authEmail || context.business.email?.trim() || '';
-		if (!payerEmail) {
-			return fail(400, {
-				message: 'No encontramos un email para asociar la suscripción. Cargá un email en la configuración del negocio.'
-			});
+		// El correo de la cuenta de Mercado Pago con la que se va a pagar. Si el formulario no lo trae
+		// (una página vieja abierta), vale el correo de ingreso, verificado por los hooks con Auth.
+		const form = await request.formData().catch(() => null);
+		const typedEmail = String(form?.get('payer_email') ?? '').trim().toLowerCase();
+		const authEmail = locals.verifiedUser?.email?.trim().toLowerCase() ?? '';
+		const payerEmail = typedEmail || authEmail || context.business.email?.trim().toLowerCase() || '';
+		const emailIssue = payerEmailIssue(payerEmail);
+		if (emailIssue) {
+			return fail(400, { message: emailIssue, payerEmail });
 		}
 
 		const amount = getSubscriptionAmountArs();
@@ -274,7 +284,18 @@ export const actions: Actions = {
 				});
 			}
 
-			if (synchronized.some(({ result }) => !result.ok || !result.data)) {
+			// Una solicitud que Mercado Pago ya no encuentra (de otro entorno, de prueba o de producción, o
+			// borrada) no puede autorizarse: se marca y deja de bloquear (hallazgo M3). Antes, cada intento
+			// respondía «Mercado Pago no respondió» para siempre.
+			for (const { row, result } of synchronized) {
+				if (result.status !== 404) continue;
+				const { error: missingError } = await admin
+					.from('mp_subscriptions')
+					.update({ status: 'not_found', last_synced_at: new Date().toISOString() })
+					.eq('preapproval_id', row.preapproval_id);
+				if (missingError) logServerFailure('No se pudo marcar una solicitud que Mercado Pago no encuentra', missingError);
+			}
+			if (synchronized.some(({ result }) => result.status !== 404 && (!result.ok || !result.data))) {
 				return fail(502, {
 					message:
 						'Ya hay una solicitud de suscripción pendiente, pero Mercado Pago no respondió. Probá de nuevo en unos minutos.'
@@ -287,6 +308,7 @@ export const actions: Actions = {
 			}> = [];
 			let hasBlockingRemoteSubscription = false;
 			for (const entry of synchronized) {
+				if (entry.result.status === 404) continue;
 				const preapproval = entry.result.data!;
 				if (preapproval.external_reference !== context.business.id) {
 					console.error('Una solicitud pendiente de Mercado Pago no pertenece al negocio activo');
@@ -397,15 +419,26 @@ export const actions: Actions = {
 		}
 
 		if (!created.ok || !created.data?.id || !created.data.init_point) {
-			logServerFailure('Mercado Pago rechazó el preapproval', { status: created.status });
+			// El motivo de Mercado Pago queda registrado: antes sólo quedaba el código de estado.
+			logServerFailure('Mercado Pago rechazó el preapproval', {
+				status: created.status,
+				message: created.error?.message ?? null,
+				error: created.error?.error ?? null
+			});
+			if (isPayerRejection(created)) {
+				return fail(400, {
+					message: `Mercado Pago no aceptó «${payerEmail}» como correo del pagador. Escribí el correo exacto de tu cuenta de Mercado Pago.`,
+					payerEmail
+				});
+			}
 			return fail(502, {
 				message: 'Mercado Pago no aceptó la solicitud. Probá de nuevo en unos minutos.'
 			});
 		}
 
-		// El mapeo local se guarda ANTES de redirigir: el retorno y el webhook
-		// dependen de él. Si este insert fallara, el topic subscription_preapproval
-		// lo reconstruye igual desde external_reference.
+		// El mapeo local se guarda ANTES de redirigir: el retorno, la conciliación y el webhook dependen
+		// de él. Si no se puede guardar, la solicitud recién creada se cancela y no se manda a pagar
+		// (hallazgo B1): un cobro de una suscripción sin vínculo sólo lo encontraría un aviso.
 		const { error: upsertError } = await admin.from('mp_subscriptions').upsert(
 			{
 				business_id: context.business.id,
@@ -421,6 +454,14 @@ export const actions: Actions = {
 		);
 		if (upsertError) {
 			logServerFailure('No se pudo guardar el mapeo de la suscripción MP', upsertError);
+			const cancelled = await cancelPreapproval(fetch, created.data.id).catch((error: unknown) => {
+				logServerFailure('No se pudo cancelar la solicitud sin vínculo', error);
+				return null;
+			});
+			if (!cancelled?.ok) {
+				logServerFailure('Quedó en Mercado Pago una solicitud pendiente sin vínculo local', { preapprovalId: created.data.id });
+			}
+			return fail(503, { message: SUBSCRIPTION_PREPARATION_UNAVAILABLE });
 		}
 
 		throw redirect(303, created.data.init_point);

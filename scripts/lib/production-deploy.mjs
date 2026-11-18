@@ -22,7 +22,10 @@ const refused = () => new Error('The configuration is not the production target.
 // without their keys would silently stop sending, so it is refused instead.
 export const PRODUCTION_APP_SECRETS = Object.freeze([
 	'GOOGLE_CALENDAR_CLIENT_ID', 'GOOGLE_CALENDAR_CLIENT_SECRET', 'GOOGLE_CALENDAR_MANAGED_ENABLED', 'GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY',
-	'INTERNAL_JOB_SECRET', 'MASTER_EMAIL', 'ODONTO_SUPABASE_ANON_KEY', 'ODONTO_SUPABASE_SERVICE_ROLE_KEY', 'ODONTO_SUPABASE_URL',
+	// Mercado Pago (18-nov-2026): sin el token la suscripción falla y sin la clave el webhook rechaza
+	// todo, sin aviso. El entorno y el precio son variables versionadas en apps/web/wrangler.jsonc.
+	'INTERNAL_JOB_SECRET', 'MASTER_EMAIL', 'MP_ACCESS_TOKEN', 'MP_WEBHOOK_SECRET',
+	'ODONTO_SUPABASE_ANON_KEY', 'ODONTO_SUPABASE_SERVICE_ROLE_KEY', 'ODONTO_SUPABASE_URL',
 	'PUBLIC_ODONTO_SUPABASE_ANON_KEY', 'PUBLIC_ODONTO_SUPABASE_URL', 'PUBLIC_VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_PUBLIC_KEY', 'VAPID_SUBJECT',
 	'ZOHO_CPAAS_API_KEY', 'ZOHO_CPAAS_WEBHOOK_KEY'
 ]);
@@ -31,6 +34,7 @@ export const PRODUCTION_APP_SECRETS = Object.freeze([
 export function assertProductionAppConfig(config) {
 	if (config?.name !== PRODUCTION_APP_WORKER || config.account_id !== CLOUDFLARE_ACCOUNT_ID ||
 		config.vars?.PUBLIC_SITE_URL !== PRODUCTION_APP_ORIGIN || config.placement?.region !== 'aws:sa-east-1' ||
+		config.vars?.MP_ENVIRONMENT !== 'production' || !/^[1-9]\d*$/.test(String(config.vars?.MP_SUBSCRIPTION_AMOUNT_ARS ?? '')) ||
 		'env' in config || 'routes' in config || 'route' in config || 'triggers' in config)
 		throw refused();
 	return config;
@@ -48,6 +52,13 @@ export function assertProductionSchedulerConfig(config) {
 
 /** Required secrets missing from the names `wrangler secret list` reports. */
 export const missingSecrets = (names) => PRODUCTION_APP_SECRETS.filter((name) => !names.includes(name));
+
+/**
+ * Secrets that share a name with a versioned variable: Cloudflare refuses that binding, so the
+ * install would fail halfway through the release. MP_ENVIRONMENT and MP_SUBSCRIPTION_AMOUNT_ARS were
+ * secrets until 18 November 2026 and are variables since; the release deletes them first.
+ */
+export const secretsShadowingVars = (names, vars) => Object.keys(vars ?? {}).filter((name) => names.includes(name)).sort();
 
 /**
  * Prove the scheduler's credential before installing triggers. The disabled legacy

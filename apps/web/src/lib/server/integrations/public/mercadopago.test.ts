@@ -10,8 +10,10 @@ vi.mock('$env/dynamic/private', () => ({ env: envState.privateEnv }));
 import {
 	buildSignatureManifest,
 	confirmMpSubscriptionForBusiness,
+	createPreapproval,
 	creditApprovedPayment,
 	getMercadoPagoApiConfigIssue,
+	getMercadoPagoConfigSummary,
 	getMercadoPagoEnvironment,
 	getPayment,
 	getPreapproval,
@@ -20,12 +22,14 @@ import {
 	logMpWebhookEventOnce,
 	MP_PAYMENT_IDEMPOTENCY_PREFIX,
 	parseSignatureHeader,
+	payerEmailIssue,
 	pickRelevantMpSubscription,
 	processMpWebhookEvent,
 	reconcileMercadoPago,
 	RECONCILE_CHARGE_CALLS,
 	RECONCILE_SUBSCRIPTION_CALLS,
 	recordCancelledPayment,
+	searchAuthorizedPayments,
 	settleApprovedChargesForPreapproval,
 	SUBSCRIPTION_DURATION_SECONDS,
 	verifyMpWebhookSignature
@@ -65,6 +69,7 @@ const createAdminMock = (opts?: {
 	const upsertCalls: Array<{ table: string; payload: Record<string, unknown> }> = [];
 	const insertCalls: Array<{ table: string; payload: Record<string, unknown> }> = [];
 	const updateCalls: Array<{ table: string; payload: Record<string, unknown> }> = [];
+	const isCalls: Array<{ table: string; column: string; value: unknown }> = [];
 	const rpcQueue = [...(opts?.rpcQueue ?? [])];
 	const tableQueues: Record<string, QueuedResult[]> = {};
 	for (const [table, queue] of Object.entries(opts?.tables ?? {})) {
@@ -87,10 +92,14 @@ const createAdminMock = (opts?: {
 			const result =
 				tableQueues[table]?.shift() ?? TABLE_DEFAULTS[table] ?? { data: null, error: null };
 			const q: Record<string, unknown> = {};
-			for (const method of ['select', 'eq', 'in', 'order', 'limit', 'retry']) {
+			for (const method of ['select', 'eq', 'in', 'order', 'limit', 'retry', 'is', 'or']) {
 				q[method] = vi.fn(() => q);
 			}
 			q.maybeSingle = vi.fn(() => q);
+			q.is = vi.fn((column: string, value: unknown) => {
+				isCalls.push({ table, column, value });
+				return q;
+			});
 			q.update = vi.fn((payload: Record<string, unknown>) => {
 				updateCalls.push({ table, payload });
 				return q;
@@ -110,7 +119,7 @@ const createAdminMock = (opts?: {
 			return q;
 		})
 	};
-	return { admin: admin as never, rpcCalls, upsertCalls, insertCalls, updateCalls };
+	return { admin: admin as never, rpcCalls, upsertCalls, insertCalls, updateCalls, isCalls };
 };
 
 const createFetchMock = (routes: Array<[string, { status?: number; body?: unknown }]>) => {
@@ -124,6 +133,12 @@ const createFetchMock = (routes: Array<[string, { status?: number; body?: unknow
 	});
 	return { fetchMock: fetchMock as unknown as typeof fetch, calls };
 };
+
+// Un pago generado por una suscripción, como lo devuelve Mercado Pago (medido el 18-nov-2026), y el
+// vínculo local de esa suscripción con un consultorio.
+const SUBSCRIPTION_POI = { type: 'SUBSCRIPTIONS', transaction_data: { subscription_id: 'pre-pago' } };
+const OTHER_BUSINESS_ID = '22222222-2222-4222-8222-222222222222';
+const linkedTo = (businessId: string) => ({ data: { business_id: businessId }, error: null });
 
 beforeEach(() => {
 	for (const key of Object.keys(envState.privateEnv)) delete envState.privateEnv[key];
@@ -222,8 +237,19 @@ describe('verifyMpWebhookSignature', () => {
 		).toBe(true);
 	});
 
-	it('rechaza una firma con ts viejo aunque el HMAC sea correcto (anti-replay)', () => {
-		const staleTs = String(Math.floor(NOW_MS / 1000) - 1200);
+	it('acepta el reintento de un aviso firmado hace 20 minutos (Mercado Pago reintenta cada 15)', () => {
+		const retryTs = String(Math.floor(NOW_MS / 1000) - 1200);
+		const v1 = signManifest(`id:123;ts:${retryTs};`);
+		expect(
+			verifyMpWebhookSignature(
+				{ signatureHeader: `ts=${retryTs},v1=${v1}`, requestId: null, dataId: '123' },
+				NOW_MS
+			)
+		).toBe(true);
+	});
+
+	it('rechaza una firma de más de 24 horas aunque el HMAC sea correcto (anti-replay)', () => {
+		const staleTs = String(Math.floor(NOW_MS / 1000) - 25 * 60 * 60);
 		const v1 = signManifest(`id:123;ts:${staleTs};`);
 		expect(
 			verifyMpWebhookSignature(
@@ -398,8 +424,8 @@ describe('recordCancelledPayment', () => {
 });
 
 describe('processMpWebhookEvent: topic payment', () => {
-	it('acredita un pago aprobado con external_reference válido', async () => {
-		const { admin, rpcCalls } = createAdminMock();
+	it('acredita un pago aprobado de una suscripción conocida del consultorio', async () => {
+		const { admin, rpcCalls } = createAdminMock({ tables: { mp_subscriptions: [linkedTo(BUSINESS_ID)] } });
 		const { fetchMock } = createFetchMock([
 			[
 				'/v1/payments/111',
@@ -408,7 +434,9 @@ describe('processMpWebhookEvent: topic payment', () => {
 						id: 111,
 						status: 'approved',
 						external_reference: BUSINESS_ID,
-						transaction_amount: 50000
+						transaction_amount: 50000,
+						currency_id: 'ARS',
+						point_of_interaction: SUBSCRIPTION_POI
 					}
 				}
 			]
@@ -432,12 +460,13 @@ describe('processMpWebhookEvent: topic payment', () => {
 					data: [{ applied: true, grant_id: 'grant-2', status_after: 'restricted' }],
 					error: null
 				}
-			]
+			],
+			tables: { mp_subscriptions: [linkedTo(BUSINESS_ID)] }
 		});
 		const { fetchMock } = createFetchMock([
 			[
 				'/v1/payments/118',
-				{ body: { id: 118, status: 'approved', external_reference: BUSINESS_ID } }
+				{ body: { id: 118, status: 'approved', external_reference: BUSINESS_ID, point_of_interaction: SUBSCRIPTION_POI } }
 			]
 		]);
 		const result = await processMpWebhookEvent(admin, fetchMock, {
@@ -449,8 +478,8 @@ describe('processMpWebhookEvent: topic payment', () => {
 		expect(result.detail).toContain('restricted');
 	});
 
-	it('usa metadata.business_id como respaldo de mapeo', async () => {
-		const { admin, rpcCalls } = createAdminMock();
+	it('acredita sin external_reference cuando la suscripción es del consultorio', async () => {
+		const { admin, rpcCalls } = createAdminMock({ tables: { mp_subscriptions: [linkedTo(BUSINESS_ID)] } });
 		const { fetchMock } = createFetchMock([
 			[
 				'/v1/payments/112',
@@ -460,7 +489,8 @@ describe('processMpWebhookEvent: topic payment', () => {
 						status: 'approved',
 						external_reference: null,
 						metadata: { business_id: BUSINESS_ID },
-						transaction_amount: 50000
+						transaction_amount: 50000,
+						point_of_interaction: SUBSCRIPTION_POI
 					}
 				}
 			]
@@ -489,12 +519,12 @@ describe('processMpWebhookEvent: topic payment', () => {
 
 	it('marca atención cuando el negocio referenciado no existe (sin loop de reintentos)', async () => {
 		const { admin, rpcCalls } = createAdminMock({
-			tables: { businesses: [{ data: null, error: null }] }
+			tables: { businesses: [{ data: null, error: null }], mp_subscriptions: [linkedTo(BUSINESS_ID)] }
 		});
 		const { fetchMock } = createFetchMock([
 			[
 				'/v1/payments/119',
-				{ body: { id: 119, status: 'approved', external_reference: BUSINESS_ID } }
+				{ body: { id: 119, status: 'approved', external_reference: BUSINESS_ID, point_of_interaction: SUBSCRIPTION_POI } }
 			]
 		]);
 		const result = await processMpWebhookEvent(admin, fetchMock, {
@@ -829,12 +859,13 @@ describe('processMpWebhookEvent: casos generales', () => {
 
 	it('convierte errores de acreditación en status error con atención', async () => {
 		const { admin } = createAdminMock({
-			rpcQueue: [{ data: null, error: { message: 'db caída' } }]
+			rpcQueue: [{ data: null, error: { message: 'db caída' } }],
+			tables: { mp_subscriptions: [linkedTo(BUSINESS_ID)] }
 		});
 		const { fetchMock } = createFetchMock([
 			[
 				'/v1/payments/300',
-				{ body: { id: 300, status: 'approved', external_reference: BUSINESS_ID } }
+				{ body: { id: 300, status: 'approved', external_reference: BUSINESS_ID, point_of_interaction: SUBSCRIPTION_POI } }
 			]
 		]);
 		const result = await processMpWebhookEvent(admin, fetchMock, {
@@ -848,12 +879,15 @@ describe('processMpWebhookEvent: casos generales', () => {
 
 	it('trata al negocio permanente como skipped con atención (sin reintentos)', async () => {
 		const { admin, rpcCalls } = createAdminMock({
-			tables: { business_subscriptions: [{ data: { is_permanent: true }, error: null }] }
+			tables: {
+				business_subscriptions: [{ data: { is_permanent: true }, error: null }],
+				mp_subscriptions: [linkedTo(BUSINESS_ID)]
+			}
 		});
 		const { fetchMock } = createFetchMock([
 			[
 				'/v1/payments/301',
-				{ body: { id: 301, status: 'approved', external_reference: BUSINESS_ID } }
+				{ body: { id: 301, status: 'approved', external_reference: BUSINESS_ID, point_of_interaction: SUBSCRIPTION_POI } }
 			]
 		]);
 		const result = await processMpWebhookEvent(admin, fetchMock, {
@@ -862,24 +896,25 @@ describe('processMpWebhookEvent: casos generales', () => {
 		});
 		expect(result.status).toBe('skipped');
 		expect(result.requiresAttention).toBe(true);
+		expect(result.detail).toContain('permanente');
 		expect(rpcCalls).toHaveLength(0);
 	});
 });
 
 describe('getSubscriptionAmountArs', () => {
-	it('usa el env cuando es un monto válido y cae a 50000 en cualquier otro caso', () => {
+	it('usa el env cuando es un monto válido y cae a 90000 en cualquier otro caso', () => {
 		envState.privateEnv.MP_SUBSCRIPTION_AMOUNT_ARS = '65000';
 		expect(getSubscriptionAmountArs()).toBe(65000);
 		envState.privateEnv.MP_SUBSCRIPTION_AMOUNT_ARS = ' 70000 ';
 		expect(getSubscriptionAmountArs()).toBe(70000);
 		envState.privateEnv.MP_SUBSCRIPTION_AMOUNT_ARS = '0';
-		expect(getSubscriptionAmountArs()).toBe(50000);
+		expect(getSubscriptionAmountArs()).toBe(90000);
 		envState.privateEnv.MP_SUBSCRIPTION_AMOUNT_ARS = '-5';
-		expect(getSubscriptionAmountArs()).toBe(50000);
+		expect(getSubscriptionAmountArs()).toBe(90000);
 		envState.privateEnv.MP_SUBSCRIPTION_AMOUNT_ARS = 'abc';
-		expect(getSubscriptionAmountArs()).toBe(50000);
+		expect(getSubscriptionAmountArs()).toBe(90000);
 		delete envState.privateEnv.MP_SUBSCRIPTION_AMOUNT_ARS;
-		expect(getSubscriptionAmountArs()).toBe(50000);
+		expect(getSubscriptionAmountArs()).toBe(90000);
 	});
 });
 
@@ -1202,7 +1237,7 @@ describe('reconcileMercadoPago', () => {
 				]
 			}
 		});
-		const { fetchMock } = createFetchMock([['/preapproval/pre-404', { status: 404, body: {} }]]);
+		const { fetchMock } = createFetchMock([['/preapproval/pre-404', { status: 500, body: {} }]]);
 
 		const summary = await reconcileMercadoPago(admin, fetchMock);
 
@@ -1585,5 +1620,377 @@ describe('settleApprovedChargesForPreapproval', () => {
 		expect(result).toEqual({ credited: 1, checked: true });
 		expect(rpcCalls[0].args.p_idempotency_key).toBe('mp:payment:801');
 		expect(insertCalls).toEqual([]);
+	});
+});
+
+
+// Contrato de /authorized_payments/search medido contra Mercado Pago el 18-nov-2026
+// (docs/plans/cobros-mercadopago-20261118.md, sección 5, paso 9): un límite mayor que 15
+// responde 400 «Invalid value for limit»; sin límite trae 12 por página; offset pagina y
+// paging.total cuenta todos los cobros. El simulador genérico de arriba acepta cualquier límite,
+// y por eso el límite de 50 que Mercado Pago rechaza nunca falló en las pruebas.
+const authorizedPaymentsContract = (
+	charges: Array<Record<string, unknown>>,
+	routes: Array<[string, { status?: number; body?: unknown }]> = []
+) => {
+	const calls: string[] = [];
+	const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+		const url = new URL(String(input));
+		calls.push(url.toString());
+		if (url.pathname === '/authorized_payments/search') {
+			const rawLimit = url.searchParams.get('limit');
+			const limit = rawLimit === null ? 12 : Number(rawLimit);
+			if (!Number.isInteger(limit) || limit < 1 || limit > 15) {
+				return new Response(JSON.stringify({ message: 'Invalid value for limit', status: 400 }), { status: 400 });
+			}
+			const offset = Number(url.searchParams.get('offset') ?? '0');
+			return new Response(
+				JSON.stringify({ paging: { offset, limit, total: charges.length }, results: charges.slice(offset, offset + limit) }),
+				{ status: 200 }
+			);
+		}
+		const hit = routes.find(([fragment]) => url.toString().includes(fragment));
+		if (!hit) return new Response('{}', { status: 404 });
+		return new Response(JSON.stringify(hit[1].body ?? {}), { status: hit[1].status ?? 200 });
+	});
+	return {
+		fetchMock: fetchMock as unknown as typeof fetch,
+		searchCalls: () => calls.filter((url) => url.includes('/authorized_payments/search'))
+	};
+};
+
+const contractCharge = (n: number, status = 'approved') => ({
+	id: 7000 + n,
+	transaction_amount: 90000,
+	payment: { id: 9000 + n, status }
+});
+
+describe('búsqueda de cobros contra el contrato real de Mercado Pago', () => {
+	it('trae todos los cobros paginando sin pedir más de 15 por página', async () => {
+		const charges = Array.from({ length: 40 }, (_, i) => contractCharge(i));
+		const { fetchMock, searchCalls } = authorizedPaymentsContract(charges);
+
+		const result = await searchAuthorizedPayments('pre-larga', fetchMock);
+
+		expect(result.ok).toBe(true);
+		expect(result.data?.results?.map((c) => c.id)).toEqual(charges.map((c) => c.id));
+		for (const url of searchCalls()) {
+			expect(Number(new URL(url).searchParams.get('limit') ?? '12')).toBeLessThanOrEqual(15);
+		}
+	});
+
+	it('el retorno acredita el cobro aprobado con la búsqueda real', async () => {
+		const { admin, rpcCalls } = createAdminMock({
+			tables: { mp_subscriptions: [{ data: [{ preapproval_id: 'pre-r', status: 'pending' }], error: null }] }
+		});
+		const { fetchMock } = authorizedPaymentsContract(
+			[contractCharge(1)],
+			[['/preapproval/pre-r', { body: { id: 'pre-r', status: 'authorized', external_reference: BUSINESS_ID } }]]
+		);
+
+		const summary = await confirmMpSubscriptionForBusiness(admin, fetchMock, BUSINESS_ID);
+
+		expect(summary.creditedNow).toBe(true);
+		expect(rpcCalls[0].args.p_idempotency_key).toBe('mp:payment:9001');
+	});
+
+	it('la conciliación encuentra un cobro aprobado sin acreditar en la tercera página', async () => {
+		const charges = Array.from({ length: 33 }, (_, i) => contractCharge(i));
+		const creditedKeys = charges.slice(0, 32).map((c) => ({ idempotency_key: `mp:payment:${c.payment.id}` }));
+		const { admin, rpcCalls } = createAdminMock({
+			tables: {
+				mp_subscriptions: [
+					{ data: [{ business_id: BUSINESS_ID, preapproval_id: 'pre-1', status: 'authorized' }], error: null }
+				],
+				access_grants: [{ data: creditedKeys, error: null }]
+			}
+		});
+		const { fetchMock } = authorizedPaymentsContract(charges, [
+			['/preapproval/pre-1', { body: { id: 'pre-1', status: 'authorized', external_reference: BUSINESS_ID } }]
+		]);
+
+		const summary = await reconcileMercadoPago(admin, fetchMock);
+
+		expect(summary).toMatchObject({ scanned: 1, credited: 1, errors: 0 });
+		expect(rpcCalls.map((c) => c.args.p_idempotency_key)).toEqual(['mp:payment:9032']);
+	});
+
+	it('si falla una página posterior al cancelar, asienta lo leído y deja la alerta', async () => {
+		const charges = Array.from({ length: 20 }, (_, i) => contractCharge(i, i === 3 ? 'approved' : 'rejected'));
+		const contract = authorizedPaymentsContract(charges);
+		let searches = 0;
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			if (String(input).includes('/authorized_payments/search') && ++searches === 2) return new Response('{}', { status: 500 });
+			return contract.fetchMock(input);
+		}) as unknown as typeof fetch;
+		const { admin, rpcCalls, insertCalls } = createAdminMock();
+
+		const result = await settleApprovedChargesForPreapproval(admin, fetchMock, BUSINESS_ID, 'pre-c');
+
+		expect(result).toEqual({ credited: 1, checked: false });
+		expect(rpcCalls.map((c) => c.args.p_idempotency_key)).toEqual(['mp:payment:9003']);
+		expect(insertCalls).toEqual([
+			expect.objectContaining({ payload: expect.objectContaining({ action: 'final_charges_unchecked', requires_attention: true }) })
+		]);
+	});
+
+	it('la conciliación acredita la primera página y deja el resto para la próxima corrida si el presupuesto no alcanza', async () => {
+		const charges = Array.from({ length: 20 }, (_, i) => contractCharge(i, i === 2 || i === 17 ? 'approved' : 'rejected'));
+		const { admin, rpcCalls } = createAdminMock({
+			tables: {
+				mp_subscriptions: [
+					{ data: [{ business_id: BUSINESS_ID, preapproval_id: 'pre-1', status: 'authorized' }], error: null }
+				]
+			}
+		});
+		const { fetchMock, searchCalls } = authorizedPaymentsContract(charges, [
+			['/preapproval/pre-1', { body: { id: 'pre-1', status: 'authorized', external_reference: BUSINESS_ID } }]
+		]);
+
+		// Admite la suscripción y sus acreditaciones, pero ninguna página adicional.
+		const summary = await reconcileMercadoPago(admin, fetchMock, { admits: (calls) => calls !== 1 });
+
+		expect(searchCalls()).toHaveLength(1);
+		expect(rpcCalls.map((c) => c.args.p_idempotency_key)).toEqual(['mp:payment:9002']);
+		expect(summary).toMatchObject({ scanned: 1, credited: 1, errors: 1 });
+		expect(summary.details.join(' ')).toContain('revisión incompleta');
+	});
+
+	it('antes de cancelar revisa los cobros con la búsqueda real', async () => {
+		const { admin, rpcCalls, insertCalls } = createAdminMock();
+		const { fetchMock } = authorizedPaymentsContract([contractCharge(5)]);
+
+		const result = await settleApprovedChargesForPreapproval(admin, fetchMock, BUSINESS_ID, 'pre-c');
+
+		expect(result).toEqual({ credited: 1, checked: true });
+		expect(rpcCalls[0].args.p_idempotency_key).toBe('mp:payment:9005');
+		expect(insertCalls).toEqual([]);
+	});
+});
+
+
+describe('correcciones del 18 de noviembre de 2026', () => {
+	it('conserva el motivo que da Mercado Pago cuando rechaza un pedido', async () => {
+		const fetchMock = vi.fn(async () => new Response(JSON.stringify({ message: 'User bad request', status: 400 }), { status: 400 }));
+		const result = await createPreapproval(fetchMock as unknown as typeof fetch, {
+			businessId: BUSINESS_ID,
+			payerEmail: 'dueño+alias@example.test',
+			amount: 90000,
+			backUrl: 'https://app.cita-suite.com.ar/odonto/pago/procesando?mp=retorno'
+		});
+		expect(result.ok).toBe(false);
+		expect(result.error).toEqual({ message: 'User bad request', error: null });
+	});
+
+	it('no acredita un pago aprobado que no viene de una suscripción', async () => {
+		const { admin, rpcCalls } = createAdminMock();
+		const { fetchMock } = createFetchMock([
+			['/v1/payments/401', { body: { id: 401, status: 'approved', external_reference: BUSINESS_ID, currency_id: 'ARS' } }]
+		]);
+		const result = await processMpWebhookEvent(admin, fetchMock, { topic: 'payment', resourceId: '401' });
+		expect(result).toMatchObject({ status: 'skipped', requiresAttention: true });
+		expect(result.detail).toContain('no proviene de una suscripción');
+		expect(rpcCalls).toHaveLength(0);
+	});
+
+	it('no acredita un pago aprobado en otra moneda', async () => {
+		const { admin, rpcCalls } = createAdminMock({ tables: { mp_subscriptions: [linkedTo(BUSINESS_ID)] } });
+		const { fetchMock } = createFetchMock([
+			['/v1/payments/402', { body: { id: 402, status: 'approved', external_reference: BUSINESS_ID, currency_id: 'USD', point_of_interaction: SUBSCRIPTION_POI } }]
+		]);
+		const result = await processMpWebhookEvent(admin, fetchMock, { topic: 'payment', resourceId: '402' });
+		expect(result).toMatchObject({ status: 'skipped', requiresAttention: true });
+		expect(rpcCalls).toHaveLength(0);
+	});
+
+	it('no acredita si la suscripción es de otro consultorio que el de la referencia', async () => {
+		const { admin, rpcCalls } = createAdminMock({ tables: { mp_subscriptions: [linkedTo(OTHER_BUSINESS_ID)] } });
+		const { fetchMock } = createFetchMock([
+			['/v1/payments/403', { body: { id: 403, status: 'approved', external_reference: BUSINESS_ID, point_of_interaction: SUBSCRIPTION_POI } }]
+		]);
+		const result = await processMpWebhookEvent(admin, fetchMock, { topic: 'payment', resourceId: '403' });
+		expect(result).toMatchObject({ status: 'skipped', requiresAttention: true, businessId: OTHER_BUSINESS_ID });
+		expect(rpcCalls).toHaveLength(0);
+	});
+
+	it('reconstruye desde Mercado Pago el vínculo que falta y acredita', async () => {
+		const { admin, rpcCalls, upsertCalls } = createAdminMock();
+		const { fetchMock } = createFetchMock([
+			['/v1/payments/404', { body: { id: 404, status: 'approved', external_reference: BUSINESS_ID, point_of_interaction: SUBSCRIPTION_POI } }],
+			['/preapproval/pre-pago', { body: { id: 'pre-pago', status: 'authorized', external_reference: BUSINESS_ID } }]
+		]);
+		const result = await processMpWebhookEvent(admin, fetchMock, { topic: 'payment', resourceId: '404' });
+		expect(result).toMatchObject({ status: 'processed', businessId: BUSINESS_ID });
+		expect(upsertCalls.some((c) => c.table === 'mp_subscriptions' && c.payload.preapproval_id === 'pre-pago')).toBe(true);
+		expect(rpcCalls[0].args.p_idempotency_key).toBe('mp:payment:404');
+	});
+
+	it('acredita un pago con reembolso parcial y lo avisa una vez', async () => {
+		const { admin, rpcCalls, insertCalls } = createAdminMock({ tables: { mp_subscriptions: [linkedTo(BUSINESS_ID)] } });
+		const { fetchMock } = createFetchMock([
+			['/v1/payments/405', { body: { id: 405, status: 'approved', external_reference: BUSINESS_ID, transaction_amount: 90000, transaction_amount_refunded: 10000, point_of_interaction: SUBSCRIPTION_POI } }]
+		]);
+		const result = await processMpWebhookEvent(admin, fetchMock, { topic: 'payment', resourceId: '405' });
+		expect(result.status).toBe('processed');
+		expect(rpcCalls).toHaveLength(1);
+		expect(insertCalls).toEqual([
+			expect.objectContaining({ table: 'mp_webhook_events', payload: expect.objectContaining({ action: 'payment_partially_refunded', resource_id: '405', requires_attention: true }) })
+		]);
+	});
+
+	it('avisa una disputa abierta sin tocar el acceso', async () => {
+		const { admin, rpcCalls, insertCalls } = createAdminMock();
+		const { fetchMock } = createFetchMock([
+			['/v1/payments/406', { body: { id: 406, status: 'in_mediation', external_reference: BUSINESS_ID, point_of_interaction: SUBSCRIPTION_POI } }]
+		]);
+		const result = await processMpWebhookEvent(admin, fetchMock, { topic: 'payment', resourceId: '406' });
+		expect(result).toMatchObject({ status: 'processed', requiresAttention: false, businessId: BUSINESS_ID });
+		expect(rpcCalls).toHaveLength(0);
+		expect(insertCalls).toEqual([
+			expect.objectContaining({ payload: expect.objectContaining({ action: 'payment_in_mediation', requires_attention: true }) })
+		]);
+	});
+
+	it('guarda el último cobro y avisa una vez cuando Mercado Pago no pudo cobrar', async () => {
+		const { admin, updateCalls, insertCalls, isCalls } = createAdminMock({ tables: { mp_subscriptions: [linkedTo(BUSINESS_ID)] } });
+		const { fetchMock } = createFetchMock([
+			['/authorized_payments/555', { body: { id: 555, preapproval_id: 'pre-c', status: 'recycling', debit_date: '2026-11-18T10:00:00.000-03:00', next_retry_date: '2026-11-21T10:00:00.000-03:00', payment: { id: 556, status: 'rejected', status_detail: 'cc_rejected_insufficient_amount' } } }]
+		]);
+		const result = await processMpWebhookEvent(admin, fetchMock, { topic: 'subscription_authorized_payment', resourceId: '555' });
+		expect(result).toMatchObject({ status: 'skipped', requiresAttention: false, businessId: BUSINESS_ID });
+		expect(updateCalls).toEqual([
+			expect.objectContaining({ table: 'mp_subscriptions', payload: expect.objectContaining({ last_charge_id: '555', last_charge_status: 'rejected', last_charge_detail: 'cc_rejected_insufficient_amount', last_charge_at: '2026-11-18T13:00:00.000Z' }) })
+		]);
+		expect(insertCalls).toEqual([
+			expect.objectContaining({ payload: expect.objectContaining({ topic: 'subscription_charge', action: 'charge_rejected', resource_id: '555', business_id: BUSINESS_ID, requires_attention: true }) })
+		]);
+		// «Una sola vez» cuenta sólo los avisos sin resolver (M1).
+		expect(isCalls).toContainEqual({ table: 'mp_webhook_events', column: 'resolved_at', value: null });
+	});
+
+	it('no repite el aviso de una cuota rechazada que sigue sin resolver', async () => {
+		const { admin, insertCalls } = createAdminMock({
+			tables: { mp_subscriptions: [linkedTo(BUSINESS_ID)], mp_webhook_events: [{ data: { id: 'evento-previo' }, error: null }] }
+		});
+		const { fetchMock } = createFetchMock([
+			['/authorized_payments/557', { body: { id: 557, preapproval_id: 'pre-c', status: 'recycling', payment: { id: 558, status: 'rejected' } } }]
+		]);
+		await processMpWebhookEvent(admin, fetchMock, { topic: 'subscription_authorized_payment', resourceId: '557' });
+		expect(insertCalls).toEqual([]);
+	});
+
+	it('guarda como último cobro un cobro aprobado', async () => {
+		const { admin, updateCalls, rpcCalls } = createAdminMock({ tables: { mp_subscriptions: [linkedTo(BUSINESS_ID)] } });
+		const { fetchMock } = createFetchMock([
+			['/authorized_payments/559', { body: { id: 559, preapproval_id: 'pre-c', status: 'processed', transaction_amount: 90000, payment: { id: 560, status: 'approved' } } }]
+		]);
+		await processMpWebhookEvent(admin, fetchMock, { topic: 'subscription_authorized_payment', resourceId: '559' });
+		expect(updateCalls).toEqual([
+			expect.objectContaining({ table: 'mp_subscriptions', payload: expect.objectContaining({ last_charge_status: 'approved' }) })
+		]);
+		expect(rpcCalls[0].args.p_idempotency_key).toBe('mp:payment:560');
+	});
+
+	it('deja de revisar una suscripción que Mercado Pago no encuentra y avisa una vez', async () => {
+		const { admin, updateCalls, insertCalls } = createAdminMock({
+			tables: { mp_subscriptions: [{ data: [{ business_id: BUSINESS_ID, preapproval_id: 'pre-otro-entorno', status: 'pending' }], error: null }] }
+		});
+		const { fetchMock } = createFetchMock([['/preapproval/pre-otro-entorno', { status: 404, body: { message: 'not found' } }]]);
+		const summary = await reconcileMercadoPago(admin, fetchMock);
+		expect(summary).toMatchObject({ scanned: 1, errors: 0, attention: 1 });
+		expect(updateCalls).toContainEqual(expect.objectContaining({ table: 'mp_subscriptions', payload: expect.objectContaining({ status: 'not_found' }) }));
+		expect(insertCalls).toContainEqual(expect.objectContaining({ payload: expect.objectContaining({ action: 'preapproval_not_found', resource_id: 'pre-otro-entorno', requires_attention: true }) }));
+	});
+
+	it('cancela en Mercado Pago una solicitud pendiente de más de 7 días', async () => {
+		const { admin, upsertCalls } = createAdminMock({
+			tables: { mp_subscriptions: [{ data: [{ business_id: BUSINESS_ID, preapproval_id: 'pre-vieja', status: 'pending', created_at: new Date(Date.now() - 10 * 86_400_000).toISOString() }], error: null }] }
+		});
+		const methods: string[] = [];
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+			methods.push(init?.method ?? 'GET');
+			const status = init?.method === 'PUT' ? 'cancelled' : 'pending';
+			return new Response(JSON.stringify({ id: 'pre-vieja', status, external_reference: BUSINESS_ID }), { status: 200 });
+		}) as unknown as typeof fetch;
+		const summary = await reconcileMercadoPago(admin, fetchMock);
+		expect(methods).toEqual(['GET', 'PUT']);
+		expect(upsertCalls.at(-1)?.payload).toMatchObject({ preapproval_id: 'pre-vieja', status: 'cancelled' });
+		expect(summary.details.join(' ')).toContain('cancelada');
+	});
+
+	it('no toca una solicitud pendiente reciente', async () => {
+		const { admin } = createAdminMock({
+			tables: { mp_subscriptions: [{ data: [{ business_id: BUSINESS_ID, preapproval_id: 'pre-nueva', status: 'pending', created_at: new Date(Date.now() - 86_400_000).toISOString() }], error: null }] }
+		});
+		const methods: string[] = [];
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+			methods.push(init?.method ?? 'GET');
+			return new Response(JSON.stringify({ id: 'pre-nueva', status: 'pending', external_reference: BUSINESS_ID }), { status: 200 });
+		}) as unknown as typeof fetch;
+		await reconcileMercadoPago(admin, fetchMock);
+		expect(methods).toEqual(['GET']);
+	});
+
+	it('la conciliación asienta un reembolso que el aviso no registró', async () => {
+		const { admin, rpcCalls, insertCalls } = createAdminMock({
+			tables: { mp_subscriptions: [{ data: [{ business_id: BUSINESS_ID, preapproval_id: 'pre-1', status: 'authorized' }], error: null }] }
+		});
+		const { fetchMock } = authorizedPaymentsContract(
+			[{ id: 7100, transaction_amount: 90000, payment: { id: 9100, status: 'refunded' } }],
+			[['/preapproval/pre-1', { body: { id: 'pre-1', status: 'authorized', external_reference: BUSINESS_ID } }]]
+		);
+		const summary = await reconcileMercadoPago(admin, fetchMock);
+		expect(rpcCalls.map((c) => c.args)).toEqual([expect.objectContaining({ p_operation: 'payment_cancelled', p_idempotency_key: 'mp:payment:9100:cancelled' })]);
+		expect(insertCalls).toContainEqual(expect.objectContaining({ payload: expect.objectContaining({ action: 'payment_reversed', requires_attention: true }) }));
+		expect(summary.attention).toBeGreaterThanOrEqual(1);
+	});
+
+	it('la conciliación avisa un cobro rechazado reciente pero no uno viejo', async () => {
+		const { admin, insertCalls } = createAdminMock({
+			tables: { mp_subscriptions: [{ data: [{ business_id: BUSINESS_ID, preapproval_id: 'pre-1', status: 'authorized' }], error: null }] }
+		});
+		const day = 86_400_000;
+		const { fetchMock } = authorizedPaymentsContract(
+			[
+				{ id: 7200, status: 'processed', debit_date: new Date(Date.now() - 40 * day).toISOString(), payment: { id: 9200, status: 'rejected' } },
+				{ id: 7201, status: 'recycling', debit_date: new Date(Date.now() - 2 * day).toISOString(), payment: { id: 9201, status: 'rejected' } }
+			],
+			[['/preapproval/pre-1', { body: { id: 'pre-1', status: 'authorized', external_reference: BUSINESS_ID } }]]
+		);
+		await reconcileMercadoPago(admin, fetchMock);
+		const alerts = insertCalls.filter((c) => (c.payload as { action?: string }).action === 'charge_rejected');
+		expect(alerts.map((c) => c.payload.resource_id)).toEqual(['7201']);
+	});
+});
+
+describe('correo del pagador y resumen de configuración (18-nov-2026)', () => {
+	it('valida el correo del pagador como lo exige Mercado Pago', () => {
+		expect(payerEmailIssue('')).toContain('Escribí el correo');
+		expect(payerEmailIssue('duena+mp@mail.com')).toContain('«+»');
+		expect(payerEmailIssue('sin-arroba.com')).toContain('no parece una dirección válida');
+		expect(payerEmailIssue('con espacio@mail.com')).toContain('no parece una dirección válida');
+		expect(payerEmailIssue('duena@mail.com')).toBeNull();
+	});
+
+	it('resume la configuración sin exponer ningún secreto', () => {
+		envState.privateEnv.MP_ACCESS_TOKEN = 'TEST-1234-secreto';
+		envState.privateEnv.MP_ENVIRONMENT = 'test';
+		envState.privateEnv.MP_WEBHOOK_SECRET = 'clave';
+		envState.privateEnv.MP_SUBSCRIPTION_AMOUNT_ARS = '90000';
+		const summary = getMercadoPagoConfigSummary();
+		expect(summary).toEqual({ environment: 'test', amountArs: 90000, tokenKind: 'TEST-', webhookSecretConfigured: true, configIssue: null });
+		expect(JSON.stringify(summary)).not.toContain('secreto');
+
+		envState.privateEnv.MP_ACCESS_TOKEN = 'APP_USR-productivo';
+		envState.privateEnv.MP_ENVIRONMENT = 'production';
+		delete envState.privateEnv.MP_WEBHOOK_SECRET;
+		expect(getMercadoPagoConfigSummary()).toMatchObject({ environment: 'production', tokenKind: 'APP_USR-', webhookSecretConfigured: false, configIssue: null });
+
+		// Un token de prueba declarado como producción es la configuración que hoy no se ve: queda señalada.
+		envState.privateEnv.MP_ACCESS_TOKEN = 'TEST-1234';
+		expect(getMercadoPagoConfigSummary()).toMatchObject({ tokenKind: 'TEST-', configIssue: 'MP_ENVIRONMENT' });
+
+		delete envState.privateEnv.MP_ACCESS_TOKEN;
+		expect(getMercadoPagoConfigSummary()).toMatchObject({ tokenKind: 'sin cargar', configIssue: 'MP_ACCESS_TOKEN' });
 	});
 });

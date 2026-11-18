@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { assertProductionAppConfig, assertProductionSchedulerConfig, missingSecrets, PRODUCTION_APP_SECRETS } from './production-deploy.mjs';
+import { assertProductionAppConfig, assertProductionSchedulerConfig, missingSecrets, PRODUCTION_APP_SECRETS, secretsShadowingVars } from './production-deploy.mjs';
 
 const json = (path) => JSON.parse(fs.readFileSync(path, 'utf8').replace(/^\s*\/\/.*$/gm, ''));
 
@@ -14,7 +14,13 @@ test('the production deployment accepts only the production app and scheduler', 
 		{ ...app, vars: { ...app.vars, PUBLIC_SITE_URL: 'https://cita-suite-staging.cita-suite.workers.dev' } },
 		{ ...app, placement: { region: 'aws:us-west-2' } },
 		{ ...app, triggers: { crons: ['*/5 * * * *'] } },
-		{ ...app, routes: ['example.com/*'] }
+		{ ...app, routes: ['example.com/*'] },
+		// Mercado Pago (docs/plans/cobros-mercadopago-20261118.md): entorno productivo y precio versionados.
+		{ ...app, vars: { ...app.vars, MP_ENVIRONMENT: 'test' } },
+		{ ...app, vars: { ...app.vars, MP_ENVIRONMENT: undefined } },
+		{ ...app, vars: { ...app.vars, MP_SUBSCRIPTION_AMOUNT_ARS: '0' } },
+		{ ...app, vars: { ...app.vars, MP_SUBSCRIPTION_AMOUNT_ARS: '90.000' } },
+		{ ...app, vars: { ...app.vars, MP_SUBSCRIPTION_AMOUNT_ARS: undefined } }
 	])
 		assert.throws(() => assertProductionAppConfig(changed), /not the production target/);
 	assert.throws(() => assertProductionAppConfig(json('apps/web/wrangler.staging.jsonc')), /not the production target/);
@@ -33,6 +39,21 @@ test('the production deployment accepts only the production app and scheduler', 
 test('a deployment that would run without a required secret is refused', () => {
 	assert.deepEqual(missingSecrets([...PRODUCTION_APP_SECRETS, 'MP_ACCESS_TOKEN']), []);
 	assert.deepEqual(missingSecrets(PRODUCTION_APP_SECRETS.filter((name) => name !== 'INTERNAL_JOB_SECRET')), ['INTERNAL_JOB_SECRET']);
+	// Sin estas claves la suscripción queda rota sin aviso: el webhook rechaza todo y nadie puede suscribirse.
+	for (const name of ['MP_ACCESS_TOKEN', 'MP_WEBHOOK_SECRET'])
+		assert.deepEqual(missingSecrets(PRODUCTION_APP_SECRETS.filter((secret) => secret !== name)), [name]);
+});
+
+test('the production app versions the Mercado Pago environment and price decided on 18 November 2026', () => {
+	const app = json('apps/web/wrangler.jsonc');
+	assert.equal(app.vars.MP_ENVIRONMENT, 'production');
+	assert.equal(app.vars.MP_SUBSCRIPTION_AMOUNT_ARS, '90000');
+	// Ya no son secretos: un secreto con el mismo nombre que una variable impide publicar.
+	assert.equal(PRODUCTION_APP_SECRETS.includes('MP_ENVIRONMENT'), false);
+	assert.equal(PRODUCTION_APP_SECRETS.includes('MP_SUBSCRIPTION_AMOUNT_ARS'), false);
+	// Mientras existan como secretos, la instalación se niega antes de empezar y dice cuáles borrar.
+	assert.deepEqual(secretsShadowingVars([...PRODUCTION_APP_SECRETS, 'MP_SUBSCRIPTION_AMOUNT_ARS', 'MP_ENVIRONMENT'], app.vars), ['MP_ENVIRONMENT', 'MP_SUBSCRIPTION_AMOUNT_ARS']);
+	assert.deepEqual(secretsShadowingVars(PRODUCTION_APP_SECRETS, app.vars), []);
 });
 
 test('scheduler activation proves the private credential without running a job and fails closed on disagreement', async () => {

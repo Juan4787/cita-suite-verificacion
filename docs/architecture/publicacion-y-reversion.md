@@ -1,10 +1,34 @@
 # Publicación y reversión
 
-## Último estado comprobado — títulos de pestaña con el nombre del consultorio: 9 de noviembre de 2026, 21:03 hora argentina (00:03 UTC del 10)
+## Último estado comprobado — enlace de reserva con el nombre del consultorio: 10 de noviembre de 2026, 22:58 hora argentina (01:58 UTC del 11)
 
 **La única vuelta atrás vigente es la de este apartado.** Las de los apartados siguientes son historia.
 
-**Producción sirve** la instantánea `aed1ddc1dd3634bb8e621c538e59d48cd46db439` de `main` `3034e45a`, Worker `app`, versión de Cloudflare **`57358b08-92ac-4218-afc8-396f3a89466e`**. 166 migraciones, sin cambios de base. Programador `e79d5660-645a-4606-b481-7c143e7931f1`, sin tocar, con los mismos cinco cron. Interruptores sin cambios.
+**Producción sirve** la instantánea `a18b7364aba6a4534f4f14e830ebe35c9c1c006f` de `main` `e127841a`, Worker `app`, versión de Cloudflare **`6cf5a14c-cd2c-44e9-8389-f9d7efb38817`**. 167 migraciones: la última es `20261110010000_business_booking_links.sql`. Programador `328b3dba-7ceb-4995-b993-befb86a48184`, reinstalado con los mismos cinco cron. Interruptores sin cambios.
+
+**Qué trae** ([plan, registro y traspaso](../plans/enlace-de-reserva-20261110.md)):
+- el enlace de reserva nombra al consultorio, por ejemplo `https://app.cita-suite.com.ar/reservar/consultorio-ramirez`. La dirección sale del nombre y lo sigue. El identificador y las direcciones anteriores redirigen a la actual, y ningún otro consultorio puede tomar una dirección ajena;
+- la migración pasó al nombre las 19 direcciones que el alta propia había hecho con el correo del dueño. Natalia conserva `natalia-frutos`;
+- «Reserva online» y su subpantalla de webs usan el dominio oficial, y la lista de señas ya no parte «hace 2 min.» entre el número y la unidad.
+
+Juan lo autorizó: «PUBLICALO».
+
+**Verificación sobre la revisión exacta:**
+- completa 42936342156: tipos, pruebas unitarias, SQL con el par de la migración y la prueba de concurrencia, comparación de tipos, Chromium con 82 de 82, las reservas directas de Natalia, la demostración y la medición de Natalia;
+- paquete 42939375661 y Chromium sobre el paquete 42939635382, con 82 de 82;
+- `verify-production-release.mjs` aprobado: 152 archivos idénticos y 78 relaciones sin exposición anónima, con su recibo en `.verification/production-release-2026-11-11T01-58-50-505Z.json`;
+- en producción: las 25 direcciones, iguales a las previstas, con una dirección anterior guardada para cada una de las 19 cambiadas. `/reservar/8b900b87-bcda-49b6-ad1a-6ff4e80b86dc` (Ramírez), su dirección vieja `cuentaprueba3-855fc174`, `Consultorio-Ramirez` y `consultorio-ramírez` redirigen a `/reservar/consultorio-ramirez`, también conservando la selección. Esa dirección y `natalia-frutos` abren sus páginas, y la integración de la web de Natalia responde con su tema.
+
+**Publicación:**
+- ensayo a las 01:55 UTC, sin fallas; las diferencias de catálogo son sólo las de la migración y los 4 disparadores de almacenamiento de Supabase que ya mostraba el ensayo del 9 de noviembre;
+- respaldo `~/.local/share/cita-suite/backups/production-2026-11-11T01-55-43-360Z`: 128 tablas, 4.463 filas, 26 objetos, sin fallas;
+- programador sin cron, migración a las 01:57:52 en 1,7 s, app a las 01:58, verificación a las 01:58:50 y programador con cron.
+
+**Vuelta atrás:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback 57358b08-92ac-4218-afc8-396f3a89466e --name app --message "<motivo>" --yes`, la versión de los títulos de pestaña. Funciona con el esquema nuevo: enlaza por identificador, «Datos del consultorio» devuelve la dirección que muestra y las dos funciones de alta conservan su firma. Mientras esté instalada, las direcciones viejas que la migración reemplazó (por ejemplo `cuentaprueba3-855fc174`) no abren. Después, los dos `/_app/version.json` deben decir `aed1ddc1dd3634bb8e621c538e59d48cd46db439`. La migración no se revierte: sólo agrega. No se ensayó. Nunca una versión anterior a E.
+
+## Estado anterior — títulos de pestaña con el nombre del consultorio: 9 de noviembre de 2026, 21:03 hora argentina (00:03 UTC del 10)
+
+**Sirvió** la instantánea `aed1ddc1dd3634bb8e621c538e59d48cd46db439` de `main` `3034e45a`, Worker `app`, versión de Cloudflare **`57358b08-92ac-4218-afc8-396f3a89466e`**. 166 migraciones, sin cambios de base. Programador `e79d5660-645a-4606-b481-7c143e7931f1`, sin tocar, con los mismos cinco cron. Interruptores sin cambios.
 
 **Qué trae** ([plan 12.35](../plans/propuesta-senas-avisos-natalia.md#correo-sin-respuesta-20261109)):
 - la página de información para la consulta y la del turno actualizado nombran al consultorio en la pestaña, por ejemplo «Información para tu consulta · Consultorio Ramirez», como ya lo hacían las demás páginas del paciente. Antes decían «Cita Suite»;

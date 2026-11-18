@@ -18,6 +18,15 @@
 	// Anti doble-click: los forms son POST nativos (sin enhance, porque el 303
 	// externo a MP no funciona con fetch); se deshabilita el botón al enviar.
 	let mpSubmitting = $state(false);
+	// Cancelar no tiene vuelta atrás en Mercado Pago: se pide una confirmación explícita.
+	let confirmingCancel = $state(false);
+	// Tras un rechazo, el correo escrito; si no, el de ingreso.
+	const payerEmailValue = $derived(
+		String((form && 'payerEmail' in form ? form.payerEmail : undefined) ?? data.payerEmailDefault ?? '')
+	);
+	const lastChargeRejected = $derived(
+		mpSub?.status === 'authorized' && mpSub.last_charge_status === 'rejected'
+	);
 	const mpPaid = $derived(
 		Boolean(
 			mpReturn &&
@@ -63,8 +72,24 @@
 		if (value === null || value === undefined || value === '') return 'Sin registrar';
 		const parsed = Number(value);
 		if (!Number.isFinite(parsed)) return String(value);
-		return parsed.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
+		return parsed.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
 	};
+
+	const grantTitle = (grant: { operation: string; source?: string | null }) => {
+		if (grant.operation === 'set_permanent') return 'Acceso permanente';
+		if (grant.operation === 'grant_access' || grant.operation === 'extend_access') return 'Acceso actualizado';
+		if (grant.operation === 'payment_registered') return grant.source === 'mercado_pago' ? 'Pago de Mercado Pago' : 'Pago registrado';
+		if (grant.operation === 'payment_cancelled') return 'Reembolso o contracargo';
+		return 'Cambio registrado';
+	};
+
+	const howToContinue = $derived.by(() => {
+		if (access.isPermanent) return 'Contactá soporte del sistema.';
+		if (isManualBlock) return 'Contactá soporte.';
+		if (mpSub?.status === 'authorized') return 'Tu suscripción se renueva sola cada mes con Mercado Pago.';
+		if (mpSub?.status === 'paused') return 'Tu suscripción está pausada en Mercado Pago.';
+		return 'Activá la suscripción con Mercado Pago más abajo.';
+	});
 
 	const statusLabel = $derived.by(() => {
 		if (!access.commercialAccessEnabled) return 'Acceso pausado';
@@ -113,15 +138,15 @@
 			<div class="grid gap-3 sm:grid-cols-2 lg:min-w-[34rem]">
 				<div class="ux-soft-card p-4">
 					<p class="text-sm font-bold text-copy-subtle">Vencimiento</p>
-					<p class="mt-2 font-bold text-fg">{access.isPermanent ? 'No vence' : formatDateTime(access.paidUntil)}</p>
+					<p class="mt-2 font-bold text-fg">{access.isPermanent ? 'No vence' : formatDateTime(access.paidUntil, 'Sin pago registrado')}</p>
 				</div>
 				<div class="ux-soft-card p-4">
 					<p class="text-sm font-bold text-copy-subtle">Límite antes de suspensión</p>
-					<p class="mt-2 font-bold text-fg">{access.isPermanent ? 'No vence' : formatDateTime(access.graceUntil)}</p>
+					<p class="mt-2 font-bold text-fg">{access.isPermanent ? 'No vence' : formatDateTime(access.graceUntil, 'Sin pago registrado')}</p>
 				</div>
 				<div class="ux-soft-card p-4">
 					<p class="text-sm font-bold text-copy-subtle">Límite antes de archivo</p>
-					<p class="mt-2 font-bold text-fg">{access.isPermanent ? 'No vence' : formatDateTime(access.restrictedUntil)}</p>
+					<p class="mt-2 font-bold text-fg">{access.isPermanent ? 'No vence' : formatDateTime(access.restrictedUntil, 'Sin fecha')}</p>
 				</div>
 				<div class="ux-soft-card p-4">
 					<p class="text-sm font-bold text-copy-subtle">Último pago</p>
@@ -137,9 +162,7 @@
 			</div>
 			<div class="ux-soft-card p-4">
 				<p class="text-sm font-bold text-copy-subtle">Cómo continuar</p>
-				<p class="mt-2 font-bold text-fg">
-					{access.isPermanent ? 'Contactá soporte del sistema.' : isManualBlock ? 'Contactá soporte.' : 'Activá la suscripción con Mercado Pago más abajo.'}
-				</p>
+				<p class="mt-2 font-bold text-fg">{howToContinue}</p>
 			</div>
 		</div>
 
@@ -170,8 +193,8 @@
 			{/if}
 			{#if access.commercialStatus === 'active' && access.paidUntil && !data.mpSubscriptionUnavailable && mpSub?.status !== 'authorized' && mpSub?.status !== 'paused'}
 				<p class="ux-alert ux-alert-success mt-4">
-					Tu tiempo vigente se conserva: cuando se acredite el primer pago, se suman 30 días
-					al vencimiento actual.
+					Tu tiempo vigente se conserva: cada cobro de Mercado Pago suma un mes a tu vencimiento
+					actual.
 				</p>
 			{/if}
 
@@ -194,8 +217,8 @@
 					</p>
 				{:else if mpReturn.subscriptionStatus === 'authorized'}
 					<p class="ux-alert ux-alert-success mt-4">
-						Suscripción autorizada. El primer cobro está en proceso y tu acceso se acredita
-						solo en los próximos minutos; podés actualizar esta página para verlo.
+						Suscripción autorizada. Mercado Pago puede tardar hasta una hora en procesar el
+						primer cobro; tu acceso se acredita solo. Podés actualizar esta página para verlo.
 					</p>
 				{:else if mpReturn.subscriptionStatus === 'pending'}
 					<p class="ux-alert ux-alert-warning mt-4">
@@ -247,21 +270,45 @@
 				</div>
 				{#if mpSub.status === 'paused'}
 					<p class="ux-alert ux-alert-warning mt-4">
-						Mercado Pago pausó esta suscripción (suele pasar por cobros fallidos). Podés
-						actualizar el medio de pago desde tu cuenta de Mercado Pago, o cancelarla acá y
-						crear una nueva.
+						Esta suscripción está pausada en Mercado Pago y no genera cobros. Podés revisarla
+						desde tu cuenta de Mercado Pago, o cancelarla acá y crear una nueva.
 					</p>
 				{/if}
-				<form method="POST" action="?/cancel" class="mt-5" onsubmit={() => (mpSubmitting = true)}>
-					<input type="hidden" name="preapproval_id" value={mpSub.preapproval_id} />
-					<button type="submit" disabled={mpSubmitting} class="ux-btn-secondary">
-						{mpSubmitting ? 'Cancelando…' : 'Cancelar suscripción'}
-					</button>
-					<p class="mt-2 text-sm text-copy-subtle">
-						Al cancelar no se generan más cobros; el tiempo ya pagado sigue vigente hasta su
-						vencimiento.
+				{#if lastChargeRejected}
+					<p class="ux-alert ux-alert-warning mt-4">
+						Mercado Pago no pudo cobrar la última cuota{mpSub.last_charge_at ? ` (${formatDateTime(mpSub.last_charge_at)})` : ''}.
+						Va a reintentar durante unos días: revisá o cambiá tu medio de pago en tu cuenta de
+						Mercado Pago para no perder el acceso.
 					</p>
-				</form>
+				{/if}
+				{#if confirmingCancel}
+					<form method="POST" action="?/cancel" class="mt-5" onsubmit={() => (mpSubmitting = true)}>
+						<input type="hidden" name="preapproval_id" value={mpSub.preapproval_id} />
+						<p class="ux-alert ux-alert-warning">
+							¿Cancelar la suscripción? Mercado Pago no permite reactivarla: para volver a
+							pagar hay que crear una nueva. El tiempo ya pagado sigue vigente hasta su
+							vencimiento.
+						</p>
+						<div class="mt-4 flex flex-col gap-3 sm:flex-row">
+							<button type="submit" disabled={mpSubmitting} class="ux-btn-secondary">
+								{mpSubmitting ? 'Cancelando…' : 'Sí, cancelar la suscripción'}
+							</button>
+							<button type="button" disabled={mpSubmitting} class="ux-btn-primary" onclick={() => (confirmingCancel = false)}>
+								No, mantenerla
+							</button>
+						</div>
+					</form>
+				{:else}
+					<div class="mt-5">
+						<button type="button" class="ux-btn-secondary" onclick={() => (confirmingCancel = true)}>
+							Cancelar suscripción
+						</button>
+						<p class="mt-2 text-sm text-copy-subtle">
+							Al cancelar no se generan más cobros; el tiempo ya pagado sigue vigente hasta su
+							vencimiento.
+						</p>
+					</div>
+				{/if}
 			{:else if canActivateWithMp}
 				{#if mpSub?.status === 'pending'}
 					<p class="mt-4 text-sm text-fg-55">
@@ -274,7 +321,22 @@
 					</p>
 				{/if}
 				<form method="POST" action="?/subscribe" class="mt-5" onsubmit={() => (mpSubmitting = true)} aria-busy={mpSubmitting}>
-					<button type="submit" disabled={mpSubmitting} class="ux-btn-primary">
+					<label class="block max-w-md">
+						<span class="ux-label">Correo de tu cuenta de Mercado Pago</span>
+						<input
+							name="payer_email"
+							type="email"
+							required
+							autocomplete="email"
+							value={payerEmailValue}
+							class="ux-input"
+						/>
+					</label>
+					<p class="mt-2 max-w-xl text-sm text-copy-subtle">
+						En Mercado Pago vas a tener que usar exactamente este correo: si pagás con otro,
+						Mercado Pago rechaza el pago. No se aceptan correos con «+».
+					</p>
+					<button type="submit" disabled={mpSubmitting} class="ux-btn-primary mt-4">
 						{mpSubmitting ? 'Creando enlace seguro en Mercado Pago…' : 'Activar suscripción con Mercado Pago'}
 					</button>
 					{#if mpSubmitting}
@@ -309,9 +371,7 @@
 					<div class="ux-soft-card p-4">
 						<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 							<div>
-								<p class="font-bold text-fg">
-									{grant.operation === 'set_permanent' ? 'Acceso permanente' : grant.operation === 'grant_access' || grant.operation === 'extend_access' ? 'Acceso actualizado' : 'Cambio registrado'}
-								</p>
+								<p class="font-bold text-fg">{grantTitle(grant)}</p>
 								<p class="mt-1 text-sm text-fg-55">
 									{money(grant.amount)}
 								</p>

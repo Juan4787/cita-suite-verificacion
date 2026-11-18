@@ -2,7 +2,8 @@
 -- psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/manual_access_then_mp_payment.sql
 --
 -- Transactional integration test: verifies that the first Mercado Pago charge
--- preserves a future manual grant and appends 30 days exactly once.
+-- preserves a future manual grant and appends one calendar month exactly once
+-- (since 20261118010000; before, a fixed 30 days).
 
 begin;
 
@@ -57,8 +58,8 @@ begin
 	if v_payment.paid_until_before is distinct from v_manual.paid_until_after then
 		raise exception 'TEST_MANUAL_EXPIRATION_WAS_NOT_PRESERVED';
 	end if;
-	if v_payment.paid_until_after is distinct from v_manual.paid_until_after + interval '30 days' then
-		raise exception 'TEST_MP_PAYMENT_DID_NOT_APPEND_EXACTLY_30_DAYS';
+	if v_payment.paid_until_after is distinct from v_manual.paid_until_after + interval '1 month' then
+		raise exception 'TEST_MP_PAYMENT_DID_NOT_APPEND_EXACTLY_ONE_MONTH';
 	end if;
 
 	select * into v_duplicate
@@ -83,7 +84,7 @@ begin
 		raise exception 'TEST_DUPLICATE_PAYMENT_CHANGED_EXPIRATION';
 	end if;
 
-	raise notice 'PASS: manual month is preserved and one approved MP payment appends exactly 30 days once.';
+	raise notice 'PASS: manual month is preserved and one approved MP payment appends exactly one calendar month once.';
 end;
 $$;
 

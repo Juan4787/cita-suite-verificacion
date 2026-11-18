@@ -2875,6 +2875,10 @@ export type Database = {
           created_at: string
           currency_id: string | null
           id: string
+          last_charge_at: string | null
+          last_charge_detail: string | null
+          last_charge_id: string | null
+          last_charge_status: string | null
           last_synced_at: string
           next_charge_at: string | null
           payer_email: string | null
@@ -2889,6 +2893,10 @@ export type Database = {
           created_at?: string
           currency_id?: string | null
           id?: string
+          last_charge_at?: string | null
+          last_charge_detail?: string | null
+          last_charge_id?: string | null
+          last_charge_status?: string | null
           last_synced_at?: string
           next_charge_at?: string | null
           payer_email?: string | null
@@ -2903,6 +2911,10 @@ export type Database = {
           created_at?: string
           currency_id?: string | null
           id?: string
+          last_charge_at?: string | null
+          last_charge_detail?: string | null
+          last_charge_id?: string | null
+          last_charge_status?: string | null
           last_synced_at?: string
           next_charge_at?: string | null
           payer_email?: string | null
@@ -2935,6 +2947,8 @@ export type Database = {
           received_at: string
           request_id: string | null
           requires_attention: boolean
+          resolved_at: string | null
+          resolved_by: string | null
           resource_id: string | null
           signature_valid: boolean
           topic: string | null
@@ -2951,6 +2965,8 @@ export type Database = {
           received_at?: string
           request_id?: string | null
           requires_attention?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
           resource_id?: string | null
           signature_valid?: boolean
           topic?: string | null
@@ -2967,6 +2983,8 @@ export type Database = {
           received_at?: string
           request_id?: string | null
           requires_attention?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
           resource_id?: string | null
           signature_valid?: boolean
           topic?: string | null

@@ -404,10 +404,22 @@
 				? 'Tu cuenta ya está creada. Activá tu suscripción para comenzar a usar Cita Suite.'
 				: 'Tu acceso a Cita Suite venció. Activá tu suscripción para volver a usar la plataforma.';
 		}
+		// Con la acreditación por mes calendario (20261118010000), estos carteles sólo aparecen si el cobro
+		// automático se atrasa. Si el acceso viene de Mercado Pago, el texto lo dice: vale tanto con la
+		// suscripción activa (Mercado Pago reintenta) como cancelada.
+		const paidWithMercadoPago = access.subscription?.access_source === 'mercado_pago';
 		if (access.commercialStatus === 'grace') {
+			if (paidWithMercadoPago) {
+				const until = access.graceUntil ? ` antes del ${new Date(access.graceUntil).toLocaleString('es-AR')}` : '';
+				return `La suscripción está vencida. Si tu suscripción de Mercado Pago sigue activa, Mercado Pago reintenta el cobro durante unos días: revisá tu medio de pago en Mercado Pago${until} para evitar restricciones.`;
+			}
 			return access.graceUntil
 				? `La suscripción está vencida. Regularizá el pago antes del ${new Date(access.graceUntil).toLocaleString('es-AR')} para evitar restricciones operativas.`
 				: 'La suscripción está vencida. Regularizá el pago para evitar restricciones operativas.';
+		}
+		if (access.visualStatus === 'expiring' && paidWithMercadoPago) {
+			const deadline = formatDateTime(access.paidUntil, activeBusiness?.business?.timezone);
+			return `Tu acceso vence${deadline ? ` el ${deadline}` : ' pronto'}. Si tu suscripción de Mercado Pago está activa, se renueva sola; si el cobro no se acredita, revisá tu medio de pago en Mercado Pago.`;
 		}
 		if (access.visualStatus === 'expiring') {
 			const deadline = formatDateTime(access.paidUntil, activeBusiness?.business?.timezone);
@@ -1298,10 +1310,25 @@
 						onsubmit={() => (mpSubmitting = true)}
 						aria-busy={mpSubmitting}
 					>
+						<!-- Mercado Pago exige pagar con exactamente este correo (docs/plans/cobros-mercadopago-20261118.md). -->
+						<label class="mx-auto block max-w-sm text-left">
+							<span class="text-sm font-bold text-warning-100">Correo de tu cuenta de Mercado Pago</span>
+							<input
+								name="payer_email"
+								type="email"
+								required
+								autocomplete="email"
+								value={data?.email ?? ''}
+								class="ux-input mt-2"
+							/>
+						</label>
+						<p class="mx-auto mt-2 max-w-sm text-left text-sm font-semibold text-warning-50-75">
+							En Mercado Pago vas a tener que usar exactamente este correo. No se aceptan correos con «+».
+						</p>
 						<button
 							type="submit"
 							disabled={mpSubmitting}
-							class="inline-flex items-center justify-center rounded-2xl bg-chip-amber-400 px-6 py-3 text-sm font-bold text-ink-amber-950 shadow-lg transition hover:bg-chip-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+							class="mt-4 inline-flex items-center justify-center rounded-2xl bg-chip-amber-400 px-6 py-3 text-sm font-bold text-ink-amber-950 shadow-lg transition hover:bg-chip-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
 						>
 							{mpSubmitting ? 'Creando enlace seguro en Mercado Pago…' : 'Activar suscripción con Mercado Pago'}
 						</button>

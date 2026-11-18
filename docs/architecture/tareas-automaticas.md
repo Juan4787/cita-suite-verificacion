@@ -76,7 +76,7 @@ Con el presupuesto Free de 40 llamadas por cadena (incluida la del Service Bindi
 | Calendario | 3 llamadas a Google (token, cambio, búsqueda o revocación); por tramo, 1 lectura y 1 cierre | reclamación + liberación final | 10 eventos |
 | Reseñas | 8 (entrega previa, preparación, comprobación, intento, envío, resultado, cierre, auditoría) | recuperación + reclamación | 4 solicitudes |
 | Cargas abandonadas | — | 1 reclamación + 1 borrado por bucket y cada 100 objetos | 200 archivos |
-| Conciliación comercial | 9 por suscripción + 4 por cada cobro aprobado nuevo | lectura + resumen | según presupuesto, 20 suscripciones como máximo |
+| Conciliación comercial | 11 por suscripción, más 1 por cada página adicional de cobros (de a 15), 2 por cada alerta de cobro rechazado y 4 por cada cobro aprobado o revertido nuevo (desde el 18-nov-2026) | lectura + resumen | según presupuesto, 20 suscripciones como máximo |
 | Almacenamiento | — | 1 RPC | — |
 
 **La CPU de Free (10 ms por invocación) no está certificada por este cálculo.** El cifrado Web Push se mide en el Worker desplegado (`workersInvocationsAdaptive`) y, si hace falta, el lote de Free se acota por CPU con esa medición.

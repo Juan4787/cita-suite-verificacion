@@ -19,6 +19,8 @@ const { POST } = await import('./+server');
 const SECRET = 'clave-secreta-de-prueba';
 const BUSINESS_ID = '22222222-2222-4222-8222-222222222222';
 const WEBHOOK_URL = 'https://app.test/api/mercadopago/webhook';
+// Un pago de suscripción como lo devuelve Mercado Pago (medido el 18-nov-2026).
+const SUBSCRIPTION_POI = { type: 'SUBSCRIPTIONS', transaction_data: { subscription_id: 'pre-webhook' } };
 
 const createAdminMock = (opts?: {
 	rpcResult?: { data?: unknown; error?: { message: string } | null };
@@ -28,7 +30,8 @@ const createAdminMock = (opts?: {
 	const tableDefaults: Record<string, { data: unknown; error: null }> = {
 		businesses: { data: { id: BUSINESS_ID }, error: null },
 		business_subscriptions: { data: { is_permanent: false }, error: null },
-		mp_subscriptions: { data: null, error: null }
+		// La suscripción de los pagos de prueba pertenece al consultorio (los pagos se acreditan sólo así).
+		mp_subscriptions: { data: { business_id: BUSINESS_ID }, error: null }
 	};
 	const admin = {
 		rpc: vi.fn(async (fn: string, args: Record<string, unknown>) => {
@@ -154,7 +157,7 @@ describe('POST /api/mercadopago/webhook', () => {
 		const mpFetch = vi.fn(
 			async (_input: RequestInfo | URL) =>
 				new Response(
-					JSON.stringify({ id: 111, status: 'approved', external_reference: BUSINESS_ID, transaction_amount: 50000 }),
+					JSON.stringify({ id: 111, status: 'approved', external_reference: BUSINESS_ID, transaction_amount: 50000, point_of_interaction: SUBSCRIPTION_POI }),
 					{ status: 200 }
 				)
 		);
@@ -181,7 +184,8 @@ describe('POST /api/mercadopago/webhook', () => {
 						id: 111,
 						status: 'approved',
 						external_reference: BUSINESS_ID,
-						transaction_amount: 50000
+						transaction_amount: 50000,
+						point_of_interaction: SUBSCRIPTION_POI
 					}),
 					{ status: 200 }
 				)
@@ -220,7 +224,7 @@ describe('POST /api/mercadopago/webhook', () => {
 		const mpFetch = vi.fn(
 			async (_input: RequestInfo | URL) =>
 				new Response(
-					JSON.stringify({ id: 112, status: 'approved', external_reference: BUSINESS_ID }),
+					JSON.stringify({ id: 112, status: 'approved', external_reference: BUSINESS_ID, point_of_interaction: SUBSCRIPTION_POI }),
 					{ status: 200 }
 				)
 		);

@@ -6,7 +6,8 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadBuildArtifact } from './lib/staging-deploy.mjs';
 import {
-	PRODUCTION_APP_ORIGIN, PRODUCTION_APP_WORKER, assertProductionAppConfig, assertProductionSchedulerConfig, assertProductionSchedulerAuthentication, missingSecrets
+	PRODUCTION_APP_ORIGIN, PRODUCTION_APP_WORKER, assertProductionAppConfig, assertProductionSchedulerConfig, assertProductionSchedulerAuthentication, missingSecrets,
+	secretsShadowingVars
 } from './lib/production-deploy.mjs';
 import { productionEnvironment, productionPsql } from './lib/production-database.mjs';
 
@@ -48,6 +49,9 @@ if (target === 'app') {
 	const names = JSON.parse(listed.stdout.slice(listed.stdout.indexOf('['))).map((secret) => secret.name);
 	const missing = missingSecrets(names);
 	if (listed.status !== 0 || missing.length) throw new Error(`Production lacks the secrets ${missing.join(', ')}. Nothing was deployed.`);
+	const shadowing = secretsShadowingVars(names, config.vars);
+	if (shadowing.length)
+		throw new Error(`Production has secrets that are now versioned variables (${shadowing.join(', ')}): delete them with \`wrangler secret delete <name> --name ${PRODUCTION_APP_WORKER}\` first. Nothing was deployed.`);
 	wrangler('web', {
 		...config,
 		main: join(artifact, '.verification/cloudflare-bundle-production/_worker.js'),

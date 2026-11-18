@@ -235,7 +235,7 @@ describe('action subscribe', () => {
 			auto_recurring: {
 				frequency: 1,
 				frequency_type: 'months',
-				transaction_amount: 50000,
+				transaction_amount: 90000,
 				currency_id: 'ARS'
 			}
 		});
@@ -250,7 +250,7 @@ describe('action subscribe', () => {
 			business_id: BUSINESS_ID,
 			preapproval_id: 'pre-9',
 			status: 'pending',
-			transaction_amount: 50000
+			transaction_amount: 90000
 		});
 	});
 
@@ -1101,7 +1101,7 @@ describe('load', () => {
 		expect(requests).toHaveLength(0);
 		// La autorizada le gana a la cancelada más nueva.
 		expect(data.mpSubscription?.preapproval_id).toBe('pre-a');
-		expect(data.mpAmount).toBe(50000);
+		expect(data.mpAmount).toBe(90000);
 		expect(data.mpReturn).toBeNull();
 	});
 
@@ -1127,5 +1127,97 @@ describe('load', () => {
 			status: 303,
 			location: '/odonto/configuracion/ayuda'
 		});
+	});
+});
+
+describe('action subscribe: correo del pagador y fallas de Mercado Pago (18-nov-2026)', () => {
+	const preparedOwner = (adminQueues: Record<string, Array<{ data?: unknown; error?: { message: string } | null }>>) => {
+		const server = createDbMock();
+		const admin = createDbMock(adminQueues);
+		mocks.createSupabaseServerClient.mockResolvedValue(server.client);
+		mocks.createSupabaseAdminClient.mockResolvedValue(admin.client);
+		mocks.resolveActiveBusiness.mockResolvedValue(ownerContext());
+		return admin;
+	};
+	type Failure = { status: number; data: { message?: string; payerEmail?: string } };
+
+	it('usa como pagador el correo de Mercado Pago que escribió el consultorio', async () => {
+		preparedOwner({ mp_subscriptions: [{ data: [], error: null }, { error: null }] });
+		const { fetchMock, requests } = createMpFetch([
+			['/preapproval', { status: 201, body: { id: 'pre-9', status: 'pending', init_point: 'https://mp.test/init/pre-9' } }]
+		]);
+
+		await expect(
+			actions.subscribe(makeEvent({ fetchMock, formEntries: { payer_email: ' Pagos@Mail.com ' } }) as never)
+		).rejects.toMatchObject({ status: 303 });
+
+		expect(requests[0].body).toMatchObject({ payer_email: 'pagos@mail.com' });
+	});
+
+	it('rechaza un correo con «+» sin pedirle nada a Mercado Pago', async () => {
+		preparedOwner({});
+		const { fetchMock, requests } = createMpFetch([]);
+
+		const result = (await actions.subscribe(
+			makeEvent({ fetchMock, formEntries: { payer_email: 'duena+mp@mail.com' } }) as never
+		)) as Failure;
+
+		expect(result.status).toBe(400);
+		expect(result.data.message).toContain('«+»');
+		expect(result.data.payerEmail).toBe('duena+mp@mail.com');
+		expect(requests).toHaveLength(0);
+	});
+
+	it('explica que Mercado Pago no aceptó el correo del pagador en lugar de pedir que se reintente', async () => {
+		preparedOwner({ mp_subscriptions: [{ data: [], error: null }] });
+		const { fetchMock } = createMpFetch([
+			['/preapproval', { status: 400, method: 'POST', body: { message: 'User bad request', status: 400 } }]
+		]);
+		vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+		const result = (await actions.subscribe(makeEvent({ fetchMock }) as never)) as Failure;
+
+		expect(result.status).toBe(400);
+		expect(result.data.message).toContain('no aceptó «duena@mail.com»');
+		expect(result.data.message).not.toContain('Probá de nuevo en unos minutos');
+	});
+
+	it('cancela la solicitud recién creada si no puede guardar su vínculo y no manda a pagar', async () => {
+		preparedOwner({ mp_subscriptions: [{ data: [], error: null }, { error: { message: 'base caída' } }] });
+		const { fetchMock, requests } = createMpFetch([
+			['/preapproval/pre-9', { status: 200, method: 'PUT', body: { id: 'pre-9', status: 'cancelled' } }],
+			['/preapproval', { status: 201, method: 'POST', body: { id: 'pre-9', status: 'pending', init_point: 'https://mp.test/init/pre-9' } }]
+		]);
+		vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+		const result = (await actions.subscribe(makeEvent({ fetchMock }) as never)) as Failure;
+
+		expect(result.status).toBe(503);
+		expect(requests.map((r) => [r.method, r.url.replace('https://api.mercadopago.com', '')])).toEqual([
+			['POST', '/preapproval'],
+			['PUT', '/preapproval/pre-9']
+		]);
+		expect(requests[1].body).toEqual({ status: 'cancelled' });
+	});
+
+	it('una solicitud pendiente que Mercado Pago ya no encuentra se marca y no bloquea', async () => {
+		const admin = preparedOwner({
+			mp_subscriptions: [
+				{ data: [{ preapproval_id: 'pre-otro-entorno', status: 'pending', created_at: '2026-07-07T12:00:00.000Z' }], error: null },
+				{ error: null },
+				{ error: null }
+			]
+		});
+		const { fetchMock } = createMpFetch([
+			['/preapproval/pre-otro-entorno', { status: 404, method: 'GET', body: { message: 'not found' } }],
+			['/preapproval', { status: 201, method: 'POST', body: { id: 'pre-nueva', status: 'pending', init_point: 'https://mp.test/init/pre-nueva' } }]
+		]);
+
+		await expect(actions.subscribe(makeEvent({ fetchMock }) as never)).rejects.toMatchObject({
+			status: 303,
+			location: 'https://mp.test/init/pre-nueva'
+		});
+		const marked = admin.calls.find((c) => c.table === 'mp_subscriptions' && c.method === 'update');
+		expect(marked?.args[0]).toMatchObject({ status: 'not_found' });
 	});
 });
