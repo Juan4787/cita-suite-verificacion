@@ -87,10 +87,15 @@ jobs:
         run: |
           mkdir -p .verification
           sudo python3 - <<'PY'
+          import re
           from pathlib import Path
           path = Path('/etc/apt/apt-mirrors.txt')
           original = path.read_text()
-          lines = [line for line in original.splitlines() if 'azure.archive.ubuntu.com' not in line]
+          # The image lists its cloud's regional mirror first: Azure, and since November 2026 AWS
+          # (us-east-2.ec2.archive.ubuntu.com). Both served tens of kB/s and cut LibreOffice at its limit
+          # (runs 39783349541, 44329615757 and 44332605807); keep only the official HTTPS fallbacks.
+          regional = re.compile(r'^\s*https?://[^/\s]+\.archive\.ubuntu\.com/')
+          lines = [line for line in original.splitlines() if not regional.match(line)]
           if not any(line.startswith('https://archive.ubuntu.com/ubuntu/') for line in lines):
               raise SystemExit('The runner has no reviewed official Ubuntu fallback mirror.')
           updated = '\n'.join(lines) + '\n'
