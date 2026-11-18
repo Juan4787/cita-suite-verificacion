@@ -31,7 +31,7 @@
   - el webhook productivo no tenía dirección; se le cargó ese mismo día.
 
   Hasta corregirlo, ningún consultorio real puede suscribirse.
-- El token de acceso y la clave secreta del webhook productivos los carga Juan en Cloudflare: nunca pasan por el chat ni por el repositorio.
+- Los secretos de Mercado Pago los carga Juan en Cloudflare: nunca pasan por el chat ni por el repositorio. Falta sólo el token de acceso productivo; la clave secreta del webhook es una sola por aplicación y la del Worker ya es la correcta (comprobado el 18-nov).
 
 ## Enlace de reserva con el nombre del consultorio (10 de noviembre)
 

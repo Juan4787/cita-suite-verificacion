@@ -39,7 +39,9 @@ returns table (
 )
 language plpgsql
 security definer
-set search_path = public
+-- pg_temp al final, explícito: es la ruta que 20261016012000 dejó en toda función privilegiada y que
+-- exige supabase/tests/security_definer_resolution.sql. Un create or replace con sólo «public» la perdería.
+set search_path = public, pg_temp
 as $$
 declare
 	v_now timestamptz := now();
