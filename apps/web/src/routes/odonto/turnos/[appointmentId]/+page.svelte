@@ -15,6 +15,7 @@ import {formatQuotedPrice} from '$lib/booking/pricing';
 	import type { StaffManagementFeedback } from '$lib/scheduling/staff-management';
 	import { formatDepositMoney } from '$lib/scheduling/reschedule-terms';
 	import { revealNotice } from '$lib/ui/reveal-notice';
+	import { createClientReadiness } from '$lib/client/readiness.svelte';
 	import type { PageData } from './$types';
 import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/shared/booking-integration';
 
@@ -244,6 +245,10 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 	let viewMonth = $state(initParts.m - 1);
 	let slotsCache = $state<Record<string, SlotBatch>>({});
 	let reprogramOpen = $state(false);
+	// Abrir «Reprogramar» pide los horarios desde el navegador. Antes de hidratar, un toque la abría
+	// de forma nativa y la hidratación la volvía a cerrar sin pedir nada (`bind:open` impone su
+	// estado inicial), así que llega inerte hasta que la página está lista.
+	const client = createClientReadiness();
 	let loadingSlots = $state(false);
 	let slotsError = $state<string | null>(null);
 	let slotRequest = 0;
@@ -570,7 +575,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 
 		{#if canOperate && !isClosed}
 			<div class={`grid items-start gap-4 ${canShowCancelAction && data.management ? 'lg:grid-cols-2' : ''}`} data-appointment-actions>
-				<details bind:open={reprogramOpen} id="reprogramar" class="ux-disclosure">
+				<details bind:open={reprogramOpen} id="reprogramar" class="ux-disclosure" inert={!client.ready}>
 					<summary><h2 class="ux-section-title">Reprogramar</h2></summary>
 					<div class="ux-disclosure-body">
 						{#if isJoint}
