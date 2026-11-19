@@ -198,6 +198,13 @@ El ingreso con contraseña conserva sus límites reales también en el entorno d
 
 Los controles que requieren JavaScript quedan deshabilitados hasta hidratar (`createClientReadiness`). Las pruebas hacen un único clic, porque Playwright espera a que el control esté habilitado, y después verifican su efecto. No se usan reintentos `toPass` alrededor de un clic: con conmutadores pueden cerrar lo que acaban de abrir y además ocultarían un primer clic perdido. Las respuestas lentas se simulan con compuertas deterministas (una promesa liberada después de verificar el estado de carga), nunca con esperas fijas.
 
+**Comprobar que un control llega deshabilitado del servidor no necesita interceptar pedidos.** Se lee el HTML del servidor con el transporte del navegador (`browserRequest`), se lo analiza con `DOMParser`, que no corre sus scripts, y después se navega normalmente y se exige el control habilitado (`clinical-entry-date.spec.ts`). Interceptar durante el arranque de la página tiene dos efectos:
+
+- mientras haya una ruta activa, Playwright desactiva la caché del navegador, y la página vuelve a bajar de Internet la hoja de Google Fonts, que demora el script de arranque hasta terminar de bajar;
+- quitar la ruta mientras la página pedía sus módulos dejó una vez el módulo de entrada (`.svelte-kit/generated/client/app.js`) sin respuesta y la página sin su código. La corrida 44409688705 falló así, y en esta máquina se reprodujo una vez en 37 arranques en frío del servidor de desarrollo.
+
+Las pruebas que sí retienen scripts, para actuar mientras la página carga (por ejemplo, completar un formulario antes de hidratar), mantienen la ruta hasta que la página está lista y recién entonces la quitan, o no la quitan.
+
 ### Paneles animados con controles
 
 Playwright 1.60 comprueba el destino de un clic sólo con el primer evento de la secuencia (`pointerdown`) y asume que `mouseup` y `click` caen en el mismo lugar. Si el contenido se mueve entre la presión y la liberación, el `click` va al ancestro común, ningún manejador corre y la acción informa éxito. La auditoría 40373057375 falló así: el panel de nuevo turno se abría con el `slide` de Svelte, que recorta con `overflow: hidden`. Ese recorte sigue siendo un contenedor desplazable: `scrollIntoView` (de Playwright, o el foco del teclado) corría el contenido recortado, y Svelte descartaba ese desplazamiento al terminar la apertura. La prueba roja 40399519234 midió **405,67 px** de salto bajo una presión en curso.

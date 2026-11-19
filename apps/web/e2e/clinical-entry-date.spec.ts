@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test, type Locator } from '@playwright/test';
+import { browserRequest } from './helpers/browser-request';
 import { createFixtureClient } from './helpers/fixture-db';
 import { loginWithSharedSession } from './helpers/shared-auth';
 
@@ -71,28 +72,26 @@ test('clinical creation persists the Argentina wall clock and displays the same 
 	const f = await fixture();
 	try {
 		await loginWithSharedSession(page, await credentials());
-		// A visible SSR button is not proof that its JS handler is attached. Hold
-		// scripts on a fresh document and require the UI's actual disabled state.
-		await page.goto('about:blank');
-		let releaseScripts!: () => void;
-		const scripts = new Promise<void>((resolve) => {
-			releaseScripts = resolve;
-		});
-		const holdScripts = async (route: import('@playwright/test').Route) => {
-			if (route.request().resourceType() === 'script') await scripts;
-			await route.continue();
-		};
-		await page.route('**/*', holdScripts);
+		const patientPath = `/odonto/pacientes/${f.patientId}`;
+		// A visible server-rendered button is not proof that its handler is attached: the
+		// server must render it disabled and only the hydrated page may enable it. The
+		// server's HTML is read with the browser's own transport and parsed without running
+		// its scripts. No request interception here: while a route is installed Playwright
+		// disables the browser cache, and removing the route while the page was requesting
+		// its modules left one of them unanswered and the page without its code (run
+		// 44409688705, reproduced on a cold development server on 18 November 2026).
+		const serverHtml = await (await browserRequest(page, patientPath)).text();
+		const serverButtons = await page.evaluate((html) => {
+			const parsed = new DOMParser().parseFromString(html, 'text/html');
+			return [...parsed.querySelectorAll('main button')]
+				.filter((button) => button.textContent?.trim() === '+ Registrar consulta')
+				.map((button) => button.hasAttribute('disabled'));
+		}, serverHtml);
+		expect(serverButtons).toEqual([true]);
+		await page.goto(patientPath);
 		const patient = page.getByRole('main');
+		await expect(patient.getByRole('heading', { name: f.fullName, exact: true })).toBeVisible();
 		const open = patient.getByRole('button', { name: '+ Registrar consulta', exact: true });
-		try {
-			await page.goto(`/odonto/pacientes/${f.patientId}`, { waitUntil: 'commit' });
-			await expect(patient.getByRole('heading', { name: f.fullName, exact: true })).toBeVisible();
-			await expect(open).toBeDisabled();
-		} finally {
-			releaseScripts();
-			await page.unrouteAll({ behavior: 'wait' });
-		}
 		await expect(open).toBeEnabled();
 		await open.click();
 		const dialog = page.getByRole('dialog', { name: `Registrar consulta - ${f.fullName}` });
