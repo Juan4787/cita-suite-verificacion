@@ -9,6 +9,7 @@
 	import { clearTtlDraft, loadTtlDraft, saveTtlDraft } from '$lib/client/ttl-draft';
 	import {
 		canonicalScheduleBlocks,
+		defaultSlotIntervalForServices,
 		scheduleBlocksFromRules,
 		serializeScheduleBlocks,
 		validateScheduleBlocks
@@ -54,8 +55,16 @@
 	const sameStringList = (left: string[], right: string[]) =>
 		uniqueSortedStrings(left).join('|') === uniqueSortedStrings(right).join('|');
 
-	const scheduleFromRules = (rules: Rule[]): ProfessionalDraft['schedule'] => ({
-		blocks: scheduleBlocksFromRules(rules, 'saved-block')
+	const scheduleFromRules = (
+		rules: Rule[],
+		services: Service[],
+		assignedServiceIds: string[]
+	): ProfessionalDraft['schedule'] => ({
+		blocks: scheduleBlocksFromRules(
+			rules,
+			'saved-block',
+			defaultSlotIntervalForServices(services, assignedServiceIds)
+		)
 	});
 
 	const buildServerDraft = (source: PageData): ProfessionalDraft => ({
@@ -65,7 +74,7 @@
 		email: source.professional?.email ?? '',
 		isAvailable: Boolean(source.professional?.is_active && source.professional?.is_public),
 		serviceIds: [...(source.assignedServiceIds ?? [])],
-		schedule: scheduleFromRules(source.rules),
+		schedule: scheduleFromRules(source.rules, source.services, source.assignedServiceIds ?? []),
 		exception: emptyExceptionDraft()
 	});
 
@@ -127,8 +136,6 @@
 		current: ProfessionalDraft,
 		saved: ProfessionalDraft
 	): DirtyFields => {
-		const editableCurrentServices = current.serviceIds.filter((id) => !defaultServiceIdSet.has(id));
-		const editableSavedServices = saved.serviceIds.filter((id) => !defaultServiceIdSet.has(id));
 		return {
 			name: normalizedText(current.name) !== normalizedText(saved.name),
 			specialty: normalizedText(current.specialty) !== normalizedText(saved.specialty),
@@ -136,7 +143,7 @@
 			email:
 				normalizedText(current.email).toLowerCase() !== normalizedText(saved.email).toLowerCase(),
 			profilePublic: current.isAvailable !== saved.isAvailable,
-			services: !sameStringList(editableCurrentServices, editableSavedServices),
+			services: !sameStringList(current.serviceIds, saved.serviceIds),
 			schedule:
 				canonicalScheduleBlocks(current.schedule.blocks) !==
 				canonicalScheduleBlocks(saved.schedule.blocks),
@@ -452,7 +459,7 @@
 			<input type="hidden" name="phone" value={draft.phone} />
 			<input type="hidden" name="email" value={draft.email} />
 			<input type="hidden" name="is_available" value={draft.isAvailable ? 'true' : 'false'} />
-			{#each draft.serviceIds.filter((id) => !defaultServiceIdSet.has(id)) as serviceId}
+			{#each draft.serviceIds as serviceId}
 				<input type="hidden" name="service_id" value={serviceId} />
 			{/each}
 			<input type="hidden" name="schedule_blocks" value={scheduleBlocksJson} /><input type="hidden" name="availability_revision" value={availabilityRevision}/><input type="hidden" name="exception_request_id" value={draft.exception.requestId}/>

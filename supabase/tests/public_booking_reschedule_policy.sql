@@ -42,6 +42,7 @@ do $$declare b uuid:=gen_random_uuid(); u uuid:=gen_random_uuid(); s uuid:=gen_r
  insert into booking_policy_fixture values('business',b::text),('owner',u::text),('service',s::text),('professional',p::text),('integration',i::text),('key',gen_random_uuid()::text);
  update private.deposit_automation set enabled=true;
  update private.appointment_management_runtime set email_producer_enabled=true;
+ perform public.operator_set_business_email_sender(b,'reschedule-policy.cita-suite.com.ar','verified');
  insert into public.deposit_policies(business_id,enabled,auto_cancel_enabled,amount_mode,fixed_amount,transfer_details)
  values(b,true,true,'fixed',40000,'Synthetic fixture transfer details');
 end$$;

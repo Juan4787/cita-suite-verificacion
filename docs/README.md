@@ -1,6 +1,10 @@
 # Documentación de Cita Suite
 
-**Todo lo que queda pendiente está en una sola lista:** [pendientes vigentes](plans/pendientes-vigentes.md). Los datos faltantes de Natalia conservan su tratamiento separado. P1, P2 y P3 están [publicadas](plans/tareas-posteriores-a-e-20261103.md) desde el 7 de noviembre; P3 sustituye D celular. E conserva su [especificación con Zoho](plans/etapa-e-correo-autogestion.md) y autorización histórica de implementación/publicación, pero **el pedido posterior 12.31 detiene implementación para documentación y traspaso**, sin cierre ni publicación E. [Registro activo](plans/ejecucion-etapa-e-20261103.md), checkpoint E3.50.
+**Auditoría final de noviembre, fase 1 (cerrada el 19 de noviembre — veredicto: `Listo con condiciones`):** [plan y punto de control](plans/auditoria-final-noviembre-fase-1.md) y [registro e informe final](plans/registro-auditoria-final-noviembre-fase-1.md#informe-final). Lo pendiente de conexiones, datos, decisiones y correcciones pasa a fase 2 ([pendientes vigentes](plans/pendientes-vigentes.md)).
+
+**Entrega a Natalia (la fase 2 de la auditoría, en pasos):** [paso 0, hecho el 21 de noviembre](plans/entrega-natalia-20261121.md) y [plan del paso 1, correcciones](plans/entrega-natalia-paso-1.md).
+
+**Todo lo que queda pendiente está en una sola lista:** [pendientes vigentes](plans/pendientes-vigentes.md). Los datos faltantes de Natalia conservan su tratamiento separado. P1, P2 y P3 están [publicadas](plans/tareas-posteriores-a-e-20261103.md) desde el 7 de noviembre; P3 sustituye D celular. E, con su [especificación con Zoho](plans/etapa-e-correo-autogestion.md), se publicó el 6 de noviembre ([estado vigente](ESTADO-VIGENTE.md)); el [registro activo](plans/ejecucion-etapa-e-20261103.md) tiene su evidencia. La detención documental del 5 de noviembre (12.31) quedó reemplazada ese mismo día por el mandato integral (12.32).
 
 **Documentación detallada de E:** [índice de implementación, decisiones, pruebas y operación](plans/indice-etapa-e.md). El [traspaso del 5 de noviembre](plans/traspaso-etapa-e-20261105.md) es historia.
 
@@ -45,7 +49,7 @@ Para el consultorio de Natalia Frutos, la primera clienta, rigen estos documento
 | Respaldo, publicación y reversión | [Respaldo y recuperación](architecture/respaldo-y-recuperacion.md), [publicación y reversión](architecture/publicacion-y-reversion.md) |
 | Confirmación de correo y alta | [Flujo publicado y límites](architecture/confirmacion-de-correo.md) |
 | Correo para recuperar contraseñas | [Configuración temporal con Gmail y prueba real](architecture/correo-de-recuperacion.md) |
-| Estado punto por punto | [Auditoría final](architecture/auditoria-final.md) |
+| Estado punto por punto, antecedente de octubre | [Auditoría final de octubre](architecture/auditoria-final.md). La vigente es la [auditoría final de noviembre](plans/auditoria-final-noviembre-fase-1.md) |
 | Nombres y destinos | [Identidad Cita Suite](architecture/identidad-cita-suite.md) |
 | Dominio, landing y direcciones públicas | [Dominio](architecture/dominio.md) |
 | Decisiones y trabajo nuevo | [Decisiones](architecture/decisiones.md), [guía para nuevas funciones](architecture/guia-nuevas-funciones.md) |

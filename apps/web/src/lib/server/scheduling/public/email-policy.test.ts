@@ -51,9 +51,13 @@ describe('appointment email preferences', () => {
   expect(await loadAppointmentEmailPolicy({ from } as never, businessId)).toEqual(policy);
   expect(query.eq).toHaveBeenCalledWith('business_id', businessId);
  });
- it('projects only required contact and the versioned economic rules to public booking', async () => {
-  const query = { select: () => query, eq: () => query, single: async () => ({ data: policy, error: null }) };
-  expect(await loadPublicBookingPolicy({ from: () => query } as never, businessId)).toEqual({ requireEmail: true,
+ it('projects only required contact when sender is ready and the versioned economic rules to public booking', async () => {
+  const unreadyQuery = { select: () => unreadyQuery, eq: () => unreadyQuery, single: async () => ({ data: policy, error: null }) };
+  expect(await loadPublicBookingPolicy({ from: () => unreadyQuery } as never, businessId)).toEqual({ requireEmail: false,
+   reschedulePolicy: { schema_version: 1, policy_revision: 7, require_deposit_on_reschedule: true, previous_deposit_disposition: 'forfeit' }
+  });
+  const readyQuery = { select: () => readyQuery, eq: () => readyQuery, single: async () => ({ data: { ...policy, sender_verified: true }, error: null }) };
+  expect(await loadPublicBookingPolicy({ from: () => readyQuery } as never, businessId)).toEqual({ requireEmail: true,
    reschedulePolicy: { schema_version: 1, policy_revision: 7, require_deposit_on_reschedule: true, previous_deposit_disposition: 'forfeit' }
   });
  });

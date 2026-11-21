@@ -4,7 +4,7 @@
 	import BackLink from '$lib/components/BackLink.svelte';
 	import type { BusinessSubscriptionRow } from '$lib/access/commercial-access';
 	import { visibleCommercialAccessNote } from '$lib/utils/commercial-access-copy';
-	import { formatAccessRemaining } from '$lib/utils/format';
+	import { formatAccessRemaining, formatDateTime as formatZonedDateTime } from '$lib/utils/format';
 
 	let { data, form }: PageProps = $props();
 
@@ -84,8 +84,9 @@
 		return 'Tu agenda, pacientes y configuración siguen guardados. Activá tu suscripción para volver a usar Cita Suite.';
 	});
 
+	const businessTimeZone = $derived(data.context.business.timezone);
 	const formatDateTime = (value?: string | null, empty = 'No vence') =>
-		value ? new Date(value).toLocaleString('es-AR') : empty;
+		value ? formatZonedDateTime(value, businessTimeZone) : empty;
 
 	const money = (value?: number | string | null) => {
 		if (value === null || value === undefined || value === '') return 'Sin registrar';
@@ -106,7 +107,11 @@
 	const howToContinue = $derived.by(() => {
 		if (access.isPermanent) return 'Contactá soporte del sistema.';
 		if (isManualBlock) return 'Contactá soporte.';
-		if (manualPlanInForce) return 'Tu plan está pago: no necesitás suscribirte ahora.';
+		if (manualPlanInForce) {
+			return access.visualStatus === 'expiring'
+				? 'Tu plan manual vence pronto. Coordiná la renovación con soporte antes del vencimiento.'
+				: 'Tu plan está pago: no necesitás suscribirte ahora.';
+		}
 		if (mpSub?.status === 'authorized') return 'Tu suscripción se renueva sola cada mes con Mercado Pago.';
 		if (mpSub?.status === 'paused') return 'Tu suscripción está pausada en Mercado Pago.';
 		return 'Activá la suscripción con Mercado Pago más abajo.';
@@ -116,7 +121,7 @@
 		if (!access.commercialAccessEnabled) return 'Acceso pausado';
 		if (access.visualStatus === 'permanent') return 'Permanente';
 		if (access.visualStatus === 'expiring') {
-			return formatAccessRemaining(access.paidUntil) ?? 'Vence pronto';
+			return formatAccessRemaining(access.paidUntil, new Date(), businessTimeZone) ?? 'Vence pronto';
 		}
 		if (access.commercialStatus === 'active') return 'Activo';
 		if (access.commercialStatus === 'grace') return 'Vencido';
@@ -197,10 +202,17 @@
 	{#if manualPlanInForce}
 		<div class="ux-card">
 			<h2 class="ux-section-title">Tu plan</h2>
-			<p class="mt-2 text-sm text-fg-55">
-				Tu plan está pago hasta el {formatDateTime(access.paidUntil, 'vencimiento de tu plan')}. No necesitás
-				suscribirte ahora: cuando venza, acá vas a ver cómo renovarlo.
-			</p>
+			{#if access.visualStatus === 'expiring'}
+				<p class="ux-alert ux-alert-warning mt-4" role="status">
+					Tu plan manual vence el {formatDateTime(access.paidUntil, 'próximo vencimiento')}. Coordiná la
+					renovación con soporte antes de esa fecha para evitar interrupciones en la agenda y las reservas online.
+				</p>
+			{:else}
+				<p class="mt-2 text-sm text-fg-55">
+					Tu plan está pago hasta el {formatDateTime(access.paidUntil, 'vencimiento de tu plan')}. No necesitás
+					suscribirte ahora: te avisamos con 30 días de anticipación para coordinar la renovación.
+				</p>
+			{/if}
 		</div>
 	{:else if !access.isPermanent}
 		<div class="ux-card">

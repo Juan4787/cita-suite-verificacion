@@ -1,10 +1,35 @@
 # Publicación y reversión
 
-## Último estado comprobado — plan pagado aparte y correcciones del alta: 18 de noviembre de 2026, 18:27 hora argentina (21:27 UTC)
+## Último estado comprobado — correo del pagador y rechazos de Mercado Pago explicados: 18 de noviembre de 2026, 23:47 hora argentina (02:47 UTC del 19)
 
 **La única vuelta atrás vigente es la de este apartado.** Las de los apartados siguientes son historia.
 
-**Producción sirve** la instantánea `189ea81fe9029341ab475d016500480bf2aaa5c8` de `main` `bf7cc2ab`, Worker `app`, versión de Cloudflare **`3d6d34af-b35b-40de-8fca-ecacbae95d72`**. 169 migraciones, sin cambios de base. Programador `0f77c160-ccf0-46e9-bac7-dce4051accf1`, sin cambios.
+**Producción sirve** la instantánea `68cc273385c169e02e22504a7d0d00b2ed532b85` de `main` `f147d127`, Worker `app`, versión de Cloudflare **`ef410385-86de-46b7-a804-80ba592a2a9c`**. 169 migraciones, sin cambios de base. Programador `0f77c160-ccf0-46e9-bac7-dce4051accf1`, sin cambios: empaqueta sólo `apps/scheduler/` y `packages/shared/src/scheduled-jobs.ts`, que no cambiaron.
+
+**Qué trae** ([plan, registro y traspaso](../plans/cobros-mercadopago-20261118.md), sección 10):
+- el correo del pagador de Mercado Pago se escribe siempre, empieza vacío y se conserva tras un error;
+- cada rechazo de Mercado Pago se explica en pantalla y se registra por categoría y códigos de causa, nunca con su texto;
+- una solicitud pendiente dice para qué correo es, y sincronizar una cancelación ya no borra el correo guardado;
+- la sección «Reprogramar» de la página del turno llega inerte hasta que la página está lista: un toque previo a la hidratación la abría y se volvía a cerrar sin pedir los horarios.
+
+Juan lo autorizó: «publicalo».
+
+**Verificación sobre la revisión exacta:**
+- completa 44442511625: 2.243 pruebas de servidor y 368 de componentes, todas las suites SQL, Chromium con 83 de 83, las reservas de Natalia, la demostración y la medición de Natalia;
+- paquete 44442536738 y Chromium sobre el paquete 44445038985, con 83 de 83;
+- `verify-production-release.mjs` aprobado a las 02:47:26 UTC: 152 archivos idénticos y 78 relaciones sin exposición anónima. Los dos `/_app/version.json` dicen `68cc273385c169e02e22504a7d0d00b2ed532b85`.
+
+Antes fallaron dos verificaciones completas en pruebas ajenas a estos cambios, y cada una se corrigió en su causa (plan, sección 10.4):
+- 44409688705: la prueba de la fecha clínica interceptaba pedidos durante el arranque de la página;
+- 44438357100: «Reprogramar» se podía abrir antes de hidratar.
+
+**Publicación:** sin migración, así que no hubo ensayo ni respaldo nuevo: sirve el de las 18:54 UTC. App a las 02:47, verificación a las 02:47:26. El programador no cambió.
+
+**Vuelta atrás:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback 3d6d34af-b35b-40de-8fca-ecacbae95d72 --name app --message "<motivo>" --yes`, la versión de las 18:27, con el mismo esquema. Después, los dos `/_app/version.json` deben decir `189ea81fe9029341ab475d016500480bf2aaa5c8`. No se ensayó. Nunca una versión anterior a E.
+
+## Estado anterior — plan pagado aparte y correcciones del alta: 18 de noviembre de 2026, 18:27 hora argentina (21:27 UTC)
+
+**Sirvió hasta las 23:47 del mismo día** la instantánea `189ea81fe9029341ab475d016500480bf2aaa5c8` de `main` `bf7cc2ab`, Worker `app`, versión de Cloudflare **`3d6d34af-b35b-40de-8fca-ecacbae95d72`**. 169 migraciones, sin cambios de base. Programador `0f77c160-ccf0-46e9-bac7-dce4051accf1`, sin cambios.
 
 **Qué trae** ([plan, registro y traspaso](../plans/cobros-mercadopago-20261118.md), secciones 8.8 y 9):
 - con un plan manual vigente, como el año de Natalia pagado por transferencia, la página de suscripción no ofrece Mercado Pago y suscribirse se niega;
@@ -21,7 +46,7 @@ Juan lo autorizó: «publicalo».
 
 **Publicación:** sin migración, así que no hubo ensayo ni respaldo nuevo: sirve el de las 18:54 UTC, de dos horas y media antes. App a las 21:27, verificación a las 21:27:40. El programador no cambió.
 
-**Vuelta atrás:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback cb46bffc-35bf-439b-8115-682adfa909de --name app --message "<motivo>" --yes`, la versión de las 15:57, con el mismo esquema. Después, los dos `/_app/version.json` deben decir `b0c64f88d68b455b62ffd898d0aa7daca276a709`. No se ensayó. Nunca una versión anterior a E.
+**Vuelta atrás de entonces, ya no vigente:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback cb46bffc-35bf-439b-8115-682adfa909de --name app --message "<motivo>" --yes`, la versión de las 15:57, con el mismo esquema. Después, los dos `/_app/version.json` deben decir `b0c64f88d68b455b62ffd898d0aa7daca276a709`. No se ensayó. Nunca una versión anterior a E.
 
 ## Estado anterior — acceso provisorio y precio fijo de Mercado Pago: 18 de noviembre de 2026, 15:57 hora argentina (18:57 UTC)
 
@@ -564,7 +589,7 @@ node scripts/verify-production-release.mjs <paquete descargado>
 NODE_OPTIONS=--max-old-space-size=192 node scripts/deploy-production-workers.mjs scheduler
 ```
 
-8. Interruptores: `reschedule_enabled` y `email_producer_enabled` en `private.appointment_management_runtime`; `GOOGLE_CALENDAR_MANAGED_ENABLED` como secreto. El correo de Natalia no sale: su consultorio no tiene remitente hasta que Juan decida.
+8. Interruptores: `reschedule_enabled` y `email_producer_enabled` en `private.appointment_management_runtime`; `GOOGLE_CALENDAR_MANAGED_ENABLED` como secreto. El correo de Natalia no sale: su consultorio no tiene remitente hasta que Juan decida. Precisión del 19 de noviembre: Juan decidió que envíe comprobantes y recordatorios; falta configurar su remitente ([pendientes vigentes](../plans/pendientes-vigentes.md#etapa-e-pendientes)). Configurado el 21 de noviembre: `turnos@natalia-frutos.cita-suite.com.ar` ([paso 0 de la entrega](../plans/entrega-natalia-20261121.md)).
 9. Webhook de Zoho: la clave se genera en un archivo privado local y se carga como secreto del Worker. En el panel: agente → Webhooks → «Configurar webhook» → URL `https://app.cita-suite.com.ar/api/zoho/webhook` → Verificar → las cuatro casillas de correo → Agregar. La clave se carga después, con «Clave de autenticación»: sin webhook creado el panel no muestra ese botón, y admite como máximo 50 caracteres. Rechazó una clave con guiones y aceptó una de 32 letras y números. Al verificar, Zoho envía un POST de ejemplo sin firma y sólo acepta `200`; por eso un pedido sin firma recibe `200` y no se guarda, y una firma inválida recibe `401`. Cloudflare tiene una Configuration Rule, «Webhook de Zoho», que apaga Browser Integrity Check sólo para esa ruta. No fue la causa del «URL cannot be reached» y, medido desde esta máquina, el agente `Webhook` de Zoho pasa sin ella; se conserva por precaución y puede retirarse.
 10. En el mismo paso: la instantánea publicada entra a la historia de `main` sin cambiar su árbol (`git merge -s ours --no-ff <instantánea>`), se actualiza `docs/ESTADO-VIGENTE.md`, se sube a GitHub y se corre `node scripts/check-repo-sync.mjs`.
 

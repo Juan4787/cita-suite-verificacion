@@ -1,7 +1,7 @@
 -- The requirement applies to new public operations, not completed replay or
 -- unrelated editing. All entry points retain the existing identity contracts.
 begin;
-select extensions.plan(11);
+select extensions.plan(12);
 create temporary table booking_email_fixture(label text primary key,value text not null);
 create function pg_temp.bev(label text) returns text language sql as $$select value from booking_email_fixture f where f.label=$1$$;
 create function pg_temp.beid(label text) returns uuid language sql as $$select pg_temp.bev($1)::uuid$$;
@@ -50,6 +50,9 @@ begin
  return to_jsonb(result);
 end$$;
 select extensions.ok((select require_email and not email_enabled from public.appointment_email_policies where business_id=pg_temp.beid('business')),'Required email remains enabled while deliveries are off');
+select extensions.ok((pg_temp.bebook('direct',null,gen_random_uuid()::text,8,'Synthetic Unverified Sender Patient')->>'id') is not null,
+ 'AF1-002: without a verified sender, public booking does not block omitted email even if require_email=true');
+select public.operator_set_business_email_sender(pg_temp.beid('business'),'booking-email-req.cita-suite.com.ar','verified');
 do $$declare before jsonb:=pg_temp.becounts(); begin
  begin perform pg_temp.bebook('direct',null); raise exception 'EMAIL_REQUIREMENT_BYPASSED';
  exception when others then if sqlerrm is distinct from 'PUBLIC_PATIENT_EMAIL_REQUIRED' then raise; end if; end;

@@ -5,6 +5,7 @@
 import { isRecord, readBoolean, readChoice, readFiniteNumber, readNullableText, readRecord, readText } from '$lib/contracts/json';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import { EMAIL_DOMAIN_STATES } from '$lib/server/scheduling/public/email-status';
+import { calendarDaysUntil } from '$lib/utils/calendar-days';
 
 export type EmailCredit = { messages: number; startedAt: string; expiresAt: string; used: number };
 export type EmailOperations = {
@@ -95,8 +96,10 @@ export const emailOperationWarnings = (ops: EmailOperations, now: Date): EmailOp
 		if (left <= 0) {
 			warnings.push({ level: 'critical', message: `El crédito venció el ${day(ops.credit.expiresAt)}. Zoho no envía más correos hasta que compres otro y lo registres acá.` });
 		} else {
-			const days = Math.ceil(left / 86_400_000);
-			if (days <= CREDIT_EXPIRY_NOTICE_DAYS)
+			const days = calendarDaysUntil(ops.credit.expiresAt, now, OPERATOR_TIME_ZONE);
+			if (days !== null && days <= 0)
+				warnings.push({ level: 'attention', message: `El crédito vence hoy (${day(ops.credit.expiresAt)}). Comprá otro antes para que no se corten los envíos.` });
+			else if (days !== null && days <= CREDIT_EXPIRY_NOTICE_DAYS)
 				warnings.push({ level: 'attention', message: `El crédito vence el ${day(ops.credit.expiresAt)}: ${plural(days, 'falta 1 día', `faltan ${days} días`)}. Comprá otro antes para que no se corten los envíos.` });
 		}
 		if (remaining === 0)

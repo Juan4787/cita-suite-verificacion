@@ -445,7 +445,7 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await page.getByRole('button', { name: 'Siguiente' }).click();
 		await page.getByPlaceholder('Nombre y apellido').fill(pendingProfessionalName);
 		await page.getByRole('button', { name: 'Siguiente' }).click();
-		// Paso Servicios: Consulta y Otro servicio vienen incluidos.
+		// Paso Servicios: cuando el consultorio ya tiene servicios activos, los ofrece para elegir sin imponer genéricos.
 		await expect(page.getByText('Servicios que ofrece')).toBeVisible();
 		// Render the same in-progress task through the complete planned width/theme matrix.
 		// Theme fixture changes only presentation; the eventual saved profile is read back below.
@@ -493,14 +493,15 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await page.setViewportSize({ width: 1280, height: 900 });
 		await page.emulateMedia({ colorScheme: 'light' });
 
-		await expect(page.getByText('Consulta', { exact: true })).toBeVisible();
-		await expect(page.getByText('Otro servicio', { exact: true })).toBeVisible();
+		await expect(page.getByText(`E2E Consulta ${fixture.suffix}`, { exact: true })).toBeVisible();
+		await expect(page.getByText('Otro servicio', { exact: true })).toHaveCount(0);
+		await page.getByRole('checkbox', { name: new RegExp(`E2E Consulta ${fixture.suffix}`) }).check();
 		await page.getByRole('button', { name: 'Siguiente' }).click();
 		// Paso Horarios: obligatorio.
 		await page.getByRole('button', { name: 'Lunes a viernes' }).click();
 		await page.getByPlaceholder('9 a 13, 15 a 19').fill('9 a 12');
 		await page.getByRole('button', { name: 'Siguiente' }).click();
-		await expect(page.getByText('Servicios incluidos')).toBeVisible();
+		await expect(page.getByText('Servicios asignados')).toBeVisible();
 		await page.getByRole('button', { name: 'Guardar rol' }).click();
 		await expect(
 			page.getByText('Perfil profesional configurado con rol Profesional.')

@@ -4,7 +4,6 @@ import { boolFromForm, scheduleBlocksFromForm, professionalSchedulePayload } fro
 import type { BusinessContext } from '$lib/access/contracts';
 import { parsePriceAdjustments } from '$lib/scheduling/price-contracts';
 import { previewMonthlyPrices, formatQuotedPrice, monthForTimezone } from '$lib/booking/pricing';
-import { isDefaultServiceName } from './default-services';
 import {
 	professionalRuleScope,
 	professionalExceptionType,
@@ -508,9 +507,7 @@ export async function loadProfessionalEditor(
 			}
 		}
 	}
-	const defaultServiceIds = (services ?? [])
-		.filter((service) => isDefaultServiceName(String(service.name ?? '')))
-		.map((service) => String(service.id));
+	const defaultServiceIds: string[] = [];
 
 	return {
 		ok: true,

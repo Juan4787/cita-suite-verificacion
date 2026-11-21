@@ -14,11 +14,13 @@
   let version = $state(untrack(() => data.business.updated_at ?? ""));
   let maxDays = $state(untrack(() => data.business.max_booking_days_ahead));
   let notice = $state(untrack(() => data.business.min_booking_notice_minutes));
+  let allowSameDay = $state(untrack(() => Boolean(data.business.allow_same_day_booking)));
   let policy = $state(untrack(() => data.business.cancellation_policy ?? ""));
   $effect(() => {
     if (!dirty && version !== data.business.updated_at) {
       maxDays = data.business.max_booking_days_ahead;
       notice = data.business.min_booking_notice_minutes;
+      allowSameDay = Boolean(data.business.allow_same_day_booking);
       policy = data.business.cancellation_policy ?? "";
       version = data.business.updated_at ?? "";
     }
@@ -30,6 +32,7 @@
       dirty = false;
       maxDays = data.business.max_booking_days_ahead;
       notice = data.business.min_booking_notice_minutes;
+      allowSameDay = Boolean(data.business.allow_same_day_booking);
       policy = data.business.cancellation_policy ?? "";
     },
   );
@@ -155,6 +158,7 @@
     action="?/save_rules"
     class="ux-card"
     oninput={() => (dirty = true)}
+    onchange={() => (dirty = true)}
     use:enhance={() => {
       saving = "rules";
       return async ({ result, update }) => {
@@ -201,6 +205,20 @@
             >{/if}{#each notices as item}<option value={item.value}
               >{item.label}</option
             >{/each}</select
+        ></label
+      >
+      <label class="ux-choice flex items-start gap-3 px-4 py-3 sm:col-span-2"
+        ><input
+          class="accent-check-accent-600 mt-1 shrink-0"
+          type="checkbox"
+          name="allow_same_day_booking"
+          value="true"
+          bind:checked={allowSameDay}
+        /><span class="min-w-0"
+          ><strong class="block">Permitir turnos para el mismo día</strong><span
+            class="mt-1 block text-sm text-fg-75"
+            >Si está desactivado, tus pacientes solo ven turnos desde mañana según la hora del consultorio. Los turnos cargados desde la agenda interna siguen disponibles para hoy.</span
+          ></span
         ></label
       >
       <label class="sm:col-span-2"

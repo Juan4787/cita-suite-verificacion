@@ -250,6 +250,8 @@
 
 <svelte:head>
 	<title>{business?.name ? `Reservar turno · ${business.name}` : 'Reserva online'}</title>
+	<meta property="og:title" content={business?.name ? `Reservar turno · ${business.name}` : 'Reserva online'} />
+	<meta name="description" content={business?.name ? `Reservá tu turno online en ${business.name}.` : 'Reservá tu turno online.'} />
 	{#if data.turnstileSiteKey}
 		<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 	{/if}

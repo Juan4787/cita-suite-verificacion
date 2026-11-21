@@ -473,6 +473,7 @@ try {
  insert into public.booking_integrations(business_id,public_key,name,is_active,is_default,theme,allowed_origins,allowed_modalities,intake_schema)
  values('${businessId}','${'cd'.repeat(16)}','Agenda general de prueba',true,true,'cita-suite',array['${hostOrigin}'],array['in_person'],
  '[{"id":"insurance","label":"Obra social y plan","kind":"text","required":true,"maxLength":120},{"id":"labs","label":"Estudios recientes","kind":"boolean","required":false}]');
+ select public.operator_set_business_email_sender('${businessId}','prueba-fixture.cita-suite.com.ar','verified');
  notify pgrst,'reload schema';
  commit;
  `,

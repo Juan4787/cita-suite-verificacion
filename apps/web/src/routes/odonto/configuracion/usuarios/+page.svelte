@@ -37,6 +37,7 @@
 	const roles = $derived(data.roles);
 	const canManage = $derived(data.context.canManage && !data.demo && client.ready);
 	const isAssisting = $derived(Boolean(data.context.assistance));
+	const isDirectAdmin = $derived(data.context.role === 'admin' && !isAssisting);
 
 	// ----- Configurar atendible (dueño/admin que también atiende pacientes) -----
 	let showAttendingForm = $state(false);
@@ -80,14 +81,24 @@
 	};
 	const membersByRole = (role: BusinessRole) => members.filter((member) => member.role === role);
 
-	const memberRoleOptions = (member: RoleAccess) =>
-		roles.includes(member.role) ? roles : [...roles, member.role];
+	const memberRoleOptions = (member: RoleAccess) => {
+		const permitted = roles.filter(
+			(option) =>
+				!((isAssisting || isDirectAdmin) && (option === 'owner' || option === 'admin')) &&
+				(option !== 'professional' || Boolean(member.professional_id) || member.role === 'professional')
+		);
+		return permitted.includes(member.role) ? permitted : [...permitted, member.role];
+	};
 	const canEditMemberRole = (member: RoleAccess) =>
 		member.status === 'active' &&
 		member.role !== 'owner' &&
-		!(isAssisting && member.role === 'admin');
+		member.user_id !== data.currentUserId &&
+		!((isAssisting || isDirectAdmin) && member.role === 'admin') &&
+		memberRoleOptions(member).length > 1;
 	const canRemoveMember = (member: RoleAccess) =>
-		member.role !== 'owner' && !(isAssisting && member.role === 'admin');
+		member.role !== 'owner' &&
+		member.user_id !== data.currentUserId &&
+		!((isAssisting || isDirectAdmin) && member.role === 'admin');
 
 	const formatDate = (value: string) =>
 		value

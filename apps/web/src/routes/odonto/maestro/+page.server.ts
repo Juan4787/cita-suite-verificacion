@@ -261,7 +261,7 @@ const buildMasterData = async (
 
 	const businesses = (businessesRes.data ?? []).map((business) => {
 		const subscription = subscriptionsByBusinessId.get(String(business.id)) ?? null;
-		const access = getBusinessAccessState(subscription, { businessCreatedAt: business.created_at });
+		const access = getBusinessAccessState(subscription, { businessCreatedAt: business.created_at, timeZone: business.timezone });
 		const members = membershipsByBusinessId.get(String(business.id)) ?? [];
 		const owners = members.filter((member) => member.role === 'owner');
 		return {

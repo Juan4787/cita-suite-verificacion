@@ -1,7 +1,24 @@
 # Directivas del Proyecto y Restricciones de Entorno
 
-## Encargo vigente: avisos, correo y calendarios (5 de noviembre, noche)
+## Auditoría final de noviembre, fase 1 (plan e informe del 19 de noviembre)
 
+- **Estado (19 de noviembre de 2026):** **fase 1 cerrada con veredicto `Listo con condiciones`** ([plan y punto de control](docs/plans/auditoria-final-noviembre-fase-1.md), [registro e informe final](docs/plans/registro-auditoria-final-noviembre-fase-1.md#informe-final)). Se encontraron **`0` críticos**, **`1` alto** (`AF1-001`), **`6` medios** y **`13` bajos**, más **`6` pendientes externos** (`AF1-P01` a `AF1-P06`). `Dra Natalia Frutos` quedó bit a bit intacta (`0` diffs en `78` tablas), Ramírez con `0` envíos pendientes y el gemelo archivado desde `/odonto/maestro`. Lo que sigue (decisiones, parches y remitente real) corresponde a la **fase 2** (plan, sección 10; listado actualizado en [pendientes vigentes](docs/plans/pendientes-vigentes.md)).
+- **Reglas bajo las que se ejecutó la fase 1 (marco de referencia):**
+  - no se cambia ni publica la app durante la fase 1;
+  - en producción, lecturas en transacciones de sólo lectura por el puerto `6543` y únicamente las escrituras autorizadas en la sección 5.4 (gemelo archivado al cierre, reservas marcadas de Natalia comprobadas con foto previa/final y turnos cancelados de Ramírez).
+- **Después de una compactación (si se abre fase 2 o mantenimiento):** verificar `node scripts/check-repo-sync.mjs` y consultar [pendientes vigentes](docs/plans/pendientes-vigentes.md) junto con el [informe final de fase 1](docs/plans/registro-auditoria-final-noviembre-fase-1.md#informe-final).
+- **Hechos confirmados al cierre de la fase 1 (19 de noviembre):** `Dra Natalia Frutos` tiene teléfono, dirección, mapa, 90 días, 60 min de anticipación (editados por su cuenta el 4-nov), sigue sin remitente verificado (`sender_verified = false`, `email_sender_ready = false` — va en fase 2) y conserva un turno/paciente residual del 4-nov a confirmar con ella.
+- **La fase 2 se ejecuta como la entrega a Natalia, en pasos (21 de noviembre):**
+  - paso 0, hecho: limpieza, nombre, remitente y registros del dominio, salvo cargar los datos que responda Natalia;
+  - paso 1, correcciones;
+  - paso 2, prueba final con correos reales;
+  - paso 3, después de entregar.
+- **Paso 1 de la entrega (correcciones):** [plan](docs/plans/entrega-natalia-paso-1.md), escrito el 21 de noviembre para que lo ejecute otro agente, sólo con la orden expresa de Juan. Fija requisitos y forma de trabajar, no la implementación. Exige soluciones estructurales y escalables, verificación exhaustiva y evidencia detallada.
+- **Precisión del 21 de noviembre (paso 0 de la entrega, [plan, registro y punto exacto](docs/plans/entrega-natalia-20261121.md)):** el turno del 4-nov era una prueba de Juan y se borró con su paciente; las 5 cuentas de prueba de la auditoría quedaron bloqueadas; el consultorio pasó a llamarse «Dra. Natalia Frutos» y la especialidad tiene la tilde de «Médica». El remitente de Natalia, `turnos@natalia-frutos.cita-suite.com.ar`, quedó verificado y registrado: su consultorio ya envía, y falta la prueba con correos reales. En el dominio principal se cargaron el SPF `v=spf1 -all` y el DMARC `v=DMARC1; p=reject; sp=none`.
+
+## Encargo de avisos, correo y calendarios (5 de noviembre, noche): cumplido
+
+- **Cumplido:** E se publicó el 6 de noviembre, y P1, P2 y P3 el 7. Lo que queda está en los [pendientes vigentes](docs/plans/pendientes-vigentes.md). El encargo en curso es la auditoría final de noviembre (sección anterior). Lo que sigue en esta sección es la historia del encargo.
 - **Mandato vigente de Juan, prioritario:** ejecutar de punta a punta notificaciones, correo, recordatorios y calendarios, cerrar E y publicar. [Mandato literal](docs/plans/mandato-integral-avisos-20261105.md), [plan canónico y checkpoint](docs/plans/plan-integral-avisos-20261105.md). Sustituye la detención documental de 12.31 ([plan 12.32](docs/plans/propuesta-senas-avisos-natalia.md#mandato-integral-20261105)). Después de una compactación, releer mandato, plan y especificación antes de seguir.
 - **Antecedente, ya sustituido:** el 5 de noviembre a la tarde Juan detuvo la implementación para el traspaso ([12.31](docs/plans/propuesta-senas-avisos-natalia.md#traspaso-e-documental-20261105), [traspaso técnico](docs/plans/traspaso-etapa-e-20261105.md)). Ese traspaso es evidencia histórica, no un plan obligatorio.
 
@@ -32,6 +49,7 @@
 
   Los tres quedaron corregidos, y Juan cargó el token productivo el 18-nov: **cada suscripción cobra de verdad**. Las pruebas con dinero van en el consultorio sintético, a su precio simbólico de 15 pesos (Mercado Pago rechaza 10).
 - Decisiones de Juan del 18-nov: acceso provisorio al quedar autorizada la suscripción (P2, sí); **quien contrató a un precio lo conserva para siempre**, y un precio nuevo es sólo para quien nunca contrató; Natalia tiene una suscripción anual pagada por transferencia, no un pago único. Las dos primeras se publicaron a las 15:57. Ocultarle a Natalia la sección de Mercado Pago mientras su año pagado esté vigente (Juan: «si ocultalo») se publicó a las 18:27, como regla general para todo plan manual vigente (plan, sección 8.8), junto con las correcciones del alta de cuenta y de la confirmación del correo (sección 9).
+- El correo del pagador escrito siempre y los rechazos de Mercado Pago explicados (plan, sección 10) se publicaron a las 23:47 del 18-nov («publicalo»), junto con «Reprogramar» inerte hasta hidratar en la página del turno. El rechazo con el correo de la cuenta «Mark» quedó descifrado el 19-nov: es la cuenta que cobra, y una cuenta no puede suscribirse a sí misma (sección 10.6). La prueba con dinero real se paga desde otra cuenta de Mercado Pago.
 - Los secretos de Mercado Pago los carga Juan en Cloudflare: nunca pasan por el chat ni por el repositorio. Juan cargó el token productivo el 18-nov; la clave secreta del webhook es una sola por aplicación y la del Worker ya es la correcta.
 
 ## Enlace de reserva con el nombre del consultorio (10 de noviembre)

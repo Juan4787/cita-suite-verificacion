@@ -49,4 +49,47 @@ describe('booking settings save', () => {
 		expect(mocks.from).toHaveBeenCalledWith('businesses');
 		expect(mocks.createSupabaseAdminClient).not.toHaveBeenCalled();
 	});
+
+	it('AF1-001: saves allow_same_day_booking true when checked and false when unchecked', async () => {
+		const patches: Record<string, unknown>[] = [];
+		const capturingQuery = () => {
+			const builder: Record<string, unknown> = {};
+			const fn = (method: string) => (...args: unknown[]) => {
+				if (method === 'update' && args[0] && typeof args[0] === 'object') {
+					patches.push(args[0] as Record<string, unknown>);
+				}
+				return proxy;
+			};
+			const proxy: object = new Proxy(builder, {
+				get: (_target, key) =>
+					key === 'then'
+						? (resolve: (value: unknown) => unknown) => Promise.resolve({ data: { id: 'business-1' }, error: null }).then(resolve)
+						: fn(String(key))
+			});
+			return proxy;
+		};
+		mocks.from.mockImplementation(capturingQuery);
+
+		const enabledForm = new FormData();
+		enabledForm.set('revision', '2026-10-20T12:00:00.000Z');
+		enabledForm.set('max_booking_days_ahead', '30');
+		enabledForm.set('min_booking_notice_minutes', '0');
+		enabledForm.set('allow_same_day_booking', 'true');
+		await expect(actions.save_rules({
+			request: new Request('http://localhost/odonto/configuracion/reserva-online', { method: 'POST', body: enabledForm }),
+			fetch: vi.fn()
+		} as never)).resolves.toMatchObject({ saved: true });
+
+		const disabledForm = new FormData();
+		disabledForm.set('revision', '2026-10-20T12:00:00.000Z');
+		disabledForm.set('max_booking_days_ahead', '30');
+		disabledForm.set('min_booking_notice_minutes', '0');
+		await expect(actions.save_rules({
+			request: new Request('http://localhost/odonto/configuracion/reserva-online', { method: 'POST', body: disabledForm }),
+			fetch: vi.fn()
+		} as never)).resolves.toMatchObject({ saved: true });
+
+		expect(patches[0]).toMatchObject({ allow_same_day_booking: true });
+		expect(patches[1]).toMatchObject({ allow_same_day_booking: false });
+	});
 });

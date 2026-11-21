@@ -73,9 +73,11 @@ select extensions.ok(not (pg_temp.claim()->>'enabled')::boolean and not exists(s
 update private.appointment_management_runtime set email_producer_enabled=true;
 select extensions.ok((select email_producer_enabled_at is not null from private.appointment_management_runtime),'3. Turning the producer on records when, so nothing earlier is treated as new');
 
-insert into mail_fixture select 'a1',pg_temp.book(pg_temp.base()+interval '100 hours');
-select extensions.ok(jsonb_array_length(pg_temp.claim()->'items')=0 and pg_temp.state(pg_temp.mid('a1'),'booking_receipt')='pending',
- '4. Enabled preference without a prepared sender keeps the receipt pending and sends nothing');
+insert into mail_fixture select 'a0',pg_temp.book(pg_temp.base()+interval '90 hours');
+select extensions.ok(jsonb_array_length(pg_temp.claim()->'items')=0
+ and not exists(select 1 from private.appointment_email_events where appointment_id=pg_temp.mid('a0'))
+ and not exists(select 1 from private.appointment_email_deliveries where appointment_id=pg_temp.mid('a0')),
+ '4. Enabled preference without a prepared sender creates no dead events or deliveries and sends nothing');
 
 select extensions.throws_ok($$select public.operator_set_business_email_sender(pg_temp.mid('business'),'avisos.cita-suite.com.ar','verified')$$,'23514',null,'5a. Infrastructure names cannot become a practice sender');
 select extensions.throws_ok($$select public.operator_set_business_email_sender(pg_temp.mid('business'),'consultorio.ejemplo.com','verified')$$,'23514',null,'5b. Only a subdomain of the product domain is accepted');
@@ -84,6 +86,8 @@ select extensions.ok((select sender_verified from public.appointment_email_polic
 select public.operator_set_business_email_sender(pg_temp.mid('business'),'consultorio-prueba.cita-suite.com.ar','verified',null,'contacto@example.test');
 select public.operator_set_business_email_sender(pg_temp.mid('business2'),'segundo-consultorio.cita-suite.com.ar','verified');
 select extensions.ok((select sender_verified from public.appointment_email_policies where business_id=pg_temp.mid('business')),'7. Readiness is mirrored to the preference row without a second activation');
+
+insert into mail_fixture select 'a1',pg_temp.book(pg_temp.base()+interval '100 hours');
 
 create temporary table mail_claim(label text primary key,value jsonb not null);
 insert into mail_claim select 'first',pg_temp.claim();

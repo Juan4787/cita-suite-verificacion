@@ -60,7 +60,7 @@ export const getAvailabilitySelection = async (client: CitaSupabaseClient, input
   (requiredProfessionalIds.length ? requiredProfessionalIds.includes(row.id) : !professionalId || row.id === professionalId));
  if (!professionals.length || (requiredProfessionalIds.length && professionals.length !== requiredProfessionalIds.length)) return selection([]);
  const now = new Date();
- const dates = clampRangeToBusinessRules(catalog.business, input.fromDate, input.toDate, now);
+ const dates = clampRangeToBusinessRules(catalog.business, input.fromDate, input.toDate, now, publicOnly);
  if (!dates.length) return selection([]);
  const rows = await loadAvailabilityWindowRows(client, catalog, {
   serviceId: service.id, professionalIds: professionals.map(row => row.id), fromDate: dates[0], toDate: dates[dates.length - 1]

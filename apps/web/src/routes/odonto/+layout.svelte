@@ -364,7 +364,7 @@
 		if (!access.commercialAccessEnabled) return 'Acceso pausado';
 		if (access.visualStatus === 'permanent') return 'Permanente';
 		if (access.visualStatus === 'expiring') {
-			return formatAccessRemaining(access.paidUntil) ?? 'Vence pronto';
+			return formatAccessRemaining(access.paidUntil, new Date(), activeBusiness?.business?.timezone) ?? 'Vence pronto';
 		}
 		if (access.commercialStatus === 'grace') return 'Vencido';
 		if (access.commercialStatus === 'restricted') return 'Activar';
@@ -421,9 +421,16 @@
 			const deadline = formatDateTime(access.paidUntil, activeBusiness?.business?.timezone);
 			return `Tu acceso vence${deadline ? ` el ${deadline}` : ' pronto'}. Si tu suscripción de Mercado Pago está activa, se renueva sola; si el cobro no se acredita, revisá tu medio de pago en Mercado Pago.`;
 		}
+		if (access.visualStatus === 'expiring' && access.subscription?.access_source === 'manual') {
+			const deadline = formatDateTime(access.paidUntil, activeBusiness?.business?.timezone);
+			const remaining = formatAccessRemaining(access.paidUntil, new Date(), activeBusiness?.business?.timezone);
+			return deadline
+				? `Tu plan manual vence el ${deadline}${remaining ? ` (${remaining.toLowerCase()})` : ''}. Coordiná la renovación con soporte antes del vencimiento para evitar interrupciones.`
+				: 'Tu plan manual vence pronto. Coordiná la renovación con soporte antes del vencimiento para evitar interrupciones.';
+		}
 		if (access.visualStatus === 'expiring') {
 			const deadline = formatDateTime(access.paidUntil, activeBusiness?.business?.timezone);
-			const remaining = formatAccessRemaining(access.paidUntil);
+			const remaining = formatAccessRemaining(access.paidUntil, new Date(), activeBusiness?.business?.timezone);
 			return deadline
 				? `La suscripción vence el ${deadline}${remaining ? ` (${remaining.toLowerCase()})` : ''}. Regularizá el pago para evitar restricciones operativas.`
 				: 'La suscripción vence pronto. Regularizá el pago para evitar restricciones operativas.';

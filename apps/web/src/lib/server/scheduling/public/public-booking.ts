@@ -68,12 +68,13 @@ export type PublicBookingBusiness = Pick<
 	| 'logo_url'
 	| 'timezone'
 	| 'public_booking_enabled'
+	| 'allow_same_day_booking'
 	| 'is_active'
 	| 'created_at'
 	| 'min_booking_notice_minutes'
 	| 'max_booking_days_ahead'
 	| 'cancellation_policy'
-> & { booking_availability_revision?: number };
+> & { public_contact_enabled?: boolean; booking_availability_revision?: number };
 
 export type PublicBookingIssue =
 	| 'integration_unavailable'
@@ -113,7 +114,7 @@ type BookingAttemptInput = {
 };
 
 export const PUBLIC_BUSINESS_SELECT =
-	'id, name, slug, phone, address, address_instructions, maps_url, logo_url, timezone, public_booking_enabled, is_active, created_at, min_booking_notice_minutes, max_booking_days_ahead, cancellation_policy, booking_availability_revision';
+	'id, name, slug, phone, address, address_instructions, maps_url, logo_url, timezone, public_booking_enabled, public_contact_enabled, allow_same_day_booking, is_active, created_at, min_booking_notice_minutes, max_booking_days_ahead, cancellation_policy, booking_availability_revision';
 
 export const PUBLIC_ACTIVE_FUTURE_APPOINTMENT_LIMIT = 4;
 
@@ -219,7 +220,8 @@ export const getPublicBusinessBySlug = async (
 export const canUsePublicBusiness = async (
 	supabase: CitaSupabaseClient,
 	businessId: string,
-	businessCreatedAt?: string | null
+	businessCreatedAt?: string | null,
+	timeZone?: string | null
 ) => {
 	const { data, error } = await supabase
 		.from('business_subscriptions')
@@ -238,7 +240,8 @@ export const canUsePublicBusiness = async (
 	}
 
 	return getBusinessAccessState(data ?? null, {
-		businessCreatedAt
+		businessCreatedAt,
+		timeZone: timeZone ?? undefined
 	}).allowedCapabilities.canUsePublicBooking;
 };
 
@@ -484,7 +487,8 @@ export const loadPublicBookingState = async (
 	const commerciallyUsable = Boolean(
 		!accessLookup?.lookupFailed &&
 			getBusinessAccessState(accessLookup?.subscription ?? null, {
-				businessCreatedAt: business.created_at
+				businessCreatedAt: business.created_at,
+				timeZone: business.timezone
 			}).allowedCapabilities.canUsePublicBooking
 	);
 	if (!commerciallyUsable) {
@@ -495,6 +499,7 @@ export const loadPublicBookingState = async (
  // presentation/business lookup, which could have observed an older version.
  business = { ...business, ...catalog.business };
  const today = todayForBusiness(business);
+ const earliestDate = business.allow_same_day_booking === false ? addDaysToDateString(today, 1) : today;
  const maxDate = addDaysToDateString(today, Math.min(Math.max(business.max_booking_days_ahead, 1), 90));
  const services = reservableServices(catalog, input.scope);
  const professionals = input.serviceId ? reservableProfessionals(catalog, input.serviceId, input.scope) : [];
@@ -538,7 +543,7 @@ export const loadPublicBookingState = async (
 	const selectedDateIsValid =
 		!selectedDate ||
 		(isAvailabilityDate(selectedDate) &&
-			selectedDate >= today &&
+			selectedDate >= earliestDate &&
 			selectedDate <= maxDate);
 	if (!selectedDateIsValid) {
 		return { business, services, professionals, slots: [], days: [], issue: 'no_availability' };
@@ -546,12 +551,16 @@ export const loadPublicBookingState = async (
  const requestedFrom = String(input.datesFrom ?? '').trim();
  if (requestedFrom && (!isAvailabilityDate(requestedFrom) || requestedFrom < today || requestedFrom > maxDate))
   throw new InvalidDataContractError('availability.publicWindow');
- const scanFromDate = selectedDate || requestedFrom || today;
+ const effectiveRequestedFrom = requestedFrom && requestedFrom < earliestDate ? earliestDate : requestedFrom;
+ const scanFromDate = selectedDate || effectiveRequestedFrom || earliestDate;
+ if (scanFromDate > maxDate) {
+  return { business, services, professionals, slots: [], days: [], issue: 'no_availability' };
+ }
  const scanToDate = selectedDate || [addDaysToDateString(scanFromDate, AVAILABILITY_WINDOW_DAYS - 1), maxDate].sort()[0];
  const previousDate = addDaysToDateString(scanFromDate, -AVAILABILITY_WINDOW_DAYS);
  const dateWindow: PublicDateWindow = {
   fromDate: scanFromDate, toDate: scanToDate, horizonEnd: maxDate,
-  previousFromDate: scanFromDate > today ? (previousDate < today ? today : previousDate) : null,
+  previousFromDate: scanFromDate > earliestDate ? (previousDate < earliestDate ? earliestDate : previousDate) : null,
   nextFromDate: scanToDate < maxDate ? addDaysToDateString(scanToDate, 1) : null
  };
  const rows = await loadAvailabilityWindowRows(supabase, catalog, {
@@ -741,7 +750,7 @@ export const createPublicBooking = async (
 		if (!business || !business.is_active || !business.public_booking_enabled) {
 			throw new Error('PUBLIC_BOOKING_UNAVAILABLE');
 		}
-		if (!(await canUsePublicBusiness(supabase, business.id, business.created_at))) {
+		if (!(await canUsePublicBusiness(supabase, business.id, business.created_at, business.timezone))) {
 			throw new Error('PUBLIC_BUSINESS_COMMERCIAL_UNAVAILABLE');
 		}
 
@@ -799,6 +808,9 @@ export const createPublicBooking = async (
 		});
 
 		const slotDate = localDateParts(new Date(input.slotStartsAt), business.timezone);
+		if (business.allow_same_day_booking === false && slotDate <= todayForBusiness(business)) {
+			throw new Error('PUBLIC_SAME_DAY_BOOKING_DISABLED');
+		}
 		const slots = await getAvailabilitySlots(supabase, {
 			modality: input.bookingIntegration?.modality,
 			modalityWindows: input.bookingIntegration?.modalityWindows,
@@ -896,6 +908,8 @@ export const PUBLIC_BOOKING_ERROR_MESSAGES = {
 		'Para reservar con un equipo, seleccioná por lo menos dos profesionales diferentes y volvé a buscar los días disponibles.',
 	PUBLIC_SLOT_UNAVAILABLE:
 		'Ese horario acaba de ser ocupado. Elegí otro de los horarios disponibles.',
+	PUBLIC_SAME_DAY_BOOKING_DISABLED:
+		'Este consultorio no permite reservar turnos para el mismo día. Elegí una fecha a partir de mañana.',
 	PUBLIC_RATE_LIMIT_IP:
 		'Se alcanzó el máximo de 3 intentos desde esta conexión en 10 minutos. Esperá unos minutos antes de volver a probar.',
 	PUBLIC_RATE_LIMIT_PHONE:
@@ -945,6 +959,7 @@ const publicBookingErrorTokenMap: ReadonlyArray<readonly [string, PublicBookingE
 	['PUBLIC_JOINT_REQUIRES_TWO_PROFESSIONALS', 'PUBLIC_JOINT_REQUIRES_TWO_PROFESSIONALS'],
 	['JOINT_APPOINTMENT_REQUIRES_TWO_PROFESSIONALS', 'PUBLIC_JOINT_REQUIRES_TWO_PROFESSIONALS'],
 	['PUBLIC_SLOT_UNAVAILABLE', 'PUBLIC_SLOT_UNAVAILABLE'],
+	['PUBLIC_SAME_DAY_BOOKING_DISABLED', 'PUBLIC_SAME_DAY_BOOKING_DISABLED'],
 	['PUBLIC_RATE_LIMIT_IP', 'PUBLIC_RATE_LIMIT_IP'],
 	['PUBLIC_RATE_LIMIT_PHONE', 'PUBLIC_RATE_LIMIT_PHONE'],
 	['PUBLIC_BOOKING_ACTIVE_LIMIT', 'PUBLIC_BOOKING_ACTIVE_LIMIT'],

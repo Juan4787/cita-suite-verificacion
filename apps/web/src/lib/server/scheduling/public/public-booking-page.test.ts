@@ -191,4 +191,27 @@ describe('condiciones de la seña en el turnero', () => {
 		expect(result.depositTerms).toBeNull();
 		expect(mocks.loadDepositTermsForSlots).not.toHaveBeenCalled();
 	});
+
+	it('AF1-010: oculta teléfono, dirección y mapa en reserva pública cuando public_contact_enabled está apagado', async () => {
+		mocks.loadPublicBookingState.mockResolvedValue(
+			state({
+				business: {
+					...state().business,
+					phone: '+5493511112222',
+					address: 'Av. Privada 123',
+					address_instructions: 'Piso 2',
+					maps_url: 'https://maps.example.test/privada',
+					public_contact_enabled: false
+				}
+			})
+		);
+		const result = (await loadPublicBookingPage(event(''), undefined, 'public_page')) as {
+			state: { business: { phone: string | null; address: string | null; address_instructions?: string | null; maps_url?: string | null } };
+			mapsLink: string | null;
+		};
+		expect(result.state.business.phone).toBeNull();
+		expect(result.state.business.address).toBeNull();
+		expect(result.state.business.address_instructions).toBeNull();
+		expect(result.mapsLink).toBeNull();
+	});
 });

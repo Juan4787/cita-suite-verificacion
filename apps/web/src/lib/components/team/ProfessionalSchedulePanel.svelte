@@ -10,6 +10,7 @@
 	} from '$lib/utils/time-ranges';
 	import {
 		createEmptyScheduleBlock,
+		defaultSlotIntervalForServices,
 		serializeScheduleBlocks,
 		validateScheduleBlocks,
 		type ScheduleBlockDraft
@@ -60,6 +61,9 @@
 	const professional = $derived(data.professional);
 	const businessTimeZone = $derived(data.context.business.timezone);
 	const defaultServiceIdSet = $derived(new Set(data.defaultServiceIds));
+	const defaultGridInterval = $derived(
+		defaultSlotIntervalForServices(data.services, draft.serviceIds)
+	);
 	const normalizedText = (value: string) => value.trim();
 	const uniqueSortedNumbers = (items: number[]) => [...new Set(items)].sort((a, b) => a - b);
 	const scheduleBlocksJson = $derived(serializeScheduleBlocks(draft.schedule.blocks));
@@ -134,6 +138,13 @@
 		return String(Number(block.slotInterval || 15)) !== String(Number(saved.slotInterval || 15));
 	};
 
+	const scheduleBlockGridDirty = (block: ScheduleBlockDraft) => {
+		const saved = baselineBlockFor(block);
+		const currentRaw = String(block.gridInterval ?? '').trim();
+		if (!saved) return currentRaw !== defaultGridInterval;
+		return String(Number(currentRaw || 0)) !== String(Number(saved.gridInterval || 15));
+	};
+
 	const scheduleBlockTimeStatus = (block: ScheduleBlockDraft) => {
 		const parsed = parseTimeRanges(block.timeRanges);
 		if (!parsed || parsed.length === 0) {
@@ -149,6 +160,13 @@
 		return scheduleBlockIntervalDirty(block) ? 'Sin guardar' : '';
 	};
 
+	const scheduleBlockGridStatus = (block: ScheduleBlockDraft) => {
+		const rawGrid = String(block.gridInterval ?? '').trim();
+		const grid = rawGrid === '' ? Number.NaN : Number(rawGrid);
+		if (!Number.isInteger(grid) || grid < 1 || grid > 120) return 'Ingresá un entero entre 1 y 120';
+		return scheduleBlockGridDirty(block) ? 'Sin guardar' : '';
+	};
+
 	const scheduleBlockDaysStatus = (block: ScheduleBlockDraft) => {
 		if (block.weekdays.length === 0) return 'Elegí días';
 		return scheduleBlockDaysDirty(block) ? 'Sin guardar' : '';
@@ -160,12 +178,16 @@
 			!parseTimeRanges(block.timeRanges) ||
 			Boolean(
 				scheduleBlockIntervalStatus(block) && scheduleBlockIntervalStatus(block) !== 'Sin guardar'
+			) ||
+			Boolean(
+				scheduleBlockGridStatus(block) && scheduleBlockGridStatus(block) !== 'Sin guardar'
 			);
 		if (hasProblem) return 'border-danger-400-35';
 		if (
 			scheduleBlockDaysDirty(block) ||
 			scheduleBlockTimeDirty(block) ||
 			scheduleBlockIntervalDirty(block) ||
+			scheduleBlockGridDirty(block) ||
 			!baselineBlockFor(block)
 		) {
 			return 'border-warning-300-35';
@@ -214,7 +236,7 @@
 	};
 
 	const addScheduleBlock = () => {
-		const next = createEmptyScheduleBlock(`new-block-${scheduleBlockSeq++}`);
+		const next = createEmptyScheduleBlock(`new-block-${scheduleBlockSeq++}`, defaultGridInterval);
 		draft.schedule.blocks = [...draft.schedule.blocks, next];
 		scheduleError = '';
 	};
@@ -222,7 +244,13 @@
 	const removeScheduleBlock = (blockId: string | undefined) => {
 		if (draft.schedule.blocks.length <= 1) {
 			draft.schedule.blocks = [
-				{ ...draft.schedule.blocks[0], weekdays: [], timeRanges: '', slotInterval: '15' }
+				{
+					...draft.schedule.blocks[0],
+					weekdays: [],
+					timeRanges: '',
+					slotInterval: '15',
+					gridInterval: defaultGridInterval
+				}
 			];
 		} else {
 			draft.schedule.blocks = draft.schedule.blocks.filter((block) => block.id !== blockId);
@@ -330,6 +358,7 @@
 						{@const daysStatus = scheduleBlockDaysStatus(block)}
 						{@const timeStatus = scheduleBlockTimeStatus(block)}
 						{@const intervalStatus = scheduleBlockIntervalStatus(block)}
+						{@const gridStatus = scheduleBlockGridStatus(block)}
 						<div class={`ux-soft-card p-4 ${scheduleBlockCardClass(block)}`}>
 							<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 								<div class="min-w-0 flex-1">
@@ -375,7 +404,7 @@
 								</div>
 							</div>
 
-							<div class="mt-5 grid gap-4 lg:grid-cols-[1fr_180px]">
+							<div class="mt-5 grid gap-4">
 								<label>
 									<span class="ux-label flex flex-wrap items-center gap-2">
 										Horarios
@@ -409,32 +438,61 @@
 										</div>
 									{/if}
 								</label>
-								<label>
-									<span class="ux-label flex flex-wrap items-center gap-2">
-										Descanso entre consultas
-										{#if intervalStatus === 'Ingresá un entero desde 0'}
-											<span class="ux-inline-status ux-inline-status-danger">{intervalStatus}</span>
-										{:else if intervalStatus}
-											<span class="ux-inline-status ux-inline-status-warning">{intervalStatus}</span>
-										{/if}
-									</span>
-									<input
-										type="number"
-										inputmode="numeric"
-										min="0"
-										step="1"
-										value={block.slotInterval}
-										disabled={!canOperate}
-										class={`ux-input text-lg font-bold ${fieldStateClass(
-											intervalStatus === 'Sin guardar',
-											intervalStatus === 'Ingresá un entero desde 0'
-										)}`}
-										oninput={(event) => updateScheduleBlock(block.id, { slotInterval: (event.currentTarget as HTMLInputElement).value })}
-									/>
-									<span class="mt-2 block text-xs font-semibold leading-relaxed text-copy-subtle">
-										0 permite otro turno inmediatamente. También podés usar cualquier entero, por ejemplo 2, 23 o 60.
-									</span>
-								</label>
+								<div class="grid gap-4 sm:grid-cols-2">
+									<label>
+										<span class="ux-label flex flex-wrap items-center gap-2">
+											Cada cuánto empieza un turno (minutos)
+											{#if gridStatus === 'Ingresá un entero entre 1 y 120'}
+												<span class="ux-inline-status ux-inline-status-danger">{gridStatus}</span>
+											{:else if gridStatus}
+												<span class="ux-inline-status ux-inline-status-warning">{gridStatus}</span>
+											{/if}
+										</span>
+										<input
+											type="number"
+											inputmode="numeric"
+											min="1"
+											max="120"
+											step="1"
+											value={block.gridInterval ?? ''}
+											disabled={!canOperate}
+											class={`ux-input text-lg font-bold ${fieldStateClass(
+												gridStatus === 'Sin guardar',
+												gridStatus === 'Ingresá un entero entre 1 y 120'
+											)}`}
+											oninput={(event) => updateScheduleBlock(block.id, { gridInterval: (event.currentTarget as HTMLInputElement).value })}
+										/>
+										<span class="mt-2 block text-xs font-semibold leading-relaxed text-copy-subtle">
+											Ej.: 60 ofrece 09:00, 10:00, 11:00; 30 ofrece 09:00, 09:30, 10:00.
+										</span>
+									</label>
+									<label>
+										<span class="ux-label flex flex-wrap items-center gap-2">
+											Descanso entre consultas
+											{#if intervalStatus === 'Ingresá un entero desde 0'}
+												<span class="ux-inline-status ux-inline-status-danger">{intervalStatus}</span>
+											{:else if intervalStatus}
+												<span class="ux-inline-status ux-inline-status-warning">{intervalStatus}</span>
+											{/if}
+										</span>
+										<input
+											type="number"
+											inputmode="numeric"
+											min="0"
+											step="1"
+											value={block.slotInterval}
+											disabled={!canOperate}
+											class={`ux-input text-lg font-bold ${fieldStateClass(
+												intervalStatus === 'Sin guardar',
+												intervalStatus === 'Ingresá un entero desde 0'
+											)}`}
+											oninput={(event) => updateScheduleBlock(block.id, { slotInterval: (event.currentTarget as HTMLInputElement).value })}
+										/>
+										<span class="mt-2 block text-xs font-semibold leading-relaxed text-copy-subtle">
+											0 permite otro turno inmediatamente. También podés usar cualquier entero, por ejemplo 2, 23 o 60.
+										</span>
+									</label>
+								</div>
 							</div>
 						</div>
 					{/each}
@@ -579,7 +637,7 @@
 											<form method="POST" action="?/delete_rule" class="flex w-full flex-col items-start gap-2 rounded-xl border border-line bg-fill-04 px-3 py-2" use:enhance={refreshEnhance}>
 												<input type="hidden" name="rule_id" value={rule.id}/><input type="hidden" name="availability_revision" value={data.availabilityRevision??0} />
 												<span class="whitespace-nowrap text-sm font-bold text-fg">{rule.start_time.slice(0, 5)} - {rule.end_time.slice(0, 5)}</span>
-												<span class="text-xs font-bold text-fg-50">Descanso entre consultas: {rule.break_minutes}&nbsp;min</span>{#if rule.service_scope==='restricted'}<span class="text-xs text-fg-75">{restrictionLabel((rule.rule_services??[]).map(item=>item.service_id))}</span>{/if}
+												<span class="text-xs font-bold text-fg-50">Turnos cada {rule.slot_interval_minutes}&nbsp;min · Descanso entre consultas: {rule.break_minutes}&nbsp;min</span>{#if rule.service_scope==='restricted'}<span class="text-xs text-fg-75">{restrictionLabel((rule.rule_services??[]).map(item=>item.service_id))}</span>{/if}
 												<button type="submit" disabled={!canOperate} class="min-h-11 whitespace-nowrap font-bold text-danger disabled:opacity-50">Quitar</button>
 											</form>
 										{/each}

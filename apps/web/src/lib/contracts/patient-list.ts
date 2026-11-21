@@ -11,6 +11,7 @@ export type PatientListData = {
 	showArchived: boolean;
 	demo: boolean;
 	canCreatePatient: boolean;
+	canArchivePatient?: boolean;
 	canAccessRadiographTrash: boolean;
 	totalCount: number;
 	activeCount: number;
@@ -80,6 +81,9 @@ export function parsePatientListData(value: unknown, expected?: Partial<Pick<Pat
 		showArchived,
 		demo: readBoolean(row.demo, contract),
 		canCreatePatient: readBoolean(row.canCreatePatient, contract),
+		...('canArchivePatient' in row
+			? { canArchivePatient: readBoolean(row.canArchivePatient, contract) }
+			: {}),
 		canAccessRadiographTrash: readBoolean(row.canAccessRadiographTrash, contract),
 		totalCount: readCount(row.totalCount),
 		activeCount: readCount(row.activeCount),

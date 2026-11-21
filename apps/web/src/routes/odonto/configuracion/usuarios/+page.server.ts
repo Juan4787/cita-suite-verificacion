@@ -188,7 +188,11 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, depends }) 
 		context,
 		members,
 		services,
-		roles: context.assistance ? TEAM_ROLES.filter((role) => role !== 'owner') : TEAM_ROLES,
+		roles: context.assistance
+			? TEAM_ROLES.filter((role) => role !== 'owner')
+			: context.role === 'admin'
+				? TEAM_ROLES.filter((role) => role !== 'owner' && role !== 'admin')
+				: TEAM_ROLES,
 		defaultServiceNames: DEFAULT_SERVICE_NAMES,
 		currentUserId,
 		demo: false
@@ -237,6 +241,12 @@ export const actions: Actions = {
 		if (context.assistance && role === 'owner') {
 			return fail(403, {
 				message: 'La propiedad del consultorio solo puede administrarla su dueño.',
+				values
+			});
+		}
+		if (!context.assistance && context.role === 'admin' && (role === 'owner' || role === 'admin')) {
+			return fail(403, {
+				message: 'Un administrador no puede agregar dueños ni otros administradores.',
 				values
 			});
 		}
@@ -351,6 +361,15 @@ export const actions: Actions = {
 				message: 'El dueño y los administradores se configuran desde el consultorio.'
 			});
 		}
+		if (
+			!context.assistance &&
+			context.role === 'admin' &&
+			(target.role === 'owner' || target.role === 'admin' || role === 'owner' || role === 'admin')
+		) {
+			return fail(403, {
+				message: 'Un administrador no puede modificar dueños ni otros administradores.'
+			});
+		}
 		if (target.role === 'owner' && role !== 'owner' && countOwners(members) <= 1) {
 			return fail(400, { message: 'El consultorio debe conservar al menos un dueño.' });
 		}
@@ -402,6 +421,11 @@ export const actions: Actions = {
 		if (context.assistance && (target.role === 'owner' || target.role === 'admin')) {
 			return fail(403, {
 				message: 'El dueño y los administradores se configuran desde el consultorio.'
+			});
+		}
+		if (!context.assistance && context.role === 'admin' && (target.role === 'owner' || target.role === 'admin')) {
+			return fail(403, {
+				message: 'Un administrador no puede quitar dueños ni otros administradores.'
 			});
 		}
 

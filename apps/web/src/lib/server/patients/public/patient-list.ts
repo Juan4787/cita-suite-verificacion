@@ -136,6 +136,7 @@ export const loadPatientList = async ({
 			showArchived,
 			demo: true,
 			canCreatePatient: true,
+			canArchivePatient: true,
 			canAccessRadiographTrash: true,
 			totalCount: demoPatients.length,
 			activeCount,
@@ -174,11 +175,16 @@ export const loadPatientList = async ({
 	if (!context) throw kitError(500, 'No se pudo resolver el consultorio activo.');
 
 	const admin = await createSupabaseAdminClient('odonto', fetch);
+	const canCreatePatient =
+		context.role !== 'readonly' && context.access.allowedCapabilities.canCreatePatient;
+	const canArchivePatient =
+		(context.role === 'owner' || context.role === 'admin' || context.role === 'professional') &&
+		context.access.allowedCapabilities.canEditPatient;
 	const cacheScope = patientDataCacheScope({
 		userId,
 		businessId: context.business.id,
 		role: context.role,
-		canCreatePatient: context.access.allowedCapabilities.canCreatePatient
+		canCreatePatient
 	});
 	const readRevision = () => getPatientDataRevision(admin, context.business.id);
 	const cursor = rawCursor
@@ -240,7 +246,8 @@ export const loadPatientList = async ({
 			query,
 			showArchived,
 			demo: false,
-			canCreatePatient: context.access.allowedCapabilities.canCreatePatient,
+			canCreatePatient,
+			canArchivePatient,
 			canAccessRadiographTrash,
 			totalCount: Number(countRow?.total_count ?? 0),
 			activeCount: Number(countRow?.active_count ?? 0),

@@ -11,6 +11,7 @@ const rows = (label: string) => ({
 	showArchived: false,
 	demo: false,
 	canCreatePatient: true,
+	canArchivePatient: true,
 	canAccessRadiographTrash: true,
 	totalCount: 1,
 	activeCount: 1,

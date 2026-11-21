@@ -78,11 +78,11 @@
           name="public_contact_enabled"
           value="true"
           bind:checked={settings.public_contact_enabled}
-        /><span>Mostrar el teléfono y la dirección en la web</span></label
+        /><span>Mostrar el teléfono y la dirección en la página de reserva y en tu web</span></label
       >
       <p class="text-sm text-fg-75">
         Se usan los datos del consultorio, incluso si las reservas están
-        pausadas.
+        pausadas. Los pacientes con turno confirmado siempre ven dónde asistir.
       </p>
       <div class="border-t border-line pt-5">
         <h2 class="ux-section-title">WhatsApp de contacto</h2>

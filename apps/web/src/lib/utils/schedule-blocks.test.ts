@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	canonicalScheduleBlocks,
+	defaultSlotIntervalForServices,
 	scheduleBlocksFromRules,
 	validateScheduleBlocks
 } from './schedule-blocks';
@@ -108,6 +109,27 @@ describe('schedule blocks', () => {
 		).toBe(
 			canonicalScheduleBlocks([{ weekdays: [1, 5], timeRanges: '08:00-15:00', slotInterval: '15' }])
 		);
+	});
+
+	it('AF1-014: sugiere el paso de grilla según la duración activa seleccionada y valida límites 1..120', () => {
+		expect(
+			defaultSlotIntervalForServices(
+				[
+					{ id: 's1', duration_minutes: 60, is_active: true },
+					{ id: 's2', duration_minutes: 90, is_active: true }
+				],
+				['s1']
+			)
+		).toBe('60');
+		expect(defaultSlotIntervalForServices([{ id: 's1', duration_minutes: 180, is_active: true }])).toBe('120');
+		expect(defaultSlotIntervalForServices([])).toBe('15');
+
+		expect(
+			validateScheduleBlocks([{ weekdays: [1], timeRanges: '9 a 13', slotInterval: '0', gridInterval: '' }])
+		).toMatchObject({ ok: false, message: expect.stringContaining('entre 1 y 120') });
+		expect(
+			validateScheduleBlocks([{ weekdays: [1], timeRanges: '9 a 13', slotInterval: '0', gridInterval: '121' }])
+		).toMatchObject({ ok: false, message: expect.stringContaining('entre 1 y 120') });
 	});
 });
 

@@ -59,6 +59,7 @@ do $$ declare b uuid:=gen_random_uuid(); u uuid:=gen_random_uuid(); p uuid:=gen_
  insert into command_fixture(label,id) values('business',b),('owner',u),('professional',p),('service',s);
  update private.deposit_automation set enabled=true;
  update private.appointment_management_runtime set reschedule_enabled=true,email_producer_enabled=true;
+ perform public.operator_set_business_email_sender(b,'command-e1.cita-suite.com.ar','verified');
  insert into public.deposit_policies(business_id,enabled,auto_cancel_enabled,amount_mode,fixed_amount,transfer_details)
  values(b,true,true,'fixed',40000,'Synthetic command fixture');
  perform set_config('request.jwt.claim.sub',u::text,true);

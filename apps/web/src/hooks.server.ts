@@ -58,6 +58,20 @@ const isTransientAuthError = (error: unknown): boolean => {
 };
 
 
+const deduplicateHtmlTitles = (html: string) => {
+	const matches = [...html.matchAll(/<title\b[^>]*>[\s\S]*?<\/title>/gi)];
+	if (matches.length <= 1) return html;
+	let result = '';
+	let cursor = 0;
+	for (let i = 0; i < matches.length - 1; i += 1) {
+		const match = matches[i];
+		const index = match.index ?? 0;
+		result += html.slice(cursor, index);
+		cursor = index + match[0].length;
+	}
+	return result + html.slice(cursor);
+};
+
 export const handle: Handle = async ({ event, resolve }) => {
 	// A page served over HTTP lets a password travel in clear text, and HSTS only protects after
 	// a first HTTPS visit: redirect before reading cookies or resolving the route. Only local
@@ -225,7 +239,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	const response = await resolve(event, { transformPageChunk: ({ html }) => applyThemeToDocument(html, themePreference) });
+	const response = await resolve(event, { transformPageChunk: ({ html }) => deduplicateHtmlTitles(applyThemeToDocument(html, themePreference)) });
 	const renderedPolicy = response.headers.get('content-security-policy');
 	if (renderedPolicy) response.headers.set('content-security-policy', withSupabaseOrigin(renderedPolicy, publicEnv.PUBLIC_ODONTO_SUPABASE_URL));
 	// Only a validated public integration may opt into framing. Private routes

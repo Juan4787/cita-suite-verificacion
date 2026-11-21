@@ -81,6 +81,7 @@ insert into public.deposit_policies(business_id,enabled,auto_cancel_enabled,amou
  values('$business_id',true,true,'fixed',40000,'Synthetic transfer');
 update private.deposit_automation set enabled=true;
 update private.appointment_management_runtime set reschedule_enabled=true,email_producer_enabled=true;
+select public.operator_set_business_email_sender('$business_id','management-race.cita-suite.com.ar','verified');
 SQL
 "${psql_command[@]}" <<'SQL'
 create function patient_management_race.prepare(p_label text,p_due boolean default false,p_target timestamptz default null) returns void language plpgsql as $$

@@ -24,6 +24,20 @@
       oninput={(event) => onchange({ label: event.currentTarget.value })}
     /></label
   >
+  <label class="sm:col-span-2"
+    ><span class="ux-label"
+      >Texto de ayuda <span class="text-fg-65">(opcional)</span></span
+    ><input
+      class="ux-input mt-2"
+      maxlength="300"
+      placeholder="Aclaración breve debajo de la pregunta"
+      value={field.help ?? ""}
+      oninput={(event) => {
+        const next = event.currentTarget.value;
+        onchange({ help: next.trim() ? next : undefined });
+      }}
+    /></label
+  >
   <label
     ><span class="ux-label">Respuesta</span><select
       use:styledSelect={field.kind}

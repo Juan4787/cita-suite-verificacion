@@ -65,7 +65,7 @@
    </label>
    <label class="ux-choice flex items-start gap-3 px-4 py-3">
     <input class="accent-check-accent-600 mt-1" type="checkbox" name="require_email" value="true" checked={values.require_email} />
-    <span><strong>Pedir email obligatorio al reservar online</strong><span class="mt-1 block text-sm text-copy-subtle">Esta opción funciona aunque apagues los envíos. Recepción puede continuar sin email después de confirmar el aviso.</span></span>
+    <span><strong>Pedir email obligatorio al reservar online</strong><span class="mt-1 block text-sm text-copy-subtle">{data.policy.sender_verified ? 'Esta opción funciona aunque apagues los envíos. Recepción puede continuar sin email después de confirmar el aviso.' : 'Esta opción empieza a exigir email al reservar recién cuando el remitente del consultorio está listo. Recepción puede continuar sin email después de confirmar el aviso.'}</span></span>
    </label>
   </fieldset>
   <fieldset class="grid gap-4" disabled={saving || data.demo}>

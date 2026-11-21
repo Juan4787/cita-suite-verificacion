@@ -1,7 +1,6 @@
 import { logServerFailure } from '$lib/server/platform/logging';
 import { writeAuditLog } from '$lib/server/platform/audit';
 import type { CitaSupabaseClient } from '$lib/types/database';
-import { isDefaultServiceName } from './default-services';
 import { formatPriceLabel } from '$lib/utils/money-input';
 import {
 	parsePositiveInt,
@@ -56,8 +55,7 @@ export async function updateProfessionalService(
 			status: 400,
 			message: 'Acortá las indicaciones o el texto del aviso antes de guardar.'
 		};
-	const isDefault = isDefaultServiceName(String(currentService.name ?? ''));
-	const name = isDefault ? String(currentService.name) : String(form.get('name') ?? '').trim();
+	const name = String(form.get('name') ?? '').trim();
 	const duration = parsePositiveInt(form.get('duration_minutes'));
 	const bufferBefore = Number(form.get('buffer_before_minutes') ?? 0);
 	const bufferAfter = Number(form.get('buffer_after_minutes') ?? 0);
@@ -99,8 +97,8 @@ export async function updateProfessionalService(
 			buffer_before_minutes: bufferBefore,
 			buffer_after_minutes: bufferAfter,
 			price_label: priceLabel || null,
-			is_public: isDefault || form.get('is_public') === 'true',
-			is_active: isDefault || form.get('is_active') === 'true',
+			is_public: form.get('is_public') === 'true',
+			is_active: form.get('is_active') === 'true',
 			updated_at: new Date().toISOString()
 		})
 		.eq('business_id', businessId)

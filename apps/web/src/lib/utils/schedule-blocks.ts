@@ -38,20 +38,51 @@ type RuleLike = {
 
 export const DEFAULT_WEEKDAYS = [1, 2, 3, 4, 5];
 
-export const createEmptyScheduleBlock = (id?: string): ScheduleBlockDraft => ({
+/**
+ * Paso inicial sugerido para bloques nuevos: la menor duración activa de las
+ * prestaciones asignadas (o del consultorio si aún no hay selección), acotada
+ * al rango operativo [5, 120] minutos, con 15 minutos como respaldo.
+ */
+export const defaultSlotIntervalForServices = (
+	services: ReadonlyArray<{ id?: string; duration_minutes: number; is_active?: boolean }>,
+	selectedIds?: ReadonlyArray<string>
+): string => {
+	const active = services.filter(
+		(service) =>
+			service.is_active !== false &&
+			Number.isFinite(service.duration_minutes) &&
+			service.duration_minutes > 0
+	);
+	const selectedSet = selectedIds && selectedIds.length > 0 ? new Set(selectedIds) : null;
+	const selected = selectedSet
+		? active.filter((service) => Boolean(service.id && selectedSet.has(service.id)))
+		: active;
+	const candidates = selected.length > 0 ? selected : active;
+	if (candidates.length === 0) return '15';
+	const minDuration = Math.min(...candidates.map((service) => Math.round(service.duration_minutes)));
+	return String(Math.min(120, Math.max(5, minDuration)));
+};
+
+export const createEmptyScheduleBlock = (
+	id?: string,
+	defaultGridInterval = '15'
+): ScheduleBlockDraft => ({
 	id,
 	weekdays: [],
 	timeRanges: '',
 	slotInterval: '15',
-	gridInterval: '15'
+	gridInterval: defaultGridInterval
 });
 
-export const createDefaultScheduleBlock = (id?: string): ScheduleBlockDraft => ({
+export const createDefaultScheduleBlock = (
+	id?: string,
+	defaultGridInterval = '15'
+): ScheduleBlockDraft => ({
 	id,
 	weekdays: [...DEFAULT_WEEKDAYS],
 	timeRanges: '',
 	slotInterval: '15',
-	gridInterval: '15'
+	gridInterval: defaultGridInterval
 });
 
 export const normalizeScheduleWeekdays = (weekdays: unknown) => {
@@ -132,7 +163,9 @@ export const validateScheduleBlocks = (
 				blockIndex: index
 			};
 		}
-		const slotIntervalMinutes = Number(block.gridInterval || 15);
+		const rawGridInterval =
+			block.gridInterval === undefined ? '15' : String(block.gridInterval).trim();
+		const slotIntervalMinutes = rawGridInterval === '' ? Number.NaN : Number(rawGridInterval);
 		if (
 			!Number.isInteger(slotIntervalMinutes) ||
 			slotIntervalMinutes < 1 ||
@@ -140,7 +173,7 @@ export const validateScheduleBlocks = (
 		) {
 			return {
 				ok: false,
-				message: `No pudimos conservar la grilla horaria del ${label}. Volvé a cargar ese bloque y guardalo otra vez.`,
+				message: `Cada cuánto empieza un turno del ${label} debe ser un número entero entre 1 y 120 minutos.`,
 				blockIndex: index
 			};
 		}
@@ -191,7 +224,7 @@ export const serializeScheduleBlocks = (blocks: ScheduleBlockDraft[]) =>
 			allowedServiceIds: block.allowedServiceIds ?? [],
 			timeRanges: block.timeRanges,
 			slotInterval: String(block.slotInterval),
-			gridInterval: String(block.gridInterval || '15')
+			gridInterval: block.gridInterval === undefined ? '15' : String(block.gridInterval)
 		}))
 	);
 
@@ -245,9 +278,10 @@ export const parseScheduleBlocksJson = (raw: string): ScheduleBlockDraft[] | nul
 
 export const scheduleBlocksFromRules = (
 	rules: RuleLike[],
-	idPrefix = 'block'
+	idPrefix = 'block',
+	defaultGridInterval = '15'
 ): ScheduleBlockDraft[] => {
-	if (rules.length === 0) return [createDefaultScheduleBlock(`${idPrefix}-1`)];
+	if (rules.length === 0) return [createDefaultScheduleBlock(`${idPrefix}-1`, defaultGridInterval)];
 
 	const groups = new Map<string, ScheduleBlockDraft>();
 	for (const rule of [...rules].sort(

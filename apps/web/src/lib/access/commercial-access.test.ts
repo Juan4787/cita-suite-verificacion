@@ -157,4 +157,40 @@ describe('getBusinessAccessState', () => {
 		expect(state.canEnterApp).toBe(false);
 		expect(state.allowedCapabilities.canCreateAppointment).toBe(false);
 	});
+
+	it('AF1-003: avisa 30 días calendario antes en planes manuales según zona horaria del consultorio', () => {
+		const timeZone = 'America/Argentina/Buenos_Aires';
+		const paidUntil = '2026-12-20T23:59:59-03:00';
+		const manualSub = {
+			...baseSubscription,
+			access_source: 'manual',
+			paid_until: paidUntil,
+			expiration_notice_enabled: true
+		};
+
+		const thirtyOneDaysBefore = getBusinessAccessState(manualSub, {
+			now: new Date('2026-11-19T12:00:00-03:00'),
+			timeZone
+		});
+		expect(thirtyOneDaysBefore.shouldShowExpiringWarning).toBe(false);
+		expect(thirtyOneDaysBefore.visualStatus).toBe('active');
+
+		const thirtyDaysBeforeMorning = getBusinessAccessState(manualSub, {
+			now: new Date('2026-11-20T00:05:00-03:00'),
+			timeZone
+		});
+		expect(thirtyDaysBeforeMorning.shouldShowExpiringWarning).toBe(true);
+		expect(thirtyDaysBeforeMorning.visualStatus).toBe('expiring');
+
+		const mpSub = {
+			...manualSub,
+			access_source: 'mercado_pago'
+		};
+		const mpTenDaysBefore = getBusinessAccessState(mpSub, {
+			now: new Date('2026-12-10T12:00:00-03:00'),
+			timeZone
+		});
+		expect(mpTenDaysBefore.shouldShowExpiringWarning).toBe(false);
+		expect(mpTenDaysBefore.visualStatus).toBe('active');
+	});
 });

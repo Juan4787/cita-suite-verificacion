@@ -56,6 +56,9 @@ export function parseAvailabilityBusiness(value: unknown) {
 	try { new Intl.DateTimeFormat('en', { timeZone: timezone }); } catch { invalid('timezone'); }
 	return {
 		timezone,
+		...(rawBusiness.allow_same_day_booking === undefined
+			? {}
+			: { allow_same_day_booking: readBoolean(rawBusiness.allow_same_day_booking, 'availability.allowSameDay') }),
 		max_booking_days_ahead: integer(rawBusiness.max_booking_days_ahead, 1, 'horizon'),
 		min_booking_notice_minutes: integer(rawBusiness.min_booking_notice_minutes, 0, 'notice'),
 		is_active: readBoolean(rawBusiness.is_active, 'availability.isActive'),

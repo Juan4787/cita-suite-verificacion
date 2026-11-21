@@ -2,6 +2,7 @@ import type { BookingModality, BookingModalityWindow } from '@cita-suite/shared/
 
 export type AvailabilityBusiness = {
 	timezone: string;
+	allow_same_day_booking?: boolean;
 	max_booking_days_ahead: number;
 	min_booking_notice_minutes?: number | null;
 	is_active: boolean;
@@ -189,11 +190,18 @@ export const clampRangeToBusinessRules = (
 	business: AvailabilityBusiness,
 	fromDate: string,
 	toDate: string,
-	now = new Date()
+	now = new Date(),
+	publicOnly = false
 ) => {
 	const dates = dateRange(fromDate, toDate);
 	const maxDate = addMinutes(now, business.max_booking_days_ahead * 24 * 60);
-	return dates.filter((date) => zonedDateTimeToUtc(date, '00:00', business.timezone) <= maxDate);
+	const blockedThroughDate =
+		publicOnly && business.allow_same_day_booking === false ? zonedDate(now, business.timezone) : null;
+	return dates.filter(
+		(date) =>
+			(!blockedThroughDate || date > blockedThroughDate) &&
+			zonedDateTimeToUtc(date, '00:00', business.timezone) <= maxDate
+	);
 };
 
 export const calculateAvailabilitySlots = (input: {
@@ -247,12 +255,14 @@ export const calculateAvailabilitySlots = (input: {
 	}
 	if (professionals.length === 0 || maxSlots <= 0 || maxSlotsPerDate <= 0) return [];
 
-	const dates = clampRangeToBusinessRules(business, input.fromDate, input.toDate, now);
+	const dates = clampRangeToBusinessRules(business, input.fromDate, input.toDate, now, publicOnly);
 	if (dates.length === 0) return [];
 
 	const minStartsAt = publicOnly
 		? addMinutes(now, Math.max(0, Number(business.min_booking_notice_minutes ?? 0)))
 		: now;
+	const blockedThroughDate =
+		publicOnly && business.allow_same_day_booking === false ? zonedDate(now, business.timezone) : null;
 	const allSlots: AvailabilitySlot[] = [];
 
 	type ProfessionalDayContext = {
@@ -279,6 +289,7 @@ export const calculateAvailabilitySlots = (input: {
 	const candidateFits = (context: ProfessionalDayContext, startsAt: Date) => {
 		const endsAt = addMinutes(startsAt, service.duration_minutes);
 		if (startsAt < minStartsAt) return false;
+		if (blockedThroughDate && zonedDate(startsAt, business.timezone) <= blockedThroughDate) return false;
         const restrictedStart=addMinutes(startsAt,-service.buffer_before_minutes);
         const restrictedEnd=addMinutes(endsAt,service.buffer_after_minutes);
         if(context.restrictions.some(item=>overlaps(restrictedStart,restrictedEnd,item.start,item.end)&&!item.allowed.includes(service.id)))return false;

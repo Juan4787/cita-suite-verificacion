@@ -10,12 +10,17 @@ function settings(max = "60", notice = "120") {
   return form;
 }
 describe("separated booking configuration", () => {
-  it("only updates booking rules and trims the cancellation text", () =>
+  it("only updates booking rules and trims the cancellation text", () => {
     expect(parseBookingSettings(settings())).toEqual({
+      allow_same_day_booking: false,
       max_booking_days_ahead: 60,
       min_booking_notice_minutes: 120,
       cancellation_policy: "Avisar con tiempo.",
-    }));
+    });
+    const sameDayForm = settings();
+    sameDayForm.set("allow_same_day_booking", "true");
+    expect(parseBookingSettings(sameDayForm).allow_same_day_booking).toBe(true);
+  });
   it.each([
     ["0", "120"],
     ["91", "120"],

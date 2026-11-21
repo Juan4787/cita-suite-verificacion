@@ -18,6 +18,7 @@
 	} from '$lib/utils/time-ranges';
 	import {
 		createEmptyScheduleBlock,
+		defaultSlotIntervalForServices,
 		serializeScheduleBlocks,
 		parseScheduleBlocksJson,
 		validateScheduleBlocks,
@@ -41,7 +42,6 @@
 		form?: TeamActionFeedback;
 		onclose: () => void;
 	} = $props();
-	const customServices = $derived(services.filter((service) => !service.is_default));
 	type NewService = { name: string; duration_minutes: number; price_label: string };
 	const roleDescriptions: Record<BusinessRole, string> = {
 		owner: 'Control total del consultorio.',
@@ -70,6 +70,7 @@
 	let scheduleBlocks = $state<ScheduleBlockDraft[]>([
 		{ ...createEmptyScheduleBlock('wizard-block-1') }
 	]);
+	let editedGridBlockIds = $state<string[]>([]);
 	let scheduleBlockSeq = 20;
 	let exceptionAppliesTo = $state<'professional' | 'business'>('professional');
 	let exceptionType = $state<'blocked' | 'extra_available'>('blocked');
@@ -103,6 +104,36 @@
 	);
 	const currentStep = $derived(steps[Math.min(stepIndex, steps.length - 1)]);
 
+	const suggestedGridInterval = $derived.by(() => {
+		const combined = [
+			...services.map((service) => ({
+				id: service.id,
+				duration_minutes: service.duration_minutes,
+				is_active: true
+			})),
+			...newServices.map((service, index) => ({
+				id: `new:${index}`,
+				duration_minutes: service.duration_minutes,
+				is_active: true
+			}))
+		];
+		const chosenIds = [
+			...selectedServiceIds,
+			...newServices.map((_, index) => `new:${index}`)
+		];
+		return defaultSlotIntervalForServices(combined, chosenIds);
+	});
+
+	$effect(() => {
+		const target = suggestedGridInterval;
+		const edited = new Set(editedGridBlockIds);
+		if (scheduleBlocks.some((block) => !edited.has(block.id ?? '') && block.gridInterval !== target)) {
+			scheduleBlocks = scheduleBlocks.map((block) =>
+				edited.has(block.id ?? '') ? block : { ...block, gridInterval: target }
+			);
+		}
+	});
+
 	$effect(() => {
 		const values = form?.values;
 		if (!values) return;
@@ -114,10 +145,12 @@
 		if (values.professional_specialty) professionalSpecialty = String(values.professional_specialty);
 		if (values.schedule_blocks) {
 			const restoredBlocks = parseScheduleBlocksJson(String(values.schedule_blocks));
-			scheduleBlocks = restoredBlocks?.map((block, index) => ({
+			const mapped = restoredBlocks?.map((block, index) => ({
 				...block,
 				id: `restored-wizard-block-${index + 1}`
-			})) ?? [{ ...createEmptyScheduleBlock('wizard-block-1') }];
+			}));
+			scheduleBlocks = mapped ?? [{ ...createEmptyScheduleBlock('wizard-block-1', suggestedGridInterval) }];
+			if (mapped) editedGridBlockIds = mapped.map((block) => block.id);
 		} else if (values.time_ranges || values.weekdays_csv) {
 			scheduleBlocks = [
 				{
@@ -131,6 +164,7 @@
 					gridInterval: String(values.slot_interval_minutes ?? '15')
 				}
 			];
+			editedGridBlockIds = ['restored-wizard-block-1'];
 		}
 		if (values.service_ids_csv) {
 			selectedServiceIds = String(values.service_ids_csv).split(',').filter(Boolean);
@@ -186,7 +220,10 @@
 		newServiceName = '';
 		newServiceDuration = '30';
 		newServicePrice = '';
-		scheduleBlocks = [{ ...createEmptyScheduleBlock(`wizard-block-${scheduleBlockSeq++}`) }];
+		scheduleBlocks = [
+			{ ...createEmptyScheduleBlock(`wizard-block-${scheduleBlockSeq++}`, suggestedGridInterval) }
+		];
+		editedGridBlockIds = [];
 		exceptionAppliesTo = 'professional';
 		exceptionType = 'blocked';
 		exceptionPeriodMode = 'single';
@@ -363,16 +400,26 @@
 	};
 
 	const addScheduleBlock = () => {
-		const next = createEmptyScheduleBlock(`wizard-block-${scheduleBlockSeq++}`);
+		const next = createEmptyScheduleBlock(`wizard-block-${scheduleBlockSeq++}`, suggestedGridInterval);
 		scheduleBlocks = [...scheduleBlocks, next];
 		scheduleError = '';
 	};
 
 	const removeScheduleBlock = (blockId: string | undefined) => {
 		if (scheduleBlocks.length <= 1) {
-			scheduleBlocks = [{ ...scheduleBlocks[0], weekdays: [], timeRanges: '', slotInterval: '15' }];
+			scheduleBlocks = [
+				{
+					...scheduleBlocks[0],
+					weekdays: [],
+					timeRanges: '',
+					slotInterval: '15',
+					gridInterval: suggestedGridInterval
+				}
+			];
+			editedGridBlockIds = [];
 		} else {
 			scheduleBlocks = scheduleBlocks.filter((block) => block.id !== blockId);
+			editedGridBlockIds = editedGridBlockIds.filter((id) => id !== blockId);
 		}
 		scheduleError = '';
 	};
@@ -389,19 +436,23 @@
 	};
 
 	const schedulePreview = (block: ScheduleBlockDraft) => parseTimeRanges(block.timeRanges) ?? [];
-	const selectedCustomServices = $derived(
-		customServices.filter((service) => selectedServiceIds.includes(service.id))
+	const selectedExistingServices = $derived(
+		services.filter((service) => selectedServiceIds.includes(service.id))
 	);
-	const summaryAdditionalServices = $derived([
-		...selectedCustomServices.map((service) => service.name),
+	const summaryAssignedServices = $derived([
+		...selectedExistingServices.map((service) => service.name),
 		...newServices.map((service) => service.name)
 	]);
+	const willSeedDefaultServices = $derived(
+		services.length === 0 && newServices.length === 0
+	);
 	const summaryScheduleBlocks = $derived(
 		scheduleBlocks.map((block) => ({
 			days: block.weekdays.map((weekday) => weekdayNames[weekday]).join(', '),
 			ranges: schedulePreview(block)
 				.map((range) => `${range.start} a ${range.end}`)
 				.join(', '),
+			gridInterval: block.gridInterval || suggestedGridInterval,
 			slotInterval: block.slotInterval || '15'
 		}))
 	);
@@ -416,19 +467,6 @@
 	};
 	const newServicesJson = $derived(JSON.stringify(newServices));
 	const scheduleBlocksJson = $derived(serializeScheduleBlocks(scheduleBlocks));
-
-	const defaultServiceRows = $derived(
-		defaultServiceNames.map((name) => {
-			const existing = services.find(
-				(service) => service.is_default && service.name.trim().toLowerCase() === name.toLowerCase()
-			);
-			return {
-				name,
-				duration_minutes: existing?.duration_minutes ?? 30,
-				price_label: existing?.price_label ?? null
-			};
-		})
-	);
 
 
 	const handleWizardSubmit = (event: SubmitEvent) => {
@@ -600,18 +638,7 @@
 						<h3 class="ux-section-title">Servicios que ofrece</h3>
 						<p class="mt-1 text-sm text-fg-55">Estos servicios estarán disponibles para reservar con este profesional.</p>
 						<div class="mt-5 grid gap-3">
-							{#each defaultServiceRows as service}
-								<div class="ux-choice ux-choice-active flex min-w-0 items-center gap-3 p-3 sm:gap-4 sm:p-4">
-									<input type="checkbox" checked disabled class="accent-check-accent-600" />
-									<span class="min-w-0 flex-1">
-										<span class="block break-words font-bold text-fg">{service.name}</span>
-										<span class="mt-1 block text-sm text-fg-55">
-											{formatDuration(service.duration_minutes)}{service.price_label ? ` ·\u00a0${service.price_label}` : ''}
-										</span>
-									</span>
-								</div>
-							{/each}
-							{#each customServices as service}
+							{#each services as service}
 								<label class={`ux-choice flex min-w-0 items-center gap-3 p-3 sm:gap-4 sm:p-4 ${selectedServiceIds.includes(service.id) ? 'ux-choice-active' : ''}`}>
 									<input
 										type="checkbox"
@@ -643,6 +670,11 @@
 									</button>
 								</div>
 							{/each}
+							{#if willSeedDefaultServices}
+								<p class="ux-empty">
+									Todavía no hay servicios cargados. Si seguís sin crear uno, se crearán {defaultServiceNames.join(' y ')} para empezar.
+								</p>
+							{/if}
 						</div>
 					</div>
 
@@ -722,7 +754,7 @@
 										</div>
 									</div>
 
-									<div class="mt-5 grid gap-4 lg:grid-cols-[1fr_180px]">
+									<div class="mt-5 grid gap-4">
 										<label>
 											<span class="ux-label">Horarios</span>
 											<input
@@ -745,22 +777,46 @@
 												</div>
 											{/if}
 										</label>
-										<label>
-											<span class="ux-label">Descanso entre consultas (minutos)</span>
-											<input
-												type="number"
-												inputmode="numeric"
-												min="0"
-												step="1"
-												disabled={!canManage}
-												class={`ux-input text-lg font-bold ${scheduleError ? 'border-danger-400-60' : ''}`}
-												value={block.slotInterval}
-												oninput={(event) => updateScheduleBlock(block.id, { slotInterval: (event.currentTarget as HTMLInputElement).value })}
-											/>
-											<span class="mt-2 block text-xs font-semibold leading-relaxed text-copy-subtle">
-												Usá 0 para permitir otro turno inmediatamente. También podés escribir cualquier entero, por ejemplo 2, 23 o 60.
-											</span>
-										</label>
+										<div class="grid gap-4 sm:grid-cols-2">
+											<label>
+												<span class="ux-label">Cada cuánto empieza un turno (minutos)</span>
+												<input
+													type="number"
+													inputmode="numeric"
+													min="1"
+													max="120"
+													step="1"
+													disabled={!canManage}
+													class={`ux-input text-lg font-bold ${scheduleError ? 'border-danger-400-60' : ''}`}
+													value={block.gridInterval ?? ''}
+													oninput={(event) => {
+														if (block.id && !editedGridBlockIds.includes(block.id)) {
+															editedGridBlockIds = [...editedGridBlockIds, block.id];
+														}
+														updateScheduleBlock(block.id, { gridInterval: (event.currentTarget as HTMLInputElement).value });
+													}}
+												/>
+												<span class="mt-2 block text-xs font-semibold leading-relaxed text-copy-subtle">
+													Ej.: 60 ofrece 09:00, 10:00, 11:00; 30 ofrece 09:00, 09:30, 10:00.
+												</span>
+											</label>
+											<label>
+												<span class="ux-label">Descanso entre consultas (minutos)</span>
+												<input
+													type="number"
+													inputmode="numeric"
+													min="0"
+													step="1"
+													disabled={!canManage}
+													class={`ux-input text-lg font-bold ${scheduleError ? 'border-danger-400-60' : ''}`}
+													value={block.slotInterval}
+													oninput={(event) => updateScheduleBlock(block.id, { slotInterval: (event.currentTarget as HTMLInputElement).value })}
+												/>
+												<span class="mt-2 block text-xs font-semibold leading-relaxed text-copy-subtle">
+													Usá 0 para permitir otro turno inmediatamente. También podés escribir cualquier entero, por ejemplo 2, 23 o 60.
+												</span>
+											</label>
+										</div>
 									</div>
 								</div>
 							{/each}
@@ -887,12 +943,16 @@
 							<p class="mt-4 text-sm font-bold text-copy-subtle">Especialidad</p>
 							<p class="mt-1 text-xl font-bold text-fg">{professionalSpecialty}</p>
 						{/if}
-						<p class="mt-4 text-sm font-bold text-copy-subtle">Servicios incluidos</p>
-						<p class="mt-1 text-xl font-bold text-fg">{(defaultServiceNames as readonly string[]).join(', ')}</p>
-						{#if summaryAdditionalServices.length > 0}
-							<p class="mt-4 text-sm font-bold text-copy-subtle">Servicios adicionales</p>
-							<p class="mt-1 text-xl font-bold text-fg">{summaryAdditionalServices.join(', ')}</p>
-						{/if}
+						<p class="mt-4 text-sm font-bold text-copy-subtle">Servicios asignados</p>
+						<p class="mt-1 text-xl font-bold text-fg">
+							{#if summaryAssignedServices.length > 0}
+								{summaryAssignedServices.join(', ')}
+							{:else if willSeedDefaultServices}
+								{(defaultServiceNames as readonly string[]).join(', ')}
+							{:else}
+								Sin servicios asignados todavía
+							{/if}
+						</p>
 						<p class="mt-4 text-sm font-bold text-copy-subtle">Horarios habituales</p>
 						<div class="mt-2 grid gap-2">
 							{#each summaryScheduleBlocks as block, index}
@@ -900,7 +960,7 @@
 									<p class="text-sm font-bold text-copy-subtle">Bloque {index + 1}</p>
 									<p class="mt-1 text-lg font-bold text-fg">{block.days || 'Sin días'}</p>
 									<p class="mt-1 text-sm font-bold text-fg-65">
-										{block.ranges || 'Sin horario'} · descanso {block.slotInterval} minutos
+										{block.ranges || 'Sin horario'} · turnos cada {block.gridInterval}&nbsp;min · descanso {block.slotInterval}&nbsp;min
 									</p>
 								</div>
 							{/each}

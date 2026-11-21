@@ -92,4 +92,33 @@ describe('team member wizard task boundary', () => {
 		expect(pending.update).not.toHaveBeenCalled();
 		expect(mocks.invalidate).not.toHaveBeenCalled();
 	});
+
+	it('AF1-012 & AF1-014: does not impose Consulta/Otro servicio when active services exist and exposes editable slot step defaulting to consultation duration', async () => {
+		render(TeamMemberWizard, {
+			services: [
+				{ id: 'svc-1', name: 'Primera consulta', duration_minutes: 60, price_label: '$ 45.000', is_default: false },
+				{ id: 'svc-2', name: 'Consulta de seguimiento', duration_minutes: 60, price_label: '$ 35.000', is_default: false }
+			],
+			roles: ['professional'],
+			defaultServiceNames: ['Consulta', 'Otro servicio'],
+			canManage: true,
+			onclose: vi.fn()
+		});
+		await fireEvent.input(screen.getByLabelText('Email'), { target: { value: 'nueva@example.test' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+		await fireEvent.click(screen.getByRole('button', { name: /Profesional/ }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+		await fireEvent.input(screen.getByPlaceholderText('Nombre y apellido'), { target: { value: 'Dra. Nueva' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+
+		// Step servicios: existing clinic services are shown, generic defaults are NOT imposed.
+		expect(screen.getByText('Primera consulta')).toBeVisible();
+		expect(screen.queryByText('Otro servicio')).not.toBeInTheDocument();
+		await fireEvent.click(screen.getByRole('checkbox', { name: /Primera consulta/ }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+
+		// Step horarios: visible editable "Cada cuánto empieza un turno" defaulting to 60 min (consultation duration).
+		const stepInput = screen.getByLabelText(/Cada cuánto empieza un turno/i);
+		expect(stepInput).toHaveValue(60);
+	});
 });

@@ -37,10 +37,12 @@ describe('operación del correo', () => {
 		expect(messages(ops())).toEqual([]);
 	});
 
-	it('avisa el vencimiento desde 14 días antes, con la fecha argentina', () => {
-		expect(messages(ops(), new Date('2026-11-19T15:00:00Z'))).toEqual([]);
-		expect(messages(ops(), new Date('2026-11-20T15:00:00Z'))).toEqual(['attention: El crédito vence el 3 de diciembre de 2026: faltan 14 días. Comprá otro antes para que no se corten los envíos.']);
-		expect(messages(ops(), new Date('2026-12-03T12:00:00Z'))).toEqual(['attention: El crédito vence el 3 de diciembre de 2026: falta 1 día. Comprá otro antes para que no se corten los envíos.']);
+	it('avisa el vencimiento desde 14 días calendario antes, con la fecha argentina', () => {
+		expect(messages(ops(), new Date('2026-11-18T23:59:00-03:00'))).toEqual([]);
+		expect(messages(ops(), new Date('2026-11-19T03:30:00-03:00'))).toEqual(['attention: El crédito vence el 3 de diciembre de 2026: faltan 14 días. Comprá otro antes para que no se corten los envíos.']);
+		expect(messages(ops(), new Date('2026-11-19T15:00:00Z'))).toEqual(['attention: El crédito vence el 3 de diciembre de 2026: faltan 14 días. Comprá otro antes para que no se corten los envíos.']);
+		expect(messages(ops(), new Date('2026-12-02T15:00:00Z'))).toEqual(['attention: El crédito vence el 3 de diciembre de 2026: falta 1 día. Comprá otro antes para que no se corten los envíos.']);
+		expect(messages(ops(), new Date('2026-12-03T12:00:00Z'))).toEqual(['attention: El crédito vence hoy (3 de diciembre de 2026). Comprá otro antes para que no se corten los envíos.']);
 	});
 
 	it('un crédito vencido o agotado es urgente; uno escaso pide atención', () => {

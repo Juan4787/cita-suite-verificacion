@@ -16,6 +16,7 @@ export function parseBookingSettings(form: FormData) {
       "Las condiciones de cancelación admiten hasta 2000 caracteres.",
     );
   return {
+    allow_same_day_booking: form.get("allow_same_day_booking") === "true",
     max_booking_days_ahead: max,
     min_booking_notice_minutes: notice,
     cancellation_policy: policy || null,

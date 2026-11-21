@@ -115,6 +115,8 @@ export const loadPublicBookingPage = async ({ params, fetch, url, setHeaders }: 
 					logo_url: null,
 					timezone: 'America/Argentina/Cordoba',
 					public_booking_enabled: true,
+					public_contact_enabled: true,
+					allow_same_day_booking: false,
 					is_active: true,
 					min_booking_notice_minutes: 0,
 					max_booking_days_ahead: 30,
@@ -219,15 +221,28 @@ export const loadPublicBookingPage = async ({ params, fetch, url, setHeaders }: 
 			// Slots without the quote the booking would fix: no terms are shown as certain.
 			depositTerms = null;
 		}
+        const publicContactVisible = state.business ? state.business.public_contact_enabled !== false : false;
+        const exposedState = state.business && !publicContactVisible
+            ? {
+                ...state,
+                business: {
+                    ...state.business,
+                    phone: null,
+                    address: null,
+                    address_instructions: null,
+                    maps_url: null
+                }
+            }
+            : state;
         return {
             priceQuote,
             ...(state.business ? await loadPublicBookingPolicy(supabase, state.business.id) : { requireEmail: true, reschedulePolicy: null }),
             depositTerms,
             patientFields,
-			state,
+			state: exposedState,
 			selected,
-			mapsLink: state.business
-				? resolveMapsUrl({ address: state.business.address, maps_url: state.business.maps_url })
+			mapsLink: exposedState.business && publicContactVisible
+				? resolveMapsUrl({ address: exposedState.business.address, maps_url: exposedState.business.maps_url })
 				: null,
 			turnstileSiteKey: publicEnv.PUBLIC_TURNSTILE_SITE_KEY ?? null,
 			bookingRequestId,

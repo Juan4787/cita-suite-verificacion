@@ -9,7 +9,7 @@ export const loadPublicBookingPolicy = async (supabase: CitaSupabaseClient, busi
  const policy = await loadAppointmentEmailPolicy(supabase, businessId);
  const reschedulePolicy: BookingReschedulePolicy = { schema_version: 1, policy_revision: policy.revision,
   require_deposit_on_reschedule: policy.require_deposit_on_reschedule, previous_deposit_disposition: policy.previous_deposit_disposition };
- return { requireEmail: policy.require_email, reschedulePolicy };
+ return { requireEmail: policy.require_email && policy.sender_verified, reschedulePolicy };
 };
 
 /** Loaded only when opening a staff booking, never with the agenda's lists. */

@@ -59,6 +59,28 @@ describe('hooks auth validation', () => {
 		mocks.isMasterEmail.mockReturnValue(false);
 	});
 
+	it('AF1-004: deduplicates SSR <title> tags keeping only the most specific route title', async () => {
+		const publicEvent = {
+			url: new URL('https://app.test/reservar/dra-natalia-frutos'),
+			request: new Request('https://app.test/reservar/dra-natalia-frutos', { headers: { accept: 'text/html' } }),
+			isDataRequest: false,
+			locals: {},
+			fetch: vi.fn(),
+			cookies: { get: vi.fn(() => undefined), set: vi.fn(), delete: vi.fn() }
+		};
+		const response = await handle({
+			event: publicEvent as never,
+			resolve: async (_event, opts) => {
+				const raw = '<!doctype html><html lang="es"><head><title>Cita Suite</title><link rel="icon" href="/logo.png"/><title>Reservar turno · Dra. Natalia Frutos</title></head><body></body></html>';
+				const html = opts?.transformPageChunk ? await opts.transformPageChunk({ html: raw, done: true }) : raw;
+				return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+			}
+		});
+		const html = await response.text();
+		const titles = [...html.matchAll(/<title>([^<]*)<\/title>/g)].map((m) => m[1]);
+		expect(titles).toEqual(['Reservar turno · Dra. Natalia Frutos']);
+	});
+
 	// SvelteKit's own origin check is off so that two exact routes can receive provider posts; the
 	// hook must keep refusing every other cross-site form before any cookie or route is touched.
 	it.each([

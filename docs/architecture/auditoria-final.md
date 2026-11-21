@@ -1,5 +1,7 @@
 # Auditoría final punto por punto
 
+> **Antecedente de octubre de 2026.** La auditoría vigente es la auditoría final de noviembre, cuya [fase 1](../plans/auditoria-final-noviembre-fase-1.md) se cerró el 19 de noviembre de 2026 con veredicto **Listo con condiciones** ([informe final](../plans/registro-auditoria-final-noviembre-fase-1.md#informe-final)).
+
 ## Actualización de continuidad — 31 de octubre
 
 Última entrega comprobada: V10b `68f31741f6ff7f2253c036800b1369f1eda16510`, versión `1d2b4acd-7dd8-4cb7-81e3-a205bafe9f8d`, publicada y verificada el 1 de noviembre a las 10:15 UTC (plan de señas y avisos, 12.16; detalle en su registro). Antes, V9 `a3c707f368736da90d2adf5850d291460f657af0`, versión `2ef53723-0a46-4879-bf6e-4af5ed5320c9`, del 31 de octubre a las 21:58 UTC (V8 más el registro de las fallas al comprobar el enlace). Antes: confirmación de correo **publicada y verificada**, V8 `408ca04d9e6750e4657dc087264644665a63fb37`, versión `a1844665-447e-40bb-b9e5-ce7c03ed29d7`. Evidencia, recuperación compatible y límites en [su traspaso](../plans/traspaso-confirmacion-email-20261030.md). Esta actualización no declara cerrada la campaña general ni revalida todos los puntos históricos de esta auditoría.

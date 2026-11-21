@@ -32,6 +32,8 @@ Un consultorio sin fila de suscripción sólo es `active` si es anterior a las s
 
 Roles: `owner` (dueño), `admin`, `reception` (recepción), `professional` y `readonly` (`BUSINESS_ROLES`). La **ayuda de cuenta** da a un usuario de soporte el rol `admin` mientras dure el permiso que concedió el dueño. El **administrador maestro** se identifica por `MASTER_EMAIL` y no es un rol del consultorio.
 
+> **Alcance de `readonly` en la interfaz de Equipo (`AF1-016`, 21-nov-2026):** `readonly` existe como rol válido en base de datos, RLS y membresías vigentes (si un consultorio ya tiene usuarios con ese rol, `/odonto/configuracion/usuarios` muestra la sección «Solo lectura» para consultarlos y gestionarlos). El asistente «Agregar integrante» ofrece intencionalmente sólo los roles operativos `owner`, `admin`, `reception` y `professional`.
+
 Cada celda supone el estado `active` o `grace`. En `restricted`, la columna «Lectura en restricción» indica qué queda.
 
 | Acción | Dueño | Admin | Recepción | Profesional | Sólo lectura | Lectura en restricción | Fuente |
@@ -39,8 +41,9 @@ Cada celda supone el estado `active` o `grace`. En `restricted`, la columna «Le
 | Agenda del consultorio | ✓ | ✓ | ✓ | Sus turnos (`mis-turnos`) | Ver | — | `canOperate`; navegación por rol en `+layout.svelte` |
 | Crear turnos | ✓ | ✓ | ✓ | — | — | — | `resolvePatientPermissions.canCreateAppointment` |
 | Ver pacientes | ✓ | ✓ | ✓ | Los de sus vínculos activos | ✓ | Dueño y admin | RLS de `patients` (`20261020020000`), `patient_read_set_based.sql` |
+| Crear pacientes | ✓ | ✓ | ✓ | ✓ | — | — | `loadPatientList`, `create_patient`, `get_patient_data_revision` (`AF1-019`) |
 | Editar datos del paciente | ✓ | ✓ | ✓ | ✓ | — | — | `canEditPatient` |
-| Archivar paciente | Global | Global | — | Su vínculo | — | — | `canArchivePatient`, `patient_archive_actor_scope.sql` |
+| Archivar / desarchivar paciente | Global | Global | — | Su vínculo | — | — | `canArchivePatient`, `patient_archive_actor_scope.sql`, `pacientes/+page.svelte` (`AF1-019`) |
 | Historia clínica: leer | ✓ | ✓ | — | ✓ | ✓ | Dueño y admin | `canReadClinicalHistory` |
 | Historia clínica: escribir | ✓ | ✓ | — | ✓ | — | — | `canCreateClinicalEntry`, `clinical_direct_write_guards.sql` |
 | Perfil clínico | ✓ | ✓ | — | ✓ | — | Dueño y admin leen | `canReadClinicalProfile`, `canEditClinicalProfile` |
@@ -51,7 +54,7 @@ Cada celda supone el estado `active` o `grace`. En `restricted`, la columna «Le
 | Exportar datos | ✓ | ✓, salvo ayuda de cuenta | — | — | — | ✓ | `canExportPatientDataFromContext` |
 | Seguimientos | Todos | Todos | Todos | Los suyos | — | — | `roleSeesAllFollowUps`, `roleParticipatesInFollowUps`, `follow_ups_database_rules.sql` |
 | Configuración del consultorio | ✓ | ✓ | — | — | — | — | `canManage`; las secciones sin permiso no se muestran y redirigen |
-| Asignar roles | Todos | Salvo dueño; admin sólo con ayuda | — | — | — | — | `canAssignTeamRole` |
+| Asignar / quitar roles | `owner`, `admin`, `reception`, `professional` | `reception` y `professional` (`admin` también en ayuda de cuenta); nunca `owner` ni otros `admin` | — | — | — | — | `canAssignTeamRole`, `usuarios/+page.server.ts`, `usuarios/+page.svelte` (`AF1-019`) |
 | Perfil atendible de dueño o admin | ✓ | El de admin; el del dueño sólo con ayuda | — | — | — | — | `canConfigureAttendingProfile` |
 | Suscripción | ✓ | ✓, salvo ayuda de cuenta | — | — | — | ✓: es la salida del bloqueo para volver a pagar | `canViewSubscription`; excepción del bloqueo en `+layout.svelte` |
 

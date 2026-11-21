@@ -102,6 +102,13 @@ export const actions: Actions = {
 		}
 
 		const { supabase, business: context } = await getOdontoContext({ locals, fetch, cookies });
+		if (context.role === 'readonly')
+			return fail(403, {
+				message: 'Tu rol es de solo lectura y no permite crear pacientes.',
+				full_name,
+				dni,
+				phone
+			});
 		if (!context.access.allowedCapabilities.canCreatePatient)
 			return fail(403, {
 				message:

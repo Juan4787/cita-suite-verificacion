@@ -35,7 +35,7 @@ const event = (name: string, phone: string, dni = '') => {
 		cookies: {}
 	};
 };
-function context(role: 'owner' | 'professional') {
+function context(role: 'owner' | 'professional' | 'readonly') {
 	const business = demoBusinessContext();
 	return {
 		supabase: client,
@@ -108,5 +108,14 @@ describe('patient create route / real SDK, simulated HTTP, context already autho
 		expect(JSON.stringify(result)).not.toContain('PRIVATE_SENTINEL');
 		expect(calls).toHaveLength(1);
 		vi.restoreAllMocks();
+	});
+	it('AF1-019: rejects patient creation for readonly role with a role message before hitting SQL', async () => {
+		vi.mocked(getOdontoContext).mockResolvedValue(context('readonly'));
+		const result = await actions.create_patient!(event('Paciente Lectura', '+54 9 11 5555-5555') as never);
+		expect(result).toMatchObject({
+			status: 403,
+			data: { message: expect.stringMatching(/solo lectura/i) }
+		});
+		expect(calls).toHaveLength(0);
 	});
 });

@@ -45,7 +45,7 @@ it("lets the professional request a standard clinical datum without choosing sto
     screen.queryByText("Guardar en el perfil como"),
   ).not.toBeInTheDocument();
 });
-it("keeps configured question identifiers and help text intact", () => {
+it("keeps configured question identifiers and help text intact", async () => {
   const fields = [
     {
       id: "known",
@@ -65,6 +65,12 @@ it("keeps configured question identifiers and help text intact", () => {
   expect(
     document.querySelector<HTMLInputElement>('[name="revision"]')!.value,
   ).toBe("7");
+  const helpInput = screen.getByLabelText(/Texto de ayuda/i);
+  expect(helpInput).toHaveValue("Texto configurado");
+  await fireEvent.input(helpInput, { target: { value: "Traé los últimos análisis" } });
+  expect(payload()[0].help).toBe("Traé los últimos análisis");
+  await fireEvent.input(helpInput, { target: { value: "   " } });
+  expect(payload()[0].help).toBeUndefined();
 });
 it("retains edits and their old revision if another person changes the configuration", async () => {
   const rendered = render(ProfessionalBookingFormEditor, {

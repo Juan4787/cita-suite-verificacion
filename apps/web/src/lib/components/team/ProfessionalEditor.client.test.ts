@@ -115,3 +115,45 @@ describe('availability revision belongs to the persisted draft base', () => {
 		expect(screen.getByRole('textbox', { name: /^Nombre(?:\s|$)/ })).toHaveValue('Borrador local');
 	});
 });
+
+describe('AF1-014: schedule block interval (Cada cuánto empieza un turno)', () => {
+	it('displays and edits slot_interval_minutes, preserves existing value, and defaults new blocks to consultation duration', async () => {
+		const initial = professionalEditorData();
+		initial.services = [
+			{
+				...initial.services[0],
+				duration_minutes: 60
+			}
+		];
+		initial.rules = [
+			{
+				...initial.rules[0],
+				slot_interval_minutes: 60,
+				break_minutes: 0
+			}
+		];
+		render(ProfessionalEditor, { data: initial });
+		await fireEvent.click(screen.getByRole('button', { name: /^Horarios/ }));
+
+		const stepInputs = screen.getAllByLabelText(/Cada cuánto empieza un turno/i);
+		expect(stepInputs).toHaveLength(1);
+		expect(stepInputs[0]).toHaveValue(60);
+
+		// Adding a second block defaults to the consultation duration (60 min), not hardcoded 15.
+		await fireEvent.click(screen.getByRole('button', { name: 'Agregar otro bloque' }));
+		const updatedStepInputs = screen.getAllByLabelText(/Cada cuánto empieza un turno/i);
+		expect(updatedStepInputs).toHaveLength(2);
+		expect(updatedStepInputs[0]).toHaveValue(60);
+		expect(updatedStepInputs[1]).toHaveValue(60);
+
+		// Editing the second block interval updates the serialized payload.
+		await fireEvent.input(updatedStepInputs[1], { target: { value: '30' } });
+		const payload = document.querySelector<HTMLInputElement>(
+			'form[action="?/save_weekly_rules"] input[name="schedule_blocks"]'
+		);
+		expect(JSON.parse(payload!.value)).toMatchObject([
+			{ gridInterval: '60' },
+			{ gridInterval: '30' }
+		]);
+	});
+});

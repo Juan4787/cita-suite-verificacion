@@ -108,6 +108,7 @@ export const BUSINESS_SUBSCRIPTIONS_LEGACY_CUTOFF_ISO = '2026-05-28T05:21:36.000
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * ONE_HOUR_MS;
+export const MANUAL_PLAN_EXPIRY_NOTICE_DAYS = 30;
 const BUSINESS_SUBSCRIPTIONS_LEGACY_CUTOFF_MS = Date.parse(BUSINESS_SUBSCRIPTIONS_LEGACY_CUTOFF_ISO);
 
 const fullCapabilities = (): BusinessAccessCapabilities => ({
@@ -206,6 +207,7 @@ const computeCommercialStatus = (
 type BusinessAccessOptions = {
 	now?: Date;
 	businessCreatedAt?: string | null;
+	timeZone?: string | null;
 };
 
 const isLegacyBusinessWithoutSubscription = (createdAt?: string | null) => {
@@ -218,7 +220,9 @@ export const getBusinessAccessState = (
 	options: BusinessAccessOptions = {}
 ): BusinessAccessState => {
 	const safeSubscription = subscription ?? null;
-	const nowMs = (options.now ?? new Date()).getTime();
+	const now = options.now ?? new Date();
+	const nowMs = now.getTime();
+	const timeZone = options.timeZone || DEFAULT_CALENDAR_TIME_ZONE;
 	// As in SQL (business_commercial_status): only a practice older than subscriptions
 	// is active without a row; nothing else can stand in for a missing subscription.
 	const legacyFallbackActive = isLegacyBusinessWithoutSubscription(options.businessCreatedAt);
@@ -230,14 +234,20 @@ export const getBusinessAccessState = (
 	const paidUntilMs = parseTs(safeSubscription?.paid_until);
 	const diffMs = paidUntilMs === null ? null : paidUntilMs - nowMs;
 	const hoursUntilExpiration = diffMs === null ? null : Math.max(0, Math.ceil(diffMs / ONE_HOUR_MS));
+	const calendarDays = calendarDaysUntil(safeSubscription?.paid_until, now, timeZone);
 	const daysUntilExpiration = diffMs === null ? null : Math.max(0, Math.ceil(diffMs / ONE_DAY_MS));
+	const isManualPlan = safeSubscription?.access_source === 'manual';
+	const withinExpiringWindow =
+		diffMs !== null &&
+		diffMs > 0 &&
+		(isManualPlan
+			? calendarDays !== null && calendarDays <= MANUAL_PLAN_EXPIRY_NOTICE_DAYS
+			: diffMs <= ONE_DAY_MS);
 	const shouldShowExpiringWarning =
 		status === 'active' &&
 		!isPermanent &&
 		safeSubscription?.expiration_notice_enabled === true &&
-		diffMs !== null &&
-		diffMs > 0 &&
-		diffMs <= ONE_DAY_MS;
+		withinExpiringWindow;
 
 	const visualStatus: CommercialVisualStatus =
 		status === 'active' && isPermanent
@@ -287,3 +297,4 @@ export const commercialAccessMessage = (state: BusinessAccessState) => {
 export const publicBusinessUnavailableMessage =
 	'La reserva online no está disponible en este momento. Contactá al consultorio.';
 import { InvalidDataContractError, readBoolean, readFiniteNumber, readNullableText, readRecord, readText } from '../contracts/json.ts';
+import { calendarDaysUntil, DEFAULT_CALENDAR_TIME_ZONE } from '../utils/calendar-days.ts';

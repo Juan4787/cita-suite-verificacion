@@ -106,7 +106,7 @@ const mapMembership = (value: unknown): BusinessContext => {
 	const role = readText(row.role, 'membership.role');
 	const business = parseBusiness(row.business);
 	if (!isBusinessRole(role)) throw new InvalidDataContractError('membership.role');
-	const access = getBusinessAccessState(null, { businessCreatedAt: business.created_at });
+	const access = getBusinessAccessState(null, { businessCreatedAt: business.created_at, timeZone: business.timezone });
 	return {
 		business,
 		role,
@@ -120,7 +120,7 @@ const mapMembership = (value: unknown): BusinessContext => {
 const mapAssistanceMembership = (value: unknown): BusinessContext => {
 	const row = readRecord(value, 'assistanceMembership');
 	const business = parseBusiness(row.business);
-	const access = getBusinessAccessState(null, { businessCreatedAt: business.created_at });
+	const access = getBusinessAccessState(null, { businessCreatedAt: business.created_at, timeZone: business.timezone });
 	return {
 		business,
 		role: 'admin',
@@ -142,7 +142,8 @@ const applySubscription = (
 	subscription: BusinessSubscriptionRow | null | undefined
 ): BusinessContext => {
 	const access = getBusinessAccessState(subscription ?? null, {
-		businessCreatedAt: membership.business.created_at
+		businessCreatedAt: membership.business.created_at,
+		timeZone: membership.business.timezone
 	});
 	return {
 		...membership,

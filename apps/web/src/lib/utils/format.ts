@@ -1,3 +1,5 @@
+import { calendarDaysUntil, DEFAULT_CALENDAR_TIME_ZONE } from './calendar-days';
+
 // Sin timeZone, Intl usa la zona del runtime: en SSR eso puede ser UTC y diferir
 // del navegador del paciente. Toda superficie pública debe pasar la timezone del negocio.
 const dateFormatters = new Map<string, Intl.DateTimeFormat>();
@@ -85,7 +87,8 @@ const DAY_MINUTES = 24 * HOUR_MINUTES;
  */
 export const formatAccessRemaining = (
 	value?: string | null,
-	now: Date = new Date()
+	now: Date = new Date(),
+	timeZone: string = DEFAULT_CALENDAR_TIME_ZONE
 ): string | null => {
 	if (!value) return null;
 	const expiresAtMs = Date.parse(value);
@@ -104,7 +107,8 @@ export const formatAccessRemaining = (
 		return `${hours} horas restantes`;
 	}
 
-	const days = Math.ceil(minutes / DAY_MINUTES);
+	const calendarDays = calendarDaysUntil(value, now, timeZone);
+	const days = calendarDays !== null && calendarDays >= 1 ? calendarDays : Math.ceil(minutes / DAY_MINUTES);
 	return `${days} ${days === 1 ? 'día restante' : 'días restantes'}`;
 };
 

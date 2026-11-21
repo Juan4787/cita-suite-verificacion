@@ -46,10 +46,9 @@
 	let uncertainCreation = $state(false),
 		destroyed = false;
 	let previousScope = untrack(() => scope);
-	const defaultServiceIdSet = $derived(new Set(defaultServiceIds));
 	const serviceDelta = $derived.by(() => {
-		const current = new Set(selectedIds.filter((id) => !defaultServiceIdSet.has(id)));
-		const saved = new Set(baselineIds.filter((id) => !defaultServiceIdSet.has(id)));
+		const current = new Set(selectedIds);
+		const saved = new Set(baselineIds);
 		const added = [...current].filter((id) => !saved.has(id)),
 			removed = [...saved].filter((id) => !current.has(id));
 		return { added, removed, count: added.length + removed.length };
@@ -88,9 +87,6 @@
 			? result.data.message
 			: fallback;
 	}
-	const editingDefaultService = $derived(
-		Boolean(editingService && defaultServiceIdSet.has(editingService.id))
-	);
 	function openServiceEditor(id: string) {
 		if (saving) return;
 		const service = services.find((item) => item.id === id);
@@ -212,18 +208,17 @@
 
 				<div class="mt-5 grid gap-3">
 					{#each services as service}
-						{@const isDefault = defaultServiceIdSet.has(service.id)}
 						<!-- The name keeps a 12rem basis: on a narrow row the edit action wraps below instead of squeezing it. -->
-						<div class={`ux-choice flex flex-wrap items-center gap-3 p-4 ${isDefault || selectedIds.includes(service.id) ? 'ux-choice-active' : ''} ${serviceRowStateClass(service.id)}`}>
+						<div class={`ux-choice flex flex-wrap items-center gap-3 p-4 ${selectedIds.includes(service.id) ? 'ux-choice-active' : ''} ${serviceRowStateClass(service.id)}`}>
 							<label class="flex min-w-0 flex-[1_1_12rem] cursor-pointer items-center gap-4">
 								<input
 									type="checkbox"
 									name="service_id"
 									value={service.id}
-									checked={isDefault || selectedIds.includes(service.id)}
-									disabled={!canManage || isDefault}
+									checked={selectedIds.includes(service.id)}
+									disabled={!canManage}
 									class="accent-check-accent-600"
-									onchange={() => !isDefault && onToggleService(service.id)}
+									onchange={() => onToggleService(service.id)}
 								/>
 								<span class="min-w-0 flex-1">
 									<span class="block font-bold text-fg">{service.name}</span>
@@ -296,12 +291,9 @@
 							name="name"
 							required
 							value={editingService.name}
-							disabled={!canManage || editingDefaultService}
+							disabled={!canManage}
 							class="ux-input"
 						/>
-						{#if editingDefaultService}
-							<span class="mt-1 block text-xs text-copy-subtle">Este nombre identifica un servicio base del consultorio.</span>
-						{/if}
 					</label>
 					<div class="grid gap-4 sm:grid-cols-2">
 						<label>
@@ -329,21 +321,16 @@
 						</label>
 					</div>
 					<fieldset class="space-y-4 border-t border-line pt-4"><legend class="ux-section-title">Información para el paciente</legend><label class="block"><span class="ux-label">Indicaciones para la consulta <span class="text-fg-65">(opcional)</span></span><textarea class="ux-textarea mt-2" name="patient_instructions" rows="2" maxlength="2000" disabled={!canManage}>{editingService.patient_instructions??''}</textarea></label><label class="block"><span class="ux-label">Texto del aviso del turno <span class="text-fg-65">(opcional)</span></span><textarea class="ux-textarea mt-2" name="public_reminder_description" rows="2" maxlength="180" disabled={!canManage}>{editingService.public_reminder_description??''}</textarea><span class="mt-1 block text-sm text-fg-75">Puede verse con el teléfono bloqueado. Evitá datos clínicos.</span></label></fieldset>
-					{#if editingDefaultService}
-						<input type="hidden" name="is_active" value="true" />
-						<input type="hidden" name="is_public" value="true" />
-					{:else}
-						<div class="grid gap-3 sm:grid-cols-2">
-							<label class="ux-choice flex items-center gap-3 px-4 py-3">
-								<input type="checkbox" name="is_active" value="true" checked={editingService.is_active} disabled={!canManage} class="accent-check-accent-600" />
-								<span class="font-bold text-fg">Servicio activo</span>
-							</label>
-							<label class="ux-choice flex items-center gap-3 px-4 py-3">
-								<input type="checkbox" name="is_public" value="true" checked={editingService.is_public} disabled={!canManage} class="accent-check-accent-600" />
-								<span class="font-bold text-fg">Visible al reservar</span>
-							</label>
-						</div>
-					{/if}
+					<div class="grid gap-3 sm:grid-cols-2">
+						<label class="ux-choice flex items-center gap-3 px-4 py-3">
+							<input type="checkbox" name="is_active" value="true" checked={editingService.is_active} disabled={!canManage} class="accent-check-accent-600" />
+							<span class="font-bold text-fg">Servicio activo</span>
+						</label>
+						<label class="ux-choice flex items-center gap-3 px-4 py-3">
+							<input type="checkbox" name="is_public" value="true" checked={editingService.is_public} disabled={!canManage} class="accent-check-accent-600" />
+							<span class="font-bold text-fg">Visible al reservar</span>
+						</label>
+					</div>
 					{#if serviceEditError}
 						<p class="ux-alert">{serviceEditError}</p>
 					{/if}

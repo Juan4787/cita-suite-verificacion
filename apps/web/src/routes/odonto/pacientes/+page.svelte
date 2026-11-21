@@ -49,7 +49,7 @@
 	hasMore = Boolean(initialData.hasMore);
 	nextCursor = initialData.nextCursor ?? null;
 
-	let showCreate = $state($page.url.searchParams.has('nuevo'));
+	let showCreate = $state(initialData.canCreatePatient !== false && $page.url.searchParams.has('nuevo'));
 	let showReport = $state(false);
 	let createFullName = $state('');
 	let createDni = $state('');
@@ -63,6 +63,7 @@
 	let searchInputElement = $state<HTMLInputElement | null>(null);
 
 	const canCreatePatient = $derived(listData.canCreatePatient !== false);
+	const canArchivePatient = $derived(listData.canArchivePatient === true);
 	const activeCount = $derived(Number(listData.activeCount ?? 0));
 	const archivedCount = $derived(Number(listData.archivedCount ?? 0));
 	const draftQuery = $derived(normalizePatientListQuery(search));
@@ -337,7 +338,7 @@
 	});
 
 	$effect(() => {
-		if ($page.url.searchParams.has('nuevo')) showCreate = true;
+		if (canCreatePatient && $page.url.searchParams.has('nuevo')) showCreate = true;
 		if (formState?.message) {
 			showCreate = true;
 			createFullName = formState.full_name ?? createFullName;
@@ -404,7 +405,7 @@
 								<td class="px-6 py-5"><div class="flex items-center gap-4"><div class="grid h-10 w-10 shrink-0 place-items-center rounded-full font-semibold bg-accent-soft text-accent">{(patient.full_name || '?').split(' ').filter(Boolean).slice(0, 2).map((part: string) => part[0]?.toUpperCase()).join('')}</div><div><button type="button" class="text-left text-sm font-semibold hover:underline text-fg" onclick={() => openPatient(patient.id)}>{patient.full_name}</button>{#if listData.showArchived}<p class="mt-1 text-xs text-copy-subtle">Archivado</p>{/if}</div></div></td>
 								<td class="whitespace-nowrap px-6 py-5 text-sm text-fg-n200">{patient.dni || 'Sin DNI'}{patient.phone ? ` ·\u00a0${patient.phone}` : ''}</td>
 								<td class="px-6 py-5 text-sm text-fg-n200">{patient.last_entry_at ? formatDate(patient.last_entry_at) : '—'}</td>
-								<td class="w-px whitespace-nowrap px-6 py-5 text-right"><div class="flex flex-col items-end gap-2"><button type="button" class="ux-btn-secondary whitespace-nowrap" onclick={() => openPatient(patient.id)}>Abrir paciente</button>{#if listData.showArchived}<form method="post" action={`/odonto/pacientes/${patient.id}?/unarchive_patient`}><button type="submit" class="rounded-full border px-4 py-2 text-xs font-semibold border-info-8fb3ff">Desarchivar</button></form>{/if}</div></td>
+								<td class="w-px whitespace-nowrap px-6 py-5 text-right"><div class="flex flex-col items-end gap-2"><button type="button" class="ux-btn-secondary whitespace-nowrap" onclick={() => openPatient(patient.id)}>Abrir paciente</button>{#if listData.showArchived && canArchivePatient}<form method="post" action={`/odonto/pacientes/${patient.id}?/unarchive_patient`}><button type="submit" class="rounded-full border px-4 py-2 text-xs font-semibold border-info-8fb3ff">Desarchivar</button></form>{/if}</div></td>
 							</tr>
 						{/each}
 					</tbody>
@@ -416,7 +417,7 @@
 					<article class="relative rounded-xl border p-4 shadow-sm transition hover:border-accent-600-40 border-line-strong bg-surface">
 						<a href={`/odonto/pacientes/${patient.id}`} class="absolute inset-0 z-0 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-accent-600" aria-label={`Abrir paciente ${patient.full_name}`} onclick={rememberPosition}></a>
 						<div class="pointer-events-none relative z-[1] flex items-center gap-3"><div class="grid h-10 w-10 shrink-0 place-items-center rounded-full font-semibold bg-accent-soft text-accent">{(patient.full_name || '?').split(' ').filter(Boolean).slice(0, 2).map((part: string) => part[0]?.toUpperCase()).join('')}</div><div class="min-w-0 flex-1"><h2 class="break-words font-semibold text-fg">{patient.full_name}</h2><p class="mt-1 text-xs text-fg-n300">DNI {patient.dni || 'Sin DNI'}{patient.phone ? ` ·\u00a0${patient.phone}` : ''}</p><p class="mt-1 text-xs text-copy-subtle">Últ. visita {patient.last_entry_at ? formatDate(patient.last_entry_at) : '—'}</p></div></div>
-						<div class="relative z-10 mt-3 grid gap-2"><button type="button" class="ux-btn-secondary w-full" onclick={() => openPatient(patient.id)}>Abrir paciente</button>{#if listData.showArchived}<form method="post" action={`/odonto/pacientes/${patient.id}?/unarchive_patient`}><button type="submit" class="w-full rounded-full border px-4 py-2.5 text-sm font-semibold border-info-8fb3ff">Desarchivar paciente</button></form>{/if}</div>
+						<div class="relative z-10 mt-3 grid gap-2"><button type="button" class="ux-btn-secondary w-full" onclick={() => openPatient(patient.id)}>Abrir paciente</button>{#if listData.showArchived && canArchivePatient}<form method="post" action={`/odonto/pacientes/${patient.id}?/unarchive_patient`}><button type="submit" class="w-full rounded-full border px-4 py-2.5 text-sm font-semibold border-info-8fb3ff">Desarchivar paciente</button></form>{/if}</div>
 					</article>
 				{/each}
 			</div>
@@ -433,7 +434,7 @@
 <Modal open={showCreate} title="Alta rápida de paciente" on:close={closeModal}>
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<form method="post" action="?/create_patient" use:enhance={createPatientEnhance} class="space-y-4" onkeydown={preventEnterSubmit}>
-		{#if !canCreatePatient}<div class="rounded-xl bg-chip-red-50 px-4 py-3 text-sm font-semibold text-ink-red-700">Tu acceso a Cita Suite venció. Activá tu suscripción para volver a usar la plataforma.</div>{/if}
+		{#if !canCreatePatient}<div class="rounded-xl bg-chip-red-50 px-4 py-3 text-sm font-semibold text-ink-red-700">No tenés permisos para crear pacientes en este momento.</div>{/if}
 		<div class="space-y-2"><label class="text-sm font-semibold text-fg" for="full_name">Nombre y apellido *</label><input id="full_name" name="full_name" required bind:value={createFullName} placeholder="Ej: Juan Pérez" class="ux-input" /></div>
 		<div class="grid gap-3 md:grid-cols-2"><div class="space-y-2"><label class="text-sm font-semibold text-fg" for="dni">DNI (opcional)</label><input id="dni" name="dni" inputmode="numeric" bind:value={createDni} placeholder="Solo números" class="ux-input" /></div><div class="space-y-2"><label class="text-sm font-semibold text-fg" for="phone">Teléfono (opcional)</label><input id="phone" name="phone" inputmode="tel" bind:value={createPhone} placeholder="Código + número" class="ux-input" /></div></div>
 		{#if formState?.message}<div class={`rounded-xl px-4 py-3 text-sm font-semibold ${formState.duplicate ? 'border border-warning-300 bg-chip-amber-50 text-ink-amber-950' : 'border border-danger-300 bg-chip-red-50 text-ink-red-800'}`}><p>{formState.message}</p>{#if formState.duplicate && formState.existingId}<a class="mt-3 inline-flex rounded-xl bg-chip-amber-500 px-4 py-2 font-bold text-ink-s950" href={`/odonto/pacientes/${formState.existingId}`}>Abrir paciente existente</a>{/if}</div>{/if}
