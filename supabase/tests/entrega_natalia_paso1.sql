@@ -18,6 +18,7 @@ declare
   prof uuid := gen_random_uuid();
   integ uuid := gen_random_uuid();
   integ_key text := repeat('a', 32);
+  v_tz text := case when extract(hour from clock_timestamp() at time zone 'America/Argentina/Cordoba') < 22 then 'America/Argentina/Cordoba' else 'Pacific/Honolulu' end;
 begin
   insert into auth.users(id, email) values
     (owner_u, 'paso1-owner-' || owner_u || '@example.test'),
@@ -28,7 +29,7 @@ begin
     ('paso1-admin-' || admin_u || '@example.test', true),
     ('paso1-readonly-' || readonly_u || '@example.test', true);
   insert into public.businesses(id, name, slug, industry, timezone, phone, address, public_booking_enabled, allow_same_day_booking, public_contact_enabled, whatsapp_contact_enabled, whatsapp_phone, max_booking_days_ahead, min_booking_notice_minutes)
-  values(b, 'Consultorio Paso 1', 'paso1-' || left(b::text, 8), 'medicine', 'America/Argentina/Cordoba', '+5493511111111', 'Av. Privada 999', true, false, false, false, '+5493512222222', 90, 0);
+  values(b, 'Consultorio Paso 1', 'paso1-' || left(b::text, 8), 'medicine', v_tz, '+5493511111111', 'Av. Privada 999', true, false, false, false, '+5493512222222', 90, 0);
   update public.business_subscriptions set commercial_access_enabled=true, is_permanent=true, subscription_status='active', paid_until=null, grace_until=null, restricted_until=null, archived_at=null where business_id=b;
   insert into public.business_users(business_id, user_id, role, status, accepted_at) values
     (b, owner_u, 'owner', 'active', now()),
@@ -44,15 +45,17 @@ begin
   update private.appointment_management_runtime set reschedule_enabled=true, email_producer_enabled=true;
   insert into paso1_fixture values
     ('business', b::text), ('owner', owner_u::text), ('admin', admin_u::text), ('readonly', readonly_u::text),
-    ('service', svc::text), ('professional', prof::text), ('integration', integ::text), ('key', integ_key);
+    ('service', svc::text), ('professional', prof::text), ('integration', integ::text), ('key', integ_key), ('tz', v_tz);
 end $$;
 
 -- AF1-001: get_availability_catalog expone allow_same_day_booking y los triggers suben revisiones al cambiarlo
+select set_config('request.jwt.claim.role', 'service_role', true);
 select extensions.is(
   (public.get_availability_catalog(pg_temp.p1id('business'), true)->'business'->>'allow_same_day_booking')::boolean,
   false,
   '1. AF1-001: availability catalog exposes allow_same_day_booking=false'
 );
+select set_config('request.jwt.claim.role', '', true);
 
 do $$
 declare rev_before bigint; cfg_before bigint; rev_after bigint; cfg_after bigint;
@@ -74,14 +77,9 @@ declare
   p uuid := pg_temp.p1id('professional');
   s uuid := pg_temp.p1id('service');
   o uuid := pg_temp.p1id('owner');
-  v_today_local date := (clock_timestamp() at time zone 'America/Argentina/Cordoba')::date;
-  v_same_day timestamptz := least(clock_timestamp() + interval '5 minutes', ((v_today_local + time '23:55') at time zone 'America/Argentina/Cordoba'));
+  v_same_day timestamptz := clock_timestamp() + interval '15 minutes';
   v_manual record;
 begin
-  -- Si ya pasaron las 23:55 hora local, usar el instante actual + 1 min (sigue siendo hoy si < 23:59)
-  if (v_same_day at time zone 'America/Argentina/Cordoba')::date > v_today_local then
-    v_same_day := clock_timestamp();
-  end if;
   begin
     perform * from public.create_appointment_with_patient_identity(
       b, 'public', null, 'Paciente Hoy', '3515000001', '+5493515000001', null,
@@ -106,7 +104,8 @@ declare
   b uuid := pg_temp.p1id('business');
   p uuid := pg_temp.p1id('professional');
   s uuid := pg_temp.p1id('service');
-  v_tomorrow timestamptz := (((clock_timestamp() at time zone 'America/Argentina/Cordoba')::date + 2) + time '10:00') at time zone 'America/Argentina/Cordoba';
+  v_tz text := pg_temp.p1v('tz');
+  v_tomorrow timestamptz := (((clock_timestamp() at time zone v_tz)::date + 2) + time '10:00') at time zone v_tz;
   v_created record;
   v_claim jsonb;
 begin
@@ -129,23 +128,23 @@ select extensions.pass('4. AF1-002: clinic without verified sender allows bookin
 do $$
 declare
   b uuid := pg_temp.p1id('business');
-  v_token text := pg_temp.p1v('apt_token');
-  v_view jsonb := public.get_patient_appointment_management_view(v_token, true, null);
+  v_apt uuid := pg_temp.p1id('apt_future');
+  v_cap text := public.issue_appointment_management_capability(b, v_apt, 1);
+  v_sem_rev text := private.appointment_semantic_revision(b, v_apt);
   v_rev bigint;
-  v_today_local date := (clock_timestamp() at time zone 'America/Argentina/Cordoba')::date;
-  v_same_day timestamptz := least(clock_timestamp() + interval '5 minutes', ((v_today_local + time '23:55') at time zone 'America/Argentina/Cordoba'));
+  v_same_day timestamptz := clock_timestamp() + interval '20 minutes';
+  v_terms jsonb := private.appointment_reschedule_financial_terms(b, v_apt, v_same_day, clock_timestamp());
 begin
   select booking_availability_revision into v_rev from public.businesses where id = b;
-  if (v_same_day at time zone 'America/Argentina/Cordoba')::date = v_today_local and v_same_day > clock_timestamp() then
-    begin
-      perform public.apply_patient_appointment_management(
-        v_token, true, gen_random_uuid(), v_view->>'revision', 'reschedule', v_same_day, v_rev, v_view->'financial_terms', null
-      );
-      raise exception 'SAME_DAY_RESCHEDULE_BYPASSED';
-    exception when others then
-      if sqlerrm is distinct from 'APPOINTMENT_RESCHEDULE_TIME_INVALID' then raise; end if;
-    end;
-  end if;
+  perform set_config('request.jwt.claim.sub', '', true);
+  begin
+    perform public.apply_patient_appointment_management(
+      v_cap, false, gen_random_uuid(), v_sem_rev, 'reschedule', v_same_day, v_rev, v_terms, null
+    );
+    raise exception 'SAME_DAY_RESCHEDULE_BYPASSED';
+  exception when others then
+    if sqlerrm is distinct from 'APPOINTMENT_RESCHEDULE_TIME_INVALID' then raise; end if;
+  end;
 end $$;
 select extensions.pass('5. AF1-001: patient self-reschedule into today is rejected when allow_same_day_booking=false');
 
@@ -156,7 +155,7 @@ select extensions.throws_ok(
   $$select * from public.create_appointment_with_patient_identity(
     pg_temp.p1id('business'), 'public', null, 'Paciente Sin Mail Con Remitente', '3515000004', '+5493515000004', null,
     false, null, pg_temp.p1id('service'), array[pg_temp.p1id('professional')],
-    (((clock_timestamp() at time zone 'America/Argentina/Cordoba')::date + 3) + time '10:00') at time zone 'America/Argentina/Cordoba',
+    (((clock_timestamp() at time zone pg_temp.p1v('tz'))::date + 3) + time '10:00') at time zone pg_temp.p1v('tz'),
     null, null, false, 'public_booking', 'valid', false, gen_random_uuid()::text
   )$$,
   'P0001', 'PUBLIC_PATIENT_EMAIL_REQUIRED',
@@ -183,6 +182,7 @@ select extensions.ok(
 
 -- AF1-012: agregar integrante o habilitar admin que atiende NO crea Consulta / Otro servicio si ya hay servicios activos
 set local role authenticated;
+select set_config('request.jwt.claim.role', 'authenticated', true);
 select set_config('request.jwt.claim.sub', pg_temp.p1v('owner'), true);
 do $$
 declare
@@ -220,28 +220,30 @@ select extensions.is(
 do $$
 declare
   v_generic uuid := gen_random_uuid();
-  v_rev bigint;
 begin
   insert into public.services(id, business_id, name, duration_minutes, is_active, is_public)
   values(v_generic, pg_temp.p1id('business'), 'Consulta', 30, true, true);
   insert into public.professional_services(business_id, professional_id, service_id)
   values(pg_temp.p1id('business'), pg_temp.p1id('professional'), v_generic);
-  select booking_availability_revision into v_rev from public.businesses where id = pg_temp.p1id('business');
-  perform set_config('request.jwt.claim.sub', pg_temp.p1v('owner'), true);
-  execute 'set local role authenticated';
-  perform public.save_professional_editor(
-    pg_temp.p1id('business'), pg_temp.p1id('professional'), v_rev, null,
-    array[pg_temp.p1id('service')], null, null, null, false
-  );
-  execute 'reset role';
-  if exists(select 1 from public.professional_services where business_id = pg_temp.p1id('business') and professional_id = pg_temp.p1id('professional') and service_id = v_generic) then
-    raise exception 'DEFAULT_SERVICE_FORCED_BACK';
-  end if;
+  insert into paso1_fixture values('generic_service', v_generic::text);
 end $$;
-select extensions.pass('12. AF1-012: save_professional_editor allows unassigning Consulta without forcing it back');
+set local role authenticated;
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claim.sub', pg_temp.p1v('owner'), true);
+select public.save_professional_editor(
+  pg_temp.p1id('business'), pg_temp.p1id('professional'),
+  (select booking_availability_revision from public.businesses where id = pg_temp.p1id('business')),
+  null, array[pg_temp.p1id('service')], null, null, null, false
+);
+reset role;
+select extensions.ok(
+  not exists(select 1 from public.professional_services where business_id = pg_temp.p1id('business') and professional_id = pg_temp.p1id('professional') and service_id = pg_temp.p1id('generic_service')),
+  '12. AF1-012: save_professional_editor allows unassigning Consulta without forcing it back'
+);
 
 -- AF1-019: get_patient_data_revision devuelve can_create_patient=false para readonly y true para owner
 set local role authenticated;
+select set_config('request.jwt.claim.role', 'authenticated', true);
 select set_config('request.jwt.claim.sub', pg_temp.p1v('readonly'), true);
 select extensions.is(
   (select can_create_patient from public.get_patient_data_revision(pg_temp.p1id('business'))),
@@ -271,17 +273,14 @@ declare
   b uuid := pg_temp.p1id('business');
   p uuid := pg_temp.p1id('professional');
   s uuid := pg_temp.p1id('service');
-  v_today_local date := (clock_timestamp() at time zone 'America/Argentina/Cordoba')::date;
-  v_same_day timestamptz := least(clock_timestamp() + interval '5 minutes', ((v_today_local + time '23:55') at time zone 'America/Argentina/Cordoba'));
+  v_same_day timestamptz := clock_timestamp() + interval '25 minutes';
   v_created record;
 begin
-  if (v_same_day at time zone 'America/Argentina/Cordoba')::date = v_today_local and v_same_day > clock_timestamp() then
-    select * into v_created from public.create_appointment_with_patient_identity(
-      b, 'public', null, 'Paciente Hoy Habilitado', '3515000005', '+5493515000005', 'hoy@example.test',
-      false, null, s, array[p], v_same_day, null, null, false, 'public_booking', 'valid', false, gen_random_uuid()::text
-    );
-    if v_created.id is null then raise exception 'SAME_DAY_ENABLED_FAILED'; end if;
-  end if;
+  select * into v_created from public.create_appointment_with_patient_identity(
+    b, 'public', null, 'Paciente Hoy Habilitado', '3515000005', '+5493515000005', 'hoy@example.test',
+    false, null, s, array[p], v_same_day, null, null, false, 'public_booking', 'valid', false, gen_random_uuid()::text
+  );
+  if v_created.id is null then raise exception 'SAME_DAY_ENABLED_FAILED'; end if;
 end $$;
 select extensions.pass('16. AF1-001: public same-day booking succeeds when allow_same_day_booking=true');
 
