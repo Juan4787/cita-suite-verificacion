@@ -160,6 +160,7 @@ SQL
 # policy wait. The producer is on so rollback must cover an actual queue write.
 query <<'SQL'
 update private.appointment_management_runtime set email_producer_enabled=true;
+select public.operator_set_business_email_sender('b9300000-0000-4000-8000-000000000001','booking-policy-race.cita-suite.com.ar','verified');
 select booking_policy_race.remember('staff');
 insert into booking_policy_race.results values('staff-before',booking_policy_race.counts());
 update public.business_subscriptions set is_permanent=false,paid_until=clock_timestamp()+interval '3 seconds',grace_until=null

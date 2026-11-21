@@ -32,6 +32,7 @@ do $$declare b uuid:=gen_random_uuid(); u uuid:=gen_random_uuid(); r uuid:=gen_r
  insert into staff_policy_fixture values('business',b::text),('owner',u::text),('reception',r::text),('readonly',viewer::text),('professional',p::text),('service',s::text),('key',gen_random_uuid()::text);
  update private.deposit_automation set enabled=true;
  update private.appointment_management_runtime set reschedule_enabled=true,email_producer_enabled=true;
+ perform public.operator_set_business_email_sender(b,'staff-policy.cita-suite.com.ar','verified');
  insert into public.deposit_policies(business_id,enabled,auto_cancel_enabled,amount_mode,fixed_amount,transfer_details,applies_to_manual)
  values(b,true,true,'fixed',40000,'Synthetic staff transfer',true);
 end$$;
