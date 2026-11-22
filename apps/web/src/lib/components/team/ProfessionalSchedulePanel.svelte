@@ -637,7 +637,8 @@
 											<form method="POST" action="?/delete_rule" class="flex w-full flex-col items-start gap-2 rounded-xl border border-line bg-fill-04 px-3 py-2" use:enhance={refreshEnhance}>
 												<input type="hidden" name="rule_id" value={rule.id}/><input type="hidden" name="availability_revision" value={data.availabilityRevision??0} />
 												<span class="whitespace-nowrap text-sm font-bold text-fg">{rule.start_time.slice(0, 5)} - {rule.end_time.slice(0, 5)}</span>
-												<span class="text-xs font-bold text-fg-50">Turnos cada {rule.slot_interval_minutes}&nbsp;min · Descanso entre consultas: {rule.break_minutes}&nbsp;min</span>{#if rule.service_scope==='restricted'}<span class="text-xs text-fg-75">{restrictionLabel((rule.rule_services??[]).map(item=>item.service_id))}</span>{/if}
+												<span class="text-xs font-bold text-fg-50">Turnos cada {rule.slot_interval_minutes}&nbsp;min</span>
+												<span class="text-xs font-bold text-fg-50">Descanso entre consultas: {rule.break_minutes}&nbsp;min</span>{#if rule.service_scope==='restricted'}<span class="text-xs text-fg-75">{restrictionLabel((rule.rule_services??[]).map(item=>item.service_id))}</span>{/if}
 												<button type="submit" disabled={!canOperate} class="min-h-11 whitespace-nowrap font-bold text-danger disabled:opacity-50">Quitar</button>
 											</form>
 										{/each}

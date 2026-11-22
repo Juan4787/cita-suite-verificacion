@@ -959,8 +959,10 @@
 								<div class="rounded-2xl border border-line bg-fill-04 px-4 py-3">
 									<p class="text-sm font-bold text-copy-subtle">Bloque {index + 1}</p>
 									<p class="mt-1 text-lg font-bold text-fg">{block.days || 'Sin días'}</p>
-									<p class="mt-1 text-sm font-bold text-fg-65">
-										{block.ranges || 'Sin horario'} · turnos cada {block.gridInterval}&nbsp;min · descanso {block.slotInterval}&nbsp;min
+									<p class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm font-bold text-fg-65">
+										<span>{block.ranges || 'Sin horario'}</span>
+										<span>Turnos cada {block.gridInterval}&nbsp;min</span>
+										<span>Descanso {block.slotInterval}&nbsp;min</span>
 									</p>
 								</div>
 							{/each}
