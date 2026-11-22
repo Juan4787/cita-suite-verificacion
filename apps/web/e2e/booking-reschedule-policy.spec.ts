@@ -44,6 +44,7 @@ test('@candidate-behavior isolated informed booking: stale policy, atomic retry 
     values('${businessId}',true,true,'fixed',40000,'Alias sintético sin cuenta bancaria');
    update private.deposit_automation set enabled=true;
    update private.appointment_management_runtime set reschedule_enabled=true;
+   select public.operator_set_business_email_sender('${businessId}','informed-${businessId}.cita-suite.com.ar','verified');
    update public.appointment_email_policies set require_deposit_on_reschedule=false,previous_deposit_disposition='credit',revision=revision+1 where business_id='${businessId}';
    select set_config('request.jwt.claim.sub','${ownerId}',true);
    select public.save_professional_booking_form('${businessId}','${professionalId}',0,

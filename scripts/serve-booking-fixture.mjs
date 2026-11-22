@@ -455,7 +455,7 @@ try {
     `
  begin;
  ${realAuth ? '' : "insert into auth.users(id,email) values('90000000-0000-4000-8000-000000000004','e2e-owner@example.test'),('90000000-0000-4000-8000-000000000007','e2e-doctor@example.test');"}
- insert into public.businesses(id,name,slug,industry,timezone,min_booking_notice_minutes,max_booking_days_ahead,address,patient_documents_enabled,public_contact_enabled,whatsapp_contact_enabled,whatsapp_phone,whatsapp_message) values('${businessId}','Consultorio de prueba','booking-e2e-isolated','other','America/Argentina/Buenos_Aires',60,180,'Dirección sintética 123',true,true,true,'+5491112345678','Consulta general sintética');
+ insert into public.businesses(id,name,slug,industry,timezone,allow_same_day_booking,min_booking_notice_minutes,max_booking_days_ahead,address,patient_documents_enabled,public_contact_enabled,whatsapp_contact_enabled,whatsapp_phone,whatsapp_message) values('${businessId}','Consultorio de prueba','booking-e2e-isolated','other','America/Argentina/Buenos_Aires',true,60,180,'Dirección sintética 123',true,true,true,'+5491112345678','Consulta general sintética');
  insert into public.business_users(business_id,user_id,role,status,accepted_at) values('${businessId}','90000000-0000-4000-8000-000000000004','owner','active',now()),('${businessId}','90000000-0000-4000-8000-000000000007','professional','active',now());
  update public.business_subscriptions set commercial_access_enabled=true,is_permanent=true,subscription_status='active',paid_until=null,grace_until=null,restricted_until=null where business_id='${businessId}';
  insert into public.services(id,business_id,name,duration_minutes) values('${serviceId}','${businessId}','Consulta de prueba',30);
