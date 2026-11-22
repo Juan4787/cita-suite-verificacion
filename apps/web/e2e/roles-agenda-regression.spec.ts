@@ -908,7 +908,7 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await page.goto(`/odonto/profesionales/${fixture.professionalId}?tab=horarios`);
 		await page.waitForLoadState('networkidle');
 		const scheduleForm = page.locator('form[action="?/save_weekly_rules"]');
-		const breakInput = scheduleForm.locator('input[type="number"]').first();
+		const breakInput = scheduleForm.getByLabel(/Descanso entre consultas/).first();
 		await expect(breakInput).toHaveValue('0');
 		await replaceNumberLikeAUser(breakInput, '23');
 		const saveScheduleButton = scheduleForm.getByRole('button', {
@@ -1055,7 +1055,7 @@ test.describe('roles, profesionales y agenda - regresiones críticas', () => {
 		await expect(adminPage.getByRole('heading', { name: adminProfessionalName })).toBeVisible();
 		await adminPage.waitForLoadState('networkidle');
 		const scheduleForm = adminPage.locator('form[action="?/save_weekly_rules"]');
-		const breakInput = scheduleForm.locator('input[type="number"]').first();
+		const breakInput = scheduleForm.getByLabel(/Descanso entre consultas/).first();
 		await replaceNumberLikeAUser(breakInput, '19');
 		await expect(breakInput).toHaveValue('19');
 		const saveScheduleButton = scheduleForm.getByRole('button', {
