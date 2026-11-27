@@ -35,11 +35,11 @@ test('@candidate-behavior D3: recordatorios por correo cubren en la lista y en e
 				('${patientWithEmail}', '${f.businessId}', '${owner}', 'Paciente Cubierto Correo D3', '+5493511111101', 'd3-cubierto@example.test'),
 				('${patientWithoutEmail}', '${f.businessId}', '${owner}', 'Paciente Sin Correo D3', '+5493511111102', null);
 			insert into public.appointments(id, business_id, patient_id, service_id, professional_id, starts_at, ends_at, blocking_starts_at, blocking_ends_at, status, source, service_name_snapshot, professional_name_snapshot, duration_minutes_snapshot)
-			select id, '${f.businessId}', patient_id, '${assignment.service_id}', '${assignment.professional_id}', starts, starts + interval '15 minutes', starts, starts + interval '15 minutes', 'reserved', 'manual', 'Consulta D3', 'Profesional D3', 15
+			select v.id, '${f.businessId}', v.patient_id, '${assignment.service_id}', '${assignment.professional_id}', v.starts, v.starts + interval '15 minutes', v.starts, v.starts + interval '15 minutes', 'reserved', 'manual', 'Consulta D3', 'Profesional D3', 15
 			from public.businesses b,
 			lateral (values
-				('${aptCovered}'::uuid, '${patientWithEmail}'::uuid, ((now() at time zone b.timezone)::date + 1 + time '23:30') at time zone b.timezone),
-				('${aptUncovered}'::uuid, '${patientWithoutEmail}'::uuid, ((now() at time zone b.timezone)::date + 1 + time '23:45') at time zone b.timezone)
+				('${aptCovered}'::uuid, '${patientWithEmail}'::uuid, (((now() at time zone b.timezone)::date + 1) + time '23:30') at time zone b.timezone),
+				('${aptUncovered}'::uuid, '${patientWithoutEmail}'::uuid, (((now() at time zone b.timezone)::date + 1) + time '23:45') at time zone b.timezone)
 			) v(id, patient_id, starts)
 			where b.id = '${f.businessId}';
 			update public.appointment_management_states
@@ -77,11 +77,10 @@ test('@candidate-behavior D3: recordatorios por correo cubren en la lista y en e
 
 		// 3. Revisión visual, contraste y layout en claro y oscuro y en anchos móvil/tableta/escritorio
 		for (const theme of ['light', 'dark'] as const) {
+			await chooseTheme(page, theme);
 			for (const width of [320, 360, 390, 430, 768, 1280]) {
 				await page.setViewportSize({ width, height: 850 });
 				await page.goto(origin + '/odonto/recordatorios?dia=manana');
-				await chooseTheme(page, theme);
-				await page.reload();
 				await expectRenderedTheme(page, theme);
 				expect((await contrastViolations(page)).violations).toEqual([]);
 				issues.push(...(await layoutIssues(page, 'main a:visible, main button:visible', 'main')));
@@ -97,7 +96,7 @@ test('@candidate-behavior D3: recordatorios por correo cubren en la lista y en e
 		const policy = JSON.parse(prevPolicy) as { email_enabled: boolean; sender_verified: boolean };
 		const sender = JSON.parse(prevSender) as { sending_domain: string | null; domain_state: string; provider_domain_key: string | null; reply_to_email: string | null } | null;
 		const sqlLit = (v: string | null) => (v === null ? 'null' : `'${v.replaceAll("'", "''")}'`);
-		const restoreSenderSql = sender
+		const restoreSenderSql = sender && sender.sending_domain
 			? `select public.operator_set_business_email_sender('${f.businessId}', ${sqlLit(sender.sending_domain)}, ${sqlLit(sender.domain_state)}, ${sqlLit(sender.provider_domain_key)}, ${sqlLit(sender.reply_to_email)});`
 			: `delete from private.business_email_senders where business_id='${f.businessId}';`;
 		f.sql(`begin;
