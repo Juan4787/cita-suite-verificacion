@@ -5262,6 +5262,7 @@ export type Database = {
         Returns: Json
       }
       get_email_unsubscribe: { Args: { p_token: string }; Returns: Json }
+      get_email_unsubscribe_state: { Args: { p_token: string }; Returns: Json }
       get_integrated_public_availability_snapshot: {
         Args: {
           p_business_id: string
@@ -5516,6 +5517,17 @@ export type Database = {
       list_appointment_email_deliveries: {
         Args: { p_appointment_id: string; p_business_id: string }
         Returns: Json
+      }
+      list_appointment_email_reminder_coverage: {
+        Args: {
+          p_appointment_ids: string[]
+          p_business_id: string
+          p_now?: string
+        }
+        Returns: {
+          appointment_id: string
+          covered: boolean
+        }[]
       }
       list_business_role_access: {
         Args: { target_business_id: string }

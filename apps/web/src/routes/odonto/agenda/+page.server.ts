@@ -127,6 +127,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 		}
 	})();
 	const reminderCountPromise = (async () => {
+		if (!DEPOSIT_ROLES.has(business.role) || !business.access.canUseBusiness) return 0;
 		try {
 			const pushSubscriptionsSupabase = await createSupabaseAdminClient('odonto', fetch);
 			return await countTomorrowUncovered(supabase, business.business, {

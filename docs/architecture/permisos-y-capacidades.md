@@ -165,9 +165,9 @@ Las tablas de correo están en `private` y nadie las lee directo: todo pasa por 
 
 | Función | Quién | Para qué |
 |---|---|---|
-| `claim_appointment_email_batch`, `record_appointment_email_results`, `record_email_provider_event`, `run_appointment_email_retention`, `get_email_unsubscribe`, `apply_email_unsubscribe`, `operator_set_business_email_sender` | Sólo `service_role` | El programador, el webhook firmado y la página de baja |
-| `list_appointment_email_deliveries`, `resolve_appointment_email_delivery`, `get_business_email_status` | Dueña, administración y recepción de ese consultorio | Ver los correos de un turno y decidir uno en comprobación |
+| `claim_appointment_email_batch`, `record_appointment_email_results`, `record_email_provider_event`, `run_appointment_email_retention`, `get_email_unsubscribe`, `get_email_unsubscribe_state`, `apply_email_unsubscribe`, `operator_set_business_email_sender` | Sólo `service_role` | El programador, el webhook firmado y la página de baja (`get_email_unsubscribe_state` expone sólo contacto público en enlaces vencidos, Lote 0 D2) |
+| `list_appointment_email_deliveries`, `resolve_appointment_email_delivery`, `get_business_email_status`, `list_appointment_email_reminder_coverage` | Dueña, administración y recepción de ese consultorio | Ver los correos de un turno, decidir uno en comprobación y consultar la cobertura de recordatorios por correo en Recordatorios y Agenda (Lote 0 D3) |
 | `save_business_email_contact` | Dueña y administración | Correo donde se reciben las respuestas |
 | `operator_get_email_operations`, `operator_set_email_operations` | Sólo `service_role`; la página admite únicamente la cuenta maestra verificada | Crédito, cupo, interruptor y pausas |
 
-Un profesional o una lectura sola no ven la sección de correos del turno. El operador ve estados y conteos, nunca la dirección de un paciente. Pruebas: `appointment_email_delivery.sql` 1 y 31, `appointment_email_operations.sql` 1, y las pruebas de servidor de cada ruta.
+Un profesional o una lectura sola no ven la sección de correos del turno ni la cobertura de recordatorios por correo. El operador ve estados y conteos, nunca la dirección de un paciente. Pruebas: `appointment_email_delivery.sql` 1 y 31, `appointment_email_operations.sql` 1, `entrega_natalia_lote0.sql` 3 y 9–12, y las pruebas de servidor de cada ruta. Ver además el [catálogo único de correos al paciente](correos-al-paciente.md).

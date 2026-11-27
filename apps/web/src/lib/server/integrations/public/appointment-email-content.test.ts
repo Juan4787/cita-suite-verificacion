@@ -134,6 +134,106 @@ describe('truthful content (RM06, UI08)', () => {
 	});
 });
 
+describe('modality-specific instructions (D1)', () => {
+	const detailPurposes = [
+		'booking_receipt',
+		'reschedule_receipt',
+		'deposit_request',
+		'reminder_72h',
+		'reminder_24h'
+	] as const;
+
+	const depositPending = {
+		appointment_id: 'appointment-1',
+		status: 'pending',
+		amount: 40000,
+		currency: 'ARS',
+		request_from: '2026-11-10T12:00:00.000Z',
+		due_at: '2026-11-18T15:00:00.000Z',
+		auto_cancel: true,
+		waived_reason: null,
+		recorded_at: null,
+		reminder_opened_at: null,
+		expired_at: null,
+		revision: 1
+	};
+
+	const bothInstructionsSnapshot = (modality: 'in_person' | 'video', videoInstructions: string | null = 'Conectate al enlace de la consulta online 5 minutos antes.') => ({
+		modality,
+		integration: {
+			is_active: true,
+			public_key: 'a'.repeat(32),
+			modality,
+			video_instructions_snapshot: videoInstructions
+		},
+		business: {
+			...snapshot().business,
+			address: 'Presidente Roca 2906',
+			address_instructions: 'Portón rojo, timbre 4B',
+			maps_url: 'https://maps.app.goo.gl/ejemplo'
+		}
+	});
+
+	it.each(detailPurposes)(
+		'virtual %s muestra indicaciones online y nunca dirección ni indicaciones para llegar',
+		(purpose) => {
+			const snap = {
+				...bothInstructionsSnapshot('video'),
+				...(purpose === 'deposit_request' ? { deposit: depositPending } : {})
+			};
+			const built = build(work(purpose, {}, snap));
+			for (const body of [built.text, built.html]) {
+				expect(body).toContain('Modalidad: virtual');
+				expect(body).toContain('Conectate al enlace de la consulta online 5 minutos antes.');
+				expect(body).not.toContain('Presidente Roca 2906');
+				expect(body).not.toContain('Portón rojo');
+				expect(body).not.toContain('timbre 4B');
+				expect(body).not.toContain('Cómo llegar');
+				expect(body).not.toContain('maps.app.goo.gl');
+			}
+		}
+	);
+
+	it.each(detailPurposes)(
+		'presencial %s muestra dirección e indicaciones para llegar y nunca indicaciones online',
+		(purpose) => {
+			const snap = {
+				...bothInstructionsSnapshot('in_person'),
+				...(purpose === 'deposit_request' ? { deposit: depositPending } : {})
+			};
+			const built = build(work(purpose, {}, snap));
+			for (const body of [built.text, built.html]) {
+				expect(body).toContain('Presidente Roca 2906');
+				expect(body).toContain('Portón rojo, timbre 4B');
+				expect(body).toContain('https://maps.app.goo.gl/ejemplo');
+				expect(body).not.toContain('Modalidad: virtual');
+				expect(body).not.toContain('Conectate al enlace de la consulta online');
+			}
+		}
+	);
+
+	it('turno virtual sin indicaciones online omite la línea de indicaciones aunque el consultorio tenga indicaciones físicas', () => {
+		const built = build(work('booking_receipt', {}, bothInstructionsSnapshot('video', null)));
+		for (const body of [built.text, built.html]) {
+			expect(body).toContain('Modalidad: virtual');
+			expect(body).not.toContain('Indicaciones:');
+			expect(body).not.toContain('Portón rojo');
+		}
+	});
+
+	it('comprobante de cancelación virtual nunca filtra dirección, mapa ni indicaciones para llegar', () => {
+		const built = build(
+			work('cancellation_receipt', {}, { ...bothInstructionsSnapshot('video'), status: 'cancelled', can_cancel: false, can_reschedule: false })
+		);
+		for (const body of [built.text, built.html]) {
+			expect(body).not.toContain('Presidente Roca 2906');
+			expect(body).not.toContain('Portón rojo');
+			expect(body).not.toContain('Conectate al enlace');
+			expect(body).not.toContain('maps.app.goo.gl');
+		}
+	});
+});
+
 describe('parseAppointmentEmailWork', () => {
 	it('refuses an unknown purpose', () => {
 		expect(() => parseAppointmentEmailWork({ delivery_id: 'd', lease_token: 'l', purpose: 'promotion', recipient: 'x', token: null, unsubscribe_token: 'u', sender: { from_address: 'a', reply_to: 'b' }, preferences: { show_cancel: true, show_reschedule: true }, snapshot: {} })).toThrow();

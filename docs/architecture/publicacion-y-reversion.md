@@ -1,10 +1,45 @@
 # Publicación y reversión
 
-## Último estado comprobado — correo del pagador y rechazos de Mercado Pago explicados: 18 de noviembre de 2026, 23:47 hora argentina (02:47 UTC del 19)
+## Último estado comprobado — paso 1 de la entrega a Natalia (13 correcciones de auditoría): 21 de noviembre de 2026, 22:23 hora argentina (01:23 UTC del 22)
 
 **La única vuelta atrás vigente es la de este apartado.** Las de los apartados siguientes son historia.
 
-**Producción sirve** la instantánea `68cc273385c169e02e22504a7d0d00b2ed532b85` de `main` `f147d127`, Worker `app`, versión de Cloudflare **`ef410385-86de-46b7-a804-80ba592a2a9c`**. 169 migraciones, sin cambios de base. Programador `0f77c160-ccf0-46e9-bac7-dce4051accf1`, sin cambios: empaqueta sólo `apps/scheduler/` y `packages/shared/src/scheduled-jobs.ts`, que no cambiaron.
+**Producción sirve** la instantánea `b6c3a8aea05c5c10b789edc544bb9f96fbc26a33` en `main`, Worker `app`, versión de Cloudflare **`3cd96265-1ed2-4769-aa65-e12bd9bfe110`**. **170 migraciones:** la última es `20261121010000_entrega_natalia_paso1.sql` (`sha256` `168e8bb4aa6a7c935bee41947041595ffc09671da02245fb7eca4a64187ebfe6`). Programador `cita-suite-scheduler` reinstalado en versión **`11c3a192-373c-4f22-ada1-c45755b92a3c`** con los mismos cinco cron (`*/5`, `1-59/5`, `2-59/5`, `3-59/5`, `17 */3`).
+
+**Qué trae** ([plan, bitácora y evidencia del paso 1](../plans/entrega-natalia-paso-1.md)):
+- `AF1-001`: `allow_same_day_booking` aplicado de punta a punta en zona horaria del consultorio (disponibilidad, reserva directa/embebida y reprogramación pública), visible y editable en `/odonto/configuracion/reserva-online`; la agenda interna sigue permitiendo cargar turnos para hoy.
+- `AF1-018`: en `/turno/[token]` y `/embed/v1/[key]/turno/[token]`, la confirmación «Tu turno quedó reservado» va primero dentro de `max-w-3xl`, antes de «Arancel registrado al reservar» e «Indicaciones para tu turno».
+- `AF1-014`: los bloques de horario muestran y editan «Cada cuánto empieza un turno (minutos)»; los bloques nuevos arrancan con la duración de la consulta (60 min para Natalia) y los existentes no cambian al editar otros campos.
+- `AF1-010`: `/api/public/contacto/[key]` y `/api/public/reservas/[key]/catalogo` exponen teléfono/dirección/WhatsApp con criterio coherente y sin 404 cuando el contacto público está apagado; `/turno/[token]` confirmado sigue mostrando dirección para asistir.
+- `AF1-002`: un consultorio sin remitente verificado no exige email al reservar, no promete correos ni encola eventos/entregas muertas.
+- `AF1-004`: los enlaces públicos de reserva sirven un único `<title>` SSR con el nombre del consultorio más `og:title` y `description`.
+- `AF1-015`: «Preguntas al paciente» permite ver, editar y conservar el `Texto de ayuda` (`help`, hasta 300 caracteres).
+- `AF1-012`: agregar o habilitar integrantes de equipo no impone «Consulta» ni «Otro servicio» si el consultorio ya tiene servicios activos, y los servicios base se pueden renombrar, ocultar, desactivar y desasignar.
+- `AF1-003`: los planes pagados aparte (`access_source = 'manual'`) avisan su vencimiento 30 días calendario antes en la zona horaria del consultorio.
+- `AF1-019`: cada rol ve habilitado sólo lo que puede ejecutar (`readonly` con `+ Nuevo paciente` deshabilitado; `reception`/`readonly` sin `Desarchivar`; `admin` sin edición/baja sobre `owner` ni sobre otro `admin`, ni promoción a `professional`).
+- `AF1-007`: todos los avisos por umbral de días cuentan días calendario en la zona horaria correspondiente (crédito de Zoho avisa exacto 14 días calendario antes en Argentina).
+- `AF1-013`: `/internal/jobs/generate-reminder-dispatches` y `/internal/jobs/process-message-dispatches` responden `410` cuando los entrypoints heredados están apagados (`503` cerrado si falla la consulta).
+- `AF1-016`: `docs/architecture/permisos-y-capacidades.md` alineado con el alta real de Equipo y la visualización de `readonly`.
+
+Juan lo autorizó el 21 de noviembre a las 19:21 hora argentina («cuando todo esté verificado, publicalo»).
+
+**Verificación sobre la revisión exacta (`b6c3a8ae`):**
+- local (`pnpm verify:fast` + *break-proof* 5/5): tipos sin errores ni advertencias, 2.257 pruebas de servidor y 374 de componentes;
+- GitHub completa `44967198981` (20m29s): tipos, 2.257 server + 374 client, 170 migraciones, 123 suites SQL (incluyendo `entrega_natalia_paso1.sql`) + concurrencia, tipos exactos, Chromium 83/83, demo y base Natalia;
+- paquete `44968891552`, Chromium sobre paquete `44969010280` (83/83), Firefox sobre paquete `44970155897` y WebKit sobre paquete `44970573918`;
+- `verify-production-release.mjs` aprobado a las 01:23:40 UTC: 152 archivos idénticos y 78 relaciones sin exposición anónima; ambos `/_app/version.json` dicen `b6c3a8aea05c5c10b789edc544bb9f96fbc26a33`;
+- verificación en vivo en producción sobre el consultorio temporal `944bcebc-721b-4498-b44f-3379a8cb4045` (archivado y limpio al cierre) y comprobación de sólo lectura de Natalia (huella idéntica `75bb96cd…` y 24/24 en su turnero).
+
+**Publicación:**
+- ensayo (`rehearse-production-migrations.mjs`) a las 01:20 UTC: `applied: 169`, `pending: 1`, `failures: 0`;
+- respaldo `~/.local/share/cita-suite/backups/production-2026-11-22T01-20-38-110Z`: 129 tablas, 4.771 filas, 169 migraciones, 26 objetos, `objectFailures: 0`;
+- programador sin cron (`dde08d59-92e4-45d1-9f33-31a9ba35b54e`); migración 170 a las 01:22:50 UTC en 1,78 s; Worker `app` (`3cd96265-1ed2-4769-aa65-e12bd9bfe110`) a las 01:23:18 UTC; verificación a las 01:23:40 UTC; programador con cron (`11c3a192-373c-4f22-ada1-c45755b92a3c`, preflight `401/410` aprobado).
+
+**Vuelta atrás:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback ef410385-86de-46b7-a804-80ba592a2a9c --name app --message "<motivo>" --yes`, la versión del 18 de noviembre a las 23:47. Es compatible con la migración 170 porque ésta conserva todas las firmas SQL, tablas y columnas existentes y sólo endurece validaciones internas y añade `allow_same_day_booking` en el JSON del catálogo. Después, los dos `/_app/version.json` deben decir `68cc273385c169e02e22504a7d0d00b2ed532b85`. La migración no se revierte. Nunca una versión anterior a E.
+
+## Estado anterior — correo del pagador y rechazos de Mercado Pago explicados: 18 de noviembre de 2026, 23:47 hora argentina (02:47 UTC del 19)
+
+**Sirvió hasta el 21 de noviembre a las 22:23 hora argentina** la instantánea `68cc273385c169e02e22504a7d0d00b2ed532b85` de `main` `f147d127`, Worker `app`, versión de Cloudflare **`ef410385-86de-46b7-a804-80ba592a2a9c`**. 169 migraciones, sin cambios de base. Programador `0f77c160-ccf0-46e9-bac7-dce4051accf1`, sin cambios: empaqueta sólo `apps/scheduler/` y `packages/shared/src/scheduled-jobs.ts`, que no cambiaron.
 
 **Qué trae** ([plan, registro y traspaso](../plans/cobros-mercadopago-20261118.md), sección 10):
 - el correo del pagador de Mercado Pago se escribe siempre, empieza vacío y se conserva tras un error;

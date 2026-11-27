@@ -12,6 +12,8 @@ Base aportada: 500 pacientes/mes × 3 mensajes = 1.500 mensajes/mes, más cambio
 
 Costos y alertas controlados, compras de Juan y sin auto-recarga. Esta excepción sólo cubre correo: no habilita Supabase Pro/Workers Paid para el primero, IP dedicada, WhatsApp/SMS/Voice ni compras del agente. Los límites del programador actual y el aislamiento por consultorio siguen siendo requisitos; ejecución de E autorizada después en [12.20](../plans/propuesta-senas-avisos-natalia.md#ejecucion-e-autorizada), con [preparación y continuidad](../plans/ejecucion-etapa-e-20261103.md) en curso. No acredita consumo ni publicación nuevos.
 
+*Actualización del 27 de noviembre de 2026 (Lote 0):* los tipos y condiciones vigentes de envío al paciente se centralizan en el [catálogo único de correos al paciente](correos-al-paciente.md). El Lote 0 (D1, D2, D3) no agrega correos nuevos por turno y evita crear filas muertas de recordatorio en la cola cuando el paciente no tiene correo válido o está dado de baja, sin aumentar el consumo sobre el crédito de Zoho ni el tope diario.
+
 ## Decisión económica del usuario y aplicación
 
 Contexto aportado por el usuario: «me compraron la app con pago unico, no puedo pagar 25 usd al mes sin ingreso recurrente, es gasto».

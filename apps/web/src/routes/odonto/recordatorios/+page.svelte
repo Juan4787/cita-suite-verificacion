@@ -130,11 +130,12 @@
 			<div class="min-w-0 flex-[1_1_20rem]">
 				<p class="text-sm font-bold text-fg">Criterio de la lista</p>
 				<p class="mt-1 text-sm text-fg-55">
-					Arriba, los turnos sin un calendario iniciado ni una notificación confirmada. Al final,
-					plegados, los que ya tienen aviso automático: podés mandarles el recordatorio igual.
+					Arriba, los turnos sin recordatorio por correo, calendario iniciado ni notificación confirmada.
+					Al final, plegados, los que ya tienen aviso automático: podés mandarles el recordatorio igual.
 				</p>
 			</div>
 			<div class="flex max-w-full shrink-0 flex-wrap gap-2 text-xs font-bold">
+				<span class="ux-badge shrink-0">Sin aviso por correo</span>
 				<span class="ux-badge shrink-0">Sin calendario iniciado</span>
 				<span class="ux-badge shrink-0">Sin notificación confirmada</span>
 			</div>
@@ -206,8 +207,8 @@
 					Ya tienen aviso automático ({automatic.length})
 				</summary>
 				<p class="mt-2 text-sm text-fg-55">
-					Iniciaron un calendario o confirmaron una notificación. El recordatorio por WhatsApp es
-					opcional.
+					Reciben recordatorio por correo, iniciaron un calendario o confirmaron una notificación. El
+					recordatorio por WhatsApp es opcional.
 				</p>
 				<div class="mt-5 grid gap-3">
 					{#each automatic as candidate (candidate.appointment_id)}

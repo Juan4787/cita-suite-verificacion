@@ -201,12 +201,13 @@ export type CoverageInput = {
 	calendar_update_required_at: string | null;
 	has_confirmed_notifications: boolean;
 	has_active_dispatch: boolean;
+	has_email_reminder?: boolean;
 	google_calendar_sync_status?: string | null;
 	has_current_google_calendar_event?: boolean;
 };
 
 export const classifyReminderCoverage = (input: CoverageInput): ReminderCoverage | null => {
-	if (input.has_confirmed_notifications || input.has_active_dispatch) return null;
+	if (input.has_confirmed_notifications || input.has_active_dispatch || input.has_email_reminder) return null;
 	if (input.has_current_google_calendar_event) return null;
 
 	// Si existe un vínculo administrado, manda el estado confirmado por Google y
@@ -277,6 +278,32 @@ export const hasConfirmedPushSubscription = (
 	return Number.isFinite(testConfirmedAt) && testConfirmedAt >= now.getTime() - 48 * 60 * 60 * 1000;
 };
 
+const EMAIL_COVERAGE_BATCH_SIZE = 500;
+
+const loadEmailReminderCoverageIds = async (
+	supabase: CitaSupabaseClient,
+	businessId: string,
+	appointmentIds: readonly string[],
+	now: Date
+): Promise<Set<string>> => {
+	const covered = new Set<string>();
+	const nowIso = now.toISOString();
+	for (let offset = 0; offset < appointmentIds.length; offset += EMAIL_COVERAGE_BATCH_SIZE) {
+		const chunk = appointmentIds.slice(offset, offset + EMAIL_COVERAGE_BATCH_SIZE);
+		const { data, error } = await supabase.rpc('list_appointment_email_reminder_coverage', {
+			p_business_id: businessId,
+			p_appointment_ids: chunk,
+			p_now: nowIso
+		});
+		if (error) throw error;
+		if (!Array.isArray(data)) throw new Error('EMAIL_REMINDER_COVERAGE_INVALID');
+		for (const row of data) {
+			if (row?.covered === true && row.appointment_id) covered.add(String(row.appointment_id));
+		}
+	}
+	return covered;
+};
+
 // --- Carga principal ----------------------------------------------------------
 
 const collectReminderItems = async (
@@ -326,7 +353,7 @@ const collectReminderItems = async (
 	const ids = appointments.map((row) => String(row.id));
 	const managedGoogleCalendarEnabled = isManagedGoogleCalendarEnabled();
 
-	const [pushResult, dispatchResult, googleCalendarResult] = await Promise.all([
+	const [pushResult, dispatchResult, googleCalendarResult, emailCoveredAppointments] = await Promise.all([
 		options.pushSubscriptionsSupabase
 			.from('push_subscriptions')
 			.select(
@@ -349,7 +376,8 @@ const collectReminderItems = async (
 					.select('appointment_id, sync_status, synced_sequence')
 					.eq('business_id', business.id)
 					.in('appointment_id', ids)
-			: Promise.resolve({ data: [], error: null })
+			: Promise.resolve({ data: [], error: null }),
+		loadEmailReminderCoverageIds(supabase, business.id, ids, now)
 	]);
 	if (pushResult.error) throw pushResult.error;
 	if (dispatchResult.error) throw dispatchResult.error;
@@ -382,6 +410,7 @@ const collectReminderItems = async (
 			calendar_update_required_at: row.calendar_update_required_at ?? null,
 			has_confirmed_notifications: confirmedPushAppointments.has(String(row.id)),
 			has_active_dispatch: dispatched.has(String(row.id)),
+			has_email_reminder: emailCoveredAppointments.has(String(row.id)),
 			google_calendar_sync_status: googleCalendar?.sync_status
 				? String(googleCalendar.sync_status)
 				: null,

@@ -197,6 +197,25 @@ describe('daily agenda load', () => {
 		expect(result.reminderCount).toBeNull();
 	});
 
+	it('D3: no consulta recordatorios operativos para solo lectura ni consultorios restringidos', async () => {
+		mocks.from.mockReturnValue(query({ data: [appointment], error: null }));
+		mocks.getOdontoContext.mockResolvedValue({
+			supabase: { from: mocks.from },
+			business: { business: { id: 'business-1', timezone: 'America/Argentina/Buenos_Aires' }, role: 'readonly', access: { canUseBusiness: true } },
+			userId: 'user-1'
+		});
+		await expect(load(event())).resolves.toMatchObject({ reminderCount: 0 });
+		expect(mocks.countTomorrowUncovered).not.toHaveBeenCalled();
+
+		mocks.getOdontoContext.mockResolvedValue({
+			supabase: { from: mocks.from },
+			business: { business: { id: 'business-1', timezone: 'America/Argentina/Buenos_Aires' }, role: 'owner', access: { canUseBusiness: false } },
+			userId: 'user-1'
+		});
+		await expect(load(event())).resolves.toMatchObject({ reminderCount: 0 });
+		expect(mocks.countTomorrowUncovered).not.toHaveBeenCalled();
+	});
+
 	describe('on Sunday 22:30 in Buenos Aires, already Monday in UTC', () => {
 		beforeEach(() => {
 			vi.useFakeTimers({ toFake: ['Date'] });

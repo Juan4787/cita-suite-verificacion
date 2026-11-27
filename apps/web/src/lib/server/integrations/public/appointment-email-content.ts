@@ -121,8 +121,16 @@ export const buildAppointmentEmail = (
 	const when = formatInTimeZone(startsAt, timezone);
 	const modality = typeof snapshot.modality === 'string' ? snapshot.modality : 'in_person';
 	const virtual = modality === 'video';
-	const address = typeof business.address === 'string' ? business.address : null;
-	const instructions = typeof business.address_instructions === 'string' ? business.address_instructions : null;
+	const integration = isRecord(snapshot.integration) ? snapshot.integration : null;
+	const address = typeof business.address === 'string' && business.address.trim() ? business.address.trim() : null;
+	const addressInstructions =
+		typeof business.address_instructions === 'string' && business.address_instructions.trim()
+			? business.address_instructions.trim()
+			: null;
+	const videoInstructions =
+		typeof integration?.video_instructions_snapshot === 'string' && integration.video_instructions_snapshot.trim()
+			? integration.video_instructions_snapshot.trim()
+			: null;
 	const mapsUrl = typeof business.maps_url === 'string' && /^https:\/\//.test(business.maps_url) ? business.maps_url : null;
 	const logoUrl = typeof business.logo_url === 'string' && /^https:\/\//.test(business.logo_url) ? business.logo_url : null;
 	const phone = typeof business.whatsapp_contact_phone === 'string' ? business.whatsapp_contact_phone
@@ -152,7 +160,6 @@ export const buildAppointmentEmail = (
 	if (base && context.actions.reschedule) links.push({ label: 'Reprogramar', href: `${base}?accion=reprogramar${sentFor ? `&${sentFor}` : ''}`, primary: false });
 	if (base && context.actions.cancel) links.push({ label: 'Cancelar', href: `${base}?accion=cancelar${sentFor ? `&${sentFor}` : ''}`, primary: false });
 	if (context.actions.bookNew) {
-		const integration = isRecord(snapshot.integration) ? snapshot.integration : null;
 		const slug = typeof business.slug === 'string' ? business.slug : null;
 		const path = integration?.is_active === true && typeof integration.public_key === 'string'
 			? `/embed/v1/${integration.public_key}` : slug ? `/reservar/${slug}` : null;
@@ -164,8 +171,9 @@ export const buildAppointmentEmail = (
 	const details: string[] = [];
 	if (!cancelled) details.push(`Fecha y hora: ${when.full}`);
 	if (!cancelled && virtual) details.push('Modalidad: virtual');
+	if (!cancelled && virtual && videoInstructions) details.push(`Indicaciones: ${videoInstructions}`);
 	if (!cancelled && !virtual && address) details.push(`Dirección: ${address}`);
-	if (!cancelled && instructions) details.push(`Indicaciones: ${instructions}`);
+	if (!cancelled && !virtual && addressInstructions) details.push(`Indicaciones: ${addressInstructions}`);
 
 	const depositLines: string[] = [];
 	if (depositPending && deposit) {

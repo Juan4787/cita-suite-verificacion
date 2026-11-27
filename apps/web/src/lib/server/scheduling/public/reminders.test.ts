@@ -146,6 +146,11 @@ describe('classifyReminderCoverage', () => {
 			classifyReminderCoverage({ ...base, calendar_action_status: 'future_unknown_status' })
 		).toBe('sin_calendario');
 	});
+
+	it('recordatorio por correo cubierto (D3): cuenta como cobertura automática', () => {
+		expect(classifyReminderCoverage({ ...base, has_email_reminder: true } as never)).toBeNull();
+		expect(classifyReminderCoverage({ ...base, has_email_reminder: false } as never)).toBe('sin_calendario');
+	});
 });
 
 describe('hasConfirmedPushSubscription', () => {
@@ -343,8 +348,13 @@ describe('loadReminderCandidates · exclusión por avisos activados', () => {
 
 	// Mock mínimo: from(tabla) entrega el siguiente resultado encolado para esa tabla;
 	// toda la cadena de filtros es no-op y la query se resuelve al await (.then).
-	const makeSupabase = (queues: Record<string, Array<{ data: unknown; error: unknown }>>) => {
+	// rpc(fn, args) entrega la respuesta encolada para esa función (por defecto lista vacía).
+	const makeSupabase = (
+		queues: Record<string, Array<{ data: unknown; error: unknown }>>,
+		rpcQueues: Record<string, Array<{ data: unknown; error: unknown }>> = {}
+	) => {
 		const calls: Array<{ table: string; method: string; args: unknown[] }> = [];
+		const rpcCalls: Array<{ fn: string; args: unknown }> = [];
 		const consume = (table: string) => queues[table]?.shift() ?? { data: null, error: null };
 		const chainFor = (table: string) => {
 			const result = consume(table);
@@ -358,7 +368,12 @@ describe('loadReminderCandidates · exclusión por avisos activados', () => {
 			chain.then = (resolve: (v: unknown) => unknown) => Promise.resolve(result).then(resolve);
 			return chain;
 		};
-		return { from: (table: string) => chainFor(table), calls } as any;
+		const rpc = (fn: string, args: unknown) => {
+			rpcCalls.push({ fn, args });
+			const result = rpcQueues[fn]?.shift() ?? { data: [], error: null };
+			return Promise.resolve(result);
+		};
+		return { from: (table: string) => chainFor(table), rpc, calls, rpcCalls } as any;
 	};
 
 	it('excluye toda suscripción verificada, incluso si tuvo un fallo transitorio', async () => {
@@ -782,6 +797,90 @@ describe('loadReminderCandidates · exclusión por avisos activados', () => {
 				pushSubscriptionsSupabase
 			})
 		).rejects.toThrow('push inaccesible');
+	});
+
+	it('D3: a la mañana, un turno de mañana a la tarde con correo cubierto aparece en aviso_automatico y el contador de Agenda coincide', async () => {
+		const rows = [appointmentRow('cubierto-por-correo'), appointmentRow('sin-correo')];
+		const makeUser = () =>
+			makeSupabase(
+				{
+					appointments: [{ data: rows, error: null }],
+					message_dispatches: [{ data: [], error: null }]
+				},
+				{
+					list_appointment_email_reminder_coverage: [
+						{
+							data: [
+								{ appointment_id: 'cubierto-por-correo', covered: true },
+								{ appointment_id: 'sin-correo', covered: false }
+							],
+							error: null
+						}
+					]
+				}
+			);
+		const makeAdmin = () => makeSupabase({ push_subscriptions: [{ data: [], error: null }] });
+
+		const listUser = makeUser();
+		const listAdmin = makeAdmin();
+		const list = await loadReminderList(listUser, business, {
+			day: 'manana',
+			now,
+			pushSubscriptionsSupabase: listAdmin
+		});
+		expect(list.map((item) => [item.appointment_id, item.coverage])).toEqual([
+			['cubierto-por-correo', 'aviso_automatico'],
+			['sin-correo', 'sin_calendario']
+		]);
+		// La regla de correo se consulta con el cliente del usuario, nunca con el privilegiado.
+		expect(listUser.rpcCalls).toEqual([
+			{
+				fn: 'list_appointment_email_reminder_coverage',
+				args: {
+					p_business_id: business.id,
+					p_appointment_ids: ['cubierto-por-correo', 'sin-correo'],
+					p_now: now.toISOString()
+				}
+			}
+		]);
+		expect(listAdmin.rpcCalls).toEqual([]);
+
+		const candidates = await loadReminderCandidates(makeUser(), business, {
+			day: 'manana',
+			now,
+			pushSubscriptionsSupabase: makeAdmin()
+		});
+		expect(candidates.map((item) => item.appointment_id)).toEqual(['sin-correo']);
+
+		await expect(
+			countTomorrowUncovered(makeUser(), business, {
+				now,
+				pushSubscriptionsSupabase: makeAdmin()
+			})
+		).resolves.toBe(1);
+	});
+
+	it('D3: falla de forma segura si no se puede consultar la cobertura por correo', async () => {
+		const userSupabase = makeSupabase(
+			{
+				appointments: [{ data: [appointmentRow('a')], error: null }],
+				message_dispatches: [{ data: [], error: null }]
+			},
+			{
+				list_appointment_email_reminder_coverage: [
+					{ data: null, error: new Error('email coverage unavailable') }
+				]
+			}
+		);
+		const adminSupabase = makeSupabase({ push_subscriptions: [{ data: [], error: null }] });
+
+		await expect(
+			loadReminderList(userSupabase, business, {
+				day: 'manana',
+				now,
+				pushSubscriptionsSupabase: adminSupabase
+			})
+		).rejects.toThrow('email coverage unavailable');
 	});
 
 });

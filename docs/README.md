@@ -2,7 +2,9 @@
 
 **Auditoría final de noviembre, fase 1 (cerrada el 19 de noviembre — veredicto: `Listo con condiciones`):** [plan y punto de control](plans/auditoria-final-noviembre-fase-1.md) y [registro e informe final](plans/registro-auditoria-final-noviembre-fase-1.md#informe-final). Lo pendiente de conexiones, datos, decisiones y correcciones pasa a fase 2 ([pendientes vigentes](plans/pendientes-vigentes.md)).
 
-**Entrega a Natalia (la fase 2 de la auditoría, en pasos):** [paso 0, hecho el 21 de noviembre](plans/entrega-natalia-20261121.md) y [plan del paso 1, correcciones](plans/entrega-natalia-paso-1.md).
+**Entrega a Natalia (la fase 2 de la auditoría, en pasos):**
+- [paso 0](plans/entrega-natalia-20261121.md), [paso 1, correcciones](plans/entrega-natalia-paso-1.md) y [paso 2, correos reales](plans/entrega-natalia-paso-2.md), hechos del 21 al 22 de noviembre;
+- [plan de implementación de lo que falta](plans/entrega-natalia-implementacion.md): lotes 0 a 3, web, consultorio de prueba, configuración e importación. Espera la orden de Juan.
 
 **Todo lo que queda pendiente está en una sola lista:** [pendientes vigentes](plans/pendientes-vigentes.md). Los datos faltantes de Natalia conservan su tratamiento separado. P1, P2 y P3 están [publicadas](plans/tareas-posteriores-a-e-20261103.md) desde el 7 de noviembre; P3 sustituye D celular. E, con su [especificación con Zoho](plans/etapa-e-correo-autogestion.md), se publicó el 6 de noviembre ([estado vigente](ESTADO-VIGENTE.md)); el [registro activo](plans/ejecucion-etapa-e-20261103.md) tiene su evidencia. La detención documental del 5 de noviembre (12.31) quedó reemplazada ese mismo día por el mandato integral (12.32).
 
@@ -48,6 +50,7 @@ Para el consultorio de Natalia Frutos, la primera clienta, rigen estos documento
 | Carga, límites y consumo | [Capacidad](architecture/capacidad.md), [control de consumo](architecture/control-de-consumo.md) |
 | Respaldo, publicación y reversión | [Respaldo y recuperación](architecture/respaldo-y-recuperacion.md), [publicación y reversión](architecture/publicacion-y-reversion.md) |
 | Confirmación de correo y alta | [Flujo publicado y límites](architecture/confirmacion-de-correo.md) |
+| Correos al paciente | [Catálogo único de correos al paciente](architecture/correos-al-paciente.md) |
 | Correo para recuperar contraseñas | [Configuración temporal con Gmail y prueba real](architecture/correo-de-recuperacion.md) |
 | Estado punto por punto, antecedente de octubre | [Auditoría final de octubre](architecture/auditoria-final.md). La vigente es la [auditoría final de noviembre](plans/auditoria-final-noviembre-fase-1.md) |
 | Nombres y destinos | [Identidad Cita Suite](architecture/identidad-cita-suite.md) |
