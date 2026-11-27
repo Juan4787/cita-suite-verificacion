@@ -85,7 +85,7 @@ test('@candidate-behavior D3: recordatorios por correo cubren en la lista y en e
 				expect((await contrastViolations(page)).violations).toEqual([]);
 				issues.push(...(await layoutIssues(page, 'main a:visible, main button:visible', 'main')));
 				if (width === 320 || width === 1280) {
-					await alignTaskForCapture(page.getByRole('heading', { name: 'Turnos para recordar', level: 1 }));
+					await alignTaskForCapture(page.getByRole('main').getByRole('heading', { name: 'Turnos para recordar', level: 1, exact: true }));
 					await page.screenshot({ path: info.outputPath(`d3-recordatorios-${theme}-${width}.jpg`), type: 'jpeg', quality: 65 });
 				}
 			}
