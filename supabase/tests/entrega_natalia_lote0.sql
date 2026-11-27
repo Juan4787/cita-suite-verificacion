@@ -544,7 +544,21 @@ declare
   v_due timestamptz := v_t - interval '24 hours';
   v_claim jsonb;
   v_mismatch integer;
+  v_profs uuid[] := array[
+    pg_temp.l0id('f1'),
+    gen_random_uuid(), gen_random_uuid(), gen_random_uuid(),
+    gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid()
+  ];
 begin
+  -- Profesionales sintéticos propios para que los 10 casos compartan exactamente el mismo v_t sin superposición
+  insert into public.professionals(id, business_id, name, is_active, is_public)
+  select pid, pg_temp.l0id('b1'), 'Prof Paridad ' || ord, true, true
+  from unnest(v_profs[2:8]) with ordinality as t(pid, ord);
+
+  insert into public.professional_services(business_id, professional_id, service_id)
+  select pg_temp.l0id('b1'), pid, pg_temp.l0id('s1')
+  from unnest(v_profs[2:8]) as t(pid);
+
   -- Limpiar trabajo previo pendiente para aislar esta serie de casos
   update private.appointment_email_events set processed_at = clock_timestamp() where processed_at is null;
   update private.appointment_email_deliveries set state = 'discarded', discard_reason = 'test_cleared', lease_token = null, lease_expires_at = null
@@ -562,16 +576,16 @@ begin
   ) on commit drop;
 
   insert into parity_cases(label, business_id, owner_id, appointment_id, expected) values
-    ('valid_email',        pg_temp.l0id('b1'), pg_temp.l0id('owner1'), pg_temp.l0_book(pg_temp.l0id('b1'), pg_temp.l0id('p_ok'),      pg_temp.l0id('s1'), pg_temp.l0id('f1'), v_t), true),
-    ('no_email',           pg_temp.l0id('b1'), pg_temp.l0id('owner1'), pg_temp.l0_book(pg_temp.l0id('b1'), pg_temp.l0id('p_bare'),    pg_temp.l0id('s1'), pg_temp.l0id('f1'), v_t), false),
-    ('invalid_email',      pg_temp.l0id('b1'), pg_temp.l0id('owner1'), pg_temp.l0_book(pg_temp.l0id('b1'), pg_temp.l0id('p_invalid'), pg_temp.l0id('s1'), pg_temp.l0id('f1'), v_t), false),
-    ('unsubscribed',       pg_temp.l0id('b1'), pg_temp.l0id('owner1'), pg_temp.l0_book(pg_temp.l0id('b1'), pg_temp.l0id('p_unsub'),   pg_temp.l0id('s1'), pg_temp.l0id('f1'), v_t), false),
-    ('hard_bounced',       pg_temp.l0id('b1'), pg_temp.l0id('owner1'), pg_temp.l0_book(pg_temp.l0id('b1'), pg_temp.l0id('p_bounced'), pg_temp.l0id('s1'), pg_temp.l0id('f1'), v_t), false),
-    ('at_boundary_no_rcp', pg_temp.l0id('b1'), pg_temp.l0id('owner1'), pg_temp.l0_book(pg_temp.l0id('b1'), pg_temp.l0id('p_ok'),      pg_temp.l0id('s1'), pg_temp.l0id('f1'), v_t), false),
-    ('near_with_receipt',  pg_temp.l0id('b1'), pg_temp.l0id('owner1'), pg_temp.l0_book(pg_temp.l0id('b1'), pg_temp.l0id('p_ok'),      pg_temp.l0id('s1'), pg_temp.l0id('f1'), v_t), true),
+    ('valid_email',        pg_temp.l0id('b1'), pg_temp.l0id('owner1'), pg_temp.l0_book(pg_temp.l0id('b1'), pg_temp.l0id('p_ok'),      pg_temp.l0id('s1'), v_profs[1], v_t), true),
+    ('no_email',           pg_temp.l0id('b1'), pg_temp.l0id('owner1'), pg_temp.l0_book(pg_temp.l0id('b1'), pg_temp.l0id('p_bare'),    pg_temp.l0id('s1'), v_profs[2], v_t), false),
+    ('invalid_email',      pg_temp.l0id('b1'), pg_temp.l0id('owner1'), pg_temp.l0_book(pg_temp.l0id('b1'), pg_temp.l0id('p_invalid'), pg_temp.l0id('s1'), v_profs[3], v_t), false),
+    ('unsubscribed',       pg_temp.l0id('b1'), pg_temp.l0id('owner1'), pg_temp.l0_book(pg_temp.l0id('b1'), pg_temp.l0id('p_unsub'),   pg_temp.l0id('s1'), v_profs[4], v_t), false),
+    ('hard_bounced',       pg_temp.l0id('b1'), pg_temp.l0id('owner1'), pg_temp.l0_book(pg_temp.l0id('b1'), pg_temp.l0id('p_bounced'), pg_temp.l0id('s1'), v_profs[5], v_t), false),
+    ('at_boundary_no_rcp', pg_temp.l0id('b1'), pg_temp.l0id('owner1'), pg_temp.l0_book(pg_temp.l0id('b1'), pg_temp.l0id('p_ok'),      pg_temp.l0id('s1'), v_profs[6], v_t), false),
+    ('near_with_receipt',  pg_temp.l0id('b1'), pg_temp.l0id('owner1'), pg_temp.l0_book(pg_temp.l0id('b1'), pg_temp.l0id('p_ok'),      pg_temp.l0id('s1'), v_profs[7], v_t), true),
     ('sender_not_ready',   pg_temp.l0id('b2'), pg_temp.l0id('owner2'), pg_temp.l0_book(pg_temp.l0id('b2'), pg_temp.l0id('p_b2'),      pg_temp.l0id('s2'), pg_temp.l0id('f2'), v_t), false),
     ('email_disabled',     pg_temp.l0id('b3'), pg_temp.l0id('owner3'), pg_temp.l0_book(pg_temp.l0id('b3'), pg_temp.l0id('p_b3'),      pg_temp.l0id('s3'), pg_temp.l0id('f3'), v_t), false),
-    ('cancelled',          pg_temp.l0id('b1'), pg_temp.l0id('owner1'), pg_temp.l0_book(pg_temp.l0id('b1'), pg_temp.l0id('p_ok'),      pg_temp.l0id('s1'), pg_temp.l0id('f1'), v_t, 'cancelled'), false);
+    ('cancelled',          pg_temp.l0id('b1'), pg_temp.l0id('owner1'), pg_temp.l0_book(pg_temp.l0id('b1'), pg_temp.l0id('p_ok'),      pg_temp.l0id('s1'), v_profs[8], v_t, 'cancelled'), false);
 
   -- Marcar los eventos de booking_receipt de la creación sintética como ya procesados
   update private.appointment_email_events set processed_at = clock_timestamp() where processed_at is null;
