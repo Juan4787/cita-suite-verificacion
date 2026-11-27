@@ -146,7 +146,7 @@ begin
     theme_snapshot, entry_point, modality, video_instructions_snapshot, context_fingerprint
   ) values (
     a_virt, pg_temp.l0id('b1'), pg_temp.l0id('integ1'), 1, 1,
-    'natalia', 'embed', 'video', 'Conectate a la consulta online por Meet 5 min antes.', repeat('e', 64)
+    'natalia', 'embedded', 'video', 'Conectate a la consulta online por Meet 5 min antes.', repeat('e', 64)
   );
   snap_pres := private.appointment_management_snapshot(pg_temp.l0id('b1'), a_pres, null, clock_timestamp());
   snap_virt := private.appointment_management_snapshot(pg_temp.l0id('b1'), a_virt, null, clock_timestamp());
