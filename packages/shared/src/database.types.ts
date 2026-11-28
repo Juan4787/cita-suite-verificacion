@@ -348,6 +348,7 @@ export type Database = {
       }
       appointment_deposit_requirements: {
         Row: {
+          actual_paid_amount: number | null
           allocation: string
           amount: number
           appointment_id: string
@@ -367,6 +368,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          actual_paid_amount?: number | null
           allocation: string
           amount: number
           appointment_id: string
@@ -386,6 +388,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          actual_paid_amount?: number | null
           allocation?: string
           amount?: number
           appointment_id?: string
@@ -522,6 +525,13 @@ export type Database = {
           waived_reason?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "appointment_deposits_applied_credit_id_fkey"
+            columns: ["applied_credit_id"]
+            isOneToOne: false
+            referencedRelation: "patient_deposit_credits"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "appointment_deposits_business_id_appointment_id_fkey"
             columns: ["business_id", "appointment_id"]
@@ -3098,6 +3108,112 @@ export type Database = {
           },
         ]
       }
+      patient_deposit_credits: {
+        Row: {
+          amount: number
+          applied_appointment_id: string | null
+          applied_at: string | null
+          applied_by: string | null
+          applied_requirement_id: string | null
+          business_id: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          last_released_at: string | null
+          last_released_by: string | null
+          patient_id: string
+          reason: string
+          source_appointment_id: string
+          source_requirement_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          applied_appointment_id?: string | null
+          applied_at?: string | null
+          applied_by?: string | null
+          applied_requirement_id?: string | null
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          last_released_at?: string | null
+          last_released_by?: string | null
+          patient_id: string
+          reason: string
+          source_appointment_id: string
+          source_requirement_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          applied_appointment_id?: string | null
+          applied_at?: string | null
+          applied_by?: string | null
+          applied_requirement_id?: string | null
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          last_released_at?: string | null
+          last_released_by?: string | null
+          patient_id?: string
+          reason?: string
+          source_appointment_id?: string
+          source_requirement_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_deposit_credits_applied_requirement_id_fkey"
+            columns: ["applied_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_deposit_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_deposit_credits_business_id_applied_appointment_id_fkey"
+            columns: ["business_id", "applied_appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["business_id", "id"]
+          },
+          {
+            foreignKeyName: "patient_deposit_credits_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_deposit_credits_business_id_patient_id_fkey"
+            columns: ["business_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["business_id", "id"]
+          },
+          {
+            foreignKeyName: "patient_deposit_credits_business_id_source_appointment_id_fkey"
+            columns: ["business_id", "source_appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["business_id", "id"]
+          },
+          {
+            foreignKeyName: "patient_deposit_credits_source_requirement_id_fkey"
+            columns: ["source_requirement_id"]
+            isOneToOne: true
+            referencedRelation: "appointment_deposit_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_export_sessions: {
         Row: {
           business_id: string
@@ -4340,7 +4456,7 @@ export type Database = {
         Args: {
           p_appointment_id: string
           p_business_id: string
-          p_credit_id?: string | null
+          p_credit_id?: string
           p_expected_revision: number
         }
         Returns: Json
@@ -4366,31 +4482,16 @@ export type Database = {
           p_action: string
           p_actor_id: string
           p_appointment_id: string
-          p_availability_revision?: number | null
+          p_availability_revision?: number
           p_business_id: string
           p_expected_revision: string
           p_ignore_break?: boolean
           p_keep_deposit_as_credit?: boolean
           p_operation_id: string
-          p_reason?: string | null
+          p_reason?: string
           p_replay_only?: boolean
-          p_reschedule_requester?: string | null
-          p_starts_at?: string | null
-        }
-        Returns: Json
-      }
-      clear_appointment_deposit_payment_notice: {
-        Args: {
-          p_appointment_id: string
-          p_business_id: string
-          p_expected_revision: number
-        }
-        Returns: Json
-      }
-      report_appointment_deposit_payment: {
-        Args: {
-          p_legacy?: boolean
-          p_token: string
+          p_reschedule_requester?: string
+          p_starts_at?: string
         }
         Returns: Json
       }
@@ -4750,6 +4851,14 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      clear_appointment_deposit_payment_notice: {
+        Args: {
+          p_appointment_id: string
+          p_business_id: string
+          p_expected_revision: number
+        }
+        Returns: Json
       }
       clear_patient_drive_folders_safely: {
         Args: { p_business_id: string }
@@ -5750,6 +5859,12 @@ export type Database = {
         }
         Returns: Json
       }
+      patient_available_deposit_credits: {
+        Args: { "": Database["public"]["Tables"]["patients"]["Row"] }
+        Returns: {
+          error: true
+        } & "the function public.patient_available_deposit_credits with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
+      }
       patient_document_in_appointment_scope: {
         Args: {
           p_actor_id: string
@@ -6006,6 +6121,10 @@ export type Database = {
           p_professional_id: string
         }
         Returns: undefined
+      }
+      report_appointment_deposit_payment: {
+        Args: { p_legacy: boolean; p_token: string }
+        Returns: Json
       }
       request_google_calendar_event_deletion: {
         Args: { p_appointment_id: string; p_now?: string }
