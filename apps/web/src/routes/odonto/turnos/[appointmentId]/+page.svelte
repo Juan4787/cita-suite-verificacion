@@ -224,7 +224,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 			if (from && to) return `${formatDateTime(from, timeZone)} -> ${formatDateTime(to, timeZone)}${requesterLabel}`;
 		}
 		const differenceNote = metadataValue(log, 'difference_note');
-		if (differenceNote) return differenceNote;
+		if (differenceNote) return differenceNote.replace(/\$\s+/g, '$\u00a0');
 		const depositAmount = log.metadata?.amount;
 		if (
 			[
@@ -861,7 +861,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 					{/if}
 				</p>
 				{#if data.deposit.amount_difference_note}
-					<p class="ux-alert ux-alert-info mt-3" data-deposit-difference-note>{data.deposit.amount_difference_note}</p>
+					<p class="ux-alert ux-alert-info mt-3" data-deposit-difference-note>{data.deposit.amount_difference_note.replace(/\$\s+/g, '$\u00a0')}</p>
 				{/if}
 				{#if depositActionsAvailable && data.deposit.status === 'pending' && (data.availableDepositCredits ?? []).length > 0}
 					{@const availableCredits = data.availableDepositCredits ?? []}

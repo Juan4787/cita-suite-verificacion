@@ -97,10 +97,10 @@
     <input type="hidden" name="previous_deposit_disposition" value={values.previous_deposit_disposition} />
     <div class="ux-soft-card grid gap-2 p-4 text-sm text-fg-70" data-p4-reschedule-rule>
      <p class="font-semibold text-fg">
-      Rige la regla por horas configurada en Señas ({data.depositCreditCutoffHours} {data.depositCreditCutoffHours === 1 ? 'hora' : 'horas'}).
+      Rige la regla por horas configurada en Señas ({data.depositCreditCutoffHours}&nbsp;{data.depositCreditCutoffHours === 1 ? 'hora' : 'horas'}).
      </p>
      <p>
-      Si se reprograma o cancela con {data.depositCreditCutoffHours} {data.depositCreditCutoffHours === 1 ? 'hora' : 'horas'} o más de anticipación, la seña pagada queda a cuenta sin pedir otra seña. Con menos tiempo, la seña se pierde (salvo excepción del consultorio o fuerza mayor).
+      Si se reprograma o cancela con {data.depositCreditCutoffHours}&nbsp;{data.depositCreditCutoffHours === 1 ? 'hora' : 'horas'} o más de anticipación, la seña pagada queda a cuenta sin pedir otra seña. Con menos tiempo, la seña se pierde (salvo excepción del consultorio o fuerza mayor).
      </p>
      <p>
       <a href="/odonto/configuracion/senas" class="font-semibold underline">Cambiar en Configuración → Señas</a>

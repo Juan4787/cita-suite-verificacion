@@ -298,11 +298,11 @@
 			</label>
 			<label class="ux-choice flex items-center gap-3 px-4 py-3">
 				<input type="radio" name="expiring_reminder_hours" value="24" bind:group={expiringReminderHours} disabled={!canSave} class="accent-check-accent-600" />
-				<span class="text-fg">24 horas antes del vencimiento</span>
+				<span class="text-fg">24&nbsp;horas antes del vencimiento</span>
 			</label>
 			<label class="ux-choice flex items-center gap-3 px-4 py-3">
 				<input type="radio" name="expiring_reminder_hours" value="48" bind:group={expiringReminderHours} disabled={!canSave} class="accent-check-accent-600" />
-				<span class="text-fg">48 horas antes del vencimiento</span>
+				<span class="text-fg">48&nbsp;horas antes del vencimiento</span>
 			</label>
 			{#if errors.expiring_reminder_hours}<span class="text-sm text-warning-300">{errors.expiring_reminder_hours}</span>{/if}
 		</fieldset>
