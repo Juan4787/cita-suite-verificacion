@@ -6,7 +6,7 @@ import { ownedAppointmentFixture } from './helpers/owned-appointment-fixture';
 import { observeRenderHealth } from './helpers/render-health';
 import { loginWithSharedSession } from './helpers/shared-auth';
 import { alignTaskForCapture } from './helpers/task-capture';
-import { applyThemeInPage, chooseTheme, contrastViolations, expectRenderedTheme } from './helpers/theme';
+import { chooseTheme, contrastViolations, expectRenderedTheme } from './helpers/theme';
 
 const addDaysIso = (isoDate: string, days: number) => {
 	const value = new Date(`${isoDate}T12:00:00Z`);
@@ -79,17 +79,24 @@ test('@candidate-behavior Lote 2A (P5, P2, P3): límite de autogestión, reserva
 		name: string,
 		widths: number[],
 		modes: Array<'light' | 'dark'>,
-		options?: { embedUrl?: string; anchor?: () => ReturnType<typeof page.locator> }
+		options?: {
+			embedUrl?: string;
+			anchor?: () => ReturnType<typeof page.locator>;
+			afterLoad?: () => Promise<void>;
+		}
 	) => {
 		for (const mode of modes) {
 			if (!options?.embedUrl) {
-				await applyThemeInPage(page, mode);
+				await chooseTheme(page, mode);
+				await page.reload({ waitUntil: 'networkidle' });
 				await expectRenderedTheme(page, mode);
+				if (options?.afterLoad) await options.afterLoad();
 			}
 			for (const width of widths) {
 				await page.setViewportSize({ width, height: 860 });
 				if (options?.embedUrl) {
 					await page.goto(`${options.embedUrl}&color_mode=${mode}`, { waitUntil: 'networkidle' });
+					if (options?.afterLoad) await options.afterLoad();
 				}
 				expect((await contrastViolations(page)).violations, `${name} ${mode} ${width}px contrast`).toEqual([]);
 				const found = await layoutIssues(page, 'main a:visible, main button:visible', 'main');
@@ -105,6 +112,9 @@ test('@candidate-behavior Lote 2A (P5, P2, P3): límite de autogestión, reserva
 					});
 				}
 			}
+		}
+		if (!options?.embedUrl) {
+			await chooseTheme(page, 'light');
 		}
 	};
 
@@ -212,9 +222,12 @@ test('@candidate-behavior Lote 2A (P5, P2, P3): límite de autogestión, reserva
 			page.getByRole('button', { name: 'Guardar' }).click()
 		]);
 		await expect(page.getByText(/Configuración de señas guardada/i)).toBeVisible();
-		await page.locator('[data-deposit-examples-accordion] > summary').click();
-		await expect(page.locator('[data-deposit-examples-accordion]')).toHaveAttribute('open', '');
 		await auditAndCapture('p2-config-senas-acordeon', [320, 390, 768, 1280], ['light', 'dark'], {
+			afterLoad: async () => {
+				const details = page.locator('[data-deposit-examples-accordion]');
+				await details.locator('> summary').click();
+				await expect(details).toHaveAttribute('open', '');
+			},
 			anchor: () => page.locator('[data-deposit-examples-accordion]')
 		});
 
