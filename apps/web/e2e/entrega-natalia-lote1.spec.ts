@@ -45,7 +45,7 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 		`select coalesce((select jsonb_agg(jsonb_build_object(
 			'id', id, 'weekday', weekday, 'start_time', start_time::text, 'end_time', end_time::text,
 			'slot_interval_minutes', slot_interval_minutes, 'break_minutes', break_minutes,
-			'is_active', is_active, 'service_scope', service_scope, 'allowed_service_ids', allowed_service_ids
+			'is_active', is_active, 'service_scope', service_scope
 		)) from public.availability_rules where business_id='${f.businessId}' and professional_id='${assignment.professional_id}'), '[]'::jsonb)::text;`
 	);
 	const prevPricePoliciesSnapshot = f.sql(
@@ -94,7 +94,7 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 		const ruleRowsSql = ruleIds
 			.map(
 				(id, weekday) =>
-					`('${id}', '${f.businessId}', '${assignment.professional_id}', ${weekday}, '09:00', '12:00', 60, 0, true, 'all', '{}'::uuid[])`
+					`('${id}', '${f.businessId}', '${assignment.professional_id}', ${weekday}, '09:00', '12:00', 60, 0, true, 'all')`
 			)
 			.join(', ');
 
@@ -115,7 +115,7 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 			update public.services set is_active = true, is_public = true where id = '${assignment.service_id}';
 			update public.professionals set is_active = true, is_public = true where id = '${assignment.professional_id}';
 			delete from public.availability_rules where business_id = '${f.businessId}' and professional_id = '${assignment.professional_id}';
-			insert into public.availability_rules(id, business_id, professional_id, weekday, start_time, end_time, slot_interval_minutes, break_minutes, is_active, service_scope, allowed_service_ids)
+			insert into public.availability_rules(id, business_id, professional_id, weekday, start_time, end_time, slot_interval_minutes, break_minutes, is_active, service_scope)
 			values ${ruleRowsSql};
 			update public.booking_integrations set is_default = false where business_id = '${f.businessId}' and is_default;
 			insert into public.booking_integrations(
@@ -341,13 +341,12 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 			break_minutes: number;
 			is_active: boolean;
 			service_scope: string;
-			allowed_service_ids: string[];
 		}>;
 		const restoreRulesSql = prevRules.length
-			? `insert into public.availability_rules(id, business_id, professional_id, weekday, start_time, end_time, slot_interval_minutes, break_minutes, is_active, service_scope, allowed_service_ids) values ${prevRules
+			? `insert into public.availability_rules(id, business_id, professional_id, weekday, start_time, end_time, slot_interval_minutes, break_minutes, is_active, service_scope) values ${prevRules
 					.map(
 						(r) =>
-							`('${r.id}', '${f.businessId}', '${assignment.professional_id}', ${r.weekday}, '${r.start_time}', '${r.end_time}', ${r.slot_interval_minutes}, ${r.break_minutes}, ${r.is_active}, ${sqlLit(r.service_scope)}, array[${(r.allowed_service_ids ?? []).map((id) => `'${id}'::uuid`).join(',')}]::uuid[])`
+							`('${r.id}', '${f.businessId}', '${assignment.professional_id}', ${r.weekday}, '${r.start_time}', '${r.end_time}', ${r.slot_interval_minutes}, ${r.break_minutes}, ${r.is_active}, ${sqlLit(r.service_scope)})`
 					)
 					.join(', ')};`
 			: '';

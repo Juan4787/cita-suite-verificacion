@@ -54,9 +54,9 @@ begin
   values (v_biz, v_prof, v_srv);
   insert into public.availability_rules(
     business_id, professional_id, weekday, start_time, end_time,
-    slot_interval_minutes, break_minutes, is_active, service_scope, allowed_service_ids
+    slot_interval_minutes, break_minutes, is_active, service_scope
   )
-  select v_biz, v_prof, wd, '09:00'::time, '12:00'::time, 60, 0, true, 'all', '{}'::uuid[]
+  select v_biz, v_prof, wd, '09:00'::time, '12:00'::time, 60, 0, true, 'all'
   from generate_series(0, 6) as wd;
 
   insert into public.patients(id, business_id, owner_id, full_name, phone_e164, email)
