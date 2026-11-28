@@ -5,7 +5,7 @@
 --  P3: marca «No cancelar sus turnos por seña impaga» (5 roles, auditoría quién/cuándo, supresión/recuperación
 --      condicionada, bloqueo en borde de vencimiento, fusión de fichas y privilegios de ejecución)
 begin;
-select extensions.plan(42);
+select extensions.plan(49);
 
 create function pg_temp.l2a_id(p_key text) returns uuid language sql immutable as $$
   select ('2a000000-0000-4000-8000-' || lpad(abs(hashtext(p_key))::bigint::text, 12, '0'))::uuid
@@ -141,7 +141,7 @@ select extensions.is(
 
 select extensions.throws_ok(
   format(
-    $q$select pg_temp.as_role(%L, 'select public.save_appointment_email_policy(%L, ''{"email_enabled":true,"require_email":true,"show_cancel":true,"show_reschedule":true,"require_deposit_on_reschedule":true,"previous_deposit_disposition":"forfeit","self_management_cutoff_hours":0}''::jsonb, 3)::text')$q$,
+    $q$select pg_temp.as_role(%L, $inner$select public.save_appointment_email_policy(%L, '{"email_enabled":true,"require_email":true,"show_cancel":true,"show_reschedule":true,"require_deposit_on_reschedule":true,"previous_deposit_disposition":"forfeit","self_management_cutoff_hours":0}'::jsonb, 3)::text$inner$)$q$,
     pg_temp.l2a_id('owner'), pg_temp.l2a_id('biz')
   ),
   'P0001', 'EMAIL_POLICY_INVALID', 'P5: rechaza cutoff_hours = 0'
@@ -149,7 +149,7 @@ select extensions.throws_ok(
 
 select extensions.throws_ok(
   format(
-    $q$select pg_temp.as_role(%L, 'select public.save_appointment_email_policy(%L, ''{"email_enabled":true,"require_email":true,"show_cancel":true,"show_reschedule":true,"require_deposit_on_reschedule":true,"previous_deposit_disposition":"forfeit","self_management_cutoff_hours":721}''::jsonb, 3)::text')$q$,
+    $q$select pg_temp.as_role(%L, $inner$select public.save_appointment_email_policy(%L, '{"email_enabled":true,"require_email":true,"show_cancel":true,"show_reschedule":true,"require_deposit_on_reschedule":true,"previous_deposit_disposition":"forfeit","self_management_cutoff_hours":721}'::jsonb, 3)::text$inner$)$q$,
     pg_temp.l2a_id('owner'), pg_temp.l2a_id('biz')
   ),
   'P0001', 'EMAIL_POLICY_INVALID', 'P5: rechaza cutoff_hours = 721'
@@ -320,7 +320,7 @@ select extensions.is(
 
 select extensions.throws_ok(
   format(
-    $q$select pg_temp.as_role(%L, 'select public.save_deposit_policy(%L, ''{"enabled":true,"auto_cancel_enabled":true,"amount_mode":"fixed","fixed_amount":40000,"percentage":null,"request_days":7,"deadline_hours":168,"min_payment_hours":24,"late_booking_payment_hours":169,"transfer_details":"","applies_to_manual":true,"excluded_service_ids":[]}''::jsonb, 2)::text')$q$,
+    $q$select pg_temp.as_role(%L, $inner$select public.save_deposit_policy(%L, '{"enabled":true,"auto_cancel_enabled":true,"amount_mode":"fixed","fixed_amount":40000,"percentage":null,"request_days":7,"deadline_hours":168,"min_payment_hours":24,"late_booking_payment_hours":169,"transfer_details":"","applies_to_manual":true,"excluded_service_ids":[]}'::jsonb, 2)::text$inner$)$q$,
     pg_temp.l2a_id('owner'), pg_temp.l2a_id('biz')
   ),
   'P0001', 'DEPOSIT_POLICY_INVALID', 'P2: rechaza late_booking_payment_hours = 169'
@@ -368,12 +368,12 @@ select extensions.is(
 
 -- Roles no autorizados (professional y readonly) rechazados
 select extensions.throws_ok(
-  format($q$select pg_temp.as_role(%L, 'select public.set_patient_deposit_auto_cancel_exemption(%L, %L, true)::text')$q$,
+  format($q$select pg_temp.as_role(%L, $inner$select public.set_patient_deposit_auto_cancel_exemption(%L, %L, true)::text$inner$)$q$,
     pg_temp.l2a_id('professional'), pg_temp.l2a_id('biz'), pg_temp.l2a_id('pat1')),
   'P0001', 'PATIENT_DEPOSIT_EXEMPTION_FORBIDDEN', 'P3: rol professional no puede activar la marca'
 );
 select extensions.throws_ok(
-  format($q$select pg_temp.as_role(%L, 'select public.set_patient_deposit_auto_cancel_exemption(%L, %L, true)::text')$q$,
+  format($q$select pg_temp.as_role(%L, $inner$select public.set_patient_deposit_auto_cancel_exemption(%L, %L, true)::text$inner$)$q$,
     pg_temp.l2a_id('readonly'), pg_temp.l2a_id('biz'), pg_temp.l2a_id('pat1')),
   'P0001', 'PATIENT_DEPOSIT_EXEMPTION_FORBIDDEN', 'P3: rol readonly no puede activar la marca'
 );
@@ -473,6 +473,23 @@ select extensions.ok(
   and not has_function_privilege('anon', 'public.set_patient_deposit_auto_cancel_exemption(uuid,uuid,boolean)', 'EXECUTE')
   and not has_function_privilege('service_role', 'public.set_patient_deposit_auto_cancel_exemption(uuid,uuid,boolean)', 'EXECUTE'),
   'P3: privilegios explícitos sólo para authenticated en set_patient_deposit_auto_cancel_exemption'
+);
+
+-- Aislamiento por consultorio y bloqueo en modo restringido
+select extensions.throws_ok(
+  format($q$select pg_temp.as_role(%L, $inner$select public.set_patient_deposit_auto_cancel_exemption(%L, %L, true)::text$inner$)$q$,
+    pg_temp.l2a_id('owner'), pg_temp.l2a_id('other_biz'), pg_temp.l2a_id('pat1')),
+  'P0001', 'PATIENT_DEPOSIT_EXEMPTION_FORBIDDEN', 'P3: rechaza acceso a otro consultorio'
+);
+
+update public.business_subscriptions
+set commercial_access_enabled = false, is_permanent = false
+where business_id = pg_temp.l2a_id('biz');
+
+select extensions.throws_ok(
+  format($q$select pg_temp.as_role(%L, $inner$select public.set_patient_deposit_auto_cancel_exemption(%L, %L, true)::text$inner$)$q$,
+    pg_temp.l2a_id('owner'), pg_temp.l2a_id('biz'), pg_temp.l2a_id('pat1')),
+  'P0001', 'PATIENT_DEPOSIT_EXEMPTION_FORBIDDEN', 'P3: rechaza edición en consultorio comercialmente restringido'
 );
 
 select * from extensions.finish();
