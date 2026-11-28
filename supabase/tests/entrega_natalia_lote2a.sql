@@ -52,12 +52,15 @@ begin
     (v_prof_u, 'prof-l2a@cita-suite.test'),
     (v_ro, 'ro-l2a@cita-suite.test');
 
-  insert into public.businesses(id, name, slug, timezone, is_active, public_booking_enabled, allow_same_day_booking, min_booking_notice_minutes, max_booking_days_ahead)
-  values (v_biz, 'Consultorio Lote 2A', 'consultorio-l2a', 'America/Argentina/Buenos_Aires', true, true, true, 0, 365);
+  insert into public.businesses(id, name, slug, industry, timezone, is_active, public_booking_enabled, allow_same_day_booking, min_booking_notice_minutes, max_booking_days_ahead)
+  values (v_biz, 'Consultorio Lote 2A', 'consultorio-l2a', 'medicine', 'America/Argentina/Buenos_Aires', true, true, true, 0, 365);
 
-  insert into public.business_subscriptions(business_id, commercial_access_enabled, is_permanent)
-  values (v_biz, true, true)
-  on conflict (business_id) do update set commercial_access_enabled = true, is_permanent = true, archived_at = null;
+  update public.business_subscriptions
+  set commercial_access_enabled = true, is_permanent = true, subscription_status = 'active',
+      paid_until = null, grace_until = null, restricted_until = null, archived_at = null
+  where business_id = v_biz;
+
+  update private.appointment_management_runtime set reschedule_enabled = true where singleton;
 
   insert into public.business_users(business_id, user_id, role, status, accepted_at) values
     (v_biz, v_owner, 'owner', 'active', now()),
@@ -80,9 +83,9 @@ begin
   insert into public.professional_services(business_id, professional_id, service_id)
   select v_biz, id, v_svc from public.professionals where business_id = v_biz;
 
-  insert into public.patients(id, business_id, full_name, email, phone, phone_e164) values
-    (v_pat1, v_biz, 'Paciente Uno', 'uno@l2a.test', '+5493415550001', '+5493415550001'),
-    (v_pat2, v_biz, 'Paciente Dos', 'dos@l2a.test', '+5493415550002', '+5493415550002');
+  insert into public.patients(id, business_id, owner_id, full_name, email, phone, phone_e164) values
+    (v_pat1, v_biz, v_owner, 'Paciente Uno', 'uno@l2a.test', '+5493415550001', '+5493415550001'),
+    (v_pat2, v_biz, v_owner, 'Paciente Dos', 'dos@l2a.test', '+5493415550002', '+5493415550002');
 
   update private.deposit_automation set enabled = true where singleton;
 end $$;
