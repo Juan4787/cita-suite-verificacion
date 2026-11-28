@@ -6181,11 +6181,7 @@ export type Database = {
         Returns: undefined
       }
       set_patient_deposit_auto_cancel_exemption: {
-        Args: {
-          p_business_id: string
-          p_exempt: boolean
-          p_patient_id: string
-        }
+        Args: { p_business_id: string; p_exempt: boolean; p_patient_id: string }
         Returns: Json
       }
       set_patient_drive_folder_safely: {
