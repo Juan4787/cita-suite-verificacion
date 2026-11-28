@@ -75,20 +75,30 @@ test('@candidate-behavior Lote 2A (P5, P2, P3): límite de autogestión, reserva
 	const health = await observeRenderHealth(page);
 	const issues: LayoutIssue[] = [];
 
+	const cleanGetUrl = (rawUrl: string) => {
+		const u = new URL(rawUrl);
+		for (const key of [...u.searchParams.keys()]) {
+			if (key.startsWith('/')) u.searchParams.delete(key);
+		}
+		return u.toString();
+	};
+
 	const auditAndCapture = async (
 		name: string,
 		widths: number[],
 		modes: Array<'light' | 'dark'>,
 		options?: {
+			pageUrl?: string;
 			embedUrl?: string;
 			anchor?: () => ReturnType<typeof page.locator>;
 			afterLoad?: () => Promise<void>;
 		}
 	) => {
+		const targetGetUrl = options?.embedUrl ? null : cleanGetUrl(options?.pageUrl ?? page.url());
 		for (const mode of modes) {
-			if (!options?.embedUrl) {
+			if (targetGetUrl) {
 				await chooseTheme(page, mode);
-				await page.reload({ waitUntil: 'networkidle' });
+				await page.goto(targetGetUrl, { waitUntil: 'networkidle' });
 				await expectRenderedTheme(page, mode);
 				if (options?.afterLoad) await options.afterLoad();
 			}
@@ -113,7 +123,7 @@ test('@candidate-behavior Lote 2A (P5, P2, P3): límite de autogestión, reserva
 				}
 			}
 		}
-		if (!options?.embedUrl) {
+		if (targetGetUrl) {
 			await chooseTheme(page, 'light');
 		}
 	};
@@ -187,7 +197,7 @@ test('@candidate-behavior Lote 2A (P5, P2, P3): límite de autogestión, reserva
 			page.getByRole('button', { name: 'Guardar preferencias' }).click()
 		]);
 		await expect(page.getByText('Se guardaron las preferencias de correo.')).toBeVisible();
-		await page.reload({ waitUntil: 'networkidle' });
+		await page.goto(origin + '/odonto/configuracion/correo', { waitUntil: 'networkidle' });
 		await expect(page.locator('input[name="self_management_cutoff_hours"]')).toHaveValue('48');
 
 		// 2. P2 en /odonto/configuracion/senas: configurar Natalia (168h / 48h / 24h), abrir acordeón y verificar ejemplos
@@ -302,6 +312,7 @@ test('@candidate-behavior Lote 2A (P5, P2, P3): límite de autogestión, reserva
 		await expect(page.locator('[data-patient-deposit-exemption]').getByRole('checkbox', { name: 'No cancelar sus turnos por seña impaga' })).toBeChecked();
 		await expect(page.locator('[data-exemption-audit]')).toContainText(/Último cambio:/i);
 		await auditAndCapture('p3-ficha-paciente', [320, 1280], ['light', 'dark'], {
+			pageUrl: `${origin}/odonto/pacientes/${patientExemptId}?tab=datos`,
 			anchor: () => page.locator('[data-patient-deposit-exemption]')
 		});
 
