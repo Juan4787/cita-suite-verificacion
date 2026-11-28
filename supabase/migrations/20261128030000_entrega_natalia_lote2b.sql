@@ -398,7 +398,7 @@ create or replace function public.consume_server_rate_limits(
 returns table(allowed boolean, used integer, retry_after_seconds integer)
 language plpgsql
 security definer
-set search_path = public, pg_catalog
+set search_path = pg_catalog, pg_temp
 as $$
 declare
   v_action text := lower(nullif(trim(coalesce(p_action, '')), ''));
