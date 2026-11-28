@@ -1048,18 +1048,23 @@ end $$;
 select extensions.pass('46. P4 decisión #4: un crédito nunca se aplica a dos turnos a la vez y «Deshacer» lo restituye a la ficha registrando quién lo hizo');
 
 -- 47. Pacientes unificados: private.merge_patient_deposit_credits mueve los créditos disponibles
-select extensions.ok(
-  private.merge_patient_deposit_credits(pg_temp.l2b_id('biz'), pg_temp.l2b_id('pat1'), pg_temp.l2b_id('pat_merge_dst')) = 1
-  and exists(
-    select 1 from public.patient_deposit_credits
-    where business_id = pg_temp.l2b_id('biz') and patient_id = pg_temp.l2b_id('pat_merge_dst') and status = 'available'
-  )
-  and not exists(
-    select 1 from public.patient_deposit_credits
-    where business_id = pg_temp.l2b_id('biz') and patient_id = pg_temp.l2b_id('pat1') and status = 'available'
-  ),
-  '47. P4: private.merge_patient_deposit_credits transfiere señas a cuenta disponibles al unificar fichas'
-);
+do $$
+declare v_moved integer;
+begin
+  v_moved := private.merge_patient_deposit_credits(pg_temp.l2b_id('biz'), pg_temp.l2b_id('pat1'), pg_temp.l2b_id('pat_merge_dst'));
+  if v_moved <> 1
+    or not exists(
+      select 1 from public.patient_deposit_credits
+      where business_id = pg_temp.l2b_id('biz') and patient_id = pg_temp.l2b_id('pat_merge_dst') and status = 'available'
+    )
+    or exists(
+      select 1 from public.patient_deposit_credits
+      where business_id = pg_temp.l2b_id('biz') and patient_id = pg_temp.l2b_id('pat1') and status = 'available'
+    ) then
+    raise exception 'P4_MERGE_CREDITS_FAILED: moved=%', v_moved;
+  end if;
+end $$;
+select extensions.pass('47. P4: private.merge_patient_deposit_credits transfiere señas a cuenta disponibles al unificar fichas');
 
 -- 48. Columna computada public.patient_available_deposit_credits respeta aislamiento multi-tenant
 do $$
