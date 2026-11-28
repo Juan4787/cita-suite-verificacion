@@ -125,9 +125,11 @@ test('@candidate-behavior Lote 2B (P1 y P4): aviso de seña por vencer, «Ya tra
 		await page.locator('input[name="deposit_credit_cutoff_hours"]').fill('48');
 		await page.locator('textarea[name="transfer_details"]').fill('Alias prueba.lote2b\nTitular Consultorio Prueba');
 		await Promise.all([
+			page.waitForEvent('load'),
 			page.waitForResponse((res) => res.request().method() === 'POST' && res.url().includes('/odonto/configuracion/senas')),
 			page.getByRole('button', { name: 'Guardar' }).click()
 		]);
+		await page.waitForLoadState('networkidle');
 		await expect(page.getByText(/Configuración de señas guardada/i)).toBeVisible();
 		await auditAndCapture('lote2b-config-senas', [320, 1280], ['light', 'dark'], {
 			pageUrl: origin + '/odonto/configuracion/senas',
@@ -182,8 +184,10 @@ test('@candidate-behavior Lote 2B (P1 y P4): aviso de seña por vencer, «Ya tra
 		await page.locator('[data-payment-notice-trigger]').click();
 		await Promise.all([
 			page.waitForResponse((res) => res.request().method() === 'POST' && res.url().includes('/report_deposit_payment')),
+			page.waitForResponse((res) => res.request().method() === 'GET' && res.url().includes('__data.json')),
 			page.getByRole('button', { name: 'Sí, ya transferí' }).click()
 		]);
+		await page.waitForLoadState('networkidle');
 		await expect(page.locator('[data-payment-notice-recorded]')).toBeVisible();
 		await expect(page.locator('[data-deposit-card]')).not.toContainText(/cancela automáticamente/i);
 		await expect(page.locator('[data-payment-notice-whatsapp-link]')).toBeVisible();
@@ -211,6 +215,7 @@ test('@candidate-behavior Lote 2B (P1 y P4): aviso de seña por vencer, «Ya tra
 		// Acción «No llegó el pago» limpia el aviso y devuelve al circuito normal
 		await apt1Row.locator('summary').filter({ hasText: 'No llegó el pago' }).click();
 		await Promise.all([
+			page.waitForEvent('load'),
 			page.waitForResponse((res) => res.request().method() === 'POST' && res.url().includes('/clear_payment_notice')),
 			apt1Row.getByRole('button', { name: 'Sí, no llegó el pago' }).click()
 		]);
@@ -219,7 +224,11 @@ test('@candidate-behavior Lote 2B (P1 y P4): aviso de seña por vencer, «Ya tra
 
 		// Confirmar la seña de apt1 ($ 40.000) para probar P4
 		await page.goto(origin + '/odonto/senas', { waitUntil: 'networkidle' });
-		await page.locator(`[data-deposit-row="${apt1Id}"]`).getByRole('button', { name: 'Confirmar seña' }).click();
+		await Promise.all([
+			page.waitForEvent('load'),
+			page.waitForResponse((res) => res.request().method() === 'POST' && res.url().includes('?/deposit')),
+			page.locator(`[data-deposit-row="${apt1Id}"]`).getByRole('button', { name: 'Confirmar seña' }).click()
+		]);
 		await page.waitForLoadState('networkidle');
 		expect(f.sql(`select status from public.appointment_deposits where appointment_id='${apt1Id}';`)).toBe('paid');
 
@@ -231,6 +240,7 @@ test('@candidate-behavior Lote 2B (P1 y P4): aviso de seña por vencer, «Ya tra
 		await cancelPanel1.getByLabel('Confirmo que quiero cancelar este turno.').check();
 		await Promise.all([
 			page.waitForResponse((res) => res.request().method() === 'POST' && res.url().includes('/update_status')),
+			page.waitForResponse((res) => res.request().method() === 'GET' && res.url().includes('__data.json')),
 			cancelPanel1.getByRole('button', { name: 'Cancelar turno' }).click()
 		]);
 		await page.waitForLoadState('networkidle');
@@ -272,6 +282,7 @@ test('@candidate-behavior Lote 2B (P1 y P4): aviso de seña por vencer, «Ya tra
 		});
 
 		await Promise.all([
+			page.waitForEvent('load'),
 			page.waitForResponse((res) => res.request().method() === 'POST' && res.url().includes('/apply_credit')),
 			apt2Row.getByRole('button', { name: 'Aplicar', exact: true }).click()
 		]);
@@ -284,6 +295,7 @@ test('@candidate-behavior Lote 2B (P1 y P4): aviso de seña por vencer, «Ya tra
 		await expect(page.locator('[data-deposit-difference-note]')).toContainText(/Falta cobrar \$[\s\u00a0]*10\.000 de diferencia/i);
 		await page.locator('[data-deposit-panel] summary').filter({ hasText: 'Deshacer' }).click();
 		await Promise.all([
+			page.waitForEvent('load'),
 			page.waitForResponse((res) => res.request().method() === 'POST' && res.url().includes('?/deposit')),
 			page.locator('[data-deposit-panel]').getByRole('button', { name: 'Sí, deshacer el registro' }).click()
 		]);
@@ -292,6 +304,7 @@ test('@candidate-behavior Lote 2B (P1 y P4): aviso de seña por vencer, «Ya tra
 
 		// Volver a aplicar desde el detalle del turno
 		await Promise.all([
+			page.waitForEvent('load'),
 			page.waitForResponse((res) => res.request().method() === 'POST' && res.url().includes('/apply_credit')),
 			page.locator('[data-deposit-panel]').getByRole('button', { name: 'Aplicar', exact: true }).click()
 		]);
@@ -301,7 +314,10 @@ test('@candidate-behavior Lote 2B (P1 y P4): aviso de seña por vencer, «Ya tra
 		// 4. Mover apt2 a < 48h (24h): verificar pregunta obligatoria «¿Quién pidió el cambio?» (Decisión #1) + excepción por fuerza mayor al cancelar (y devuelve $ 40.000 reales, Decisión #3)
 		f.sql(`update public.appointments set starts_at = now() + interval '24 hours', ends_at = now() + interval '25 hours', blocking_starts_at = now() + interval '24 hours', blocking_ends_at = now() + interval '25 hours' where id = '${apt2Id}';`);
 		await page.goto(`${origin}/odonto/turnos/${apt2Id}`, { waitUntil: 'networkidle' });
-		await page.locator('#reprogramar > summary').click();
+		await Promise.all([
+			page.waitForResponse((res) => res.url().includes(`/odonto/turnos/${apt2Id}/slots`)),
+			page.locator('#reprogramar > summary').click()
+		]);
 		const requesterFieldset = page.locator('[data-reschedule-requester-fieldset]');
 		await expect(requesterFieldset).toBeVisible();
 		await expect(requesterFieldset).toContainText('¿Quién pidió el cambio?');
@@ -315,10 +331,14 @@ test('@candidate-behavior Lote 2B (P1 y P4): aviso de seña por vencer, «Ya tra
 		await auditAndCapture('p4-turno-decision-y-fuerza-mayor', [320, 1280], ['light', 'dark'], {
 			pageUrl: `${origin}/odonto/turnos/${apt2Id}`,
 			afterLoad: async () => {
-				await page.locator('#reprogramar > summary').click();
+				await Promise.all([
+					page.waitForResponse((res) => res.url().includes(`/odonto/turnos/${apt2Id}/slots`)),
+					page.locator('#reprogramar > summary').click()
+				]);
 				await expect(page.locator('[data-reschedule-requester-fieldset]')).toBeVisible();
 				await page.locator('[data-cancel-panel] > summary').click();
 				await expect(page.locator('[data-force-majeure-credit]')).toBeVisible();
+				await page.waitForLoadState('networkidle');
 			},
 			anchor: () => page.locator('[data-reschedule-requester-fieldset]')
 		});
@@ -330,6 +350,7 @@ test('@candidate-behavior Lote 2B (P1 y P4): aviso de seña por vencer, «Ya tra
 		await page.locator('[data-cancel-panel]').getByLabel('Confirmo que quiero cancelar este turno.').check();
 		await Promise.all([
 			page.waitForResponse((res) => res.request().method() === 'POST' && res.url().includes('/update_status')),
+			page.waitForResponse((res) => res.request().method() === 'GET' && res.url().includes('__data.json')),
 			page.locator('[data-cancel-panel]').getByRole('button', { name: 'Cancelar turno' }).click()
 		]);
 		await page.waitForLoadState('networkidle');
