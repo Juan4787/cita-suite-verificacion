@@ -136,21 +136,15 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 				id, business_id, patient_id, service_id, professional_id,
 				starts_at, ends_at, blocking_starts_at, blocking_ends_at,
 				status, source, confirmation_token,
-				service_name_snapshot, professional_name_snapshot, duration_minutes_snapshot,
-				price_quote_snapshot
+				service_name_snapshot, professional_name_snapshot, duration_minutes_snapshot
 			) values (
 				'${virtualAptId}', '${f.businessId}', '${patientId}', '${assignment.service_id}', '${assignment.professional_id}',
 				((('${day365}'::date)::timestamp + time '10:00') at time zone '${prevBiz.timezone}'),
 				((('${day365}'::date)::timestamp + time '11:00') at time zone '${prevBiz.timezone}'),
 				((('${day365}'::date)::timestamp + time '10:00') at time zone '${prevBiz.timezone}'),
 				((('${day365}'::date)::timestamp + time '11:00') at time zone '${prevBiz.timezone}'),
-				'reserved', 'public_booking', '${virtualToken}',
-				'Primera consulta', 'Dra. Prueba', 60,
-				jsonb_build_object(
-					'amount', 57500, 'base_amount', 32000, 'currency', 'ARS',
-					'date', '${day365}', 'month', '${day365.slice(0, 7)}-01',
-					'adjusted', true, 'hash', repeat('c', 64), 'revision', 1, 'policy_id', '${pricePolicyId}'
-				)
+				'reserved', 'manual', '${virtualToken}',
+				'Primera consulta', 'Dra. Prueba', 60
 			);
 			insert into public.appointment_booking_contexts(
 				appointment_id, business_id, integration_id, integration_revision, contract_version,
@@ -372,7 +366,7 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 			delete from private.appointment_email_events where business_id='${f.businessId}' and appointment_id='${virtualAptId}';
 			delete from public.appointments where business_id='${f.businessId}' and id='${virtualAptId}';
 			delete from public.patients where business_id='${f.businessId}' and id='${patientId}';
-			delete from public.service_price_policies where business_id='${f.businessId}' and id='${pricePolicyId}';
+			delete from public.service_price_policies where business_id='${f.businessId}' and service_id='${assignment.service_id}';
 			${restorePoliciesSql}
 			delete from public.availability_rules where business_id='${f.businessId}' and professional_id='${assignment.professional_id}';
 			${restoreRulesSql}
