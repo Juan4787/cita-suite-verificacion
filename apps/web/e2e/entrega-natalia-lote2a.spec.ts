@@ -326,9 +326,10 @@ test('@candidate-behavior Lote 2A (P5, P2, P3): límite de autogestión, reserva
 			anchor: () => page.locator(`[data-deposit-row="${aptCancelledNoEmailId}"]`)
 		});
 
-		// Verificar /turno/[token] dentro de ventana P5: oculta Cancelar/Reprogramar y muestra aviso + WhatsApp
+		// Verificar /turno/[token] dentro de ventana P5: oculta Cancelar/Reprogramar y muestra aviso + WhatsApp (incluso con seña pendiente)
 		await page.goto(`${origin}/turno/${aptInsideToken}`, { waitUntil: 'networkidle' });
 		await expect(page.locator('[data-self-management-closed-notice]')).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Escribir al consultorio por WhatsApp' })).toBeVisible();
 		await expect(page.getByRole('link', { name: 'Cancelar turno' })).toHaveCount(0);
 		await expect(page.getByRole('link', { name: 'Reprogramar turno' })).toHaveCount(0);
 		await expect(page.locator('[data-deposit-card]')).not.toContainText(/cancela automáticamente/i);

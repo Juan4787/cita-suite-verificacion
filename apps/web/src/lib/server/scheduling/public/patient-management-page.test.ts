@@ -67,4 +67,57 @@ describe('public appointment route delegation', () => {
   const result = await createPatientManagementPage(false).actions.reschedule!(event());
   expect(result).toMatchObject({ status: 429 }); expect(mock.submit).not.toHaveBeenCalled();
  });
+ it('P5: conserva management.practiceWhatsApp dentro de la ventana cerrada aunque haya seña pendiente', async () => {
+  const base = demoPublicAppointment('b'.repeat(64));
+  const appointment = {
+   ...base,
+   status: 'reserved' as const,
+   is_past: false,
+   business: { ...base.business, whatsapp_contact_phone: '5493415550199' },
+   deposit: {
+    status: 'pending' as const,
+    amount: 40000,
+    currency: 'ARS',
+    due_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    request_from: new Date().toISOString(),
+    auto_cancel: false,
+    transfer_details: 'Alias prueba',
+    recorded_at: null
+   }
+  };
+  mock.screen.mockResolvedValue({
+   view: { appointment, newBookingAllowed: true, canManageReminders: true, canAddInformation: false },
+   panel: {
+    mode: 'overview',
+    url: `/turno/${token}`,
+    now: new Date().toISOString(),
+    startsAt: appointment.starts_at,
+    timezone: appointment.business.timezone,
+    revision: 'rev-1',
+    operationId: 'op-1',
+    canConfirm: true,
+    canCancel: false,
+    canReschedule: false,
+    selfManagementCutoffHours: 48,
+    selfManagementCutoffAt: new Date(Date.now() - 3600_000).toISOString(),
+    selfManagementWindowClosed: true,
+    practicePhone: '+54 341 555-0199',
+    unavailableMessage: null,
+    date: '2026-12-01',
+    minDate: '2026-11-28',
+    maxDate: '2026-12-28',
+    slots: [],
+    selectedStart: null,
+    availabilityRevision: null,
+    durationMinutes: 60,
+    financialTerms: null,
+    financialSummary: { paidAmount: '0', appliedAmount: '0', creditedAmount: '0', forfeitedAmount: '0', unresolvedAmount: '0' }
+   }
+  });
+  const loaded = await createPatientManagementPage(true).load(event());
+  expect(loaded.depositWhatsApp).not.toBeNull();
+  expect(loaded.practiceWhatsApp).toBeNull();
+  expect(loaded.management?.practiceWhatsApp?.whatsappUrl).toContain('https://wa.me/5493415550199');
+  expect(loaded.management?.practiceWhatsApp?.whatsappWebUrl).toContain('https://web.whatsapp.com/send?phone=5493415550199');
+ });
 });

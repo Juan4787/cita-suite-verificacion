@@ -12,7 +12,7 @@ import {
 	type PublicAppointmentView
 } from '$lib/server/scheduling/public/public-appointments';
 import { canRegisterCalendarAction, markCalendarOffered } from '$lib/server/integrations/public/calendar-tracking';
-import { buildTurnWhatsAppNotices } from '$lib/server/scheduling/public/practice-whatsapp';
+import { buildPracticeWhatsAppNotice, buildTurnWhatsAppNotices } from '$lib/server/scheduling/public/practice-whatsapp';
 import {
 	getGoogleCalendarPublicMessage,
 	loadGoogleCalendarUiState,
@@ -202,13 +202,18 @@ const load = async (event: RequestEvent) => {
 		const whatsAppNotices = appointment
 			? buildTurnWhatsAppNotices(appointment, { created })
 			: { depositWhatsApp: null, practiceWhatsApp: null };
+		// P5: dentro de la ventana cerrada, el botón de WhatsApp del bloque «Gestionar mi turno»
+		// siempre debe ofrecerse cuando el consultorio tiene WhatsApp activo, incluso si hay seña pendiente.
+		const managementWhatsApp = appointment
+			? (buildPracticeWhatsAppNotice(appointment, { created: false }) ?? whatsAppNotices.practiceWhatsApp)
+			: null;
 		const management = screen?.panel
 			? {
 					...screen.panel,
-					practiceWhatsApp: whatsAppNotices.practiceWhatsApp
+					practiceWhatsApp: managementWhatsApp
 						? {
-								whatsappUrl: whatsAppNotices.practiceWhatsApp.whatsappUrl,
-								whatsappWebUrl: whatsAppNotices.practiceWhatsApp.whatsappWebUrl
+								whatsappUrl: managementWhatsApp.whatsappUrl,
+								whatsappWebUrl: managementWhatsApp.whatsappWebUrl
 							}
 						: null,
 					device
