@@ -1,10 +1,37 @@
 # Publicación y reversión
 
-## Último estado comprobado — paso 1 de la entrega a Natalia (13 correcciones de auditoría): 21 de noviembre de 2026, 22:23 hora argentina (01:23 UTC del 22)
+## Último estado comprobado — lote 0 de la entrega a Natalia (D1, D2, D3): 27 de noviembre de 2026, 20:29 hora argentina (23:29 UTC)
 
 **La única vuelta atrás vigente es la de este apartado.** Las de los apartados siguientes son historia.
 
-**Producción sirve** la instantánea `b6c3a8aea05c5c10b789edc544bb9f96fbc26a33` en `main`, Worker `app`, versión de Cloudflare **`3cd96265-1ed2-4769-aa65-e12bd9bfe110`**. **170 migraciones:** la última es `20261121010000_entrega_natalia_paso1.sql` (`sha256` `168e8bb4aa6a7c935bee41947041595ffc09671da02245fb7eca4a64187ebfe6`). Programador `cita-suite-scheduler` reinstalado en versión **`11c3a192-373c-4f22-ada1-c45755b92a3c`** con los mismos cinco cron (`*/5`, `1-59/5`, `2-59/5`, `3-59/5`, `17 */3`).
+**Producción sirve** la instantánea `3bad70e896e382fc3ca98fe3d76de9f328555d4c` en `main`, Worker `app`, versión de Cloudflare **`7a4648b2-11ff-405f-8d5f-df4406e7d6ab`**. **171 migraciones:** la última es `20261127010000_entrega_natalia_lote0.sql` (`sha256` `6a522572ca6bc2b05eb03ad1550728df749423c0a9dc6a1c349bc8f6d5fa1268`). Programador `cita-suite-scheduler` reinstalado en versión **`843f7426-ef36-4d28-88b2-196de8acd5a6`** con los mismos cinco cron (`*/5`, `1-59/5`, `2-59/5`, `3-59/5`, `17 */3`).
+
+**Qué trae** ([plan, bitácora y evidencia del lote 0](../plans/entrega-natalia-implementacion.md#lote-0-defectos)):
+- **D1:** los correos de turnos virtuales ya no muestran dirección, indicaciones para llegar ni enlace al mapa (ni en `private.appointment_management_snapshot` ni en `appointment-email-content.ts`), y muestran «Modalidad: virtual» junto a las indicaciones para la consulta online; los presenciales conservan dirección, indicaciones para llegar y mapa sin texto online.
+- **D2:** la página de baja de correos (`/correo/baja/[token]`) distingue enlace vencido de enlace inválido mediante `public.get_email_unsubscribe_state(text)` (sin modificar `get_email_unsubscribe(text)`): ante enlace vencido muestra «Este enlace venció», el nombre del consultorio y el acceso público de WhatsApp y/o teléfono sin pedir nunca «respondé un correo»; ante enlace inválido no revela ningún dato del consultorio.
+- **D3:** `list_appointment_email_reminder_coverage` comparte la misma regla SQL que `plan_appointment_email_work` y `claim_appointment_email_batch` para que `/odonto/recordatorios` y el aviso de `/odonto/agenda` reconozcan los turnos cubiertos por recordatorio automático de correo; `agenda/+page.server.ts` respeta los permisos de rol.
+- Catálogo único de correos al paciente en [`docs/architecture/correos-al-paciente.md`](correos-al-paciente.md).
+
+Juan autorizó la publicación el 27 de noviembre a las 20:24 hora argentina («publicalo y continua»).
+
+**Verificación sobre la revisión exacta (`3bad70e8`):**
+- local (`pnpm verify:fast` + TDD rojo/verde + *break-proof* 5/5): tipos sin errores ni advertencias, 2.275 pruebas de servidor y 379 de componentes;
+- GitHub SQL `46067263127` (3m55s): 171 migraciones, 124 suites SQL (incluyendo `entrega_natalia_lote0.sql` 26/26 con paridad 10/10 planificador-lista), concurrencia y tipos exactos byte a byte;
+- GitHub completa `46073307195` (20m25s): `verify:fast`, LibreOffice, Natalia, 171 migraciones, 124 suites SQL + concurrencia, tipos exactos, Chromium 85/85, demo y reserva nativa de Natalia;
+- paquete `46075753631` (`bundleSha256=7061f2abbfcf6ea11f8ba9656c4428db59eadec7730bccd5d7c2e58a73f7e271`), Chromium sobre paquete `46075948345` (85/85), Firefox sobre paquete `46077621062` (85/85) y WebKit sobre paquete `46079782260` (83/85 + 2 omitidas declaradas de WebKit en Linux);
+- `verify-production-release.mjs` aprobado a las 23:29 UTC: 152 archivos idénticos y 78 relaciones sin exposición anónima; ambos `/_app/version.json` dicen `3bad70e896e382fc3ca98fe3d76de9f328555d4c`;
+- comprobación en vivo en producción sobre el consultorio de prueba **«Dra. Natalia Frutos — PRUEBA»** (`c121c69c-f90b-4248-89a9-cd6e5bed6163`, `natalia-frutos-prueba`, remitente `turnos@prueba-correo.cita-suite.com.ar`): D1 (2 correos reales en la bandeja principal de `citasuite@gmail.com` con `SPF/DKIM/DMARC pass`, sin `Reply-To`, enlaces 200 y capturas HTML inspeccionadas), D2 (baja vencida e inválida en `320px`/`390px`/`1280px`), D3 (`/odonto/recordatorios` y aviso exacto en `/odonto/agenda`), limpieza de registros temporales del Lote 0 (`0` turnos/pacientes/entregas/tokens) y comprobación de sólo lectura del consultorio real de Natalia (huella idéntica `75bb96cd…` y turnero `24/24`).
+
+**Publicación:**
+- ensayo (`rehearse-production-migrations.mjs`) a las 23:25 UTC: `applied: 170`, `pending: 1`, `failures: 0`;
+- respaldo `~/.local/share/cita-suite/backups/production-2026-11-27T23-25-57-489Z`: 129 tablas, 4.948 filas, 170 migraciones, 26 objetos, `objectFailures: 0`;
+- programador sin cron (`60da0618-6d93-414c-893b-71cd90d98533`); migración 171 a las 23:28:31 UTC en 1,48 s; Worker `app` (`7a4648b2-11ff-405f-8d5f-df4406e7d6ab`) desde el paquete exacto `46075753631`; verificación `verify-production-release.mjs`; programador con cron (`843f7426-ef36-4d28-88b2-196de8acd5a6`, preflight `401/410` aprobado).
+
+**Vuelta atrás:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback 3cd96265-1ed2-4769-aa65-e12bd9bfe110 --name app --message "<motivo>" --yes`, la versión del 21 de noviembre a las 22:23 (paso 1). Es compatible con la migración 171 porque ésta conserva `public.get_email_unsubscribe(text)` y todas las firmas, tablas y columnas existentes; sólo filtra `address_instructions` en turnos virtuales dentro de `private.appointment_management_snapshot` y agrega funciones nuevas (`get_email_unsubscribe_state`, `list_appointment_email_reminder_coverage` y los predicados compartidos). Después, los dos `/_app/version.json` deben decir `b6c3a8aea05c5c10b789edc544bb9f96fbc26a33`. La migración no se revierte. Nunca una versión anterior a E.
+
+## Estado anterior — paso 1 de la entrega a Natalia (13 correcciones de auditoría): 21 de noviembre de 2026, 22:23 hora argentina (01:23 UTC del 22)
+
+**Sirvió hasta el 27 de noviembre a las 20:29 hora argentina** la instantánea `b6c3a8aea05c5c10b789edc544bb9f96fbc26a33` en `main`, Worker `app`, versión de Cloudflare **`3cd96265-1ed2-4769-aa65-e12bd9bfe110`**. **170 migraciones:** la última es `20261121010000_entrega_natalia_paso1.sql` (`sha256` `168e8bb4aa6a7c935bee41947041595ffc09671da02245fb7eca4a64187ebfe6`). Programador `cita-suite-scheduler` reinstalado en versión **`11c3a192-373c-4f22-ada1-c45755b92a3c`** con los mismos cinco cron (`*/5`, `1-59/5`, `2-59/5`, `3-59/5`, `17 */3`).
 
 **Qué trae** ([plan, bitácora y evidencia del paso 1](../plans/entrega-natalia-paso-1.md)):
 - `AF1-001`: `allow_same_day_booking` aplicado de punta a punta en zona horaria del consultorio (disponibilidad, reserva directa/embebida y reprogramación pública), visible y editable en `/odonto/configuracion/reserva-online`; la agenda interna sigue permitiendo cargar turnos para hoy.
@@ -35,7 +62,7 @@ Juan lo autorizó el 21 de noviembre a las 19:21 hora argentina («cuando todo e
 - respaldo `~/.local/share/cita-suite/backups/production-2026-11-22T01-20-38-110Z`: 129 tablas, 4.771 filas, 169 migraciones, 26 objetos, `objectFailures: 0`;
 - programador sin cron (`dde08d59-92e4-45d1-9f33-31a9ba35b54e`); migración 170 a las 01:22:50 UTC en 1,78 s; Worker `app` (`3cd96265-1ed2-4769-aa65-e12bd9bfe110`) a las 01:23:18 UTC; verificación a las 01:23:40 UTC; programador con cron (`11c3a192-373c-4f22-ada1-c45755b92a3c`, preflight `401/410` aprobado).
 
-**Vuelta atrás:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback ef410385-86de-46b7-a804-80ba592a2a9c --name app --message "<motivo>" --yes`, la versión del 18 de noviembre a las 23:47. Es compatible con la migración 170 porque ésta conserva todas las firmas SQL, tablas y columnas existentes y sólo endurece validaciones internas y añade `allow_same_day_booking` en el JSON del catálogo. Después, los dos `/_app/version.json` deben decir `68cc273385c169e02e22504a7d0d00b2ed532b85`. La migración no se revierte. Nunca una versión anterior a E.
+**Vuelta atrás de entonces, ya no vigente:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback ef410385-86de-46b7-a804-80ba592a2a9c --name app --message "<motivo>" --yes`, la versión del 18 de noviembre a las 23:47. Es compatible con la migración 170 porque ésta conserva todas las firmas SQL, tablas y columnas existentes y sólo endurece validaciones internas y añade `allow_same_day_booking` en el JSON del catálogo. Después, los dos `/_app/version.json` deben decir `68cc273385c169e02e22504a7d0d00b2ed532b85`. La migración no se revierte. Nunca una versión anterior a E.
 
 ## Estado anterior — correo del pagador y rechazos de Mercado Pago explicados: 18 de noviembre de 2026, 23:47 hora argentina (02:47 UTC del 19)
 

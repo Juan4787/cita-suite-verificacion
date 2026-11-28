@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { previewMonthlyPrices, monthForTimezone } from "./pricing";
+import { previewMonthlyPrices, monthForTimezone, quotedPriceEstimateNotice } from "./pricing";
 describe("monthly fee calculation", () => {
   it("compounds with exact internal precision and whole peso quotes and replaces the default in exceptional months", () => {
     const rows = previewMonthlyPrices("20000", "2", "1", "2026-10", "2026-11", [
@@ -72,5 +72,15 @@ describe("monthly fee calculation", () => {
         "America/Argentina/Buenos_Aires",
       ),
     ).toBe("2026-10");
+  });
+
+  it("P6: shows an estimated value legend only when the quote includes future adjustments", () => {
+    expect(quotedPriceEstimateNotice({ adjusted: false }, "booking")).toBeNull();
+    expect(quotedPriceEstimateNotice({ adjusted: false }, "registered")).toBeNull();
+    expect(quotedPriceEstimateNotice(null, "booking")).toBeNull();
+    expect(quotedPriceEstimateNotice({ adjusted: true }, "booking")).toMatch(/valor estimado/i);
+    expect(quotedPriceEstimateNotice({ adjusted: true }, "booking")).toMatch(/puede actualizarse/i);
+    expect(quotedPriceEstimateNotice({ adjusted: true }, "registered")).toMatch(/valor estimado/i);
+    expect(quotedPriceEstimateNotice({ adjusted: true }, "registered")).toMatch(/puede actualizarse/i);
   });
 });

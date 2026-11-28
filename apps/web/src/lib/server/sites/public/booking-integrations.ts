@@ -1,5 +1,5 @@
 import { isUuid } from '@cita-suite/shared/uuid';
-import { readArray, readNullableText, readRecord } from '$lib/contracts/json';
+import { isRecord, readArray, readNullableText, readRecord } from '$lib/contracts/json';
 import { bookingInformationEnabled } from '$lib/server/patients/public/booking-information';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import {
@@ -138,16 +138,22 @@ export function readAppointmentBookingContext(value: unknown): AppointmentBookin
 	const theme = BOOKING_THEMES.find(theme => theme === row.theme_snapshot);
 	const modality = BOOKING_MODALITIES.find(modality => modality === row.modality);
 	if (!theme || !modality) throw new Error('BOOKING_INTEGRATION_CONFIGURATION_INVALID');
+	const integrationRow = isRecord(row.booking_integrations) ? row.booking_integrations : null;
+	const liveVideoInstructions =
+		typeof integrationRow?.video_instructions === 'string' && integrationRow.video_instructions.trim()
+			? integrationRow.video_instructions.trim()
+			: null;
+	const snapshotVideoInstructions = readNullableText(row.video_instructions_snapshot, 'appointmentBookingContext.videoInstructions');
 	return {
 		theme,
 		modality,
-		videoInstructions: readNullableText(row.video_instructions_snapshot, 'appointmentBookingContext.videoInstructions')
+		videoInstructions: modality === 'video' ? (liveVideoInstructions ?? snapshotVideoInstructions) : null
 	};
 }
 
 export async function loadAppointmentBookingContext(supabase: CitaSupabaseClient, appointmentId: string): Promise<AppointmentBookingContext | null> {
 	const { data, error } = await supabase.from('appointment_booking_contexts')
-		.select('theme_snapshot, modality, video_instructions_snapshot').eq('appointment_id', appointmentId).maybeSingle();
+		.select('theme_snapshot, modality, video_instructions_snapshot, booking_integrations(video_instructions)').eq('appointment_id', appointmentId).maybeSingle();
 	if (error) throw error;
 	return data ? readAppointmentBookingContext(data) : null;
 }

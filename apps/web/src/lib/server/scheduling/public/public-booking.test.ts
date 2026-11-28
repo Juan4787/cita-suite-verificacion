@@ -883,4 +883,36 @@ describe('loadPublicBookingState (performance del flujo público)', () => {
   expect(state.issue).toBe('no_availability');
  });
 
+ it('P6: admite hasta 365 días por tramos de 15 días, acepta el día 365 y rechaza el día 366', async () => {
+  const fixture = createSupabaseMock();
+  fixture.source.business.max_booking_days_ahead = 365;
+  const today = todayForBusiness(business);
+  const day365 = addDaysToDateString(today, 365);
+  const day366 = addDaysToDateString(today, 366);
+  const base = {
+   slug: business.slug,
+   serviceId: '00000000-0000-4000-8000-000000000002',
+   professionalId: '00000000-0000-4000-8000-000000000003'
+  };
+
+  const firstChunk = await loadPublicBookingState(fixture.client, base);
+  expect(firstChunk.dateWindow).toMatchObject({
+   fromDate: today,
+   toDate: addDaysToDateString(today, 14),
+   horizonEnd: day365,
+   nextFromDate: addDaysToDateString(today, 15)
+  });
+
+  const at365 = await loadPublicBookingState(fixture.client, { ...base, date: day365 });
+  expect(at365.issue).toBeNull();
+  expect(at365.slots.length).toBeGreaterThan(0);
+  expect(at365.slots.every((slot) => slot.date === day365)).toBe(true);
+
+  const at366 = await loadPublicBookingState(fixture.client, { ...base, date: day366 });
+  expect(at366.issue).toBe('no_availability');
+  expect(at366.slots).toEqual([]);
+
+  await expect(loadPublicBookingState(fixture.client, { ...base, datesFrom: day366 })).rejects.toThrow();
+ });
+
 });

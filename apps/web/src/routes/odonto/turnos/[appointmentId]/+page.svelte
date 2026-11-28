@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { AppointmentEmailDelivery } from '$lib/scheduling/email-policy';
-import {formatQuotedPrice} from '$lib/booking/pricing';
+import {formatQuotedPrice, quotedPriceEstimateNotice} from '$lib/booking/pricing';
 	import BackLink from '$lib/components/BackLink.svelte';
 	import { formatDateTime } from '$lib/utils/format';
 	import { refineDeviceClass, type DeviceClass } from '$lib/device';
@@ -527,9 +527,13 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 					</div>
 				{/if}
 				{#if data.appointment.price_quote_snapshot}
+					{@const registeredPriceNotice = quotedPriceEstimateNotice(data.appointment.price_quote_snapshot, 'registered')}
 					<div>
 						<dt class="text-sm font-semibold text-fg-55">Arancel registrado al reservar</dt>
 						<dd class="mt-1 font-semibold text-fg">{formatQuotedPrice(data.appointment.price_quote_snapshot)}</dd>
+						{#if registeredPriceNotice}
+							<dd class="mt-1 text-xs text-fg-65">{registeredPriceNotice}</dd>
+						{/if}
 					</div>
 				{/if}
 				<div class="col-span-2 sm:col-span-1">

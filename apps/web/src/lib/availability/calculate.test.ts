@@ -199,4 +199,59 @@ describe("AF1-001: allow_same_day_booking in business local timezone", () => {
     });
     expect(internalStaff.some((slot) => slot.date === monday)).toBe(true);
   });
+
+  it("P6: allows day 365 and rejects day 366 in the practice timezone (and caps above 365)", () => {
+    const now = new Date("2026-06-22T12:00:00Z"); // 2026-06-22 09:00 AR
+    const day365 = "2027-06-22"; // Tuesday (weekday 2)
+    const day366 = "2027-06-23"; // Wednesday (weekday 3)
+    const rulesAllWeek = Array.from({ length: 7 }, (_, weekday) => ({
+      id: `r-${weekday}`,
+      professional_id: "p1",
+      weekday,
+      start_time: "09:00",
+      end_time: "10:00",
+      slot_interval_minutes: 30,
+      break_minutes: 0,
+      is_active: true,
+      service_scope: "all" as const,
+      allowed_service_ids: [],
+    }));
+    const slotsAt365 = calculateAvailabilitySlots({
+      ...baseInput,
+      rules: rulesAllWeek,
+      fromDate: day365,
+      toDate: day366,
+      business: {
+        timezone: "America/Argentina/Buenos_Aires",
+        is_active: true,
+        public_booking_enabled: true,
+        allow_same_day_booking: true,
+        max_booking_days_ahead: 365,
+        min_booking_notice_minutes: 0,
+      },
+      now,
+      publicOnly: true,
+    });
+    expect(slotsAt365.some((slot) => slot.date === day365)).toBe(true);
+    expect(slotsAt365.some((slot) => slot.date === day366)).toBe(false);
+
+    const cappedAbove365 = calculateAvailabilitySlots({
+      ...baseInput,
+      rules: rulesAllWeek,
+      fromDate: day365,
+      toDate: day366,
+      business: {
+        timezone: "America/Argentina/Buenos_Aires",
+        is_active: true,
+        public_booking_enabled: true,
+        allow_same_day_booking: true,
+        max_booking_days_ahead: 400,
+        min_booking_notice_minutes: 0,
+      },
+      now,
+      publicOnly: true,
+    });
+    expect(cappedAbove365.some((slot) => slot.date === day365)).toBe(true);
+    expect(cappedAbove365.some((slot) => slot.date === day366)).toBe(false);
+  });
 });

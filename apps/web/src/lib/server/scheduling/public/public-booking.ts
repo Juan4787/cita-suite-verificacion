@@ -26,14 +26,14 @@ import {
 	getBusinessAccessState,
 	type BusinessSubscriptionRow
 } from '$lib/access/commercial-access';
-import { isLikelyPhoneE164, normalizePhoneE164 } from '$lib/utils/phone';
+import { isLikelyPhoneE164, normalizeArgentineWhatsAppPhone, normalizePhoneE164 } from '$lib/utils/phone';
 import { sanitizePublicImageUrl } from '$lib/server/sites/public/public-image';
 import type { IntegratedBookingInput } from '$lib/server/sites/public/booking-integrations';
 import type { BookingModality, BookingModalityWindow } from '@cita-suite/shared/booking-integration';
 import { loadAvailabilityCatalog, loadAvailabilityWindowRows } from '$lib/server/scheduling/public/availability-windows';
 import type { AvailabilityCatalog } from '$lib/availability/contracts';
 import type { IntegratedAvailabilityRows } from '$lib/availability/rows';
-import { AVAILABILITY_WINDOW_DAYS, isAvailabilityDate } from '$lib/availability/windows';
+import { AVAILABILITY_WINDOW_DAYS, isAvailabilityDate, MAX_BOOKING_DAYS_AHEAD } from '$lib/availability/windows';
 import { InvalidDataContractError } from '$lib/contracts/json';
 import { isRecord } from '$lib/contracts/json';
 import { isUuid } from '@cita-suite/shared/uuid';
@@ -62,6 +62,7 @@ export type PublicBookingBusiness = Pick<
 	| 'name'
 	| 'slug'
 	| 'phone'
+	| 'email'
 	| 'address'
 	| 'address_instructions'
 	| 'maps_url'
@@ -74,7 +75,11 @@ export type PublicBookingBusiness = Pick<
 	| 'min_booking_notice_minutes'
 	| 'max_booking_days_ahead'
 	| 'cancellation_policy'
-> & { public_contact_enabled?: boolean; booking_availability_revision?: number };
+> & {
+	public_contact_enabled?: boolean;
+	booking_availability_revision?: number;
+	whatsapp_contact_phone?: string | null;
+};
 
 export type PublicBookingIssue =
 	| 'integration_unavailable'
@@ -114,7 +119,7 @@ type BookingAttemptInput = {
 };
 
 export const PUBLIC_BUSINESS_SELECT =
-	'id, name, slug, phone, address, address_instructions, maps_url, logo_url, timezone, public_booking_enabled, public_contact_enabled, allow_same_day_booking, is_active, created_at, min_booking_notice_minutes, max_booking_days_ahead, cancellation_policy, booking_availability_revision';
+	'id, name, slug, phone, email, address, address_instructions, maps_url, logo_url, timezone, public_booking_enabled, public_contact_enabled, allow_same_day_booking, is_active, created_at, min_booking_notice_minutes, max_booking_days_ahead, cancellation_policy, booking_availability_revision';
 
 export const PUBLIC_ACTIVE_FUTURE_APPOINTMENT_LIMIT = 4;
 
@@ -197,7 +202,7 @@ export const getPublicBusinessBySlug = async (
 	const read = async (column: 'id' | 'slug', value: string) => {
 		const { data, error } = await supabase
 			.from('businesses')
-			.select(PUBLIC_BUSINESS_SELECT)
+			.select(`${PUBLIC_BUSINESS_SELECT}, whatsapp_contact_enabled, whatsapp_phone`)
 			.eq(column, value)
 			.maybeSingle();
 		if (error) throw error;
@@ -211,9 +216,12 @@ export const getPublicBusinessBySlug = async (
 		if (isUuid(businessId)) data = await read('id', businessId);
 	}
 	if (!data) return null;
+	const { whatsapp_contact_enabled, whatsapp_phone, ...publicBusiness } = data;
 	return {
-		...data,
-		logo_url: sanitizePublicImageUrl(data.logo_url)
+		...publicBusiness,
+		logo_url: sanitizePublicImageUrl(publicBusiness.logo_url),
+		whatsapp_contact_phone:
+			whatsapp_contact_enabled === true ? normalizeArgentineWhatsAppPhone(whatsapp_phone) : null
 	};
 };
 
@@ -500,7 +508,7 @@ export const loadPublicBookingState = async (
  business = { ...business, ...catalog.business };
  const today = todayForBusiness(business);
  const earliestDate = business.allow_same_day_booking === false ? addDaysToDateString(today, 1) : today;
- const maxDate = addDaysToDateString(today, Math.min(Math.max(business.max_booking_days_ahead, 1), 90));
+ const maxDate = addDaysToDateString(today, Math.min(Math.max(business.max_booking_days_ahead, 1), MAX_BOOKING_DAYS_AHEAD));
  const services = reservableServices(catalog, input.scope);
  const professionals = input.serviceId ? reservableProfessionals(catalog, input.serviceId, input.scope) : [];
 	if (services.length === 0) {

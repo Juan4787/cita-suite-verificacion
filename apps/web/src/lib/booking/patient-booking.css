@@ -289,3 +289,94 @@ textarea.patient-control {
   grid-row: 2;
   justify-self: start;
 }
+.patient-email-help {
+  margin-top: 0.45rem;
+  color: var(--patient-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.patient-no-email {
+  margin-top: 0.25rem;
+}
+.patient-no-email-trigger {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0.5rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--patient-muted);
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-align: left;
+  cursor: pointer;
+}
+.patient-no-email-trigger:hover {
+  color: var(--text);
+}
+.patient-no-email-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 0.4rem;
+}
+.patient-no-email-panel,
+.patient-no-email-error {
+  margin-top: 0.5rem;
+  padding: 1rem 1.1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--patient-field-border);
+  background: var(--patient-field-bg);
+  color: var(--text);
+  display: grid;
+  gap: 0.75rem;
+}
+.patient-no-email-error {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+.booking-natalia .patient-no-email-error {
+  border-color: var(--error-border);
+  background: var(--error-bg);
+}
+.patient-no-email-error-title {
+  margin: 0;
+  color: var(--danger-text);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.booking-natalia .patient-no-email-error-title {
+  color: var(--error-text);
+}
+.patient-no-email-step {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.patient-no-email-action {
+  display: inline-flex;
+  justify-content: center;
+  width: 100%;
+  min-height: 2.75rem;
+  padding-inline: 0.75rem;
+}
+.patient-no-email-note {
+  margin: 0;
+  color: var(--patient-muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+@media (max-width: 480px) {
+  .patient-no-email-panel,
+  .patient-no-email-error {
+    padding: 0.85rem;
+  }
+  .patient-no-email-action {
+    font-size: 0.875rem;
+  }
+}

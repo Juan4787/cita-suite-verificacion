@@ -4,7 +4,7 @@ import { parsePriceQuote, parseServicePriceLabels } from '$lib/scheduling/price-
 import { parsePublicCatalogue, parsePublicContactResponse } from '$lib/sites/catalogue';
 
 const quote = { amount: 21016, base_amount: 20000, current_amount: 20000, currency: 'ARS', date: '2027-01-15', month: '2027-01-01', adjusted: true, hash: 'binding', revision: 1, policy_id: 'policy' };
-const contact = { phone: null, address: 'Consultorio sintético', whatsapp_phone: null, whatsapp_message: null };
+const contact = { phone: null, email: null, address: 'Consultorio sintético', whatsapp_phone: null, whatsapp_message: null };
 describe('public JSON contracts', () => {
   it('keeps optional and absent historical price snapshots distinct from invalid quotes', () => {
     expect(parsePriceQuote(null)).toBeNull();
@@ -23,9 +23,9 @@ describe('public JSON contracts', () => {
       expect(() => parseServicePriceLabels(malformed)).toThrow(InvalidDataContractError);
   });
   it('returns only the public contact contract and requires explicit allowed origins', () => {
-    expect(parsePublicContactResponse({ allowed_origins: ['https://example.test'], contact: { ...contact, private_notes: 'excluded' } }))
-      .toEqual({ allowedOrigins: ['https://example.test'], contact });
-    for (const malformed of [null, { contact }, { allowed_origins: [null], contact }, { allowed_origins: [], contact: { phone: {} } }])
+    expect(parsePublicContactResponse({ allowed_origins: ['https://example.test'], contact: { ...contact, email: 'hola@consultorio.test', private_notes: 'excluded' } }))
+      .toEqual({ allowedOrigins: ['https://example.test'], contact: { ...contact, email: 'hola@consultorio.test' } });
+    for (const malformed of [null, { contact }, { allowed_origins: [null], contact }, { allowed_origins: [], contact: { phone: {} } }, { allowed_origins: [], contact: { ...contact, email: 123 } }])
       expect(() => parsePublicContactResponse(malformed)).toThrow(InvalidDataContractError);
   });
   it('distinguishes a valid empty catalogue from incomplete, invalid services or unknown modalities', () => {

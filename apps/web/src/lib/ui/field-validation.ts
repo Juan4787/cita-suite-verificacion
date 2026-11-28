@@ -64,6 +64,12 @@ export function installFieldValidation(root: Document = document) {
 	const onInvalid = (event: Event) => {
 		const field = event.target;
 		if (!isField(field) || field.classList.contains('ux-native-source')) return;
+		if (field.validity.valueMissing && field.dataset.missingErrorHandled === 'true') {
+			event.preventDefault();
+			const first = [...(field.form?.elements ?? [])].find((element) => isField(element) && !element.validity.valid);
+			if (!first || first === field) field.focus();
+			return;
+		}
 		event.preventDefault();
 		show(field);
 		const first = [...(field.form?.elements ?? [])].find((element) => isField(element) && !element.validity.valid);

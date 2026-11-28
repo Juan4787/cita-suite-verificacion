@@ -1,4 +1,5 @@
 import type { BookingModality, BookingModalityWindow } from '@cita-suite/shared/booking-integration';
+import { MAX_BOOKING_DAYS_AHEAD, shiftAvailabilityDate } from './windows';
 
 export type AvailabilityBusiness = {
 	timezone: string;
@@ -194,13 +195,13 @@ export const clampRangeToBusinessRules = (
 	publicOnly = false
 ) => {
 	const dates = dateRange(fromDate, toDate);
-	const maxDate = addMinutes(now, business.max_booking_days_ahead * 24 * 60);
+	const today = zonedDate(now, business.timezone);
+	const horizonDays = Math.min(Math.max(business.max_booking_days_ahead, 1), MAX_BOOKING_DAYS_AHEAD);
+	const maxDate = shiftAvailabilityDate(today, horizonDays);
 	const blockedThroughDate =
-		publicOnly && business.allow_same_day_booking === false ? zonedDate(now, business.timezone) : null;
+		publicOnly && business.allow_same_day_booking === false ? today : null;
 	return dates.filter(
-		(date) =>
-			(!blockedThroughDate || date > blockedThroughDate) &&
-			zonedDateTimeToUtc(date, '00:00', business.timezone) <= maxDate
+		(date) => (!blockedThroughDate || date > blockedThroughDate) && date <= maxDate
 	);
 };
 

@@ -45,6 +45,20 @@ export const formatQuotedPrice = (
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(quote.amount);
+
+export const ESTIMATED_PRICE_BOOKING_NOTICE =
+  "Este arancel incluye los ajustes configurados por el consultorio para la fecha elegida. Es un valor estimado que puede actualizarse.";
+export const ESTIMATED_PRICE_REGISTERED_NOTICE =
+  "Es un valor estimado según los ajustes previstos al reservar y puede actualizarse.";
+export const quotedPriceEstimateNotice = (
+  quote: Pick<PriceQuote, "adjusted"> | null | undefined,
+  context: "booking" | "registered" = "booking",
+): string | null => {
+  if (!quote?.adjusted) return null;
+  return context === "registered"
+    ? ESTIMATED_PRICE_REGISTERED_NOTICE
+    : ESTIMATED_PRICE_BOOKING_NOTICE;
+};
 export const MAX_PRICE_MONTH_OFFSET = 600;
 export const MAX_PRICE_PREVIEW_RESULTS = 120;
 export class PriceConfigurationError extends Error {

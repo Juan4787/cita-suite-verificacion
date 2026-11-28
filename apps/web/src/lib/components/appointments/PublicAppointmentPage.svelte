@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
- import {formatQuotedPrice} from '$lib/booking/pricing';
+ import {formatQuotedPrice, quotedPriceEstimateNotice} from '$lib/booking/pricing';
+ import {splitTextWithHttpsLinks} from '$lib/utils/safe-links';
 	import PatientManagementPanel from '$lib/components/appointments/PatientManagementPanel.svelte';
 	import BookingAppearance from '$lib/booking/BookingAppearance.svelte';
 	import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/shared/booking-integration';
@@ -1395,7 +1396,13 @@
 		{/if}
 		<p class="mt-4 text-lg font-bold text-fg bk-text">{isVirtual ? 'Modalidad: Virtual' : current.business.address}</p>
 		{#if current.business.address_instructions}
-			<p class="mt-2 text-sm text-fg-70 bk-muted">{current.business.address_instructions}</p>
+			{#if isVirtual}
+				<p class="mt-2 whitespace-pre-wrap break-words text-sm text-fg-70 bk-muted">
+					{#each splitTextWithHttpsLinks(current.business.address_instructions) as part}{#if part.type === 'link'}<a href={part.href} target="_blank" rel="noopener noreferrer" class="ux-link break-all bk-accent-text">{part.label}</a>{:else}{part.value}{/if}{/each}
+				</p>
+			{:else}
+				<p class="mt-2 text-sm text-fg-70 bk-muted">{current.business.address_instructions}</p>
+			{/if}
 		{/if}
 		{#if current.business.maps_link}
 			<a href={`${managementBase}/ir/maps`} target="_blank" rel="noreferrer" class="ux-btn-primary mt-5 block w-full text-center">
@@ -1609,9 +1616,13 @@
 			</section>
 
 			{#if !managementDecision && appointment.price_quote_snapshot}
+				{@const registeredPriceNotice = quotedPriceEstimateNotice(appointment.price_quote_snapshot, 'registered')}
 				<section class="ux-card">
 					<h2 class="ux-section-title">Arancel registrado al reservar</h2>
 					<p class="mt-2 font-bold">{formatQuotedPrice(appointment.price_quote_snapshot)}</p>
+					{#if registeredPriceNotice}
+						<p class="mt-2 text-sm text-fg-70 bk-muted">{registeredPriceNotice}</p>
+					{/if}
 				</section>
 			{/if}
 

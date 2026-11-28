@@ -7,6 +7,7 @@ import type { BookingReschedulePolicy } from '$lib/scheduling/email-policy';
 import type { AvailabilitySlot } from '$lib/availability/calculate';
 import type { PriceQuote } from '$lib/booking/pricing';
 import type { BookingDepositTerms, DepositSlotTerms } from '$lib/scheduling/deposits';
+import type { DeviceClass } from '$lib/device';
 
 export type BookingService = {
 	id: string;
@@ -57,6 +58,7 @@ export type BookingFormState = {
 	values?: Record<string, unknown>;
 	uncertain?: boolean;
 	refreshDepositTerms?: boolean;
+	emailMissing?: boolean;
 };
 
 /** Presentation projection, shared without importing a server implementation. */
@@ -66,6 +68,7 @@ export type BookingViewData = {
 	priceQuote?: PriceQuote | null;
 	// Deposit terms of each slot of the loaded day (adjustment 4); null when they could not be computed.
 	depositTerms?: Record<string, DepositSlotTerms> | null;
+	device?: DeviceClass;
 	state: {
 		business: {
 			name: string;
@@ -73,6 +76,8 @@ export type BookingViewData = {
 			logo_url?: string | null;
 			address?: string | null;
 			phone?: string | null;
+			email?: string | null;
+			whatsapp_contact_phone?: string | null;
 			cancellation_policy?: string | null;
 		} | null;
 		services: BookingService[];

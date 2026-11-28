@@ -1,4 +1,6 @@
 import { isUuid } from '@cita-suite/shared/uuid';
+import { validConfirmationEmail } from '$lib/access/email-confirmation';
+import { classifyUserAgent } from '$lib/device';
 import { logServerFailure } from '$lib/server/platform/logging';
 import { readBoundedBookingForm } from '$lib/server/platform/form-data';
 import { isRecord } from '$lib/contracts/json';
@@ -73,7 +75,8 @@ async function recoverIntegratedBooking(supabase: CitaSupabaseClient, url: URL, 
 // OJO performance: este load NUNCA debe leer el parámetro `slot`. SvelteKit
 // trackea los search params accedidos: al no leerlo, elegir horario no re-ejecuta
 // el load (la página lo resuelve client-side desde page.url) y es instantáneo.
-export const loadPublicBookingPage = async ({ params, fetch, url, setHeaders }: RequestEvent, integration?: BookingIntegration, entryPoint: 'embedded' | 'public_page' = 'embedded') => {
+export const loadPublicBookingPage = async ({ params, fetch, url, request, setHeaders }: RequestEvent, integration?: BookingIntegration, entryPoint: 'embedded' | 'public_page' = 'embedded') => {
+	const device = classifyUserAgent(request?.headers?.get('user-agent') ?? null);
 	const framed = entryPoint === 'embedded' && url.searchParams.has('parent_origin') && url.searchParams.has('instance_id');
 	const suppliedRequestId = url.searchParams.get('request_id') ?? '';
 	const bookingRequestId = integration && BOOKING_REQUEST_ID_PATTERN.test(suppliedRequestId) ? suppliedRequestId : randomUUID();
@@ -222,16 +225,24 @@ export const loadPublicBookingPage = async ({ params, fetch, url, setHeaders }: 
 			depositTerms = null;
 		}
         const publicContactVisible = state.business ? state.business.public_contact_enabled !== false : false;
-        const exposedState = state.business && !publicContactVisible
+        const rawPublicEmail = typeof state.business?.email === 'string' ? state.business.email.trim() : '';
+        const sanitizedPublicEmail = publicContactVisible && rawPublicEmail && validConfirmationEmail(rawPublicEmail) ? rawPublicEmail : null;
+        const exposedState = state.business
             ? {
                 ...state,
-                business: {
-                    ...state.business,
-                    phone: null,
-                    address: null,
-                    address_instructions: null,
-                    maps_url: null
-                }
+                business: publicContactVisible
+                    ? {
+                        ...state.business,
+                        email: sanitizedPublicEmail
+                    }
+                    : {
+                        ...state.business,
+                        phone: null,
+                        email: null,
+                        address: null,
+                        address_instructions: null,
+                        maps_url: null
+                    }
             }
             : state;
         return {
@@ -239,6 +250,7 @@ export const loadPublicBookingPage = async ({ params, fetch, url, setHeaders }: 
             ...(state.business ? await loadPublicBookingPolicy(supabase, state.business.id) : { requireEmail: true, reschedulePolicy: null }),
             depositTerms,
             patientFields,
+			device,
 			state: exposedState,
 			selected,
 			mapsLink: exposedState.business && publicContactVisible
@@ -436,6 +448,7 @@ export const submitPublicBookingPage = async ({ request, params, fetch, url, get
 			else logServerFailure('Error creando reserva publica', error);
 			return fail(400, {
 				...(['DEPOSIT_TERMS_CHANGED', 'RESCHEDULE_POLICY_TERMS_CHANGED'].includes(getPublicBookingErrorCode(error)) ? { refreshDepositTerms: true } : {}),
+				...(getPublicBookingErrorCode(error) === 'PUBLIC_PATIENT_EMAIL_REQUIRED' ? { emailMissing: true } : {}),
 				message: publicErrorMessage(error).includes('PRICE_') ? 'El arancel cambió mientras reservabas. Actualizá la página, revisá el precio para tu fecha y confirmá nuevamente.' : /BOOKING_(INFORMATION|PROFILE|INTAKE)/.test(publicErrorMessage(error)) ? informationErrorMessage(error) : integrationMessage ?? getPublicBookingErrorMessage(error),
 				uncertain: Boolean(!/PRICE_|SCHEDULE_SERVICE|SCHEDULE_BLOCKED/.test(publicErrorMessage(error)) && integration && ((!integrationMessage && getPublicBookingErrorCode(error) === 'PUBLIC_BOOKING_UNEXPECTED') || publicErrorMessage(error).includes('APPOINTMENT_IDEMPOTENCY_CONFLICT'))),
 				values: valuesFromForm(form)

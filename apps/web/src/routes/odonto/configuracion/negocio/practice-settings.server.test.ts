@@ -126,4 +126,30 @@ describe('practice settings save', () => {
 		expect(result).toMatchObject({ status: 400 });
 		expect(mocks.from).not.toHaveBeenCalled();
 	});
+
+	it('P9: valida el formato del correo de contacto, guarda uno válido o vacío y rechaza uno inválido', async () => {
+		const submitEmail = (email: string) => {
+			const form = new FormData();
+			form.set('name', 'Consultorio'); form.set('slug', 'consultorio'); form.set('industry', 'odontology');
+			form.set('timezone', 'America/Argentina/Buenos_Aires'); form.set('email', email);
+			return actions.update_business({
+				request: new Request('http://localhost/odonto/configuracion/negocio', { method: 'POST', body: form }),
+				locals: { auth: { access_token: 'test-token' } }, fetch: vi.fn(), cookies: { get: vi.fn() }
+			} as never);
+		};
+
+		await expect(submitEmail('contacto@consultorio.test')).resolves.toEqual({ success: true });
+		expect(saved()).toMatchObject({ email: 'contacto@consultorio.test' });
+
+		calls.length = 0;
+		await expect(submitEmail('   ')).resolves.toEqual({ success: true });
+		expect(saved()).toMatchObject({ email: null });
+
+		calls.length = 0;
+		mocks.from.mockClear();
+		for (const bad of ['sin-arroba', 'algo@sinpunto', 'con espacios@ejemplo.com', `${'a'.repeat(245)}@ejemplo.com`]) {
+			await expect(submitEmail(bad)).resolves.toMatchObject({ status: 400 });
+		}
+		expect(mocks.from).not.toHaveBeenCalled();
+	});
 });

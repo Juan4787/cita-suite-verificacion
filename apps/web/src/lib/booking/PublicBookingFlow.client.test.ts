@@ -550,3 +550,114 @@ it("does not show or submit monetary penalties for a slot without a deposit", ()
   expect(document.querySelector("[data-reschedule-policy-notice]")).toBeNull();
   expect(document.querySelector('[name="reschedule_policy_terms"]')).toBeNull();
 });
+
+it("P6: muestra leyenda de valor estimado sólo cuando el arancel incluye ajustes futuros", () => {
+  const adjustedData = bookingFixture(["in_person"]);
+  Object.assign(adjustedData, {
+    priceQuote: {
+      amount: 35000,
+      base_amount: 32000,
+      currency: "ARS",
+      date: "2026-11-02",
+      month: "2026-11",
+      adjusted: true,
+      hash: "e".repeat(64),
+      revision: 1,
+      policy_id: "policy",
+    },
+  });
+  render(PublicBookingFlow, { data: adjustedData });
+  expect(screen.getByText(/valor estimado/i)).toBeInTheDocument();
+  expect(screen.getByText(/puede actualizarse/i)).toBeInTheDocument();
+
+  cleanup();
+
+  const fixedData = bookingFixture(["in_person"]);
+  Object.assign(fixedData, {
+    priceQuote: {
+      amount: 32000,
+      base_amount: 32000,
+      currency: "ARS",
+      date: "2026-11-02",
+      month: "2026-11",
+      adjusted: false,
+      hash: "f".repeat(64),
+      revision: 1,
+      policy_id: "policy",
+    },
+  });
+  render(PublicBookingFlow, { data: fixedData });
+  expect(screen.queryByText(/valor estimado/i)).not.toBeInTheDocument();
+});
+
+it("P10: despliega «¿No tenés correo?» sin perder datos, en el orden correcto y con WhatsApp prearmado", async () => {
+  const data = bookingFixture(["in_person", "video"]);
+  Object.assign(data.state.business, {
+    phone: "+54 341 555-0100",
+    whatsapp_contact_phone: "+5493415550101",
+  });
+  render(PublicBookingFlow, { data });
+
+  const emailLabel = document.querySelector('label[for="patient-email"]')!;
+  expect(emailLabel.textContent).not.toMatch(/obligatorio/i);
+  expect(screen.getByText(/confirmación y los recordatorios/i)).toBeInTheDocument();
+
+  const nameInput = screen.getByLabelText("Nombre y apellido");
+  await fireEvent.input(nameInput, { target: { value: "Marta Gómez" } });
+
+  const trigger = screen.getByRole("button", { name: "¿No tenés correo?" });
+  expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await fireEvent.click(trigger);
+  expect(trigger).toHaveAttribute("aria-expanded", "true");
+  // Preserva lo ya escrito y elegido.
+  expect(nameInput).toHaveValue("Marta Gómez");
+
+  const familyText = screen.getByText(/correo de un familiar/i);
+  const waButton = screen.getByRole("link", { name: "Pedir turno por WhatsApp" });
+  expect(familyText.compareDocumentPosition(waButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(waButton).toHaveAttribute("target", "_blank");
+  const waHref = decodeURIComponent(waButton.getAttribute("href") ?? "");
+  expect(waHref).toContain("Marta Gómez");
+  expect(waHref).toContain("Consulta");
+  expect(waHref).toContain("09:00");
+  expect(screen.getByText(/no queda reservado hasta que el consultorio/i)).toBeInTheDocument();
+});
+
+it("P10: sin WhatsApp configurado muestra sugerencia familiar y teléfono público sin botón roto", async () => {
+  const data = bookingFixture(["in_person"]);
+  Object.assign(data.state.business, { phone: "+54 341 555-0100", whatsapp_contact_phone: null });
+  render(PublicBookingFlow, { data });
+
+  await fireEvent.click(screen.getByRole("button", { name: "¿No tenés correo?" }));
+  expect(screen.getByText(/correo de un familiar/i)).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: /WhatsApp/i })).not.toBeInTheDocument();
+  const telLink = screen.getByRole("link", { name: "+54 341 555-0100" });
+  expect(telLink).toHaveAttribute("href", "tel:+543415550100");
+});
+
+it("P10: al fallar por correo vacío muestra las mismas salidas asociadas al campo y no aparece cuando el correo es opcional", async () => {
+  const data = bookingFixture(["in_person"]);
+  Object.assign(data.state.business, { whatsapp_contact_phone: "+5493415550101" });
+  render(PublicBookingFlow, {
+    data,
+    form: {
+      emailMissing: true,
+      message: "Completá tu correo electrónico para reservar el turno.",
+      values: { patient_name: "Marta Gómez" },
+    },
+  });
+
+  const email = screen.getByLabelText("Correo electrónico");
+  expect(email).toHaveAttribute("aria-invalid", "true");
+  const alert = screen.getByRole("alert");
+  expect(alert).toHaveTextContent(/correo de un familiar/i);
+  expect(alert.querySelector('a[href*="wa.me"], a[href*="whatsapp.com"]')).not.toBeNull();
+  expect(email.getAttribute("aria-describedby")).toContain(alert.id);
+
+  cleanup();
+
+  const optionalData = bookingFixture(["in_person"]);
+  Object.assign(optionalData, { requireEmail: false });
+  render(PublicBookingFlow, { data: optionalData });
+  expect(screen.queryByRole("button", { name: "¿No tenés correo?" })).not.toBeInTheDocument();
+});

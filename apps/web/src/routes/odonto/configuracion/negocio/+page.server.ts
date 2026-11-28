@@ -8,6 +8,7 @@ import {
 } from '$lib/server/access/public/business';
 import { createSupabaseServerClient } from '$lib/server/platform/supabase';
 import { isValidMapsUrl } from '$lib/sites/location';
+import { validConfirmationEmail } from '$lib/access/email-confirmation';
 import { isAllowedPublicImageUrl } from '$lib/server/sites/public/public-image';
 import { getPublicSiteUrl } from '$lib/server/integrations/public/messaging';
 import { env } from '$env/dynamic/private';
@@ -142,6 +143,12 @@ export const actions: Actions = {
 			return fail(400, {
 				message:
 					'El link de Google Maps no parece válido. Pegá el link que te da el botón Compartir de Google Maps (empieza con https://maps.app.goo.gl o https://www.google.com/maps).',
+				values: Object.fromEntries(form)
+			});
+		}
+		if (email && !validConfirmationEmail(email)) {
+			return fail(400, {
+				message: 'El correo de contacto no tiene un formato válido. Revisá la dirección o dejalo vacío.',
 				values: Object.fromEntries(form)
 			});
 		}

@@ -21,9 +21,13 @@ describe("separated booking configuration", () => {
     sameDayForm.set("allow_same_day_booking", "true");
     expect(parseBookingSettings(sameDayForm).allow_same_day_booking).toBe(true);
   });
+  it("accepts up to 365 days ahead (P6)", () => {
+    expect(parseBookingSettings(settings("365", "60")).max_booking_days_ahead).toBe(365);
+    expect(parseBookingSettings(settings("1", "0")).max_booking_days_ahead).toBe(1);
+  });
   it.each([
     ["0", "120"],
-    ["91", "120"],
+    ["366", "120"],
     ["60", "10081"],
     ["60", "1.5"],
     ["60", ""],

@@ -198,6 +198,7 @@ describe('condiciones de la seña en el turnero', () => {
 				business: {
 					...state().business,
 					phone: '+5493511112222',
+					email: 'privado@consultorio.test',
 					address: 'Av. Privada 123',
 					address_instructions: 'Piso 2',
 					maps_url: 'https://maps.example.test/privada',
@@ -206,12 +207,73 @@ describe('condiciones de la seña en el turnero', () => {
 			})
 		);
 		const result = (await loadPublicBookingPage(event(''), undefined, 'public_page')) as {
-			state: { business: { phone: string | null; address: string | null; address_instructions?: string | null; maps_url?: string | null } };
+			state: { business: { phone: string | null; email?: string | null; address: string | null; address_instructions?: string | null; maps_url?: string | null } };
 			mapsLink: string | null;
 		};
 		expect(result.state.business.phone).toBeNull();
+		expect(result.state.business.email).toBeNull();
 		expect(result.state.business.address).toBeNull();
 		expect(result.state.business.address_instructions).toBeNull();
 		expect(result.mapsLink).toBeNull();
+	});
+
+	it('P9: expone email válido cuando public_contact_enabled está prendido y omite correos inválidos o vacíos', async () => {
+		mocks.loadPublicBookingState.mockResolvedValue(
+			state({
+				business: {
+					...state().business,
+					email: 'turnos@consultorio.test',
+					public_contact_enabled: true
+				}
+			})
+		);
+		const visible = (await loadPublicBookingPage(event(''), undefined, 'public_page')) as {
+			state: { business: { email?: string | null } };
+		};
+		expect(visible.state.business.email).toBe('turnos@consultorio.test');
+
+		mocks.loadPublicBookingState.mockResolvedValue(
+			state({
+				business: {
+					...state().business,
+					email: 'invalido-sin-arroba',
+					public_contact_enabled: true
+				}
+			})
+		);
+		const invalid = (await loadPublicBookingPage(event(''), undefined, 'public_page')) as {
+			state: { business: { email?: string | null } };
+		};
+		expect(invalid.state.business.email).toBeNull();
+	});
+
+	it('P10: al fallar por correo faltante devuelve emailMissing: true preservando los datos ingresados', async () => {
+		mocks.createPublicBooking.mockRejectedValueOnce(new Error('PUBLIC_PATIENT_EMAIL_REQUIRED'));
+		const result = await submitPublicBookingPage({
+			params: { businessSlug: BUSINESS_ID },
+			fetch: vi.fn(),
+			url: new URL('http://localhost/reservar/consultorio'),
+			getClientAddress: () => '127.0.0.1',
+			request: new Request('http://localhost/reservar/consultorio?/create_booking', {
+				method: 'POST',
+				body: new URLSearchParams({
+					service_id: SERVICE_ID,
+					professional_id: PROFESSIONAL_ID,
+					slot_starts_at: '2026-11-20T13:00:00.000Z',
+					patient_name: 'Marta Gómez',
+					patient_phone: '3415048209',
+					patient_email: '',
+					idempotency_key: '00000000-0000-4000-8000-0000000000a1',
+					deposit_terms: '"none"'
+				})
+			})
+		} as never);
+		expect(result).toMatchObject({
+			status: 400,
+			data: {
+				emailMissing: true,
+				values: { patient_name: 'Marta Gómez', patient_phone: '3415048209' }
+			}
+		});
 	});
 });

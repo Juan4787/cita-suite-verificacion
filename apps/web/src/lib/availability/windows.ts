@@ -2,6 +2,7 @@ import { InvalidDataContractError } from '$lib/contracts/json';
 
 export const AVAILABILITY_WINDOW_DAYS = 15;
 export const AVAILABILITY_GROUP_SIZE = 16;
+export const MAX_BOOKING_DAYS_AHEAD = 365;
 
 export function isAvailabilityDate(value: string): boolean {
 	if (!/^\d{4}-(0[1-9]|1[0-2])-\d{2}$/.test(value) || value.startsWith('0000-')) return false;

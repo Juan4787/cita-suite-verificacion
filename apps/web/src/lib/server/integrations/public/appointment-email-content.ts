@@ -18,6 +18,7 @@ import {
 } from '$lib/scheduling/patient-action-context';
 import { tokens } from '$lib/theme/palette.js';
 import { formatInTimeZone } from '$lib/utils/format';
+import { splitTextWithHttpsLinks } from '$lib/utils/safe-links';
 
 export type AppointmentEmailWork = {
 	deliveryId: string;
@@ -73,6 +74,20 @@ const button = (href: string, label: string, primary: boolean) =>
 
 const paragraph = (value: string) =>
 	`<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${color('--text')};">${escapeHtml(value).replace(/\n/g, '<br>')}</p>`;
+
+const paragraphWithHttpsLinks = (prefix: string, value: string) => {
+	const rendered = splitTextWithHttpsLinks(value)
+		.map((part) =>
+			part.type === 'link'
+				? `<a href="${escapeHtml(part.href)}" style="color:${color('--accent-text')};text-decoration:underline;word-break:break-word;">${escapeHtml(part.label)}</a>`
+				: escapeHtml(part.value).replace(/\n/g, '<br>')
+		)
+		.join('');
+	return `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${color('--text')};">${escapeHtml(prefix)}${rendered}</p>`;
+};
+
+const VIRTUAL_LINK_UPDATED_NOTICE =
+	'Si cambia el enlace de conexión, el enlace vigente está siempre en la página de tu turno.';
 
 const small = (value: string) =>
 	`<p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:${color('--text-muted')};">${escapeHtml(value)}</p>`;
@@ -169,11 +184,29 @@ export const buildAppointmentEmail = (
 	const unsubscribeUrl = `${options.siteUrl}/correo/baja/${work.unsubscribeToken}`;
 
 	const details: string[] = [];
-	if (!cancelled) details.push(`Fecha y hora: ${when.full}`);
-	if (!cancelled && virtual) details.push('Modalidad: virtual');
-	if (!cancelled && virtual && videoInstructions) details.push(`Indicaciones: ${videoInstructions}`);
-	if (!cancelled && !virtual && address) details.push(`Dirección: ${address}`);
-	if (!cancelled && !virtual && addressInstructions) details.push(`Indicaciones: ${addressInstructions}`);
+	const detailsHtml: string[] = [];
+	if (!cancelled) {
+		details.push(`Fecha y hora: ${when.full}`);
+		detailsHtml.push(paragraph(`Fecha y hora: ${when.full}`));
+	}
+	if (!cancelled && virtual) {
+		details.push('Modalidad: virtual');
+		detailsHtml.push(paragraph('Modalidad: virtual'));
+	}
+	if (!cancelled && virtual && videoInstructions) {
+		details.push(`Indicaciones: ${videoInstructions}`);
+		details.push(VIRTUAL_LINK_UPDATED_NOTICE);
+		detailsHtml.push(paragraphWithHttpsLinks('Indicaciones: ', videoInstructions));
+		detailsHtml.push(paragraph(VIRTUAL_LINK_UPDATED_NOTICE));
+	}
+	if (!cancelled && !virtual && address) {
+		details.push(`Dirección: ${address}`);
+		detailsHtml.push(paragraph(`Dirección: ${address}`));
+	}
+	if (!cancelled && !virtual && addressInstructions) {
+		details.push(`Indicaciones: ${addressInstructions}`);
+		detailsHtml.push(paragraph(`Indicaciones: ${addressInstructions}`));
+	}
 
 	const depositLines: string[] = [];
 	if (depositPending && deposit) {
@@ -226,7 +259,7 @@ export const buildAppointmentEmail = (
 		`<h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:${color('--text')};">${escapeHtml(headings[work.purpose])}</h1>` +
 		(patientName ? paragraph(`Hola, ${patientName}.`) : '') +
 		paragraph(stateLine) +
-		(details.length ? `<div style="margin:16px 0;padding:14px 16px;background:${color('--surface-2')};border-radius:10px;">${details.map(paragraph).join('')}</div>` : '') +
+		(detailsHtml.length ? `<div style="margin:16px 0;padding:14px 16px;background:${color('--surface-2')};border-radius:10px;">${detailsHtml.join('')}</div>` : '') +
 		(depositLines.length ? `<div style="margin:16px 0;padding:14px 16px;background:${color('--warning-soft')};border-radius:10px;">${depositLines.map(paragraph).join('')}</div>` : '') +
 		closing.map(paragraph).join('') +
 		(links.length ? `<div style="margin:20px 0 8px;">${links.map((link) => button(link.href, link.label, link.primary)).join('')}</div>` : '') +

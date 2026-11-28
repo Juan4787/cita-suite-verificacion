@@ -36,6 +36,14 @@
       policy = data.business.cancellation_policy ?? "";
     },
   );
+  const horizonOptions = [
+    { value: 15, label: "Próximos 15 días" },
+    { value: 30, label: "Próximos 30 días" },
+    { value: 60, label: "Próximos 60 días" },
+    { value: 90, label: "Próximos 90 días" },
+    { value: 180, label: "Próximos 180 días" },
+    { value: 365, label: "Hasta un año" },
+  ];
   const notices = [
     { value: 0, label: "Hasta el momento del turno" },
     { value: 60, label: "1 hora antes" },
@@ -187,10 +195,10 @@
           class="ux-select mt-2"
           name="max_booking_days_ahead"
           bind:value={maxDays}
-          >{#if ![15, 30, 60, 90].includes(maxDays)}<option value={maxDays}
+          >{#if !horizonOptions.some((item) => item.value === maxDays)}<option value={maxDays}
               >Próximos {maxDays} días</option
-            >{/if}{#each [15, 30, 60, 90] as days}<option value={days}
-              >Próximos {days} días</option
+            >{/if}{#each horizonOptions as item}<option value={item.value}
+              >{item.label}</option
             >{/each}</select
         ></label
       >

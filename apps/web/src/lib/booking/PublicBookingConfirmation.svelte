@@ -6,7 +6,8 @@
  import { isRecord } from '$lib/contracts/json';
  import type { BookingViewData, BookingFormState, BookingConfirmation } from '$lib/scheduling/booking-view';
  import { normalizePatientFullName, patientFullNameErrorMessage, PATIENT_FULL_NAME_INVALID_ERROR_MESSAGE } from '$lib/utils/patient-name';
- import { formatQuotedPrice } from './pricing';
+ import { formatQuotedPrice, quotedPriceEstimateNotice } from './pricing';
+ import { buildNoEmailWhatsAppLinks } from './no-email-assistance';
  import { buildDepositTermsNotice, DEPOSIT_TERMS_UNAVAILABLE_NOTICE } from '$lib/scheduling/deposits';
  import { bookingReschedulePolicyNotice } from '$lib/scheduling/email-policy';
  import { suggestEmailCorrection } from '$lib/booking/email-suggestion';
@@ -30,8 +31,54 @@
  const business = $derived(data.state.business);
  const values = $derived({ ...form?.values, ...localDraft });
  const emailSuggestion = $derived(suggestEmailCorrection(String(values.patient_email ?? '')));
+ const priceEstimateNotice = $derived(quotedPriceEstimateNotice(currentPriceQuote, 'booking'));
+ let noEmailOpen = $state(false);
+ let emailMissingError = $state(false);
+ const emailValue = $derived(String(values.patient_email ?? ''));
+ const showEmailMissingError = $derived(
+  (data.requireEmail ?? true) &&
+   !emailValue.trim() &&
+   (emailMissingError || form?.emailMissing === true)
+ );
+ const selectedModalityLabel = $derived(
+  data.presentation && (data.presentation.modalities.length > 1 || modality === 'video')
+   ? BOOKING_MODALITY_LABELS[modality as BookingModality]
+   : null
+ );
+ const selectedDateLabel = $derived(
+  selectedSlot?.starts_at
+   ? new Intl.DateTimeFormat('es-AR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      timeZone: timezone
+     })
+      .format(new Date(selectedSlot.starts_at))
+      .replace(',', '')
+   : null
+ );
+ const noEmailWhatsApp = $derived(
+  buildNoEmailWhatsAppLinks(business?.whatsapp_contact_phone, {
+   patientName: String(values.patient_name ?? ''),
+   serviceName: selectedService?.name ?? null,
+   modalityLabel: selectedModalityLabel,
+   dateLabel: selectedDateLabel,
+   timeLabel: selectedSlot?.time ?? null
+  })
+ );
+ const noEmailWhatsAppHref = $derived(
+  noEmailWhatsApp
+   ? data.device === 'desktop'
+     ? noEmailWhatsApp.whatsappWebUrl
+     : noEmailWhatsApp.whatsappUrl
+   : null
+ );
+ const publicTelHref = $derived(
+  business?.phone ? `tel:${business.phone.replace(/[^\d+]/g, '')}` : null
+ );
  const setDraftValue = (key: string, value: unknown) => {
   localDraft = { ...values, [key]: value == null ? '' : String(value) };
+  if (key === 'patient_email' && String(value ?? '').trim()) emailMissingError = false;
  };
  const intakeFields = $derived(data.patientFields?.fields ?? data.presentation?.intakeFields ?? []);
  const requiredIntakeFields = $derived(intakeFields.filter((field: BookingIntakeField) => field.required));
@@ -125,13 +172,85 @@
 
 </script>
 
+{#snippet noEmailOptions()}
+ <p class="patient-no-email-step">
+  Podés usar el correo de un familiar o de alguien que te ayude a recibir la confirmación y los recordatorios.
+ </p>
+ {#if noEmailWhatsAppHref}
+  <a
+   href={noEmailWhatsAppHref}
+   target="_blank"
+   rel="noopener noreferrer"
+   class="ux-btn-secondary patient-no-email-action"
+  >
+   Pedir turno por WhatsApp
+  </a>
+ {:else if business?.phone && publicTelHref}
+  <p class="patient-no-email-step">
+   También podés pedir tu turno por teléfono al <a href={publicTelHref} class="ux-link whitespace-nowrap bk-accent-text">{business.phone}</a>.
+  </p>
+ {:else}
+  <p class="patient-no-email-step">
+   Si no tenés un correo para usar, comunicate con el consultorio para pedir tu turno.
+  </p>
+ {/if}
+ <p class="patient-no-email-note">
+  El horario que elegiste no queda reservado hasta que el consultorio te lo confirme.
+ </p>
+{/snippet}
+
 {#snippet emailField(required: boolean)}
+ {@const describedBy = required
+  ? [
+     'patient-email-help',
+     showEmailMissingError ? 'patient-email-missing-error' : null
+    ]
+     .filter(Boolean)
+     .join(' ')
+  : undefined}
  <div class="patient-field">
   <label for="patient-email" class="patient-label"><span>Correo electrónico</span><span class={required ? 'patient-required' : 'patient-optional'} aria-hidden="true">{required ? '*' : 'Opcional'}</span></label>
   <input id="patient-email" aria-label="Correo electrónico" name="patient_email" maxlength="254" type="email" autocomplete="email"
-   {required} bind:value={() => String(values.patient_email ?? ''), (value: string) => setDraftValue('patient_email', value)} class="ux-input patient-control" />
+   {required}
+   aria-describedby={describedBy}
+   aria-invalid={showEmailMissingError ? 'true' : undefined}
+   data-missing-error-handled={required ? 'true' : undefined}
+   oninvalid={(event) => {
+    if (required && event.currentTarget.validity.valueMissing) {
+     event.preventDefault();
+     emailMissingError = true;
+    }
+   }}
+   bind:value={() => emailValue, (value: string) => setDraftValue('patient_email', value)} class="ux-input patient-control" />
+  {#if required}
+   <p id="patient-email-help" class="patient-email-help">Te enviamos ahí la confirmación y los recordatorios de tu turno.</p>
+  {/if}
   {#if emailSuggestion}
    <p class="mt-2 text-sm" role="status">¿Quisiste decir <button type="button" class="font-semibold underline" onclick={() => setDraftValue('patient_email', emailSuggestion)}>{emailSuggestion}</button>?</p>
+  {/if}
+  {#if required}
+   <div class="patient-no-email">
+    <button
+     type="button"
+     class="patient-no-email-trigger"
+     aria-expanded={noEmailOpen}
+     aria-controls="patient-no-email-panel"
+     onclick={() => (noEmailOpen = !noEmailOpen)}
+    >¿No tenés correo?</button>
+    {#if showEmailMissingError}
+     <div id="patient-email-missing-error" role="alert" class="patient-no-email-error">
+      <p class="patient-no-email-error-title">
+       {form?.emailMissing && form?.message ? form.message : 'Completá tu correo electrónico para confirmar el turno.'}
+      </p>
+      {@render noEmailOptions()}
+     </div>
+    {/if}
+    {#if noEmailOpen && !showEmailMissingError}
+     <div id="patient-no-email-panel" role="region" aria-label="Opciones si no tenés correo electrónico" class="patient-no-email-panel">
+      {@render noEmailOptions()}
+     </div>
+    {/if}
+   </div>
   {/if}
  </div>
 {/snippet}
@@ -175,8 +294,8 @@
 				      >
 				        {BOOKING_MODALITY_LABELS[modality as BookingModality]}
 				      </p>{/if}
-				    {#if currentPriceQuote?.adjusted}<p class="patient-price-notice">
-				        Este arancel incluye los ajustes del consultorio para la fecha elegida.
+				    {#if priceEstimateNotice}<p class="patient-price-notice">
+				        {priceEstimateNotice}
 				      </p>{/if}
 				    {#if depositNotice}<p class="patient-price-notice" data-deposit-notice>{depositNotice}</p>{/if}
 				    {#if reschedulePolicyNotice}<div class="patient-price-notice" data-reschedule-policy-notice>
@@ -310,7 +429,7 @@
 				  {#if data.turnstileSiteKey}
 				    <div class="mt-5" bind:this={turnstileContainer}></div>
 				  {/if}
-				  {#if form?.message}
+				  {#if form?.message && !showEmailMissingError}
 				    <p class="ux-alert mt-5" role="alert">{form.message}</p>
 				  {/if}
 

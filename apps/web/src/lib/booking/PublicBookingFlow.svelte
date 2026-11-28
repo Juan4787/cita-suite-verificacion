@@ -5,7 +5,7 @@
  import PublicBookingDates from './PublicBookingDates.svelte';
  import type { BookingViewData, BookingFormState, BookingService as Service, BookingProfessional as Professional, BookingSlot as Slot, BookingDay as Day, BookingQuery } from '$lib/scheduling/booking-view';
 	import "./patient-booking.css";
- import { formatQuotedPrice } from './pricing';
+ import { formatQuotedPrice, quotedPriceEstimateNotice } from './pricing';
  import type { BookingDepositTerms } from '$lib/scheduling/deposits';
 	import BookingAppearance from '$lib/booking/BookingAppearance.svelte';
 	import BookingFrameBridge from '$lib/booking/BookingFrameBridge.svelte';
@@ -272,9 +272,12 @@
 				{/if}
 				<div class="min-w-0">
 					<h1 class="text-2xl font-bold text-fg sm:text-3xl bk-text">{business?.name ?? 'Reserva online'}</h1>
-					{#if (modality !== 'video' && business?.address) || business?.phone}
+					{#if (modality !== 'video' && business?.address) || business?.phone || business?.email}
 						<p class="mt-2 text-sm text-fg-55 bk-muted">
 							{modality !== 'video' ? business.address ?? '' : ''}{modality !== 'video' && business.address && business.phone ? ' ·\u00a0' : ''}{business.phone ?? ''}
+							{#if business.email}
+								{(modality !== 'video' && business.address) || business.phone ? ' ·\u00a0' : ''}<a href={`mailto:${business.email}`} class="font-semibold text-fg-80 underline bk-muted">{business.email}</a>
+							{/if}
 							{#if modality !== 'video' && data.mapsLink && business.address}
 								·&nbsp;<a href={data.mapsLink} target="_blank" rel="noreferrer" class="font-bold text-fg-80 underline bk-muted">Cómo llegar</a>
 							{/if}
@@ -403,10 +406,11 @@
 			{/if}
 
             {#if step === 4 && !slotsStale && data.priceQuote && data.priceQuote.date === selection.date}
+                {@const priceEstimateNotice = quotedPriceEstimateNotice(data.priceQuote, 'booking')}
                 <section class="ux-card" aria-live="polite" aria-atomic="true">
                     <h2 class="ux-section-title">Arancel para la fecha elegida</h2>
                     <p class="mt-3 text-xl font-bold tabular-nums">{formatQuotedPrice(data.priceQuote)}</p>
-                    {#if data.priceQuote.adjusted}<p class="mt-2 text-sm text-fg-75 bk-muted">Este importe incluye los ajustes mensuales configurados por el consultorio para tu fecha. Podés cambiar el día antes de confirmar.</p>{/if}
+                    {#if priceEstimateNotice}<p class="mt-2 text-sm text-fg-75 bk-muted">{priceEstimateNotice} Podés cambiar el día antes de confirmar.</p>{/if}
                 </section>
             {/if}
 

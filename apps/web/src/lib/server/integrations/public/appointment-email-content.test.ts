@@ -232,6 +232,42 @@ describe('modality-specific instructions (D1)', () => {
 			expect(body).not.toContain('maps.app.goo.gl');
 		}
 	});
+
+	it.each(detailPurposes)(
+		'P7: virtual %s vuelve clicable sólo enlaces https://, escapa HTML y aclara que el enlace vigente está en la página del turno',
+		(purpose) => {
+			const snap = {
+				...bothInstructionsSnapshot(
+					'video',
+					'Ingresá por https://meet.google.com/abc-defg-hij. <script>alert(1)</script> http://inseguro.test javascript:alert(2)'
+				),
+				...(purpose === 'deposit_request' ? { deposit: depositPending } : {})
+			};
+			const built = build(work(purpose, {}, snap));
+			expect(built.html).toContain('href="https://meet.google.com/abc-defg-hij"');
+			expect(built.html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+			expect(built.html).not.toContain('<script>');
+			expect(built.html).not.toContain('href="http://inseguro.test"');
+			expect(built.html).not.toContain('href="javascript:alert(2)"');
+			expect(built.html).toMatch(/enlace vigente está siempre en la página de tu turno/i);
+			expect(built.text).toContain('https://meet.google.com/abc-defg-hij');
+			expect(built.text).toMatch(/enlace vigente está siempre en la página de tu turno/i);
+		}
+	);
+
+	it('P7: virtual sin indicaciones no muestra aviso de enlace y presencial nunca muestra enlace ni aviso online', () => {
+		const virtualEmpty = build(work('booking_receipt', {}, bothInstructionsSnapshot('video', '   ')));
+		expect(virtualEmpty.html).not.toMatch(/enlace vigente/i);
+		expect(virtualEmpty.text).not.toMatch(/enlace vigente/i);
+
+		const inPerson = build(
+			work('booking_receipt', {}, bothInstructionsSnapshot('in_person', 'https://meet.google.com/abc-defg-hij'))
+		);
+		expect(inPerson.html).not.toContain('meet.google.com');
+		expect(inPerson.html).not.toMatch(/enlace vigente/i);
+		expect(inPerson.text).not.toContain('meet.google.com');
+		expect(inPerson.text).not.toMatch(/enlace vigente/i);
+	});
 });
 
 describe('parseAppointmentEmailWork', () => {

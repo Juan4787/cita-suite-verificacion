@@ -414,8 +414,12 @@
                     required
                     rows="2"
                     maxlength="1000"
+                    placeholder="Ej.: Conectate por Google Meet en https://meet.google.com/abc-defg-hij"
                     bind:value={draft.videoInstructions}
-                  ></textarea></label
+                  ></textarea>
+                  <span class="mt-1 block text-xs text-copy-subtle">
+                    Si incluís un enlace que empiece con https://, el paciente puede tocarlo desde el correo y la página de su turno. Si cambiás el enlace más adelante, la página del turno muestra siempre el vigente.
+                  </span></label
                 >{:else}<input
                   type="hidden"
                   name="video_instructions"

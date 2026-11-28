@@ -105,7 +105,10 @@
 			</label>
 			<label>
 				<span class="ux-label">Correo de contacto (opcional)</span>
-				<input name="email" type="email" value={valueOf('email')} disabled={!canManage} class="ux-input" />
+				<input name="email" type="email" maxlength="254" value={valueOf('email')} disabled={!canManage} class="ux-input" />
+				<span class="mt-1 block text-xs text-copy-subtle">
+					Si activás el contacto público en tu web, este correo se muestra a los pacientes. No se usa para enviar correos automáticos.
+				</span>
 			</label>
 			<label class="md:col-span-2">
 				<span class="ux-label">Dirección visible para pacientes</span>

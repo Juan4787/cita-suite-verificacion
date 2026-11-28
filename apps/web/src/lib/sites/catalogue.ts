@@ -5,6 +5,7 @@ export function parsePublicContact(value: unknown) {
   const row = readRecord(value, 'publicContact');
   return {
     phone: readNullableText(row.phone, 'publicContact.phone'),
+    email: row.email === undefined ? null : readNullableText(row.email, 'publicContact.email'),
     address: readNullableText(row.address, 'publicContact.address'),
     whatsapp_phone: readNullableText(row.whatsapp_phone, 'publicContact.whatsapp_phone'),
     whatsapp_message: readNullableText(row.whatsapp_message, 'publicContact.whatsapp_message')
