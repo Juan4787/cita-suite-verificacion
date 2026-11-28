@@ -23,18 +23,32 @@ export const submitStaffManagementAction = async (reader: CitaSupabaseClient,
   const names = ['operation_id', 'expected_revision', ...(action === 'reschedule' ?
    ['slot_starts_at', 'availability_revision', 'ignore_break', 'reprogram_date'] : ['status', 'reason', 'confirm_cancel'])];
   fields = Object.fromEntries(names.map(name => [name, field(form, name)]));
+  const rawRequester = action === 'reschedule' ? form.get('reschedule_requester') : null;
+  const rawKeepCredit = action === 'update_status' ? form.get('keep_deposit_as_credit') : null;
+  if (rawRequester !== null && (typeof rawRequester !== 'string' || !['', 'patient', 'practice_or_force_majeure'].includes(rawRequester))) {
+   throw new InvalidDataContractError('appointment.management.form');
+  }
+  if (rawKeepCredit !== null && rawKeepCredit !== 'true' && rawKeepCredit !== 'false' && rawKeepCredit !== '') {
+   throw new InvalidDataContractError('appointment.management.form');
+  }
+  if (typeof rawRequester === 'string' && rawRequester) fields.reschedule_requester = rawRequester;
+  if (rawKeepCredit === 'true') fields.keep_deposit_as_credit = 'true';
   const observed = { ...input, operationId: fields.operation_id, expectedRevision: fields.expected_revision };
   let result;
   if (action === 'reschedule') {
    if (!isAvailabilityDate(fields.reprogram_date) || zonedDate(new Date(managementInstant(fields.slot_starts_at)), input.business.timezone) !== fields.reprogram_date ||
     !/^[1-9]\d{0,15}$/.test(fields.availability_revision) || !['true', 'false'].includes(fields.ignore_break))
     throw new InvalidDataContractError('appointment.management.form');
+   const rescheduleRequester =
+    rawRequester === 'patient' || rawRequester === 'practice_or_force_majeure' ? rawRequester : null;
    result = await rescheduleAppointment(reader, { ...observed, startsAt: fields.slot_starts_at,
-    availabilityRevision: managementCounter(Number(fields.availability_revision)), ignoreBreak: fields.ignore_break === 'true' });
+    availabilityRevision: managementCounter(Number(fields.availability_revision)), ignoreBreak: fields.ignore_break === 'true',
+    ...(rescheduleRequester ? { rescheduleRequester } : {}) });
   } else {
    if (!isAppointmentStatus(fields.status) || fields.status === 'confirmed' || fields.status === 'reserved' ||
     (fields.status === 'cancelled' && fields.confirm_cancel !== 'true')) throw new InvalidDataContractError('appointment.management.form');
-   result = await updateAppointmentStatus(reader, { ...observed, status: fields.status, reason: fields.reason.trim() || null });
+   result = await updateAppointmentStatus(reader, { ...observed, status: fields.status, reason: fields.reason.trim() || null,
+    ...(rawKeepCredit === 'true' ? { keepDepositAsCredit: true } : {}) });
   }
   return { success: true, result, message: result.idempotentReplay ? 'Esta acción ya estaba guardada. Revisá el estado actual del turno.' :
    !result.changed ? 'El turno ya tenía ese horario; no fue necesario modificarlo.' :

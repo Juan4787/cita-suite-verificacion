@@ -34,7 +34,7 @@ export const resolvePatientActions = (context: PatientActionContext): PatientAct
 
 export const APPOINTMENT_EMAIL_PURPOSES = [
 	'booking_receipt', 'reschedule_receipt', 'cancellation_receipt',
-	'deposit_request', 'reminder_72h', 'reminder_24h'
+	'deposit_request', 'deposit_expiring_reminder', 'reminder_72h', 'reminder_24h'
 ] as const;
 export type AppointmentEmailPurpose = (typeof APPOINTMENT_EMAIL_PURPOSES)[number];
 
@@ -75,9 +75,10 @@ export const resolveAppointmentEmailContext = (context: AppointmentEmailContext)
 	if (context.purpose === 'cancellation_receipt') {
 		if (context.status !== 'cancelled') return skip('stale_event');
 	} else if (!isActiveAppointmentStatus(context.status)) return skip('stale_event');
-	if (['reminder_72h', 'reminder_24h', 'deposit_request'].includes(context.purpose) &&
+	if (['reminder_72h', 'reminder_24h', 'deposit_request', 'deposit_expiring_reminder'].includes(context.purpose) &&
 		Date.parse(context.startsAt) <= context.now.getTime()) return skip('appointment_started');
-	if (context.purpose === 'deposit_request' && context.depositStatus !== 'pending') return skip('deposit_not_pending');
+	if ((context.purpose === 'deposit_request' || context.purpose === 'deposit_expiring_reminder') &&
+		context.depositStatus !== 'pending') return skip('deposit_not_pending');
 	const available = resolvePatientActions(context);
 	return {
 		send: true, skipReason: null, appointmentState, depositState,

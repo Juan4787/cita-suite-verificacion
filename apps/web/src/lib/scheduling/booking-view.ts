@@ -66,6 +66,7 @@ export type BookingViewData = {
 	requireEmail?: boolean;
 	reschedulePolicy?: BookingReschedulePolicy | null;
 	selfManagementCutoffHours?: number | null;
+	depositCreditCutoffHours?: number | null;
 	priceQuote?: PriceQuote | null;
 	// Deposit terms of each slot of the loaded day (adjustment 4); null when they could not be computed.
 	depositTerms?: Record<string, DepositSlotTerms> | null;

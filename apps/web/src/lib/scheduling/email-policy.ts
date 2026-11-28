@@ -78,15 +78,35 @@ export const parseBookingReschedulePolicy = (value: unknown): BookingRescheduleP
   previous_deposit_disposition: readChoice(row.previous_deposit_disposition, ['credit', 'forfeit'] as const, 'booking.reschedulePolicy.disposition') };
 };
 
-export type ManualBookingReschedulePolicy = { policy: BookingReschedulePolicy; excludedServiceIds: string[] };
+export type ManualBookingReschedulePolicy = {
+ policy: BookingReschedulePolicy;
+ excludedServiceIds: string[];
+ depositCreditCutoffHours?: number | null;
+};
 export const parseManualBookingReschedulePolicy = (value: unknown): ManualBookingReschedulePolicy | null => {
  if (value === null) return null;
  const row = readRecord(value, 'manualBooking.reschedulePolicy');
- return { policy: parseBookingReschedulePolicy(row.policy), excludedServiceIds: readArray(row.excludedServiceIds, 'manualBooking.excludedServices')
-  .map(id => readText(id, 'manualBooking.excludedService')) };
+ const rawCutoff = row.depositCreditCutoffHours;
+ const depositCreditCutoffHours =
+  typeof rawCutoff === 'number' && Number.isSafeInteger(rawCutoff) && rawCutoff >= 1 && rawCutoff <= 720
+   ? rawCutoff
+   : undefined;
+ return {
+  policy: parseBookingReschedulePolicy(row.policy),
+  excludedServiceIds: readArray(row.excludedServiceIds, 'manualBooking.excludedServices')
+   .map(id => readText(id, 'manualBooking.excludedService')),
+  ...(depositCreditCutoffHours !== undefined ? { depositCreditCutoffHours } : {})
+ };
 };
 
-export const bookingReschedulePolicyNotice = (policy: BookingReschedulePolicy): string => {
+export const bookingReschedulePolicyNotice = (
+ policy: BookingReschedulePolicy,
+ depositCreditCutoffHours?: number | null
+): string => {
+ if (typeof depositCreditCutoffHours === 'number' && Number.isSafeInteger(depositCreditCutoffHours) && depositCreditCutoffHours >= 1) {
+  const hoursLabel = depositCreditCutoffHours === 1 ? '1\u00a0hora' : `${depositCreditCutoffHours}\u00a0horas`;
+  return `Si reprogramás después de pagar con ${hoursLabel} o más de anticipación, la seña queda a cuenta del nuevo horario sin pedir otra seña. Con menos de ${hoursLabel}, la seña se pierde y corresponde una nueva seña. Si todavía no pagaste, se mantiene una sola seña pendiente.`;
+ }
  const previous = policy.previous_deposit_disposition === 'forfeit'
   ? 'esa seña no se aplicará al nuevo turno.' : 'esa seña seguirá a cuenta del turno.';
  const next = policy.require_deposit_on_reschedule
@@ -98,7 +118,7 @@ export const bookingReschedulePolicyNotice = (policy: BookingReschedulePolicy): 
 /** One message of an appointment as the practice sees it. No provider identifiers. */
 export type AppointmentEmailDelivery = {
  id: string;
- purpose: 'booking_receipt' | 'reschedule_receipt' | 'cancellation_receipt' | 'deposit_request' | 'reminder_72h' | 'reminder_24h';
+ purpose: 'booking_receipt' | 'reschedule_receipt' | 'cancellation_receipt' | 'deposit_request' | 'deposit_expiring_reminder' | 'reminder_72h' | 'reminder_24h';
  state: 'pending' | 'sending' | 'retry' | 'accepted' | 'delivered' | 'uncertain' | 'failed' | 'bounced' | 'complained' | 'discarded';
  recipient: string | null;
  createdAt: string;

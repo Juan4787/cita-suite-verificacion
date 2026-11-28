@@ -80,7 +80,7 @@
 			patientsLoaded?: boolean;
 			referencesLoaded?: boolean;
 			reminderCount?: number | null;
-			depositAlerts?: { toRequest: number; dueSoon: number; cancelledToday: number } | null;
+			depositAlerts?: { toRequest: number; dueSoon: number; cancelledToday: number; paymentReported?: number } | null;
 			canRecordDeposit?: boolean;
 			slotReleases?: SlotReleaseListView;
 			appointmentRequestId: string;
@@ -374,6 +374,10 @@
 		const alerts = data.depositAlerts;
 		if (!alerts) return [];
 		const parts: string[] = [];
+		if ((alerts.paymentReported ?? 0) > 0) {
+			const reported = alerts.paymentReported!;
+			parts.push(`${reported} ${reported === 1 ? 'paciente avisó que pagó' : 'pacientes avisaron que pagaron'}`);
+		}
 		if (alerts.toRequest > 0) parts.push(`${alerts.toRequest} ${alerts.toRequest === 1 ? 'seña para pedir' : 'señas para pedir'}`);
 		if (alerts.dueSoon > 0) parts.push(`${alerts.dueSoon} ${alerts.dueSoon === 1 ? 'vence' : 'vencen'} en menos de 24 horas`);
 		if (alerts.cancelledToday > 0) {

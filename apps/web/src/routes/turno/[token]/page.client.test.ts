@@ -1226,7 +1226,7 @@ describe('seña del turno', () => {
   const deposit = screen.getByRole('heading', { name: 'Seña del turno' });
   expect(result.compareDocumentPosition(deposit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.getByText('Tu turno se confirma cuando el consultorio registra la seña.')).toBeVisible();
-  expect(screen.getByRole('link', { name: 'Ya transferí: enviar el comprobante' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Ya transferí: enviar el comprobante' })).toBeVisible();
   expect(screen.queryByRole('button', { name: 'Confirmo que voy' })).not.toBeInTheDocument();
  });
 
@@ -1239,10 +1239,7 @@ describe('seña del turno', () => {
 		expect(due).toContain('12:00');
 		expect(card).toContain('el turno se cancela automáticamente y el horario se libera');
 		expect(card).toContain('Alias natalia.frutos');
-		expect(screen.getByRole('link', { name: 'Ya transferí: enviar el comprobante' })).toHaveAttribute(
-			'href',
-			depositWhatsApp.paidNow.whatsappUrl
-		);
+		expect(screen.getByRole('button', { name: 'Ya transferí: enviar el comprobante' })).toBeInTheDocument();
 		expect(screen.getByRole('link', { name: 'Voy a pagar la seña más adelante' })).toHaveAttribute(
 			'href',
 			depositWhatsApp.payLater.whatsappUrl
@@ -1255,12 +1252,21 @@ describe('seña del turno', () => {
 	it('en una computadora los dos caminos abren WhatsApp Web', () => {
 		installNotificationEnvironment();
 		render(Page, {
-			data: { ...pageData, device: 'desktop' as never, appointment: withDeposit(pendingDeposit), depositWhatsApp }
+			data: {
+				...pageData,
+				device: 'desktop' as never,
+				appointment: withDeposit({ ...pendingDeposit, patient_payment_notice_at: '2026-08-05T15:00:00.000Z' }),
+				depositWhatsApp
+			}
 		});
-		expect(screen.getByRole('link', { name: 'Ya transferí: enviar el comprobante' })).toHaveAttribute(
+		expect(screen.getByRole('link', { name: 'Enviar comprobante por WhatsApp' })).toHaveAttribute(
 			'href',
 			depositWhatsApp.paidNow.whatsappWebUrl
 		);
+		cleanup();
+		render(Page, {
+			data: { ...pageData, device: 'desktop' as never, appointment: withDeposit(pendingDeposit), depositWhatsApp }
+		});
 		expect(screen.getByRole('link', { name: 'Voy a pagar la seña más adelante' })).toHaveAttribute(
 			'href',
 			depositWhatsApp.payLater.whatsappWebUrl

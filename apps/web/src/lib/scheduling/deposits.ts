@@ -31,6 +31,26 @@ export type AppointmentDepositView = {
 	reminder_opened_at: string | null;
 	expired_at: string | null;
 	revision: number;
+	patient_payment_notice_at?: string | null;
+	applied_credit_id?: string | null;
+	applied_credit_amount?: number | null;
+	amount_difference_note?: string | null;
+};
+
+export type PatientDepositCredit = {
+	id: string;
+	amount: number;
+	currency: 'ARS';
+	reason: 'cancelled_in_time' | 'force_majeure';
+	sourceAppointmentId: string;
+	createdAt: string;
+};
+
+export type CancellationDepositOutcome = {
+	outcome: 'credit' | 'forfeit';
+	amount: string;
+	reason: 'cancelled_in_time' | 'force_majeure' | 'cancelled_late';
+	cutoffHours: number | null;
 };
 
 export const DEPOSIT_STATUS_LABELS: Record<DepositStatus, string> = {
@@ -58,7 +78,7 @@ export const parseAppointmentDeposit = (value: unknown): AppointmentDepositView 
 	if (value === null || value === undefined) return null;
 	const row = readRecord(value, 'deposit');
 	if (row.currency !== 'ARS') throw new InvalidDataContractError('deposit.currency');
-	return {
+	const base: AppointmentDepositView = {
 		appointment_id: readText(row.appointment_id, 'deposit.appointment_id'),
 		status: readChoice(row.status, DEPOSIT_STATUSES, 'deposit.status'),
 		amount: readPositiveInteger(row.amount, 'deposit.amount'),
@@ -75,6 +95,81 @@ export const parseAppointmentDeposit = (value: unknown): AppointmentDepositView 
 		expired_at: readNullableInstant(row.expired_at, 'deposit.expired_at'),
 		revision: readPositiveInteger(row.revision, 'deposit.revision')
 	};
+	if (row.patient_payment_notice_at !== undefined) {
+		base.patient_payment_notice_at = readNullableInstant(row.patient_payment_notice_at, 'deposit.patient_payment_notice_at');
+	}
+	if (row.applied_credit_id !== undefined) {
+		base.applied_credit_id = row.applied_credit_id === null ? null : readText(row.applied_credit_id, 'deposit.applied_credit_id');
+	}
+	if (row.applied_credit_amount !== undefined) {
+		base.applied_credit_amount =
+			row.applied_credit_amount === null ? null : readPositiveInteger(row.applied_credit_amount, 'deposit.applied_credit_amount');
+	}
+	if (row.amount_difference_note !== undefined) {
+		base.amount_difference_note =
+			row.amount_difference_note === null ? null : readText(row.amount_difference_note, 'deposit.amount_difference_note');
+	}
+	return base;
+};
+
+export const parsePatientDepositCredits = (value: unknown): PatientDepositCredit[] => {
+	if (!Array.isArray(value)) return [];
+	const credits: PatientDepositCredit[] = [];
+	for (const entry of value) {
+		if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+		const row = entry as Record<string, unknown>;
+		try {
+			const id = readText(row.id, 'depositCredit.id');
+			const amount = readPositiveInteger(row.amount, 'depositCredit.amount');
+			if (row.currency !== 'ARS') continue;
+			const reason = readChoice(row.reason, ['cancelled_in_time', 'force_majeure'] as const, 'depositCredit.reason');
+			const sourceAppointmentId = readText(row.source_appointment_id ?? row.sourceAppointmentId, 'depositCredit.source');
+			const createdAt = readInstant(row.created_at ?? row.createdAt, 'depositCredit.createdAt');
+			credits.push({ id, amount, currency: 'ARS', reason, sourceAppointmentId, createdAt });
+		} catch {
+			continue;
+		}
+	}
+	return credits;
+};
+
+export const parseCancellationDepositOutcome = (value: unknown): CancellationDepositOutcome | null => {
+	if (value === null || value === undefined) return null;
+	const row = readRecord(value, 'cancellationDepositOutcome');
+	const outcome = readChoice(row.outcome, ['credit', 'forfeit'] as const, 'cancellationDepositOutcome.outcome');
+	const amount = readText(row.amount, 'cancellationDepositOutcome.amount');
+	if (!/^[1-9]\d{0,12}$/.test(amount)) throw new InvalidDataContractError('cancellationDepositOutcome.amount');
+	const reason = readChoice(
+		row.reason,
+		['cancelled_in_time', 'force_majeure', 'cancelled_late'] as const,
+		'cancellationDepositOutcome.reason'
+	);
+	const rawCutoff = row.cutoff_hours;
+	const cutoffHours =
+		rawCutoff === null || rawCutoff === undefined
+			? null
+			: readPositiveInteger(rawCutoff, 'cancellationDepositOutcome.cutoffHours');
+	return { outcome, amount, reason, cutoffHours };
+};
+
+export const describeCreditDifference = (
+	paidAmount: number,
+	targetAmount: number,
+	context: 'credit_applied' | 'rescheduled' = 'credit_applied'
+): string | null => {
+	if (!Number.isSafeInteger(paidAmount) || !Number.isSafeInteger(targetAmount) || paidAmount === targetAmount) return null;
+	const paidLabel = formatDepositAmount(paidAmount);
+	const targetLabel = formatDepositAmount(targetAmount);
+	if (targetAmount > paidAmount) {
+		const diffLabel = formatDepositAmount(targetAmount - paidAmount);
+		return context === 'rescheduled'
+			? `Se conserva la seña pagada de ${paidLabel}. Como el monto vigente es ${targetLabel}, falta cobrar ${diffLabel} de diferencia.`
+			: `Se aplicó la seña a cuenta de ${paidLabel}. Falta cobrar ${diffLabel} de diferencia.`;
+	}
+	const diffLabel = formatDepositAmount(paidAmount - targetAmount);
+	return context === 'rescheduled'
+		? `Se conserva la seña pagada de ${paidLabel}. Como el monto vigente es ${targetLabel}, queda ${diffLabel} de saldo a favor.`
+		: `Se aplicó la seña a cuenta de ${paidLabel}. Queda ${diffLabel} de saldo a favor.`;
 };
 
 export const formatDepositAmount = (amount: number) => formatQuotedPrice({ amount, currency: 'ARS' });
@@ -101,10 +196,11 @@ export const parseBookingDepositTerms = (value: unknown): BookingDepositTerms =>
 	};
 };
 
-export type DepositListSection = 'to_request' | 'due_soon' | 'manual' | 'overdue' | 'later' | 'cancelled';
+export type DepositListSection = 'payment_reported' | 'to_request' | 'due_soon' | 'manual' | 'overdue' | 'later' | 'cancelled';
 
-/** The sections of the deposits page, in the order of the plan (section 4.8). */
+/** The sections of the deposits page, in the order of the plan (section 4.8 + P1). */
 export const DEPOSIT_SECTIONS: ReadonlyArray<{ id: DepositListSection; title: string; folded: boolean }> = [
+	{ id: 'payment_reported', title: 'Avisó que pagó: verificar', folded: false },
 	{ id: 'to_request', title: 'Para pedir', folded: false },
 	{ id: 'due_soon', title: 'Vencen en menos de 24 horas', folded: false },
 	{ id: 'manual', title: 'Último momento: resolver a mano', folded: false },
@@ -185,6 +281,7 @@ export const classifyDeposit = (
 	}
 	if (deposit.status !== 'pending' || appointment.status === 'cancelled') return null;
 	if (!(Date.parse(appointment.startsAt) > nowMs)) return null;
+	if (deposit.patient_payment_notice_at) return 'payment_reported';
 	const due = Date.parse(deposit.due_at);
 	if (due <= nowMs) return 'overdue';
 	if (!deposit.auto_cancel || appointment.status === 'reschedule_requested') return 'manual';
@@ -206,17 +303,18 @@ export type DepositDeadlineDescription = {
 /**
  * Single source of truth for deposit deadline formatting across every patient surface
  * (pre-booking summary, confirmation, turn page, embedded confirmation, emails and reschedule).
- * Never promises automatic cancellation when `autoCancel` is false or the deadline already passed.
+ * Never promises automatic cancellation when `autoCancel` is false, a payment notice was
+ * already recorded, or the deadline already passed.
  */
 export const describeDepositDeadline = (
-	terms: { amount: number; dueAt: string; autoCancel: boolean },
+	terms: { amount: number; dueAt: string; autoCancel: boolean; paymentNoticeAt?: string | null },
 	timezone: string,
 	now: Date
 ): DepositDeadlineDescription => {
 	const amountLabel = formatDepositAmount(terms.amount);
 	const due = formatInTimeZone(terms.dueAt, timezone);
 	const overdue = Date.parse(terms.dueAt) <= now.getTime();
-	const willAutoCancel = terms.autoCancel && !overdue;
+	const willAutoCancel = terms.autoCancel && !overdue && !terms.paymentNoticeAt;
 	const autoCancelSentence = willAutoCancel
 		? 'Si no se registra para esa fecha, el turno se cancela automáticamente y el horario se libera.'
 		: null;

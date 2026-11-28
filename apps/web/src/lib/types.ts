@@ -32,6 +32,7 @@ export interface Patient {
 	exempt_from_deposit_auto_cancel?: boolean;
 	exempt_from_deposit_auto_cancel_updated_at?: string | null;
 	exempt_from_deposit_auto_cancel_updated_by_name?: string | null;
+	available_deposit_credits?: import('$lib/scheduling/deposits').PatientDepositCredit[];
 	last_entry_at?: string | null;
 	created_at?: string | null;
 	updated_at?: string | null;

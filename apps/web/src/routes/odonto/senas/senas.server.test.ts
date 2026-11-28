@@ -141,9 +141,9 @@ describe('Señas · carga', () => {
 			truncated: false
 		});
 		const result = (await load(event())) as { sections: Array<{ id: string; rows: Array<Record<string, unknown>> }> };
-		expect(result.sections.map((section) => section.id)).toEqual(['to_request', 'due_soon', 'manual', 'overdue', 'later', 'cancelled']);
-		expect(result.sections[1].rows[0]).toMatchObject({ reminder: { openedBy: 'aye@consultorio.test' }, revision: 3, hasPhone: true });
-		expect(result.sections[0].rows[0]).toMatchObject({ reminder: { openedBy: 'alguien del equipo' } });
+		expect(result.sections.map((section) => section.id)).toEqual(['payment_reported', 'to_request', 'due_soon', 'manual', 'overdue', 'later', 'cancelled']);
+		expect(result.sections[2].rows[0]).toMatchObject({ reminder: { openedBy: 'aye@consultorio.test' }, revision: 3, hasPhone: true });
+		expect(result.sections[1].rows[0]).toMatchObject({ reminder: { openedBy: 'alguien del equipo' } });
 	});
 
 	it('una cancelada por la seña ofrece avisarle a la persona, con dónde reservar, y volver a dar el horario', async () => {

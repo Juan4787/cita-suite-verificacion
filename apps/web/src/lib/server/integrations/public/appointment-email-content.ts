@@ -10,7 +10,12 @@ import {
 	readRecord,
 	readText
 } from '$lib/contracts/json';
-import { describeDepositDeadline, parseAppointmentDeposit } from '$lib/scheduling/deposits';
+import {
+	describeDepositDeadline,
+	formatDepositAmount,
+	parseAppointmentDeposit,
+	parseCancellationDepositOutcome
+} from '$lib/scheduling/deposits';
 import {
 	APPOINTMENT_EMAIL_PURPOSES,
 	resolveAppointmentEmailContext,
@@ -105,6 +110,7 @@ const headings: Record<AppointmentEmailPurpose, string> = {
 	reschedule_receipt: 'Tu turno cambió de horario',
 	cancellation_receipt: 'Tu turno fue cancelado',
 	deposit_request: 'Falta registrar la seña de tu turno',
+	deposit_expiring_reminder: 'Tu seña está por vencer',
 	reminder_72h: 'Te recordamos tu turno',
 	reminder_24h: 'Tu turno se acerca'
 };
@@ -159,7 +165,17 @@ export const buildAppointmentEmail = (
 	const cancelled = work.purpose === 'cancellation_receipt';
 	const cancelledByDepositExpiry =
 		cancelled && (snapshot.cancelled_by_deposit_expiry === true || deposit?.status === 'expired');
+	const cancellationDepositOutcome = cancelled
+		? (() => {
+				try {
+					return parseCancellationDepositOutcome(snapshot.cancellation_deposit_outcome);
+				} catch {
+					return null;
+				}
+			})()
+		: null;
 	const depositPending = !cancelled && deposit?.status === 'pending';
+	const depositPaymentNoticeAt = depositPending ? (deposit?.patient_payment_notice_at ?? null) : null;
 	const transferDetails = typeof snapshot.deposit_transfer_details === 'string' ? snapshot.deposit_transfer_details : null;
 	const selfManagementWindowClosed = !cancelled && snapshot.self_management_window_closed === true;
 	const selfManagementCutoffHours =
@@ -176,16 +192,21 @@ export const buildAppointmentEmail = (
 			: cancelledByDepositExpiry
 				? `El turno del ${when.full} se canceló automáticamente porque no se registró la seña dentro del plazo.`
 				: `El turno del ${when.full} quedó cancelado.`
-		: depositPending
-			? 'Tu turno está reservado. Se confirma cuando el consultorio registre la seña.'
-			: status === 'confirmed'
-				? 'Tu turno está confirmado.'
-				: 'Tu turno está reservado.';
+		: work.purpose === 'deposit_expiring_reminder'
+			? 'La seña de tu turno está por vencer. Transferila y avisá al consultorio para confirmarlo.'
+			: depositPending
+				? depositPaymentNoticeAt
+					? 'Tu turno está reservado. Ya avisaste que transferiste la seña y el consultorio va a verificar el pago.'
+					: 'Tu turno está reservado. Se confirma cuando el consultorio registre la seña.'
+				: status === 'confirmed'
+					? 'Tu turno está confirmado.'
+					: 'Tu turno está reservado.';
 	const subject = headerText(
 		work.purpose === 'booking_receipt' ? `Tu turno en ${businessName}: ${when.full}`
 		: work.purpose === 'reschedule_receipt' ? `Tu turno cambió: ${when.full}`
 		: work.purpose === 'cancellation_receipt' ? `Turno cancelado: ${when.full}`
 		: work.purpose === 'deposit_request' ? `Seña de tu turno del ${when.full}`
+		: work.purpose === 'deposit_expiring_reminder' ? `Tu seña está por vencer: turno del ${when.full}`
 		: `Recordatorio de tu turno: ${when.full}`
 	);
 	const preheader = headerText(cancelled ? stateLine : `${when.full}. ${stateLine}`, 120);
@@ -194,7 +215,17 @@ export const buildAppointmentEmail = (
 	// The link states which time this message described, so an old message can say that it changed.
 	const sentFor = typeof snapshot.schedule_revision === 'number' ? `desde=${snapshot.schedule_revision}` : '';
 	const links: EmailLink[] = [];
-	if (base && !cancelled) links.push({ label: 'Ver mi turno', href: sentFor ? `${base}?${sentFor}` : base, primary: true });
+	if (base && !cancelled) {
+		if (work.purpose === 'deposit_expiring_reminder') {
+			links.push({
+				label: 'Pagar la seña y avisar',
+				href: `${sentFor ? `${base}?${sentFor}` : base}#sena-del-turno`,
+				primary: true
+			});
+		} else {
+			links.push({ label: 'Ver mi turno', href: sentFor ? `${base}?${sentFor}` : base, primary: true });
+		}
+	}
 	if (base && context.actions.reschedule) links.push({ label: 'Reprogramar', href: `${base}?accion=reprogramar${sentFor ? `&${sentFor}` : ''}`, primary: false });
 	if (base && context.actions.cancel) links.push({ label: 'Cancelar', href: `${base}?accion=cancelar${sentFor ? `&${sentFor}` : ''}`, primary: false });
 	if (context.actions.bookNew) {
@@ -242,17 +273,39 @@ export const buildAppointmentEmail = (
 	const depositLines: string[] = [];
 	if (depositPending && deposit) {
 		const deadline = describeDepositDeadline(
-			{ amount: deposit.amount, dueAt: deposit.due_at, autoCancel: deposit.auto_cancel },
+			{
+				amount: deposit.amount,
+				dueAt: deposit.due_at,
+				autoCancel: deposit.auto_cancel,
+				paymentNoticeAt: depositPaymentNoticeAt
+			},
 			timezone,
 			options.now
 		);
 		depositLines.push(deadline.emailLine);
-		if (transferDetails) depositLines.push(`Datos para transferir:\n${transferDetails}`);
-		if (deadline.autoCancelSentence) depositLines.push(deadline.autoCancelSentence);
-		depositLines.push('Esto no es un comprobante de pago: el consultorio registra la seña cuando recibe la transferencia.');
+		if (depositPaymentNoticeAt) {
+			depositLines.push('Ya avisaste que transferiste la seña; el consultorio va a verificar el pago.');
+		} else {
+			if (transferDetails) depositLines.push(`Datos para transferir:\n${transferDetails}`);
+			if (deadline.autoCancelSentence) depositLines.push(deadline.autoCancelSentence);
+			depositLines.push('Esto no es un comprobante de pago: el consultorio registra la seña cuando recibe la transferencia.');
+		}
 	}
 	const closing: string[] = [];
 	const closingHtml: string[] = [];
+	if (cancelled && !cancelledByDepositExpiry && cancellationDepositOutcome) {
+		const amountLabel = formatDepositAmount(Number(cancellationDepositOutcome.amount));
+		const line =
+			cancellationDepositOutcome.outcome === 'credit'
+				? cancellationDepositOutcome.reason === 'force_majeure'
+					? `Tu seña de ${amountLabel} quedó a cuenta para un próximo turno por excepción del consultorio.`
+					: `Tu seña de ${amountLabel} quedó a cuenta para un próximo turno.`
+				: cancellationDepositOutcome.cutoffHours
+					? `Como la cancelación fue con menos de ${cancellationDepositOutcome.cutoffHours === 1 ? '1\u00a0hora' : `${cancellationDepositOutcome.cutoffHours}\u00a0horas`} de anticipación, la seña de ${amountLabel} se perdió.`
+					: `La seña de ${amountLabel} se perdió por cancelación fuera de plazo.`;
+		closing.push(line);
+		closingHtml.push(paragraph(line));
+	}
 	if (selfManagementWindowClosed) {
 		const hoursText = selfManagementCutoffHours
 			? selfManagementCutoffHours === 1

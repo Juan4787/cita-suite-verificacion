@@ -2,7 +2,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import { page } from '$app/state';
 	import { classifyUserAgent, refineDeviceClass, type DeviceClass } from '$lib/device';
-	import { formatElapsed } from '$lib/scheduling/deposits';
+	import { describeCreditDifference, formatDepositAmount, formatElapsed } from '$lib/scheduling/deposits';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 
@@ -52,29 +52,65 @@
 
 {#snippet depositActions(row: Row)}
 	<div class="flex shrink-0 flex-col gap-2 sm:items-end">
-		{#if data.demo}
-			<button class="ux-btn-primary px-3 sm:px-5" disabled>Pedir seña por WhatsApp</button>
+		{#if row.section === 'payment_reported'}
+			<form method="POST" action="?/deposit">
+				<input type="hidden" name="appointment_id" value={row.appointmentId} />
+				<input type="hidden" name="deposit_action" value="paid" />
+				<input type="hidden" name="expected_revision" value={row.revision} />
+				<button class="ux-btn-primary w-full" disabled={data.demo}>Registrar pago</button>
+			</form>
+			<details class="w-full sm:w-auto">
+				<summary class="ux-btn-secondary cursor-pointer list-none">No llegó el pago</summary>
+				<form method="POST" action="?/clear_payment_notice" class="mt-2 flex flex-col gap-2 sm:items-end">
+					<p class="max-w-60 text-xs text-fg-55 sm:text-right">
+						Se quita el aviso y el turno vuelve al circuito normal (decidir o cancelación automática si todavía corresponde).
+					</p>
+					<input type="hidden" name="appointment_id" value={row.appointmentId} />
+					<input type="hidden" name="expected_revision" value={row.revision} />
+					<button class="ux-btn-secondary w-full" disabled={data.demo}>Sí, no llegó el pago</button>
+				</form>
+			</details>
+			{#if row.availableCredits && row.availableCredits.length > 0}
+				<form method="POST" action="?/apply_credit">
+					<input type="hidden" name="appointment_id" value={row.appointmentId} />
+					<input type="hidden" name="expected_revision" value={row.revision} />
+					<input type="hidden" name="credit_id" value={row.availableCredits[0].id} />
+					<button class="ux-btn-secondary w-full" disabled={data.demo}>Aplicar</button>
+				</form>
+			{/if}
+		{:else}
+			{#if row.availableCredits && row.availableCredits.length > 0}
+				<form method="POST" action="?/apply_credit">
+					<input type="hidden" name="appointment_id" value={row.appointmentId} />
+					<input type="hidden" name="expected_revision" value={row.revision} />
+					<input type="hidden" name="credit_id" value={row.availableCredits[0].id} />
+					<button class="ux-btn-primary w-full" disabled={data.demo}>Aplicar</button>
+				</form>
+			{/if}
+			{#if data.demo}
+				<button class="ux-btn-primary px-3 sm:px-5" disabled>Pedir seña por WhatsApp</button>
   {:else if !row.canPrepareDelivery}
    <span class="ux-badge ux-badge-warning">Revisar ficha</span>
    <a href={`/odonto/pacientes/${row.patientId}`} class="ux-btn-secondary">Ver ficha del paciente</a>
-		{:else if !row.hasPhone}
-			<span class="ux-badge ux-badge-warning">Revisar teléfono</span>
-			<p class="max-w-60 text-xs leading-relaxed text-fg-50 sm:text-right">
-				Falta un número argentino completo con código de área.
-			</p>
-			<a href={`/odonto/pacientes/${row.patientId}`} class="ux-btn-secondary">Corregir número</a>
-		{:else if row.reminder}
-			<p class="max-w-60 text-xs text-copy-subtle sm:text-right">Ya se pidió por WhatsApp. ¿Abrirlo otra vez?</p>
-			{@render openDeposit(row, true)}
-		{:else}
-			{@render openDeposit(row)}
+			{:else if !row.hasPhone}
+				<span class="ux-badge ux-badge-warning">Revisar teléfono</span>
+				<p class="max-w-60 text-xs leading-relaxed text-fg-50 sm:text-right">
+					Falta un número argentino completo con código de área.
+				</p>
+				<a href={`/odonto/pacientes/${row.patientId}`} class="ux-btn-secondary">Corregir número</a>
+			{:else if row.reminder}
+				<p class="max-w-60 text-xs text-copy-subtle sm:text-right">Ya se pidió por WhatsApp. ¿Abrirlo otra vez?</p>
+				{@render openDeposit(row, true)}
+			{:else}
+				{@render openDeposit(row)}
+			{/if}
+			<form method="POST" action="?/deposit">
+				<input type="hidden" name="appointment_id" value={row.appointmentId} />
+				<input type="hidden" name="deposit_action" value="paid" />
+				<input type="hidden" name="expected_revision" value={row.revision} />
+				<button class="ux-btn-primary w-full" disabled={data.demo}>Confirmar seña</button>
+			</form>
 		{/if}
-		<form method="POST" action="?/deposit">
-			<input type="hidden" name="appointment_id" value={row.appointmentId} />
-			<input type="hidden" name="deposit_action" value="paid" />
-			<input type="hidden" name="expected_revision" value={row.revision} />
-			<button class="ux-btn-primary w-full" disabled={data.demo}>Confirmar seña</button>
-		</form>
 		<details class="w-full sm:w-auto">
 			<summary class="ux-btn-secondary cursor-pointer list-none">Exceptuar</summary>
 			<form method="POST" action="?/deposit" class="mt-2 flex flex-col gap-2 sm:items-end">
@@ -129,8 +165,25 @@
 					{/if}
 				{:else}
 					<p class="mt-2 text-sm font-bold text-fg">Seña de {row.amountLabel}, vence el {row.dueLabel}</p>
+					{#if row.section === 'payment_reported' && row.paymentNoticeAt}
+						<p class="mt-2 text-sm font-semibold text-warning-300" data-payment-notice-elapsed>
+							Avisó que pagó {formatElapsed(row.paymentNoticeAt, now)}. La cancelación automática está pausada hasta verificar.
+						</p>
+					{/if}
 					{#if row.appointmentStatus === 'reschedule_requested'}
 						<p class="mt-1 text-sm text-warning-300">Pidió reprogramar: resolver a mano.</p>
+					{/if}
+					{#if row.availableCredits && row.availableCredits.length > 0}
+						{@const credit = row.availableCredits[0]}
+						{@const diffNote = describeCreditDifference(credit.amount, row.amount, 'credit_applied')}
+						<div class="mt-3 rounded-xl border border-accent-300-30 bg-accent-400-10 p-3 text-sm" data-available-credit={credit.id}>
+							<p class="font-semibold text-fg">
+								Tiene {row.availableCredits.length === 1 ? '1 seña a cuenta' : `${row.availableCredits.length} señas a cuenta`} disponible{row.availableCredits.length === 1 ? '' : 's'} ({formatDepositAmount(credit.amount)}).
+							</p>
+							{#if diffNote}
+								<p class="mt-1 text-fg-75">{diffNote}</p>
+							{/if}
+						</div>
 					{/if}
 				{/if}
 				{#if row.reminder}

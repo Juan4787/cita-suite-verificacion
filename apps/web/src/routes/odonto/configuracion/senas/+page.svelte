@@ -16,6 +16,8 @@
 		deadlineHours: string;
 		minPaymentHours: string;
 		lateBookingPaymentHours: string;
+		expiringReminderHours?: string;
+		depositCreditCutoffHours?: string;
 		transferDetails: string;
 		appliesToManual: boolean;
 		excludedServiceIds: string[];
@@ -41,6 +43,14 @@
 			data.policy.lateBookingPaymentHours === null || data.policy.lateBookingPaymentHours === undefined
 				? ''
 				: String(data.policy.lateBookingPaymentHours),
+		expiringReminderHours:
+			data.policy.expiringReminderHours === null
+				? ''
+				: String(data.policy.expiringReminderHours ?? 24),
+		depositCreditCutoffHours:
+			data.policy.depositCreditCutoffHours === null || data.policy.depositCreditCutoffHours === undefined
+				? ''
+				: String(data.policy.depositCreditCutoffHours),
 		transferDetails: data.policy.transferDetails ?? '',
 		appliesToManual: data.policy.appliesToManual,
 		excludedServiceIds: data.policy.excludedServiceIds
@@ -54,6 +64,8 @@
 	let deadlineHours = $state(initial.deadlineHours);
 	let minPaymentHours = $state(initial.minPaymentHours);
 	let lateBookingPaymentHours = $state(initial.lateBookingPaymentHours ?? '');
+	let expiringReminderHours = $state(initial.expiringReminderHours ?? '24');
+	let depositCreditCutoffHours = $state(initial.depositCreditCutoffHours ?? '');
 	let excluded = $state<string[]>([...initial.excludedServiceIds]);
 	let refinedDevice = $state<DeviceClass | null>(null);
 	onMount(() => {
@@ -274,6 +286,45 @@
 				{/if}
 			</div>
 		</details>
+
+		<fieldset class="grid gap-3" data-expiring-reminder-fieldset>
+			<legend class="ux-section-title">Aviso automático antes del vencimiento</legend>
+			<p class="text-sm text-fg-55">
+				Envía un correo automático al paciente antes de que venza la seña, con los datos para transferir y el botón para avisar que ya pagó. Sólo se envía si los correos del consultorio están activos.
+			</p>
+			<label class="ux-choice flex items-center gap-3 px-4 py-3">
+				<input type="radio" name="expiring_reminder_hours" value="" bind:group={expiringReminderHours} disabled={!canSave} class="accent-check-accent-600" />
+				<span class="text-fg">Desactivado</span>
+			</label>
+			<label class="ux-choice flex items-center gap-3 px-4 py-3">
+				<input type="radio" name="expiring_reminder_hours" value="24" bind:group={expiringReminderHours} disabled={!canSave} class="accent-check-accent-600" />
+				<span class="text-fg">24 horas antes del vencimiento</span>
+			</label>
+			<label class="ux-choice flex items-center gap-3 px-4 py-3">
+				<input type="radio" name="expiring_reminder_hours" value="48" bind:group={expiringReminderHours} disabled={!canSave} class="accent-check-accent-600" />
+				<span class="text-fg">48 horas antes del vencimiento</span>
+			</label>
+			{#if errors.expiring_reminder_hours}<span class="text-sm text-warning-300">{errors.expiring_reminder_hours}</span>{/if}
+		</fieldset>
+
+		<fieldset class="grid gap-3" data-deposit-credit-cutoff-fieldset>
+			<legend class="ux-section-title">Seña a cuenta al cancelar o reprogramar</legend>
+			<label class="grid gap-2">
+				<span class="ux-label">Horas de anticipación para conservar la seña a cuenta (opcional)</span>
+				<input
+					name="deposit_credit_cutoff_hours"
+					inputmode="numeric"
+					bind:value={depositCreditCutoffHours}
+					disabled={!canSave}
+					class="ux-input max-w-44"
+					placeholder="48"
+				/>
+				<span class="block text-xs text-copy-subtle">
+					Entre 1 y 720&nbsp;horas. Con esa anticipación o más, la seña pagada queda a cuenta al cancelar o cubre el nuevo horario al reprogramar. Con menos tiempo, la seña se pierde (el consultorio puede hacer excepción por fuerza mayor). Vacío, rige la configuración fija de Correo.
+				</span>
+				{#if errors.deposit_credit_cutoff_hours}<span class="text-sm text-warning-300">{errors.deposit_credit_cutoff_hours}</span>{/if}
+			</label>
+		</fieldset>
 
 		<label>
 			<span class="ux-label">Datos para transferir</span>

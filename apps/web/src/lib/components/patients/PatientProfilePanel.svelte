@@ -11,6 +11,7 @@
 		PatientPermissions
 	} from '$lib/patients/contracts';
 	import { readPatientChangeEvents } from '$lib/patients/history-contract';
+	import { formatDepositAmount } from '$lib/scheduling/deposits';
 	import { formatDate, formatDateTime } from '$lib/utils/format';
 	let {
 		active,
@@ -410,6 +411,31 @@
 							</label>
 							<button type="submit" disabled={demo} class="ux-btn-secondary shrink-0">Guardar</button>
 						</form>
+					{/if}
+				</div>
+
+				<div class="rounded-xl border p-4 border-line-strong bg-surface" data-patient-deposit-credits>
+					<p class="text-caption font-bold uppercase tracking-wide text-fg-n300">Señas a cuenta</p>
+					{#if (patient.available_deposit_credits ?? []).length > 0}
+						<ul class="mt-3 space-y-2">
+							{#each patient.available_deposit_credits ?? [] as credit (credit.id)}
+								<li class="flex flex-col gap-1 rounded-lg border border-line-strong bg-raised px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+									<div>
+										<p class="font-semibold text-fg">{formatDepositAmount(credit.amount)}</p>
+										<p class="text-xs text-fg-n300">
+											{credit.reason === 'force_majeure' ? 'Excepción por fuerza mayor' : 'Cancelación a tiempo'}
+											·&nbsp;{formatDateTime(credit.createdAt, businessTimeZone)}
+										</p>
+									</div>
+									<a href={`/odonto/turnos/${credit.sourceAppointmentId}`} class="text-xs font-semibold text-accent underline underline-offset-2">Ver turno de origen</a>
+								</li>
+							{/each}
+						</ul>
+						<p class="mt-2 text-xs text-fg-n300">
+							Cuando reserve otro turno que pida seña, podés aplicarla en un clic desde Señas o desde el turno.
+						</p>
+					{:else}
+						<p class="mt-2 text-sm text-copy-subtle">No tiene señas a cuenta disponibles.</p>
 					{/if}
 				</div>
 			</div>

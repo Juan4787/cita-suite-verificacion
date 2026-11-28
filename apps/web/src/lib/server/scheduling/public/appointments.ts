@@ -139,6 +139,8 @@ export const getHumanAppointmentErrorMessage = (error: unknown) => {
   return 'Este turno cambió desde que lo abriste. Revisá su estado actual antes de volver a confirmar.';
  if (raw.includes('APPOINTMENT_ALREADY_STARTED'))
   return 'Este turno ya empezó, así que no se puede cancelar. Actualizá la página para ver su estado.';
+ if (raw.includes('APPOINTMENT_RESCHEDULE_REQUESTER_REQUIRED'))
+  return 'Indicá quién pidió el cambio de horario antes de reprogramar este turno.';
  if (raw.includes('APPOINTMENT_AVAILABILITY_CHANGED') || raw.includes('APPOINTMENT_SLOT_UNAVAILABLE'))
   return 'Los horarios disponibles cambiaron. Recargá el turno y elegí otra opción.';
  if (raw.includes('APPOINTMENT_MANAGEMENT_FORBIDDEN') || raw.includes('DEPOSIT_FORBIDDEN') || raw.includes('DEPOSIT_BUSINESS_UNAVAILABLE') || candidate.code === '42501')
@@ -488,7 +490,7 @@ type StaffOperation = {
 };
 
 export const updateAppointmentStatus = async (supabase: CitaSupabaseClient,
- input: StaffOperation & { status: AppointmentStatus; reason?: string | null }) => {
+ input: StaffOperation & { status: AppointmentStatus; reason?: string | null; keepDepositAsCredit?: boolean }) => {
  const action = input.status === 'cancelled' ? 'cancel' : input.status === 'confirmed' ? 'confirm' :
   input.status === 'reschedule_requested' ? 'request_reschedule' : null;
  if (!action) throw new Error('APPOINTMENT_INVALID_TRANSITION');
@@ -496,5 +498,10 @@ export const updateAppointmentStatus = async (supabase: CitaSupabaseClient,
 };
 
 export const rescheduleAppointment = async (supabase: CitaSupabaseClient,
- input: StaffOperation & { startsAt: string; ignoreBreak: boolean; availabilityRevision: number }) =>
+ input: StaffOperation & {
+  startsAt: string;
+  ignoreBreak: boolean;
+  availabilityRevision: number;
+  rescheduleRequester?: 'patient' | 'practice_or_force_majeure' | null;
+ }) =>
  applyStaffManagementCommand(input.writer, supabase, { ...input, actorId: input.userId, action: 'reschedule' });

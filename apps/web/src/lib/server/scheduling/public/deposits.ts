@@ -18,9 +18,11 @@ import {
 	DEPOSIT_STATUSES,
 	classifyDeposit,
 	parseAppointmentDeposit,
+	parsePatientDepositCredits,
 	type AppointmentDepositView,
 	type DepositListSection,
-	type DepositSlotTerms
+	type DepositSlotTerms,
+	type PatientDepositCredit
 } from '$lib/scheduling/deposits';
 import { managementRevision } from '../internal/management-contract';
 import { APPOINTMENT_STATUSES } from '$lib/server/scheduling/public/appointments';
@@ -37,6 +39,7 @@ const DEPOSIT_ERROR_CODES = [
 	'DEPOSIT_REMINDER_ALREADY_OPENED',
 	'DEPOSIT_ACTION_INVALID',
 	'DEPOSIT_NOTE_INVALID',
+	'DEPOSIT_CREDIT_UNAVAILABLE',
 	'APPOINTMENT_DEPOSIT_PENDING',
 	'DEPOSIT_POLICY_FORBIDDEN',
 	'DEPOSIT_POLICY_CHANGED',
@@ -71,6 +74,8 @@ export const getDepositErrorMessage = (code: DepositError['code']): string => {
 			return 'Esa acción no corresponde al estado de esta seña.';
 		case 'DEPOSIT_NOTE_INVALID':
 			return 'La nota puede tener hasta 300 caracteres.';
+		case 'DEPOSIT_CREDIT_UNAVAILABLE':
+			return 'Esa seña a cuenta ya no está disponible para aplicar. Recargá la página para ver el estado actual.';
 		case 'APPOINTMENT_DEPOSIT_PENDING':
 			return 'Este turno tiene la seña pendiente. Para confirmarlo, usá «Confirmar seña».';
 		case 'DEPOSIT_POLICY_FORBIDDEN':
@@ -92,7 +97,8 @@ export const getDepositErrorStatus = (code: DepositError['code']): number => {
 		code === 'DEPOSIT_POLICY_CHANGED' ||
 		code === 'DEPOSIT_APPOINTMENT_CLOSED' ||
 		code === 'DEPOSIT_NOT_PENDING' ||
-		code === 'DEPOSIT_REMINDER_ALREADY_OPENED'
+		code === 'DEPOSIT_REMINDER_ALREADY_OPENED' ||
+		code === 'DEPOSIT_CREDIT_UNAVAILABLE'
 	)
 		return 409;
 	if (code === 'DEPOSIT_UNEXPECTED') return 500;
@@ -163,6 +169,76 @@ export const openDepositReminder = async (
 	return { previouslyOpenedAt: readNullableText(row.previously_opened_at, 'depositReminder.previouslyOpenedAt') };
 };
 
+export type PaymentNoticeCleared = {
+	revision: number;
+	autoCancel: boolean;
+	dueAt: string;
+};
+
+/** Clears a patient's «Ya transferí» notice («No llegó el pago») and returns the turn to the normal circuit. */
+export const clearAppointmentDepositPaymentNotice = async (
+	supabase: CitaSupabaseClient,
+	input: { businessId: string; appointmentId: string; expectedRevision: number }
+): Promise<PaymentNoticeCleared> => {
+	if (!isUuid(input.businessId) || !isUuid(input.appointmentId)) throw new DepositError('DEPOSIT_NOT_FOUND');
+	if (!Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 1) throw new DepositError('DEPOSIT_CHANGED');
+	const { data, error } = await supabase.rpc('clear_appointment_deposit_payment_notice', {
+		p_business_id: input.businessId,
+		p_appointment_id: input.appointmentId,
+		p_expected_revision: input.expectedRevision
+	});
+	if (error) throw depositFailure(error);
+	const row = readRecord(data, 'paymentNoticeCleared');
+	const revision = readFiniteNumber(row.revision, 'paymentNoticeCleared.revision');
+	if (!Number.isSafeInteger(revision) || revision < 1) throw new DepositError('DEPOSIT_UNEXPECTED');
+	return {
+		revision,
+		autoCancel: readBoolean(row.auto_cancel, 'paymentNoticeCleared.autoCancel'),
+		dueAt: readText(row.due_at, 'paymentNoticeCleared.dueAt')
+	};
+};
+
+export type AppliedDepositCreditResult = {
+	status: (typeof DEPOSIT_STATUSES)[number];
+	revision: number;
+	appointmentStatus: string;
+	creditId: string;
+	creditAmount: number;
+	depositAmount: number;
+	differenceAmount: number;
+	differenceNote: string | null;
+};
+
+/** Applies one available patient deposit credit to a pending appointment deposit in a single transaction. */
+export const applyPatientDepositCredit = async (
+	supabase: CitaSupabaseClient,
+	input: { businessId: string; appointmentId: string; expectedRevision: number; creditId?: string | null }
+): Promise<AppliedDepositCreditResult> => {
+	if (!isUuid(input.businessId) || !isUuid(input.appointmentId)) throw new DepositError('DEPOSIT_NOT_FOUND');
+	if (!Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 1) throw new DepositError('DEPOSIT_CHANGED');
+	if (input.creditId != null && !isUuid(input.creditId)) throw new DepositError('DEPOSIT_CREDIT_UNAVAILABLE');
+	const { data, error } = await supabase.rpc('apply_patient_deposit_credit', {
+		p_business_id: input.businessId,
+		p_appointment_id: input.appointmentId,
+		p_expected_revision: input.expectedRevision,
+		p_credit_id: input.creditId ?? null
+	});
+	if (error) throw depositFailure(error);
+	const row = readRecord(data, 'appliedDepositCredit');
+	const revision = readFiniteNumber(row.revision, 'appliedDepositCredit.revision');
+	if (!Number.isSafeInteger(revision) || revision < 1) throw new DepositError('DEPOSIT_UNEXPECTED');
+	return {
+		status: readChoice(row.status, DEPOSIT_STATUSES, 'appliedDepositCredit.status'),
+		revision,
+		appointmentStatus: readChoice(row.appointment_status, APPOINTMENT_STATUSES, 'appliedDepositCredit.appointmentStatus'),
+		creditId: readText(row.credit_id, 'appliedDepositCredit.creditId'),
+		creditAmount: readFiniteNumber(row.credit_amount, 'appliedDepositCredit.creditAmount'),
+		depositAmount: readFiniteNumber(row.deposit_amount, 'appliedDepositCredit.depositAmount'),
+		differenceAmount: readFiniteNumber(row.difference_amount, 'appliedDepositCredit.differenceAmount'),
+		differenceNote: readNullableText(row.difference_note, 'appliedDepositCredit.differenceNote')
+	};
+};
+
 export type DepositPolicy = {
 	revision: number;
 	enabled: boolean;
@@ -174,6 +250,8 @@ export type DepositPolicy = {
 	deadlineHours: number;
 	minPaymentHours: number;
 	lateBookingPaymentHours: number | null;
+	expiringReminderHours: 24 | 48 | null;
+	depositCreditCutoffHours: number | null;
 	transferDetails: string | null;
 	appliesToManual: boolean;
 	excludedServiceIds: string[];
@@ -191,6 +269,8 @@ export const DEFAULT_DEPOSIT_POLICY: DepositPolicy = {
 	deadlineHours: 48,
 	minPaymentHours: 24,
 	lateBookingPaymentHours: null,
+	expiringReminderHours: 24,
+	depositCreditCutoffHours: null,
 	transferDetails: null,
 	appliesToManual: true,
 	excludedServiceIds: []
@@ -199,11 +279,19 @@ export const DEFAULT_DEPOSIT_POLICY: DepositPolicy = {
 const readNullableNumber = (value: unknown, contract: string) =>
 	value === null || value === undefined ? null : readFiniteNumber(value, contract);
 
+const readExpiringReminderHours = (value: unknown): 24 | 48 | null => {
+	if (value === null) return null;
+	if (value === undefined) return 24;
+	const parsed = readFiniteNumber(value, 'depositPolicy.expiringReminderHours');
+	if (parsed === 24 || parsed === 48) return parsed;
+	throw new DepositError('DEPOSIT_UNEXPECTED');
+};
+
 export const loadDepositPolicy = async (supabase: CitaSupabaseClient, businessId: string): Promise<DepositPolicy> => {
 	const [policyResult, exclusionsResult] = await Promise.all([
 		supabase
 			.from('deposit_policies')
-			.select('enabled, auto_cancel_enabled, amount_mode, fixed_amount, percentage, request_days, deadline_hours, min_payment_hours, late_booking_payment_hours, transfer_details, applies_to_manual, revision')
+			.select('enabled, auto_cancel_enabled, amount_mode, fixed_amount, percentage, request_days, deadline_hours, min_payment_hours, late_booking_payment_hours, expiring_reminder_hours, deposit_credit_cutoff_hours, transfer_details, applies_to_manual, revision')
 			.eq('business_id', businessId)
 			.maybeSingle(),
 		supabase.from('deposit_service_exclusions').select('service_id').eq('business_id', businessId)
@@ -226,6 +314,8 @@ export const loadDepositPolicy = async (supabase: CitaSupabaseClient, businessId
 		deadlineHours: readFiniteNumber(row.deadline_hours, 'depositPolicy.deadlineHours'),
 		minPaymentHours: readFiniteNumber(row.min_payment_hours, 'depositPolicy.minPaymentHours'),
 		lateBookingPaymentHours: readNullableNumber(row.late_booking_payment_hours, 'depositPolicy.lateBookingPaymentHours'),
+		expiringReminderHours: readExpiringReminderHours(row.expiring_reminder_hours),
+		depositCreditCutoffHours: readNullableNumber(row.deposit_credit_cutoff_hours, 'depositPolicy.depositCreditCutoffHours'),
 		transferDetails: readNullableText(row.transfer_details, 'depositPolicy.transferDetails'),
 		appliesToManual: readBoolean(row.applies_to_manual, 'depositPolicy.appliesToManual'),
 		excludedServiceIds
@@ -250,6 +340,8 @@ export const saveDepositPolicy = async (
 			deadline_hours: policy.deadlineHours,
 			min_payment_hours: policy.minPaymentHours,
 			late_booking_payment_hours: policy.lateBookingPaymentHours ?? null,
+			expiring_reminder_hours: policy.expiringReminderHours === undefined ? 24 : policy.expiringReminderHours,
+			deposit_credit_cutoff_hours: policy.depositCreditCutoffHours ?? null,
 			transfer_details: policy.transferDetails ?? '',
 			applies_to_manual: policy.appliesToManual,
 			excluded_service_ids: policy.excludedServiceIds
@@ -323,7 +415,15 @@ export type DepositListItem = {
 	reminderOpenedBy: string | null;
 	section: DepositListSection;
 	appointment: { id: string; startsAt: string; status: string; managementRevision: string; professionalId: string; serviceId: string };
-	patient: { id: string; name: string; phoneE164: string | null; email?: string | null; blocked: boolean; archivedAt: string | null };
+	patient: {
+		id: string;
+		name: string;
+		phoneE164: string | null;
+		email?: string | null;
+		blocked: boolean;
+		archivedAt: string | null;
+		availableDepositCredits?: PatientDepositCredit[];
+	};
 };
 
 // One practice holds few dozen pending deposits; past this bound the page says the list is
@@ -346,7 +446,7 @@ export const loadDepositList = async (
 	const query = supabase
 		.from('appointment_deposits')
 		.select(
-			'appointment_id, status, amount, currency, request_from, due_at, auto_cancel, waived_reason, recorded_at, reminder_opened_at, reminder_opened_by, expired_at, revision, appointments!inner(id, starts_at, status, appointment_management_revision, professional_id, service_id, patients!inner(id, full_name, phone_e164, email, blocked, archived_at))'
+			'appointment_id, status, amount, currency, request_from, due_at, auto_cancel, waived_reason, recorded_at, reminder_opened_at, reminder_opened_by, expired_at, revision, patient_payment_notice_at, applied_credit_id, applied_credit_amount, amount_difference_note, appointments!inner(id, starts_at, status, appointment_management_revision, professional_id, service_id, patients!inner(id, full_name, phone_e164, email, blocked, archived_at, patient_available_deposit_credits))'
 		)
 		.eq('business_id', businessId)
 		.gt('appointments.starts_at', now.toISOString())
@@ -369,6 +469,10 @@ export const loadDepositList = async (
 		const startsAt = readText(appointment.starts_at, 'depositList.appointment.startsAt');
 		const section = classifyDeposit(deposit, { status, startsAt }, now);
 		if (!section) continue;
+		const availableCredits =
+			patient.patient_available_deposit_credits === undefined
+				? undefined
+				: parsePatientDepositCredits(patient.patient_available_deposit_credits);
 		items.push({
 			deposit,
 			reminderOpenedBy: readNullableText(row.reminder_opened_by, 'depositList.reminderOpenedBy'),
@@ -387,7 +491,8 @@ export const loadDepositList = async (
 				phoneE164: readNullableText(patient.phone_e164, 'depositList.patient.phone'),
 				email: patient.email === undefined ? undefined : readNullableText(patient.email, 'depositList.patient.email'),
 				blocked: readBoolean(patient.blocked, 'depositList.patient.blocked'),
-				archivedAt: readNullableText(patient.archived_at, 'depositList.patient.archivedAt')
+				archivedAt: readNullableText(patient.archived_at, 'depositList.patient.archivedAt'),
+				...(availableCredits !== undefined ? { availableDepositCredits: availableCredits } : {})
 			}
 		});
 	}
@@ -401,20 +506,24 @@ export const loadDepositPolicyEnabled = async (supabase: CitaSupabaseClient, bus
 	return data ? readBoolean(data.enabled, 'depositPolicy.enabled') : false;
 };
 
-export type DepositAlerts = { toRequest: number; dueSoon: number; cancelledToday: number };
+export type DepositAlerts = { toRequest: number; dueSoon: number; cancelledToday: number; paymentReported?: number };
 
 /**
- * The agenda's alerts (plan, section 4.8), from the same list and sections as the deposits page:
- * deposits to request whose WhatsApp nobody opened yet, deposits due in less than 24 hours and
- * turns cancelled by a missing deposit in the last 24 hours.
+ * The agenda's alerts (plan, section 4.8 + P1), from the same list and sections as the deposits page:
+ * deposits where the patient reported payment, deposits to request whose WhatsApp nobody opened yet,
+ * deposits due in less than 24 hours and turns cancelled by a missing deposit in the last 24 hours.
  */
-export const summarizeDepositAlerts = (items: DepositListItem[], now: Date): DepositAlerts => ({
-	toRequest: items.filter((item) => item.section === 'to_request' && !item.deposit.reminder_opened_at).length,
-	dueSoon: items.filter((item) => item.section === 'due_soon').length,
-	cancelledToday: items.filter(
-		(item) => item.section === 'cancelled' && now.getTime() - Date.parse(item.deposit.expired_at ?? '') <= 24 * 3_600_000
-	).length
-});
+export const summarizeDepositAlerts = (items: DepositListItem[], now: Date): DepositAlerts => {
+	const paymentReported = items.filter((item) => item.section === 'payment_reported').length;
+	const base: DepositAlerts = {
+		toRequest: items.filter((item) => item.section === 'to_request' && !item.deposit.reminder_opened_at).length,
+		dueSoon: items.filter((item) => item.section === 'due_soon').length,
+		cancelledToday: items.filter(
+			(item) => item.section === 'cancelled' && now.getTime() - Date.parse(item.deposit.expired_at ?? '') <= 24 * 3_600_000
+		).length
+	};
+	return paymentReported > 0 ? { ...base, paymentReported } : base;
+};
 
 export const loadDepositAutomationStatus = async (
 	supabase: CitaSupabaseClient

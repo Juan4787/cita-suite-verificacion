@@ -1,7 +1,7 @@
 import { BOOKING_THEMES, BOOKING_INTEGRATION_KEY_PATTERN, parseBookingModalityWindows, type BookingModality } from '@cita-suite/shared/booking-integration';
 import { InvalidDataContractError, readArray, readBoolean, readNullableText, readRecord, readText, readJson } from '$lib/contracts/json';
 import { parsePriceQuote } from '$lib/scheduling/price-contracts';
-import { parseAppointmentDeposit } from '$lib/scheduling/deposits';
+import { parseAppointmentDeposit, parseCancellationDepositOutcome } from '$lib/scheduling/deposits';
 import { parseRescheduleFinancialTerms } from '$lib/scheduling/reschedule-terms';
 import { isAvailabilityDate } from '$lib/availability/windows';
 import { zonedDate } from '$lib/availability/calculate';
@@ -103,6 +103,14 @@ export const parsePatientManagementView = (value: unknown) => {
  const selfManagementWindowClosed = row.self_management_window_closed === true;
  const cancelledByDepositExpiry =
   row.cancelled_by_deposit_expiry === true || (row.status === 'cancelled' && deposit?.status === 'expired');
+ const depositCreditCutoffHours =
+  row.deposit_credit_cutoff_hours === null || row.deposit_credit_cutoff_hours === undefined
+   ? null
+   : counter(row.deposit_credit_cutoff_hours);
+ const cancellationDepositOutcome =
+  row.cancellation_deposit_outcome === null || row.cancellation_deposit_outcome === undefined
+   ? null
+   : parseCancellationDepositOutcome(row.cancellation_deposit_outcome);
  return {
   appointment, canAddInformation, canManageReminders, emailRemindersActive, revision: token(row.revision), generation: counter(row.generation), scheduleRevision: counter(row.schedule_revision),
   accessKind: row.access_kind === 'legacy' ? 'legacy' as const : 'capability' as const, now,
@@ -112,6 +120,8 @@ export const parsePatientManagementView = (value: unknown) => {
   selfManagementCutoffHours,
   selfManagementCutoffAt,
   selfManagementWindowClosed,
+  depositCreditCutoffHours,
+  cancellationDepositOutcome,
   cancelledByDepositExpiry,
   financialTerms: row.financial_terms === null ? null : parseRescheduleFinancialTerms(row.financial_terms),
   financialSummary: { appliedAmount: money(financial.applied_amount), forfeitedAmount: money(financial.forfeited_amount), unresolvedAmount: money(financial.unresolved_amount) }

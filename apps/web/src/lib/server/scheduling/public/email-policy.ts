@@ -20,7 +20,11 @@ export const loadPublicBookingPolicy = async (supabase: CitaSupabaseClient, busi
 export const loadManualBookingReschedulePolicy = async (supabase: CitaSupabaseClient, businessId: string): Promise<ManualBookingReschedulePolicy | null> => {
  const [deposit, automation] = await Promise.all([loadDepositPolicy(supabase, businessId), loadDepositAutomationStatus(supabase)]);
  if (!deposit.enabled || !deposit.appliesToManual || !automation.enabled) return null;
- return { policy: (await loadPublicBookingPolicy(supabase, businessId)).reschedulePolicy, excludedServiceIds: deposit.excludedServiceIds };
+ return {
+  policy: (await loadPublicBookingPolicy(supabase, businessId)).reschedulePolicy,
+  excludedServiceIds: deposit.excludedServiceIds,
+  ...(deposit.depositCreditCutoffHours != null ? { depositCreditCutoffHours: deposit.depositCreditCutoffHours } : {})
+ };
 };
 
 /** A staff checkbox records what the operator says they communicated. */

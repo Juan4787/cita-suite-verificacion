@@ -111,6 +111,8 @@ describe('política de señas', () => {
 					deadline_hours: 48,
 					min_payment_hours: 24,
 					late_booking_payment_hours: null,
+					expiring_reminder_hours: 24,
+					deposit_credit_cutoff_hours: null,
 					transfer_details: '',
 					applies_to_manual: true,
 					excluded_service_ids: []

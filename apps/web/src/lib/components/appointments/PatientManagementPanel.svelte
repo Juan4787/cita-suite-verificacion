@@ -15,7 +15,8 @@
  $effect(() => { context.date; context.mode; draftDate = null; });
  const dateChanged = $derived(draftDate !== null && draftDate !== context.date);
  let transportFeedback = $state<PatientManagementFeedback | null>(null);
- const outcome = $derived(transportFeedback ?? feedback);
+ const panelFeedback = $derived(feedback?.action === 'report_deposit_payment' ? undefined : feedback);
+ const outcome = $derived(transportFeedback ?? panelFeedback);
  let responseElement = $state<HTMLParagraphElement | null>(null);
  $effect(() => { if (outcome?.message) revealNotice(responseElement); });
  const progressive: SubmitFunction = ({ action, formData, cancel }) => {
@@ -46,6 +47,14 @@
  const rescheduleUrl = $derived(`${context.url}?accion=reprogramar`);
  const slotUrl = (startsAt: string) => `${rescheduleUrl}&fecha=${encodeURIComponent(context.date)}&horario=${encodeURIComponent(startsAt)}`;
  const positive = (value: string) => BigInt(value) > 0n;
+ const depositCreditCutoffHours = $derived(context.depositCreditCutoffHours ?? null);
+ const hoursUntilStart = $derived((Date.parse(context.startsAt) - Date.parse(context.now)) / 3_600_000);
+ const cancelCutoffInTime = $derived(
+  depositCreditCutoffHours !== null && hoursUntilStart >= depositCreditCutoffHours
+ );
+ const cancelCutoffHoursLabel = $derived(
+  depositCreditCutoffHours === 1 ? '1\u00a0hora' : `${depositCreditCutoffHours}\u00a0horas`
+ );
  const cutoffClosedNotice = $derived(
   context.selfManagementWindowClosed
    ? buildSelfManagementCutoffNotice({
@@ -113,7 +122,13 @@
   <h2 class="ux-section-title">¿Querés cancelar este turno?</h2>
   <p class="mt-3 font-bold text-fg bk-text">{formatDateTime(context.startsAt, context.timezone)}</p>
   <p class="mt-3 text-fg-65 bk-muted">Se liberará ese horario.</p>
-  {#if positive(context.financialSummary.appliedAmount) || positive(context.financialSummary.unresolvedAmount)}<p class="mt-3 text-fg-65 bk-muted">El consultorio resolverá con vos el dinero registrado. La cancelación no hace una devolución automática.</p>{/if}
+  {#if positive(context.financialSummary.appliedAmount) && depositCreditCutoffHours !== null}
+   {#if cancelCutoffInTime}
+    <p class="mt-3 text-fg bk-text" data-cancel-deposit-outcome-preview>Tu seña de {formatDepositMoney(context.financialSummary.appliedAmount)} quedará a cuenta para un próximo turno porque cancelás con {cancelCutoffHoursLabel} o más de anticipación. La cancelación no hace una devolución automática.</p>
+   {:else}
+    <p class="ux-alert ux-alert-warning mt-3" data-cancel-deposit-outcome-preview>Si cancelás con menos de {cancelCutoffHoursLabel} de anticipación, la seña de {formatDepositMoney(context.financialSummary.appliedAmount)} se pierde. La cancelación no hace una devolución automática.</p>
+   {/if}
+  {:else if positive(context.financialSummary.appliedAmount) || positive(context.financialSummary.unresolvedAmount)}<p class="mt-3 text-fg-65 bk-muted">El consultorio resolverá con vos el dinero registrado. La cancelación no hace una devolución automática.</p>{/if}
   <form method="POST" action="?/cancel" class="mt-5" use:enhance={progressive}>
    {@render hiddenFields(fields)}
    <input type="hidden" name="confirm_cancel" value="true" />

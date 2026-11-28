@@ -32,6 +32,8 @@ export const loadPatientManagementScreen = async (client: CitaSupabaseClient, ac
   selfManagementCutoffHours: view.selfManagementCutoffHours ?? null,
   selfManagementCutoffAt: view.selfManagementCutoffAt ?? null,
   selfManagementWindowClosed: view.selfManagementWindowClosed === true,
+  depositCreditCutoffHours: view.depositCreditCutoffHours ?? null,
+  cancellationDepositOutcome: view.cancellationDepositOutcome ?? null,
   practicePhone: appointment.business.phone ?? null,
   date, slots: [], selectedStart: null, availabilityRevision: null, integrationRevision: view.integration?.revision ?? null,
   durationMinutes: view.durationMinutes, financialTerms: view.financialTerms, financialSummary: view.financialSummary, unavailableMessage: null

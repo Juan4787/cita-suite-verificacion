@@ -6,11 +6,13 @@
 	import BookingAppearance from '$lib/booking/BookingAppearance.svelte';
 	import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/shared/booking-integration';
 	import { onMount, tick } from 'svelte';
+	import { enhance } from '$app/forms';
 	import { replaceState } from '$app/navigation';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import { formatDateTime, formatInTimeZone } from '$lib/utils/format';
 	import { isActiveAppointmentStatus } from '$lib/utils/appointment-visibility';
 	import type { DepositWhatsAppNotices, PracticeWhatsAppNotice } from '$lib/scheduling/contracts';
-	import { describeDepositDeadline } from '$lib/scheduling/deposits';
+	import { describeDepositDeadline, formatDepositAmount } from '$lib/scheduling/deposits';
 	import { buildSelfManagementCutoffNotice } from '$lib/scheduling/email-policy';
 	import {
 		refineDeviceClass,
@@ -65,7 +67,7 @@
 
 	const appointment = $derived(data.appointment);
  const managementDecision = $derived(!!data.management && data.management.mode !== 'overview' && !form?.success);
- const managementPriority = $derived(!!data.management && (managementDecision || !!form?.message));
+ const managementPriority = $derived(!!data.management && (managementDecision || (!!form?.message && form?.action !== 'report_deposit_payment')));
 	const isVirtual = $derived(appointment?.booking_context?.modality === 'video');
 
 	// El server clasifica por User-Agent; acá solo se corrige el iPad que se
@@ -1043,8 +1045,52 @@
 		}
 	};
 
-	// Seña pendiente: pagarla es lo que confirma el turno (plan de señas y avisos, 4.2 y 4.9).
+	// Seña pendiente: pagarla es lo que confirma el turno (plan de señas y avisos, 4.2, 4.9 y P1).
 	const depositPending = $derived(appointment?.deposit?.status === 'pending');
+	const paymentNoticeAt = $derived(
+		form?.action === 'report_deposit_payment' && form?.success && form?.paymentNoticeAt
+			? form.paymentNoticeAt
+			: (appointment?.deposit?.patient_payment_notice_at ?? null)
+	);
+	const paidNowHref = $derived(
+		data.depositWhatsApp
+			? whatsappHrefFor(device, data.depositWhatsApp.paidNow.whatsappUrl, data.depositWhatsApp.paidNow.whatsappWebUrl)
+			: null
+	);
+	let confirmPaymentNoticeOpen = $state(false);
+	let reportingPaymentNotice = $state(false);
+	let paymentNoticePopupBlocked = $state(false);
+	let paymentNoticeError = $state('');
+	const submitPaymentNotice: SubmitFunction = ({ cancel }) => {
+		if (reportingPaymentNotice) {
+			cancel();
+			return;
+		}
+		reportingPaymentNotice = true;
+		paymentNoticeError = '';
+		paymentNoticePopupBlocked = false;
+		const targetHref = paidNowHref;
+		return async ({ result, update }) => {
+			try {
+				if (result.type === 'error') {
+					paymentNoticeError = 'No pudimos registrar tu aviso de pago. Volvé a intentar en unos segundos.';
+					return;
+				}
+				await update({ reset: false });
+				if (result.type === 'success') {
+					confirmPaymentNoticeOpen = false;
+					if (targetHref && typeof window !== 'undefined' && typeof window.open === 'function') {
+						const opened = window.open(targetHref, '_blank', 'noopener,noreferrer');
+						if (!opened) paymentNoticePopupBlocked = true;
+					}
+				}
+			} catch {
+				paymentNoticeError = 'No pudimos registrar tu aviso de pago. Volvé a intentar en unos segundos.';
+			} finally {
+				reportingPaymentNotice = false;
+			}
+		};
+	};
 	let transferCopied = $state(false);
 	const copyTransferDetails = async () => {
 		try {
@@ -1326,7 +1372,7 @@
 
 {#snippet depositCard(current: PublicAppointmentView, deposit: NonNullable<PublicAppointmentView['deposit']>)}
 	{@const deadline = describeDepositDeadline(
-		{ amount: deposit.amount, dueAt: deposit.due_at, autoCancel: deposit.auto_cancel },
+		{ amount: deposit.amount, dueAt: deposit.due_at, autoCancel: deposit.auto_cancel, paymentNoticeAt },
 		current.business.timezone,
 		new Date(data.management?.now ?? Date.now())
 	)}
@@ -1334,7 +1380,7 @@
 		<h2 class="ux-section-title">Seña del turno</h2>
 		<p class="mt-2 text-fg-65 bk-muted">Tu turno se confirma cuando el consultorio registra la seña.</p>
 		<p class="mt-2 text-fg-80 bk-muted">{deadline.turnPageLine}</p>
-		{#if deadline.autoCancelSentence}
+		{#if !paymentNoticeAt && deadline.autoCancelSentence}
 			<p class="mt-2 text-sm text-fg-65 bk-muted">{deadline.autoCancelSentence}</p>
 		{/if}
 		{#if current.deposit_transfer_details}
@@ -1346,24 +1392,74 @@
 				</button>
 			</div>
 		{/if}
-		{#if data.depositWhatsApp}
+		{#if paymentNoticeError}
+			<p class="ux-alert mt-4" role="alert">{paymentNoticeError}</p>
+		{:else if form?.action === 'report_deposit_payment' && !form?.success && form?.message}
+			<p class="ux-alert mt-4" role="alert">{form.message}</p>
+		{/if}
+		{#if paymentNoticeAt}
+			<div class="ux-alert ux-alert-success mt-4" role="status" data-payment-notice-recorded>
+				<p class="font-bold text-fg bk-text">Avisamos al consultorio que transferiste la seña.</p>
+				<p class="mt-1 text-sm text-fg-80 bk-muted">
+					Aviso registrado el {formatInTimeZone(paymentNoticeAt, current.business.timezone).full}. El consultorio va a verificar tu pago y confirmar el turno.
+				</p>
+			</div>
+			{#if paidNowHref}
+				{#if paymentNoticePopupBlocked}
+					<p class="mt-3 text-sm text-fg-70 bk-muted">Si WhatsApp no se abrió automáticamente, tocá abajo para enviar el comprobante.</p>
+				{/if}
+				<a
+					href={paidNowHref}
+					target="_blank"
+					rel="noreferrer"
+					class="ux-btn-primary mt-3 w-full"
+					data-payment-notice-whatsapp-link
+				>
+					Enviar comprobante por WhatsApp
+				</a>
+			{/if}
+		{:else}
 			<div class="mt-4 grid gap-3">
-				<a
-					href={whatsappHrefFor(device, data.depositWhatsApp.paidNow.whatsappUrl, data.depositWhatsApp.paidNow.whatsappWebUrl)}
-					target="_blank"
-					rel="noreferrer"
-					class="ux-btn-primary w-full"
-				>
-					Ya transferí: enviar el comprobante
-				</a>
-				<a
-					href={whatsappHrefFor(device, data.depositWhatsApp.payLater.whatsappUrl, data.depositWhatsApp.payLater.whatsappWebUrl)}
-					target="_blank"
-					rel="noreferrer"
-					class="ux-btn-secondary w-full"
-				>
-					Voy a pagar la seña más adelante
-				</a>
+				{#if confirmPaymentNoticeOpen}
+					<div class="ux-soft-card border border-accent-300-30 bg-accent-400-10 p-4 bk-notice-fill bk-notice-line" data-payment-notice-confirm>
+						<p class="font-bold text-fg bk-text">¿Confirmás que ya transferiste {formatDepositAmount(deposit.amount)}?</p>
+						<p class="mt-1 text-sm text-fg-70 bk-muted">
+							{paidNowHref
+								? 'Registramos tu aviso para el consultorio y abrimos WhatsApp para que envíes el comprobante.'
+								: 'Registramos tu aviso para que el consultorio verifique el pago y confirme tu turno.'}
+						</p>
+						<form method="POST" action="?/report_deposit_payment" use:enhance={submitPaymentNotice} class="mt-3 grid gap-2 sm:grid-cols-2">
+							<button type="submit" class="ux-btn-primary w-full" disabled={reportingPaymentNotice}>
+								{reportingPaymentNotice ? 'Avisando…' : 'Sí, ya transferí'}
+							</button>
+							<button type="button" class="ux-btn-secondary w-full" disabled={reportingPaymentNotice} onclick={() => (confirmPaymentNoticeOpen = false)}>
+								Todavía no
+							</button>
+						</form>
+					</div>
+				{:else}
+					<button
+						type="button"
+						class="ux-btn-primary w-full"
+						onclick={() => {
+							paymentNoticeError = '';
+							confirmPaymentNoticeOpen = true;
+						}}
+						data-payment-notice-trigger
+					>
+						{data.depositWhatsApp ? 'Ya transferí: enviar el comprobante' : 'Ya transferí la seña'}
+					</button>
+				{/if}
+				{#if data.depositWhatsApp}
+					<a
+						href={whatsappHrefFor(device, data.depositWhatsApp.payLater.whatsappUrl, data.depositWhatsApp.payLater.whatsappWebUrl)}
+						target="_blank"
+						rel="noreferrer"
+						class="ux-btn-secondary w-full"
+					>
+						Voy a pagar la seña más adelante
+					</a>
+				{/if}
 			</div>
 		{/if}
 	</section>
@@ -1661,8 +1757,22 @@
 			{/if}
 
 			{#if isCancelled}
+				{@const cancellationOutcome = data.management?.cancellationDepositOutcome ?? null}
 				<section class="ux-card">
 					<h2 class="ux-section-title">Turno cancelado</h2>
+					{#if cancellationOutcome}
+						{#if cancellationOutcome.outcome === 'credit'}
+							<p class="ux-alert ux-alert-success mt-3" data-cancellation-deposit-outcome>
+								{cancellationOutcome.reason === 'force_majeure'
+									? `Tu seña de ${formatDepositAmount(Number(cancellationOutcome.amount))} quedó a cuenta por decisión del consultorio para una próxima consulta.`
+									: `Tu seña de ${formatDepositAmount(Number(cancellationOutcome.amount))} quedó a cuenta para tu próximo turno.`}
+							</p>
+						{:else}
+							<p class="ux-alert ux-alert-warning mt-3" data-cancellation-deposit-outcome>
+								La seña de {formatDepositAmount(Number(cancellationOutcome.amount))} se perdió porque la cancelación fue con menos de {cancellationOutcome.cutoffHours} {cancellationOutcome.cutoffHours === 1 ? 'hora' : 'horas'} de anticipación.
+							</p>
+						{/if}
+					{/if}
 					{#if appointment.deposit?.status === 'expired'}
 						<p class="mt-3 text-sm text-fg-70 bk-muted">
 							Este turno se canceló porque no se registró la seña antes del {formatInTimeZone(appointment.deposit.due_at, timezone).full}.

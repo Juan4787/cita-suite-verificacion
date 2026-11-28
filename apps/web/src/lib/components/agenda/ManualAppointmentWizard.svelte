@@ -1343,7 +1343,7 @@
 				{#if disclosedPolicy}
 					<section class="mt-5 space-y-3" aria-label="Condiciones para reprogramar">
 						<p class="text-sm font-semibold text-fg">Si este turno requiere seña, informale al paciente</p>
-						<p class="text-sm leading-relaxed text-copy-muted">{bookingReschedulePolicyNotice(disclosedPolicy)}</p>
+						<p class="text-sm leading-relaxed text-copy-muted">{bookingReschedulePolicyNotice(disclosedPolicy, manualBookingPolicy?.depositCreditCutoffHours)}</p>
 						<label class="flex min-h-11 cursor-pointer items-start gap-3 py-2 text-sm text-fg">
 							<input type="checkbox" name="reschedule_policy_acknowledged" value="true" class="mt-0.5 h-5 w-5 shrink-0"
 								checked={Boolean(activeAttestation)} onchange={(event) => { attestedPolicy = event.currentTarget.checked && disclosedPolicy ? { ...disclosedPolicy } : null; attestationKey = attestationContext; }} />

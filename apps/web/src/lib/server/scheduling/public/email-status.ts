@@ -6,7 +6,7 @@ import type { CitaSupabaseClient } from '$lib/types/database';
 
 export const EMAIL_DOMAIN_STATES = ['unprovisioned', 'dns_pending', 'verified', 'failed', 'disabled'] as const;
 export const EMAIL_DELIVERY_STATES = ['pending', 'sending', 'retry', 'accepted', 'delivered', 'uncertain', 'failed', 'bounced', 'complained', 'discarded'] as const;
-export const EMAIL_PURPOSES = ['booking_receipt', 'reschedule_receipt', 'cancellation_receipt', 'deposit_request', 'reminder_72h', 'reminder_24h'] as const;
+export const EMAIL_PURPOSES = ['booking_receipt', 'reschedule_receipt', 'cancellation_receipt', 'deposit_request', 'deposit_expiring_reminder', 'reminder_72h', 'reminder_24h'] as const;
 
 export const parseBusinessEmailStatus = (value: unknown) => {
  const row = readRecord(value, 'email.status');

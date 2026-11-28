@@ -424,9 +424,13 @@ export type Database = {
       appointment_deposits: {
         Row: {
           amount: number
+          amount_difference_note: string | null
+          applied_credit_amount: number | null
+          applied_credit_id: string | null
           appointment_id: string
           auto_cancel: boolean
           auto_cancel_suppressed_by_patient_exemption: boolean
+          auto_cancel_suppressed_by_payment_notice: boolean
           business_id: string
           created_at: string
           currency: string
@@ -436,6 +440,7 @@ export type Database = {
           late_booking_payment_hours: number | null
           min_payment_hours: number
           note: string | null
+          patient_payment_notice_at: string | null
           percentage: number | null
           policy_revision: number
           recorded_at: string | null
@@ -452,9 +457,13 @@ export type Database = {
         }
         Insert: {
           amount: number
+          amount_difference_note?: string | null
+          applied_credit_amount?: number | null
+          applied_credit_id?: string | null
           appointment_id: string
           auto_cancel: boolean
           auto_cancel_suppressed_by_patient_exemption?: boolean
+          auto_cancel_suppressed_by_payment_notice?: boolean
           business_id: string
           created_at?: string
           currency?: string
@@ -464,6 +473,7 @@ export type Database = {
           late_booking_payment_hours?: number | null
           min_payment_hours: number
           note?: string | null
+          patient_payment_notice_at?: string | null
           percentage?: number | null
           policy_revision: number
           recorded_at?: string | null
@@ -480,9 +490,13 @@ export type Database = {
         }
         Update: {
           amount?: number
+          amount_difference_note?: string | null
+          applied_credit_amount?: number | null
+          applied_credit_id?: string | null
           appointment_id?: string
           auto_cancel?: boolean
           auto_cancel_suppressed_by_patient_exemption?: boolean
+          auto_cancel_suppressed_by_payment_notice?: boolean
           business_id?: string
           created_at?: string
           currency?: string
@@ -492,6 +506,7 @@ export type Database = {
           late_booking_payment_hours?: number | null
           min_payment_hours?: number
           note?: string | null
+          patient_payment_notice_at?: string | null
           percentage?: number | null
           policy_revision?: number
           recorded_at?: string | null
@@ -2096,7 +2111,9 @@ export type Database = {
           auto_cancel_enabled: boolean
           business_id: string
           deadline_hours: number
+          deposit_credit_cutoff_hours: number | null
           enabled: boolean
+          expiring_reminder_hours: number | null
           fixed_amount: number | null
           late_booking_payment_hours: number | null
           min_payment_hours: number
@@ -2113,7 +2130,9 @@ export type Database = {
           auto_cancel_enabled?: boolean
           business_id: string
           deadline_hours?: number
+          deposit_credit_cutoff_hours?: number | null
           enabled?: boolean
+          expiring_reminder_hours?: number | null
           fixed_amount?: number | null
           late_booking_payment_hours?: number | null
           min_payment_hours?: number
@@ -2130,7 +2149,9 @@ export type Database = {
           auto_cancel_enabled?: boolean
           business_id?: string
           deadline_hours?: number
+          deposit_credit_cutoff_hours?: number | null
           enabled?: boolean
+          expiring_reminder_hours?: number | null
           fixed_amount?: number | null
           late_booking_payment_hours?: number | null
           min_payment_hours?: number
@@ -3354,6 +3375,7 @@ export type Database = {
           search_phone_digits: string
           spam_score: number
           updated_at: string
+          patient_available_deposit_credits: Json | null
         }
         Insert: {
           activity_at?: string
@@ -4314,6 +4336,15 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_patient_deposit_credit: {
+        Args: {
+          p_appointment_id: string
+          p_business_id: string
+          p_credit_id?: string | null
+          p_expected_revision: number
+        }
+        Returns: Json
+      }
       apply_staff_appointment_management: {
         Args: {
           p_action: string
@@ -4327,6 +4358,39 @@ export type Database = {
           p_reason?: string
           p_replay_only?: boolean
           p_starts_at?: string
+        }
+        Returns: Json
+      }
+      apply_staff_appointment_management_with_deposit_decision: {
+        Args: {
+          p_action: string
+          p_actor_id: string
+          p_appointment_id: string
+          p_availability_revision?: number | null
+          p_business_id: string
+          p_expected_revision: string
+          p_ignore_break?: boolean
+          p_keep_deposit_as_credit?: boolean
+          p_operation_id: string
+          p_reason?: string | null
+          p_replay_only?: boolean
+          p_reschedule_requester?: string | null
+          p_starts_at?: string | null
+        }
+        Returns: Json
+      }
+      clear_appointment_deposit_payment_notice: {
+        Args: {
+          p_appointment_id: string
+          p_business_id: string
+          p_expected_revision: number
+        }
+        Returns: Json
+      }
+      report_appointment_deposit_payment: {
+        Args: {
+          p_legacy?: boolean
+          p_token: string
         }
         Returns: Json
       }

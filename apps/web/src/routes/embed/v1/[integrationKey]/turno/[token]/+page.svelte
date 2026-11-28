@@ -40,14 +40,21 @@
             </section>
             {#if appointment.status !== 'cancelled' && !appointment.is_past && appointment.deposit?.status === 'pending'}
                 {@const deadline = describeDepositDeadline(
-                    { amount: appointment.deposit.amount, dueAt: appointment.deposit.due_at, autoCancel: appointment.deposit.auto_cancel },
+                    {
+                        amount: appointment.deposit.amount,
+                        dueAt: appointment.deposit.due_at,
+                        autoCancel: appointment.deposit.auto_cancel,
+                        paymentNoticeAt: appointment.deposit.patient_payment_notice_at
+                    },
                     appointment.business.timezone,
                     new Date(data.now ?? Date.now())
                 )}
                 <section class="ux-card" data-embed-deposit-card>
                     <h2 class="ux-section-title">Seña del turno</h2>
                     <p class="mt-2">{deadline.turnPageLine}</p>
-                    {#if deadline.autoCancelSentence}
+                    {#if appointment.deposit.patient_payment_notice_at}
+                        <p class="mt-2 text-sm text-fg-70 bk-muted">Avisaste que transferiste la seña. El consultorio va a verificar tu pago y confirmar el turno.</p>
+                    {:else if deadline.autoCancelSentence}
                         <p class="mt-2 text-sm text-fg-70 bk-muted">{deadline.autoCancelSentence}</p>
                     {/if}
                     {#if appointment.deposit_transfer_details}

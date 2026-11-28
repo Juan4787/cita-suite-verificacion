@@ -38,6 +38,25 @@ import type { CitaSupabaseClient } from '$lib/types/database';
 import { loadDepositTermsForSlots } from '$lib/server/scheduling/public/deposits';
 import { parseBookingDepositTerms, type BookingDepositTerms, type DepositSlotTerms } from '$lib/scheduling/deposits';
 
+const loadPublicDepositCreditCutoffHours = async (
+	supabase: CitaSupabaseClient,
+	businessId: string
+): Promise<number | null> => {
+	if (typeof supabase.from !== 'function') return null;
+	try {
+		const { data, error } = await supabase
+			.from('deposit_policies')
+			.select('deposit_credit_cutoff_hours')
+			.eq('business_id', businessId)
+			.maybeSingle();
+		if (error || !data) return null;
+		const hours = data.deposit_credit_cutoff_hours;
+		return typeof hours === 'number' && Number.isSafeInteger(hours) && hours >= 1 && hours <= 720 ? hours : null;
+	} catch {
+		return null;
+	}
+};
+
 const valuesFromForm = (form: FormData) => Object.fromEntries(form.entries());
 
 // The same recovery operation serves native and embedded entry points. A failed
@@ -245,9 +264,16 @@ export const loadPublicBookingPage = async ({ params, fetch, url, request, setHe
                     }
             }
             : state;
+        const [publicBookingPolicy, depositCreditCutoffHours] = state.business
+            ? await Promise.all([
+                loadPublicBookingPolicy(supabase, state.business.id),
+                loadPublicDepositCreditCutoffHours(supabase, state.business.id)
+            ])
+            : [{ requireEmail: true, reschedulePolicy: null, selfManagementCutoffHours: null }, null];
         return {
             priceQuote,
-            ...(state.business ? await loadPublicBookingPolicy(supabase, state.business.id) : { requireEmail: true, reschedulePolicy: null, selfManagementCutoffHours: null }),
+            ...publicBookingPolicy,
+            depositCreditCutoffHours,
             depositTerms,
             patientFields,
 			device,

@@ -46,7 +46,7 @@
 					<li>Preparar exportaciones Excel solicitadas por el dueño o un administrador autorizado.</li>
 					<li>
 						Enviar al paciente, con la identidad del consultorio, el comprobante de su turno, los cambios, las
-						cancelaciones, los pedidos de seña y los recordatorios por correo, y los recordatorios del navegador si los
+						cancelaciones, los pedidos y avisos de vencimiento de seña y los recordatorios por correo, y los recordatorios del navegador si los
 						activó. Cada correo permite dejar de recibir los de ese consultorio.
 					</li>
 					<li>Mejorar estabilidad y soporte técnico.</li>

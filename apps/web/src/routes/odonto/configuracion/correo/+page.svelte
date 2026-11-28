@@ -61,7 +61,7 @@
    <legend class="ux-section-title mb-3">Correo del paciente</legend>
    <label class="ux-choice flex items-start gap-3 px-4 py-3">
     <input class="accent-check-accent-600 mt-1" type="checkbox" name="email_enabled" value="true" checked={values.email_enabled} />
-    <span><strong>Enviar comprobantes y recordatorios por email</strong><span class="mt-1 block text-sm text-copy-subtle">Los recordatorios se envían 72 y 24&nbsp;horas antes del turno, cuando corresponde.</span></span>
+    <span><strong>Enviar comprobantes y recordatorios por email</strong><span class="mt-1 block text-sm text-copy-subtle">Los recordatorios se envían 72 y 24&nbsp;horas antes del turno, y el aviso de seña por vencer según la configuración de Señas.</span></span>
    </label>
    <label class="ux-choice flex items-start gap-3 px-4 py-3">
     <input class="accent-check-accent-600 mt-1" type="checkbox" name="require_email" value="true" checked={values.require_email} />
@@ -92,22 +92,38 @@
   </fieldset>
   <fieldset class="grid gap-4" disabled={saving || data.demo}>
    <legend class="ux-section-title mb-3">Seña al reprogramar</legend>
-   <p class="text-sm text-copy-subtle">Estas condiciones se informan en las nuevas reservas. Cada turno conserva las que aceptó. Los cambios de horario hechos por el consultorio conservan el dinero aplicable.</p>
-   <label class="ux-choice flex items-start gap-3 px-4 py-3">
-    <input class="accent-check-accent-600 mt-1" type="checkbox" name="require_deposit_on_reschedule" value="true" checked={values.require_deposit_on_reschedule} />
-    <span>Pedir una nueva seña si el paciente cambia el horario de un turno que exige seña</span>
-   </label>
-   <fieldset class="grid gap-3">
-    <legend class="ux-label mb-2">¿Qué pasa con la seña anterior?</legend>
+   {#if data.depositCreditCutoffHours}
+    {#if values.require_deposit_on_reschedule}<input type="hidden" name="require_deposit_on_reschedule" value="true" />{/if}
+    <input type="hidden" name="previous_deposit_disposition" value={values.previous_deposit_disposition} />
+    <div class="ux-soft-card grid gap-2 p-4 text-sm text-fg-70" data-p4-reschedule-rule>
+     <p class="font-semibold text-fg">
+      Rige la regla por horas configurada en Señas ({data.depositCreditCutoffHours} {data.depositCreditCutoffHours === 1 ? 'hora' : 'horas'}).
+     </p>
+     <p>
+      Si se reprograma o cancela con {data.depositCreditCutoffHours} {data.depositCreditCutoffHours === 1 ? 'hora' : 'horas'} o más de anticipación, la seña pagada queda a cuenta sin pedir otra seña. Con menos tiempo, la seña se pierde (salvo excepción del consultorio o fuerza mayor).
+     </p>
+     <p>
+      <a href="/odonto/configuracion/senas" class="font-semibold underline">Cambiar en Configuración → Señas</a>
+     </p>
+    </div>
+   {:else}
+    <p class="text-sm text-copy-subtle">Estas condiciones se informan en las nuevas reservas. Cada turno conserva las que aceptó. Los cambios de horario hechos por el consultorio conservan el dinero aplicable.</p>
     <label class="ux-choice flex items-start gap-3 px-4 py-3">
-     <input class="accent-check-accent-600 mt-1" type="radio" name="previous_deposit_disposition" value="forfeit" checked={values.previous_deposit_disposition === 'forfeit'} required />
-     <span>Deja de aplicarse al precio de la consulta cuando el paciente confirma el cambio</span>
+     <input class="accent-check-accent-600 mt-1" type="checkbox" name="require_deposit_on_reschedule" value="true" checked={values.require_deposit_on_reschedule} />
+     <span>Pedir una nueva seña si el paciente cambia el horario de un turno que exige seña</span>
     </label>
-    <label class="ux-choice flex items-start gap-3 px-4 py-3">
-     <input class="accent-check-accent-600 mt-1" type="radio" name="previous_deposit_disposition" value="credit" checked={values.previous_deposit_disposition === 'credit'} />
-     <span>Se conserva a cuenta del precio de la consulta</span>
-    </label>
-   </fieldset>
+    <fieldset class="grid gap-3">
+     <legend class="ux-label mb-2">¿Qué pasa con la seña anterior?</legend>
+     <label class="ux-choice flex items-start gap-3 px-4 py-3">
+      <input class="accent-check-accent-600 mt-1" type="radio" name="previous_deposit_disposition" value="forfeit" checked={values.previous_deposit_disposition === 'forfeit'} required />
+      <span>Deja de aplicarse al precio de la consulta cuando el paciente confirma el cambio</span>
+     </label>
+     <label class="ux-choice flex items-start gap-3 px-4 py-3">
+      <input class="accent-check-accent-600 mt-1" type="radio" name="previous_deposit_disposition" value="credit" checked={values.previous_deposit_disposition === 'credit'} />
+      <span>Se conserva a cuenta del precio de la consulta</span>
+     </label>
+    </fieldset>
+   {/if}
   </fieldset>
   <div><button class="ux-btn-primary" disabled={saving || data.demo || changed}>{saving ? 'Guardando…' : 'Guardar preferencias'}</button></div>
  </form>

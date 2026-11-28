@@ -7,22 +7,45 @@ import { isRecord } from '$lib/contracts/json';
 import { DEFAULT_APPOINTMENT_EMAIL_PREFERENCES } from '$lib/scheduling/email-policy';
 import { loadAppointmentEmailPolicy, parseAppointmentEmailPolicyForm, saveAppointmentEmailPolicy } from '$lib/server/scheduling/public/email-policy';
 import { loadBusinessEmailStatus, type BusinessEmailStatus } from '$lib/server/scheduling/public/email-status';
+import type { CitaSupabaseClient } from '$lib/types/database';
 import type { Actions, PageServerLoad } from './$types';
+
+// Secondary information for the P4 reschedule rule notice: its failure must not hide email preferences.
+const loadDepositCreditCutoffHours = async (supabase: CitaSupabaseClient, businessId: string): Promise<number | null> => {
+ try {
+  const { data, error: queryError } = await supabase
+   .from('deposit_policies')
+   .select('deposit_credit_cutoff_hours')
+   .eq('business_id', businessId)
+   .maybeSingle();
+  if (queryError) {
+   logServerFailure('Error cargando corte de seña a cuenta en configuración de correo', queryError);
+   return null;
+  }
+  return typeof data?.deposit_credit_cutoff_hours === 'number' ? data.deposit_credit_cutoff_hours : null;
+ } catch (cause) {
+  logServerFailure('Error cargando corte de seña a cuenta en configuración de correo', cause);
+  return null;
+ }
+};
 
 export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
  if (!locals.auth) redirect(303, '/login');
- if (env.DEMO_MODE === 'true') return { demo: true, context: demoBusinessContext(), policy: { ...DEFAULT_APPOINTMENT_EMAIL_PREFERENCES, revision: 1, sender_verified: false }, status: null as BusinessEmailStatus | null };
+ if (env.DEMO_MODE === 'true') return { demo: true, context: demoBusinessContext(), policy: { ...DEFAULT_APPOINTMENT_EMAIL_PREFERENCES, revision: 1, sender_verified: false }, depositCreditCutoffHours: null as number | null, status: null as BusinessEmailStatus | null };
  const supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);
  const context = await resolveActiveBusiness({ supabase, accessToken: locals.auth.access_token, cookies });
  if (!context?.canManage) error(403, 'Sólo la dueña o la administración pueden configurar los correos del consultorio.');
  try {
-  const policy = await loadAppointmentEmailPolicy(supabase, context.business.id);
+  const [policy, depositCreditCutoffHours] = await Promise.all([
+   loadAppointmentEmailPolicy(supabase, context.business.id),
+   loadDepositCreditCutoffHours(supabase, context.business.id)
+  ]);
   // The status is informative: its failure must not hide the preferences.
   const status = await loadBusinessEmailStatus(supabase, context.business.id).catch((cause: unknown) => {
    logServerFailure('Error cargando el estado de los correos', cause);
    return null;
   });
-  return { demo: false, context, policy, status };
+  return { demo: false, context, policy, depositCreditCutoffHours, status };
  }
  catch (cause) { logServerFailure('Error cargando preferencias de correo', cause); error(503, 'No pudimos cargar la configuración de correo. Volvé a intentar en unos segundos.'); }
 };

@@ -18,7 +18,9 @@ export const RATE_LIMIT_ACTIONS = [
 	'radiograph_trash_by_user',
 	'radiograph_restore_by_user',
 	'patient_export_individual_by_user',
-	'patient_export_global_by_business'
+	'patient_export_global_by_business',
+	'deposit_payment_notice_by_ip',
+	'deposit_payment_notice_by_token'
 ] as const;
 
 export type RateLimitAction = (typeof RATE_LIMIT_ACTIONS)[number];
@@ -335,6 +337,23 @@ export const patientExportGlobalRateLimitRules = (businessId: string): RateLimit
 		limit: 2,
 		windowSeconds: ONE_HOUR,
 		message: 'Ya se prepararon varias exportaciones completas durante esta hora.'
+	}
+];
+
+export const depositPaymentNoticeRateLimitRules = (token: string, ip: string): RateLimitRule[] => [
+	{
+		action: 'deposit_payment_notice_by_token',
+		subject: token,
+		limit: 10,
+		windowSeconds: FIFTEEN_MINUTES,
+		message: 'Ya recibimos varios avisos seguidos para este turno.'
+	},
+	{
+		action: 'deposit_payment_notice_by_ip',
+		subject: ip,
+		limit: 30,
+		windowSeconds: FIFTEEN_MINUTES,
+		message: 'Hubo demasiados avisos seguidos desde esta conexión.'
 	}
 ];
 

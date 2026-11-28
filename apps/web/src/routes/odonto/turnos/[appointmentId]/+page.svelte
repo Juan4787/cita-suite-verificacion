@@ -10,7 +10,13 @@ import {formatQuotedPrice, quotedPriceEstimateNotice} from '$lib/booking/pricing
 	import { hasAppointmentStarted, isUpcomingActiveAppointment } from '$lib/utils/appointment-visibility';
 	import StaffCancelPanel from '$lib/components/appointments/StaffCancelPanel.svelte';
 	import { agendaTime, agendaWeekdayLongDate } from '$lib/utils/agenda-dates';
-	import { DEPOSIT_STATUS_LABELS, formatDepositAmount, type AppointmentDepositView } from '$lib/scheduling/deposits';
+	import {
+		DEPOSIT_STATUS_LABELS,
+		describeCreditDifference,
+		formatDepositAmount,
+		type AppointmentDepositView,
+		type PatientDepositCredit
+	} from '$lib/scheduling/deposits';
 	import { formatInTimeZone } from '$lib/utils/format';
 	import type { StaffManagementFeedback } from '$lib/scheduling/staff-management';
 	import { formatDepositMoney } from '$lib/scheduling/reschedule-terms';
@@ -36,6 +42,9 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
    management: PageData['management'];
 			deposit: (AppointmentDepositView & { cancelsItself: boolean | null }) | null;
    depositFinancials: PageData['depositFinancials'];
+			depositCreditCutoffHours?: number | null;
+			availableDepositCredits?: PatientDepositCredit[];
+			nowIso?: string;
 			canRecordDeposit: boolean;
 			auditLogs: AuditLog[] | null;
 			emailDeliveries: PageData['emailDeliveries'];
@@ -69,12 +78,13 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
  const feedback = $derived(localFeedback ?? form);
  const emailPurposeLabels: Record<AppointmentEmailDelivery['purpose'], string> = {
   booking_receipt: 'Comprobante de reserva', reschedule_receipt: 'Comprobante de cambio', cancellation_receipt: 'Comprobante de cancelación',
-  deposit_request: 'Pedido de seña', reminder_72h: 'Recordatorio de 72 horas', reminder_24h: 'Recordatorio de 24 horas'
+  deposit_request: 'Pedido de seña', deposit_expiring_reminder: 'Aviso de seña por vencer', reminder_72h: 'Recordatorio de 72 horas', reminder_24h: 'Recordatorio de 24 horas'
  };
  const emailDiscardLabels: Record<string, string> = {
   no_recipient: 'el paciente no tiene correo', invalid_recipient: 'la dirección no es válida', suppressed: 'esa dirección pidió no recibir correos',
   email_disabled: 'los correos están apagados', expired: 'ya no era útil', superseded_schedule: 'el horario cambió', appointment_cancelled: 'el turno se canceló',
   appointment_started: 'el turno ya empezó', deposit_not_pending: 'la seña ya no está pendiente', covered_by_receipt: 'ya estaba en el comprobante',
+  payment_notice_recorded: 'el paciente ya avisó que pagó', expiring_reminder_disabled: 'el aviso de seña por vencer está desactivado',
   not_cancelled: 'el turno volvió a estar vigente', operator_dismissed: 'lo descartó el consultorio'
  };
  // "Accepted" and "delivered" are what the provider reports. Neither means the patient read it.
@@ -185,6 +195,13 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 		if (log.action === 'appointment.deposit_paid') return `${user} confirmó la seña`;
 		if (log.action === 'appointment.deposit_waived') return `${user} exceptuó la seña`;
 		if (log.action === 'appointment.deposit_reopened') return `${user} deshizo el registro de la seña`;
+		if (log.action === 'appointment.deposit_payment_notice_recorded') return 'El paciente avisó que transfirió la seña';
+		if (log.action === 'appointment.deposit_payment_notice_cleared') return `${user} marcó que no llegó el pago de la seña`;
+		if (log.action === 'appointment.deposit_credit_applied') return `${user} aplicó una seña a cuenta`;
+		if (log.action === 'appointment.deposit_credit_created') {
+			return log.user_id ? `${user} dejó la seña a cuenta del paciente` : 'La seña quedó a cuenta del paciente';
+		}
+		if (log.action === 'appointment.deposit_credit_released') return `${user} devolvió la seña a cuenta a la ficha del paciente`;
 		if (log.action === 'appointment.slot_release_hidden') return `${user} ocultó un aviso de horario liberado`;
 		if (log.action === 'appointment.deposit_reminder_opened') return `${user} abrió el pedido de seña por WhatsApp`;
 		if (log.action === 'appointment.deposit_expired') return 'El turno se canceló automáticamente porque no se registró la seña';
@@ -197,10 +214,29 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 		if (log.action === 'appointment.rescheduled') {
 			const from = metadataValue(log, 'from_starts_at');
 			const to = metadataValue(log, 'to_starts_at');
-			if (from && to) return `${formatDateTime(from, timeZone)} -> ${formatDateTime(to, timeZone)}`;
+			const requester = metadataValue(log, 'reschedule_requester');
+			const requesterLabel =
+				requester === 'patient'
+					? ' · Pedido por el paciente'
+					: requester === 'practice_or_force_majeure'
+						? ' · Pedido por el consultorio o fuerza mayor'
+						: '';
+			if (from && to) return `${formatDateTime(from, timeZone)} -> ${formatDateTime(to, timeZone)}${requesterLabel}`;
 		}
+		const differenceNote = metadataValue(log, 'difference_note');
+		if (differenceNote) return differenceNote;
 		const depositAmount = log.metadata?.amount;
-		if (['appointment.deposit_paid', 'appointment.deposit_waived', 'appointment.deposit_reopened'].includes(log.action) && typeof depositAmount === 'number') {
+		if (
+			[
+				'appointment.deposit_paid',
+				'appointment.deposit_waived',
+				'appointment.deposit_reopened',
+				'appointment.deposit_credit_applied',
+				'appointment.deposit_credit_created',
+				'appointment.deposit_credit_released'
+			].includes(log.action) &&
+			typeof depositAmount === 'number'
+		) {
 			return `Seña de ${formatDepositAmount(depositAmount)}`;
 		}
 		const reason = metadataValue(log, 'reason');
@@ -255,7 +291,27 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 	let selectedSlot = $state('');
 	// svelte-ignore state_referenced_locally
 	let ignoreBreak = $state(false);
+	let rescheduleRequester = $state<'' | 'patient' | 'practice_or_force_majeure'>('');
 	let submitting = $state(false);
+
+	const p4CutoffHours = $derived(data.depositCreditCutoffHours ?? null);
+	const hoursUntilAppointmentStart = $derived(
+		data.appointment
+			? (Date.parse(data.appointment.starts_at) - (data.nowIso ? Date.parse(data.nowIso) : Date.now())) / 3_600_000
+			: null
+	);
+	// Decisión #1 de Juan (28/11/2026): reprogramación hecha por personal con < corte de P4 o turno pasado y seña pagada
+	// exige preguntar obligatoriamente y sin opción marcada «¿Quién pidió el cambio?».
+	const requiresRescheduleRequester = $derived(
+		Boolean(
+			data.appointment &&
+			data.deposit?.status === 'paid' &&
+			typeof p4CutoffHours === 'number' &&
+			p4CutoffHours >= 1 &&
+			(appointmentStarted || (hoursUntilAppointmentStart !== null && hoursUntilAppointmentStart < p4CutoffHours))
+		)
+	);
+	const p4CutoffHoursLabel = $derived(p4CutoffHours === 1 ? '1\u00a0hora' : `${p4CutoffHours}\u00a0horas`);
 
 	$effect(() => {
 		const nextParts = parseIso(data.reprogramDate);
@@ -265,6 +321,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 		slotsCache = {};
   slotRequest += 1;
 		selectedSlot = '';
+		rescheduleRequester = '';
 		slotsError = null;
 		loadingSlots = false;
 	});
@@ -377,7 +434,11 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 	};
 
  const onStaffAction: SubmitFunction = ({ cancel, action, formData }) => {
-  if (submitting || (action.search === '?/reschedule' && !selectedSlot && !feedback?.retry)) { cancel(); return; }
+  if (
+   submitting ||
+   (action.search === '?/reschedule' && !selectedSlot && !feedback?.retry) ||
+   (action.search === '?/reschedule' && requiresRescheduleRequester && !rescheduleRequester && !feedback?.retry)
+  ) { cancel(); return; }
   const fields = Object.fromEntries([...formData].map(([key,value]) => [key, String(value)]));
   const kind = action.searchParams.has('/late_deposit') ? 'late_deposit' as const :
    action.searchParams.has('/reschedule') ? 'reschedule' as const : 'update_status' as const;
@@ -688,12 +749,58 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 							<input type="hidden" name="slot_starts_at" value={selectedSlot} />
 							<input type="hidden" name="reprogram_date" value={selectedDate} />
 							<input type="hidden" name="ignore_break" value={ignoreBreak ? 'true' : 'false'} />
-							<button type="submit" disabled={!selectedSlot || submitting || !!feedback?.retry} class="ux-btn-primary w-full">
+							{#if requiresRescheduleRequester}
+								<fieldset class="mb-4 grid gap-3 rounded-2xl border border-warning-300-35 bg-warning-400-07 p-4" data-reschedule-requester-fieldset>
+									<legend class="text-sm font-bold text-fg">¿Quién pidió el cambio?</legend>
+									<p class="text-xs text-fg-70">
+										Este turno tiene la seña pagada y {appointmentStarted ? 'ya empezó o pasó' : `faltan menos de ${p4CutoffHoursLabel}`}. Esta respuesta es obligatoria y queda registrada.
+									</p>
+									<label class="ux-choice flex items-start gap-3 px-4 py-3 text-sm">
+										<input
+											type="radio"
+											name="reschedule_requester"
+											value="patient"
+											bind:group={rescheduleRequester}
+											required
+											class="mt-0.5 accent-check-accent-600"
+										/>
+										<span>
+											<strong class="block text-fg">El paciente</strong>
+											<span class="block text-xs text-fg-65">La seña anterior se pierde y se pide una nueva si corresponde.</span>
+										</span>
+									</label>
+									<label class="ux-choice flex items-start gap-3 px-4 py-3 text-sm">
+										<input
+											type="radio"
+											name="reschedule_requester"
+											value="practice_or_force_majeure"
+											bind:group={rescheduleRequester}
+											required
+											class="mt-0.5 accent-check-accent-600"
+										/>
+										<span>
+											<strong class="block text-fg">El consultorio o fuerza mayor</strong>
+											<span class="block text-xs text-fg-65">La seña pagada queda a cuenta y cubre el nuevo horario (con nota de diferencia si cambió el monto).</span>
+										</span>
+									</label>
+								</fieldset>
+							{:else if data.deposit?.status === 'paid' && typeof p4CutoffHours === 'number' && p4CutoffHours >= 1}
+								<p class="mb-4 text-sm text-fg-70" data-reschedule-p4-credit-notice>
+									Como faltan {p4CutoffHoursLabel} o más, la seña pagada cubre el nuevo horario sin pedir otra seña.
+								</p>
+							{/if}
+							<button
+								type="submit"
+								disabled={!selectedSlot || (requiresRescheduleRequester && !rescheduleRequester) || submitting || !!feedback?.retry}
+								class="ux-btn-primary w-full"
+							>
 								{submitting
 									? 'Reprogramando…'
-									: selectedSlot
-										? `Reprogramar a las ${selectedSlotTime}`
-										: 'Elegí un horario'}
+									: !selectedSlot
+										? 'Elegí un horario'
+										: requiresRescheduleRequester && !rescheduleRequester
+											? 'Elegí quién pidió el cambio'
+											: `Reprogramar a las ${selectedSlotTime}`}
 							</button>
 						</form>
 					</div>
@@ -705,6 +812,9 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 						when={`${dateOnly(data.appointment.starts_at)} a las ${timeOnly(data.appointment.starts_at)}`}
 						patientHasEmail={Boolean(data.appointment.patients?.email)}
 						deposit={data.deposit}
+						depositCreditCutoffHours={data.depositCreditCutoffHours ?? null}
+						startsAt={data.appointment.starts_at}
+						nowIso={data.nowIso ?? null}
 						operationId={data.management.statusOperationId}
 						revision={data.management.revision}
 						disabled={!canUseStatusAction('cancelled')}
@@ -727,13 +837,21 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 					{#if isClosed && data.deposit.status === 'pending'}
 						El turno está cancelado. La seña no se había registrado al cancelarlo.
 					{:else if data.deposit.status === 'pending'}
-						{data.deposit.cancelsItself === true
-							? 'Si no se registra antes del vencimiento, el turno se cancela solo.'
-							: data.deposit.cancelsItself === false
-								? 'No se cancela sola: si no llega, decide el consultorio.'
-								: 'No pudimos comprobar si este turno se cancela solo.'}
+						{#if data.deposit.patient_payment_notice_at}
+							El paciente avisó que transfirió el {formatInTimeZone(data.deposit.patient_payment_notice_at, timeZone).full}. La cancelación automática está pausada hasta verificar.
+						{:else}
+							{data.deposit.cancelsItself === true
+								? 'Si no se registra antes del vencimiento, el turno se cancela solo.'
+								: data.deposit.cancelsItself === false
+									? 'No se cancela sola: si no llega, decide el consultorio.'
+									: 'No pudimos comprobar si este turno se cancela solo.'}
+						{/if}
 					{:else if data.deposit.status === 'paid'}
-						Recibida{data.deposit.recorded_at ? ` el ${formatInTimeZone(data.deposit.recorded_at, timeZone).full}` : ''}.
+						{#if data.deposit.applied_credit_id}
+							Cubierta con seña a cuenta ({formatDepositAmount(data.deposit.applied_credit_amount ?? data.deposit.amount)}){data.deposit.recorded_at ? ` el ${formatInTimeZone(data.deposit.recorded_at, timeZone).full}` : ''}.
+						{:else}
+							Recibida{data.deposit.recorded_at ? ` el ${formatInTimeZone(data.deposit.recorded_at, timeZone).full}` : ''}.
+						{/if}
 					{:else if data.deposit.status === 'waived'}
 						{data.deposit.waived_reason === 'policy_disabled'
 							? 'Exceptuada al apagar la seña del consultorio.'
@@ -742,14 +860,47 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 						Venció sin registrarse: el turno se canceló automáticamente.
 					{/if}
 				</p>
+				{#if data.deposit.amount_difference_note}
+					<p class="ux-alert ux-alert-info mt-3" data-deposit-difference-note>{data.deposit.amount_difference_note}</p>
+				{/if}
+				{#if depositActionsAvailable && data.deposit.status === 'pending' && (data.availableDepositCredits ?? []).length > 0}
+					{@const availableCredits = data.availableDepositCredits ?? []}
+					{@const credit = availableCredits[0]}
+					{@const diffNote = describeCreditDifference(credit.amount, data.deposit.amount, 'credit_applied')}
+					<div class="ux-soft-card mt-3 border border-accent-300-30 bg-accent-400-10 p-4 text-sm" data-deposit-available-credit>
+						<p class="font-semibold text-fg">
+							Tiene {availableCredits.length === 1 ? '1 seña a cuenta' : `${availableCredits.length} señas a cuenta`} disponible{availableCredits.length === 1 ? '' : 's'} ({formatDepositAmount(credit.amount)}).
+						</p>
+						{#if diffNote}
+							<p class="mt-1 text-fg-75">{diffNote}</p>
+						{/if}
+					</div>
+				{/if}
 				{#if depositActionsAvailable && data.deposit}
 					<div class="mt-4 flex flex-wrap items-start gap-3">
 						{#if data.deposit.status === 'pending'}
+							{#if (data.availableDepositCredits ?? []).length > 0}
+								<form method="POST" action="?/apply_credit">
+									<input type="hidden" name="expected_revision" value={data.deposit.revision} />
+									<input type="hidden" name="credit_id" value={(data.availableDepositCredits ?? [])[0].id} />
+									<button class="ux-btn-primary">Aplicar</button>
+								</form>
+							{/if}
 							<form method="POST" action="?/deposit">
 								<input type="hidden" name="deposit_action" value="paid" />
 								<input type="hidden" name="expected_revision" value={data.deposit.revision} />
-								<button class="ux-btn-primary">Confirmar seña</button>
+								<button class="ux-btn-primary">{data.deposit.patient_payment_notice_at ? 'Registrar pago' : 'Confirmar seña'}</button>
 							</form>
+							{#if data.deposit.patient_payment_notice_at}
+								<details>
+									<summary class="ux-btn-secondary">No llegó el pago</summary>
+									<form method="POST" action="?/clear_payment_notice" class="mt-2 flex flex-col gap-2">
+										<p class="max-w-72 text-sm text-fg-55">Se quita el aviso y el turno vuelve al circuito normal (decidir o cancelación automática si todavía corresponde).</p>
+										<input type="hidden" name="expected_revision" value={data.deposit.revision} />
+										<button class="ux-btn-secondary">Sí, no llegó el pago</button>
+									</form>
+								</details>
+							{/if}
 							<details>
 								<summary class="ux-btn-secondary">Exceptuar</summary>
 								<form method="POST" action="?/deposit" class="mt-2 flex flex-col gap-2">
@@ -764,10 +915,15 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 								<summary class="ux-btn-secondary">Deshacer</summary>
 								<form method="POST" action="?/deposit" class="mt-2 flex flex-col gap-2">
 									<p class="max-w-72 text-sm text-fg-55">
-										La seña vuelve a pendiente y, si el turno estaba Confirmado, vuelve a Reservado.
+										{data.deposit.applied_credit_id
+											? 'La seña vuelve a pendiente, el turno vuelve a Reservado y la seña a cuenta vuelve disponible a la ficha del paciente.'
+											: 'La seña vuelve a pendiente y, si el turno estaba Confirmado, vuelve a Reservado.'}
 									</p>
 									<input type="hidden" name="deposit_action" value="pending" />
 									<input type="hidden" name="expected_revision" value={data.deposit.revision} />
+									{#if data.deposit.applied_credit_id}
+										<input type="hidden" name="had_applied_credit" value="true" />
+									{/if}
 									<button class="ux-btn-secondary">Sí, deshacer el registro</button>
 								</form>
 							</details>

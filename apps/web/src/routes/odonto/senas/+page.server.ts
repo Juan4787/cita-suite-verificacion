@@ -10,6 +10,8 @@ import { logServerFailure } from '$lib/server/platform/logging';
 import {
 	DEPOSIT_ACTIONS,
 	DepositError,
+	applyPatientDepositCredit,
+	clearAppointmentDepositPaymentNotice,
 	getDepositErrorMessage,
 	getDepositErrorStatus,
 	loadDepositAutomationStatus,
@@ -24,7 +26,8 @@ import {
 	describeDepositAutomation,
 	formatDepositAmount,
 	type DepositAutomationNotice,
-	type DepositListSection
+	type DepositListSection,
+	type PatientDepositCredit
 } from '$lib/scheduling/deposits';
 import { zonedDate } from '$lib/availability/calculate';
 import { formatInTimeZone } from '$lib/utils/format';
@@ -37,6 +40,7 @@ type DepositRow = {
 	patientName: string;
 	turnLabel: string;
 	amountLabel: string;
+	amount: number;
 	dueLabel: string;
 	section: DepositListSection;
 	revision: number;
@@ -45,7 +49,9 @@ type DepositRow = {
 	hasPhone: boolean;
 	hasEmail: boolean;
  canPrepareDelivery: boolean;
+	paymentNoticeAt: string | null;
 	reminder: { openedAt: string; openedBy: string } | null;
+	availableCredits: PatientDepositCredit[];
 	// Only for turns cancelled by the deposit: the agenda to give the slot again and, with a valid
 	// phone, the notice to the person.
 	cancellation: { rebookHref: string; canNotify: boolean } | null;
@@ -65,6 +71,7 @@ const demoRows = (now: Date, timezone: string): DepositRow[] => {
 		patientId: `${overrides.appointmentId}-paciente`,
 		turnLabel: turn(120),
 		amountLabel: formatDepositAmount(40000),
+		amount: 40000,
 		dueLabel: turn(72),
 		revision: 1,
   managementRevision: '0'.repeat(64),
@@ -72,7 +79,9 @@ const demoRows = (now: Date, timezone: string): DepositRow[] => {
 		hasPhone: true,
 		hasEmail: true,
   canPrepareDelivery: true,
+		paymentNoticeAt: null,
 		reminder: null,
+		availableCredits: [],
 		cancellation: null,
 		...overrides
 	});
@@ -204,6 +213,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			patientName: item.patient.name,
 			turnLabel: formatInTimeZone(item.appointment.startsAt, business.timezone).full,
 			amountLabel: formatDepositAmount(item.deposit.amount),
+			amount: item.deposit.amount,
 			dueLabel: formatInTimeZone(item.deposit.due_at, business.timezone).full,
 			section: item.section,
 			revision: item.deposit.revision,
@@ -212,9 +222,11 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
 			hasPhone: Boolean(phone),
 			hasEmail: item.patient.email === undefined ? true : Boolean(item.patient.email?.trim()),
    canPrepareDelivery: !item.patient.blocked && item.patient.archivedAt === null,
+			paymentNoticeAt: item.deposit.patient_payment_notice_at ?? null,
 			reminder: openedAt
 				? { openedAt, openedBy: (item.reminderOpenedBy && userLabels.get(item.reminderOpenedBy)) || 'alguien del equipo' }
 				: null,
+			availableCredits: item.patient.availableDepositCredits ?? [],
 			cancellation
 		};
 	};
@@ -277,6 +289,82 @@ export const actions: Actions = {
 			// Only a deposit rule has its own message: any other failure is unexpected, never guessed.
 			const code = actionError instanceof DepositError ? actionError.code : 'DEPOSIT_UNEXPECTED';
 			if (code === 'DEPOSIT_UNEXPECTED') logServerFailure('Error registrando una seña', actionError);
+			return fail(getDepositErrorStatus(code), { appointmentId, message: getDepositErrorMessage(code) });
+		}
+	},
+	clear_payment_notice: async ({ request, locals, fetch, cookies }) => {
+		if (!locals.auth) throw redirect(303, '/login');
+		if (env.DEMO_MODE === 'true') return fail(400, { message: 'No disponible en modo demo.' });
+
+		const form = await request.formData();
+		const appointmentId = String(form.get('appointment_id') ?? '').trim();
+		const rawRevision = String(form.get('expected_revision') ?? '').trim();
+		const expectedRevision = /^\d{1,15}$/.test(rawRevision) ? Number(rawRevision) : Number.NaN;
+		if (!isUuid(appointmentId)) return fail(404, { message: 'No encontramos ese turno.' });
+		if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1) {
+			return fail(400, { appointmentId, message: 'No pudimos leer la versión de la seña. Recargá la página antes de seguir.' });
+		}
+
+		const supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);
+		const context = await resolveActiveBusiness({ supabase, accessToken: locals.auth.access_token, cookies });
+		if (!context) throw kitError(500, 'No se pudo resolver el negocio activo');
+
+		try {
+			await clearAppointmentDepositPaymentNotice(supabase, {
+				businessId: context.business.id,
+				appointmentId,
+				expectedRevision
+			});
+			return {
+				success: true,
+				appointmentId,
+				message: 'Se quitó el aviso de pago. El turno volvió al circuito normal.'
+			};
+		} catch (actionError) {
+			const code = actionError instanceof DepositError ? actionError.code : 'DEPOSIT_UNEXPECTED';
+			if (code === 'DEPOSIT_UNEXPECTED') logServerFailure('Error quitando aviso de pago de seña', actionError);
+			return fail(getDepositErrorStatus(code), { appointmentId, message: getDepositErrorMessage(code) });
+		}
+	},
+	apply_credit: async ({ request, locals, fetch, cookies }) => {
+		if (!locals.auth) throw redirect(303, '/login');
+		if (env.DEMO_MODE === 'true') return fail(400, { message: 'No disponible en modo demo.' });
+
+		const form = await request.formData();
+		const appointmentId = String(form.get('appointment_id') ?? '').trim();
+		const rawRevision = String(form.get('expected_revision') ?? '').trim();
+		const expectedRevision = /^\d{1,15}$/.test(rawRevision) ? Number(rawRevision) : Number.NaN;
+		const rawCreditId = String(form.get('credit_id') ?? '').trim();
+		const creditId = rawCreditId || null;
+		if (!isUuid(appointmentId)) return fail(404, { message: 'No encontramos ese turno.' });
+		if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1) {
+			return fail(400, { appointmentId, message: 'No pudimos leer la versión de la seña. Recargá la página antes de seguir.' });
+		}
+		if (creditId && !isUuid(creditId)) {
+			return fail(400, { appointmentId, message: getDepositErrorMessage('DEPOSIT_CREDIT_UNAVAILABLE') });
+		}
+
+		const supabase = await createSupabaseServerClient('odonto', locals.auth, fetch);
+		const context = await resolveActiveBusiness({ supabase, accessToken: locals.auth.access_token, cookies });
+		if (!context) throw kitError(500, 'No se pudo resolver el negocio activo');
+
+		try {
+			const applied = await applyPatientDepositCredit(supabase, {
+				businessId: context.business.id,
+				appointmentId,
+				expectedRevision,
+				creditId
+			});
+			return {
+				success: true,
+				appointmentId,
+				message: applied.differenceNote
+					? `Seña a cuenta aplicada. El turno quedó Confirmado. ${applied.differenceNote}`
+					: 'Seña a cuenta aplicada. El turno quedó Confirmado.'
+			};
+		} catch (actionError) {
+			const code = actionError instanceof DepositError ? actionError.code : 'DEPOSIT_UNEXPECTED';
+			if (code === 'DEPOSIT_UNEXPECTED') logServerFailure('Error aplicando seña a cuenta', actionError);
 			return fail(getDepositErrorStatus(code), { appointmentId, message: getDepositErrorMessage(code) });
 		}
 	}

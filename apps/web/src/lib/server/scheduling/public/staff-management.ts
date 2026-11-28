@@ -48,10 +48,14 @@ export const listStaffManagementSlots = async (reader: CitaSupabaseClient, busin
  return selected;
 };
 
+export type StaffRescheduleRequester = 'patient' | 'practice_or_force_majeure';
+
 export type StaffManagementCommand = {
  business: Business; actorId: string; appointmentId: string; operationId: string; expectedRevision: string;
  action: 'cancel' | 'confirm' | 'request_reschedule' | 'reschedule';
  startsAt?: string | null; availabilityRevision?: number | null; ignoreBreak?: boolean; reason?: string | null;
+ keepDepositAsCredit?: boolean;
+ rescheduleRequester?: StaffRescheduleRequester | null;
 };
 
 /** Only the backend may dispatch: actor/tenant come from the verified session.
@@ -61,8 +65,14 @@ export const applyStaffManagementCommand = async (writer: CitaSupabaseClient, re
  managementId(input.business.id); managementId(input.actorId); managementId(input.appointmentId);
  managementId(input.operationId); managementRevision(input.expectedRevision);
  const moving = input.action === 'reschedule';
+ const keepCredit = input.keepDepositAsCredit === true;
+ const requester = input.rescheduleRequester ?? null;
  if (!['cancel', 'confirm', 'request_reschedule', 'reschedule'].includes(input.action) ||
   (input.ignoreBreak !== undefined && typeof input.ignoreBreak !== 'boolean') ||
+  (input.keepDepositAsCredit !== undefined && typeof input.keepDepositAsCredit !== 'boolean') ||
+  (requester !== null && requester !== 'patient' && requester !== 'practice_or_force_majeure') ||
+  (keepCredit && input.action !== 'cancel') ||
+  (requester !== null && !moving) ||
   (input.reason != null && (typeof input.reason !== 'string' || input.reason.length > 500)) ||
   (!moving && (input.startsAt != null || input.availabilityRevision != null || input.ignoreBreak === true)) ||
   (moving && input.reason != null)) return invalid();
@@ -71,7 +81,17 @@ export const applyStaffManagementCommand = async (writer: CitaSupabaseClient, re
   p_operation_id: input.operationId, p_expected_revision: input.expectedRevision, p_action: input.action,
   p_starts_at: startsAt, p_ignore_break: input.ignoreBreak ?? false,
   p_availability_revision: moving ? managementCounter(input.availabilityRevision) : null, p_reason: input.reason ?? null };
- const recovered = await writer.rpc('apply_staff_appointment_management', { ...args, p_replay_only: true });
+ const useDecisionRpc = keepCredit || requester !== null;
+ const dispatch = (replayOnly: boolean) =>
+  useDecisionRpc
+   ? writer.rpc('apply_staff_appointment_management_with_deposit_decision', {
+      ...args,
+      p_replay_only: replayOnly,
+      p_keep_deposit_as_credit: keepCredit,
+      p_reschedule_requester: requester
+     })
+   : writer.rpc('apply_staff_appointment_management', { ...args, p_replay_only: replayOnly });
+ const recovered = await dispatch(true);
  if (recovered.error) throw recovered.error;
  if (recovered.data !== null) return parseManagementResult(recovered.data);
  if (moving) {
@@ -84,7 +104,7 @@ export const applyStaffManagementCommand = async (writer: CitaSupabaseClient, re
    if (!selection.slots.some(slot => sameManagementInstant(slot.starts_at, startsAt!))) throw new Error('APPOINTMENT_SLOT_UNAVAILABLE');
   }
  }
- const { data, error } = await writer.rpc('apply_staff_appointment_management', { ...args, p_replay_only: false });
+ const { data, error } = await dispatch(false);
  if (error) throw error;
  return parseManagementResult(data);
 };

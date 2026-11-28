@@ -119,7 +119,7 @@ test('appointment deposits: booking terms, registration, agenda and automatic ca
 			.eq('business_id', f.businessId).eq('appointment_id', appointment.id).single());
 		expect(await deposit()).toMatchObject({ status: 'pending', amount: 50000, revision: 1 });
 		await expect(page.getByRole('button', { name: 'Confirmo que voy', exact: true })).toHaveCount(0);
-		await expect(page.getByRole('link', { name: 'Ya transferí: enviar el comprobante', exact: true })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Ya transferí: enviar el comprobante', exact: true })).toBeVisible();
 		for (const theme of ['light', 'dark']) {
 			await page.goto(`${publicPath}?creado=1&color_mode=${theme}`);
 			await matrix(page, info, `turno-pendiente-${theme}`, page.getByRole('heading', { name: 'Seña del turno', exact: true }), issues);

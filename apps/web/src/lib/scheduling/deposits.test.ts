@@ -273,6 +273,7 @@ describe('página de señas', () => {
 
 	it('las secciones siguen el orden del plan, con «Más adelante» plegada', () => {
 		expect(DEPOSIT_SECTIONS.map((section) => section.title)).toEqual([
+			'Avisó que pagó: verificar',
 			'Para pedir',
 			'Vencen en menos de 24 horas',
 			'Último momento: resolver a mano',

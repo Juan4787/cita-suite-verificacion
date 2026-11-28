@@ -43,7 +43,13 @@ import { loadPatientManagementScreen, submitPatientManagementAction } from './pa
 import { loadPatientManagementView, type PatientManagementAccess } from './patient-management';
 import type { PatientManagementPanelData } from '$lib/scheduling/patient-management-page';
 import { zonedDate } from '$lib/availability/calculate';
-import { hashRateLimitSubject } from '$lib/server/platform/rate-limits';
+import {
+	depositPaymentNoticeRateLimitRules,
+	enforceRateLimits,
+	hashRateLimitSubject,
+	rateLimitFail
+} from '$lib/server/platform/rate-limits';
+import { readBoolean, readRecord, readText } from '$lib/contracts/json';
 
 const managementReadLimit = async (supabase: Awaited<ReturnType<typeof createSupabaseAdminClient>>, event: RequestEvent) => {
  const { data, error } = await supabase.rpc('consume_booking_integration_read_limit', { p_subject_hash: hashRateLimitSubject(event.getClientAddress()) });
@@ -286,6 +292,79 @@ const submit = (action: 'confirm' | 'cancel' | 'reschedule') => async (event: Re
 };
 const actions: Actions = {
  confirm: submit('confirm'), cancel: submit('cancel'), reschedule: submit('reschedule'),
+ report_deposit_payment: async (event) => {
+  if (env.DEMO_MODE === 'true') {
+   return {
+    success: true,
+    action: 'report_deposit_payment' as const,
+    paymentNoticeAt: new Date().toISOString(),
+    alreadyRecorded: false,
+    message: 'Demostración: avisamos al consultorio que transferiste la seña.'
+   };
+  }
+  const token = event.params.token ?? '';
+  if (!/^[a-f0-9]{64}$/.test(token)) {
+   return fail(404, { action: 'report_deposit_payment' as const, message: 'Este enlace no es válido o ya no está disponible.' });
+  }
+  const supabase = await createSupabaseAdminClient('odonto', event.fetch);
+  try {
+   await managementReadLimit(supabase, event);
+   await enforceRateLimits(depositPaymentNoticeRateLimitRules(token, event.getClientAddress()), event.fetch);
+  } catch (rateError) {
+   if (rateError instanceof Error && rateError.message === 'APPOINTMENT_RATE_LIMIT') {
+    return fail(429, {
+     action: 'report_deposit_payment' as const,
+     message: 'Hubo varios intentos seguidos. Esperá un minuto y volvé a intentar.'
+    });
+   }
+   const failure = rateLimitFail(rateError, {
+    logContext: 'Error limitando avisos de pago de seña',
+    unavailableMessage: 'No pudimos registrar el aviso ahora. Volvé a intentar en unos segundos.'
+   });
+   return fail(failure.status, { action: 'report_deposit_payment' as const, message: failure.message });
+  }
+  try {
+   const { data, error } = await supabase.rpc('report_appointment_deposit_payment', {
+    p_token: token,
+    p_legacy: legacy
+   });
+   if (error) {
+    const raw = typeof error.message === 'string' ? error.message : '';
+    if (raw.includes('APPOINTMENT_LINK_UNAVAILABLE') || raw.includes('DEPOSIT_NOT_FOUND')) {
+     return fail(404, { action: 'report_deposit_payment' as const, message: 'Este enlace o su seña ya no están disponibles.' });
+    }
+    if (raw.includes('DEPOSIT_NOT_PENDING') || raw.includes('DEPOSIT_APPOINTMENT_CLOSED')) {
+     return fail(409, {
+      action: 'report_deposit_payment' as const,
+      message: 'Esta seña ya no está pendiente. Recargá la página para ver el estado actual del turno.'
+     });
+    }
+    logServerFailure('Error registrando aviso de pago de seña', error);
+    return fail(503, {
+     action: 'report_deposit_payment' as const,
+     message: 'No pudimos registrar tu aviso de pago. Volvé a intentar en unos segundos.'
+    });
+   }
+   const row = readRecord(data, 'depositPaymentNotice');
+   const paymentNoticeAt = readText(row.payment_notice_at, 'depositPaymentNotice.paymentNoticeAt');
+   const alreadyRecorded = readBoolean(row.already_recorded, 'depositPaymentNotice.alreadyRecorded');
+   return {
+    success: true,
+    action: 'report_deposit_payment' as const,
+    paymentNoticeAt,
+    alreadyRecorded,
+    message: alreadyRecorded
+     ? 'Ya teníamos registrado tu aviso de transferencia. El consultorio va a verificar tu pago.'
+     : 'Avisamos al consultorio que transferiste la seña. Va a verificar tu pago y confirmar el turno.'
+   };
+  } catch (err) {
+   logServerFailure('Error inesperado registrando aviso de pago de seña', err);
+   return fail(503, {
+    action: 'report_deposit_payment' as const,
+    message: 'No pudimos registrar tu aviso de pago. Volvé a intentar en unos segundos.'
+   });
+  }
+ },
  // Old forms cannot create a manual request or bypass revision/confirmation.
  request_reschedule: async () => fail(409,{ message: 'Revisá el turno y elegí un horario desde «Reprogramar turno».' }),
 	remove_google_calendar: async ({ params, fetch }) => {

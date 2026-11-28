@@ -38,7 +38,7 @@
    : null
  );
  const informedReschedulePolicy = $derived(depositTerms === 'none' ? null : data.reschedulePolicy ?? null);
- const reschedulePolicyNotice = $derived(informedReschedulePolicy ? bookingReschedulePolicyNotice(informedReschedulePolicy) : null);
+ const reschedulePolicyNotice = $derived(informedReschedulePolicy ? bookingReschedulePolicyNotice(informedReschedulePolicy, data.depositCreditCutoffHours) : null);
  const business = $derived(data.state.business);
  const values = $derived({ ...form?.values, ...localDraft });
  const emailSuggestion = $derived(suggestEmailCorrection(String(values.patient_email ?? '')));
