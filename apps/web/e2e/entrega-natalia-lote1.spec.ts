@@ -157,15 +157,24 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 
 		// 1. P6 y P9 en pantallas de configuración + API de contacto público
 		await loginWithSharedSession(page, { email: f.email, password: f.password });
-		await page.goto(origin + '/odonto/configuracion/reserva-online');
+		await page.goto(origin + '/odonto/configuracion/reserva-online', { waitUntil: 'networkidle' });
 		await expect(page.locator('select[name="max_booking_days_ahead"] option[value="365"]')).toHaveText('Hasta un año');
 		await page.locator('select[name="max_booking_days_ahead"]').selectOption('365', { force: true });
-		await page.getByRole('button', { name: 'Guardar reglas' }).click();
+		await expect(page.locator('select[name="max_booking_days_ahead"]')).toHaveValue('365');
+		await Promise.all([
+			page.waitForResponse((res) => res.request().method() === 'POST' && res.url().includes('/odonto/configuracion/reserva-online')),
+			page.getByRole('button', { name: 'Guardar reglas' }).click()
+		]);
 		await expect(page.getByText('Reglas de reserva guardadas.')).toBeVisible();
 
-		await page.goto(origin + '/odonto/configuracion/negocio');
-		await page.locator('input[name="email"]').fill('contacto-lote1@consultorio.test');
-		await page.getByRole('button', { name: 'Guardar' }).click();
+		await page.goto(origin + '/odonto/configuracion/negocio', { waitUntil: 'networkidle' });
+		const contactEmailInput = page.locator('input[name="email"]');
+		await contactEmailInput.fill('contacto-lote1@consultorio.test');
+		await expect(contactEmailInput).toHaveValue('contacto-lote1@consultorio.test');
+		await Promise.all([
+			page.waitForResponse((res) => res.request().method() === 'POST' && res.url().includes('/odonto/configuracion/negocio')),
+			page.getByRole('button', { name: 'Guardar' }).click()
+		]);
 		await expect(page.getByText('Consultorio guardado.')).toBeVisible();
 
 		const contactOnRes = await page.request.get(`${origin}/api/public/contacto/${integrationKey}`, {
