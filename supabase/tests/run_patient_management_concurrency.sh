@@ -158,6 +158,8 @@ SQL
 race() {
  local name=$1 first=$2 second=$3 expected_error=${4:-} after_wait=${5:-}
  echo "Patient management race: $name" >&2
+ : >"$task_directory/holder.log"
+ : >"$task_directory/other.log"
  "${psql_command[@]}" >"$task_directory/holder.log" 2>&1 <<SQL &
 set statement_timeout='12s';
 begin;
