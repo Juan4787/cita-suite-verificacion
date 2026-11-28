@@ -123,13 +123,22 @@ test('@candidate-behavior staff delivery: explicit preparation, contact revocati
   await page.goto('/odonto/recordatorios');
   const reminderForm = page.locator(`form[action*="/recordatorios/abrir/${reminderId}"]`);
   const reminderRow = reminderForm.locator('xpath=ancestor::div[contains(@class,"ux-soft-card")][1]');
+  const revealReminder = async () => {
+   const details = page.locator('details.ux-card');
+   if ((await details.count()) > 0 && !(await reminderRow.isVisible())) {
+    await details.locator('summary').click();
+   }
+  };
   const review = await reminderForm.locator('[name="expected_revision"]').inputValue();
+  await revealReminder();
   await open(reminderForm.getByRole('button', { name: 'Enviar WhatsApp', exact: true }));
   expect(f.sql(`select (whatsapp_reminder_opened_at is not null and whatsapp_reminder_opened_by='${owner}')::text from public.appointments where id='${reminderId}';`)).toBe('true');
   await page.reload();
+  await revealReminder();
   const marked = page.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).pathname === '/odonto/recordatorios');
   await reminderRow.getByRole('button', { name: 'Marcar como enviado', exact: true }).click();
   expect((await marked).status()).toBe(200);
+  await revealReminder();
   await expect(reminderRow.getByText(/^Enviado /)).toBeVisible();
   expect(f.sql(`select (whatsapp_reminder_marked_sent_at is not null and whatsapp_reminder_marked_sent_by='${owner}')::text from public.appointments where id='${reminderId}';`)).toBe('true');
   const afterMark = counts();
