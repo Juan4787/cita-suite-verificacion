@@ -34,7 +34,7 @@ create function pg_temp.book_turn(
   p_svc uuid,
   p_prof uuid,
   p_starts timestamptz,
-  p_source text default 'public_booking',
+  p_source text default 'manual',
   p_ack_terms boolean default true
 ) returns uuid language plpgsql as $$
 declare v_id uuid := gen_random_uuid();
@@ -447,7 +447,7 @@ select extensions.pass('15. P1: paciente con marca P3 recibe deposit_expiring_re
 do $$
 declare v_biz uuid := pg_temp.l2b_id('biz'); v_a uuid; v_tok text; v_due timestamptz;
 begin
-  v_a := pg_temp.book_turn(v_biz, pg_temp.l2b_id('pat1'), pg_temp.l2b_id('service'), pg_temp.l2b_id('prof1'), clock_timestamp() + interval '25 days');
+  v_a := pg_temp.book_turn(v_biz, pg_temp.l2b_id('pat1'), pg_temp.l2b_id('service'), pg_temp.l2b_id('prof1'), clock_timestamp() + interval '29 days');
   select confirmation_token into v_tok from public.appointments where id = v_a;
   select due_at into v_due from public.appointment_deposits where appointment_id = v_a;
   perform private.plan_appointment_email_work(v_due - interval '24 hours', 50);
@@ -673,7 +673,7 @@ select extensions.pass('28. P4: cancelar a 47h 59m pierde la seña, crea 0 créd
 do $$
 declare v_biz uuid := pg_temp.l2b_id('biz'); v_a uuid; v_rev text;
 begin
-  v_a := pg_temp.book_turn(v_biz, pg_temp.l2b_id('pat1'), pg_temp.l2b_id('service'), pg_temp.l2b_id('prof1'), clock_timestamp() + interval '20 hours');
+  v_a := pg_temp.book_turn(v_biz, pg_temp.l2b_id('pat1'), pg_temp.l2b_id('service'), pg_temp.l2b_id('prof1'), clock_timestamp() + interval '16 hours');
   perform pg_temp.as_role(pg_temp.l2b_id('owner'), format('select (public.set_appointment_deposit(%L,%L,''paid'',1,null)).status', v_biz, v_a));
   v_rev := private.appointment_semantic_revision(v_biz, v_a);
   perform public.apply_staff_appointment_management(v_biz, pg_temp.l2b_id('owner'), v_a, gen_random_uuid(), v_rev, 'cancel', null, false, null, 'Canceló tarde', false);
@@ -753,7 +753,7 @@ declare
   v_avail_rev bigint;
   v_target timestamptz;
 begin
-  v_a := pg_temp.book_turn(v_biz, pg_temp.l2b_id('pat1'), pg_temp.l2b_id('service'), pg_temp.l2b_id('prof1'), clock_timestamp() + interval '5 days');
+  v_a := pg_temp.book_turn(v_biz, pg_temp.l2b_id('pat1'), pg_temp.l2b_id('service'), pg_temp.l2b_id('prof1'), clock_timestamp() + interval '5 days', 'public_booking', true);
   select confirmation_token into v_tok from public.appointments where id = v_a;
   perform pg_temp.as_role(pg_temp.l2b_id('owner'), format('select (public.set_appointment_deposit(%L,%L,''paid'',1,null)).status', v_biz, v_a));
   -- El consultorio sube la seña vigente a $ 50.000
@@ -784,7 +784,7 @@ select extensions.pass('33. P4 decisión #2: reprogramación del paciente >= 48h
 do $$
 declare v_biz uuid := pg_temp.l2b_id('biz'); v_a uuid; v_tok text; v_rev text; v_terms jsonb; v_avail_rev bigint; v_target timestamptz;
 begin
-  v_a := pg_temp.book_turn(v_biz, pg_temp.l2b_id('pat1'), pg_temp.l2b_id('service'), pg_temp.l2b_id('prof1'), clock_timestamp() + interval '47 hours 59 minutes');
+  v_a := pg_temp.book_turn(v_biz, pg_temp.l2b_id('pat1'), pg_temp.l2b_id('service'), pg_temp.l2b_id('prof1'), clock_timestamp() + interval '47 hours 59 minutes', 'public_booking', true);
   select confirmation_token into v_tok from public.appointments where id = v_a;
   perform pg_temp.as_role(pg_temp.l2b_id('owner'), format('select (public.set_appointment_deposit(%L,%L,''paid'',1,null)).status', v_biz, v_a));
   v_target := clock_timestamp() + interval '8 days';
