@@ -207,7 +207,7 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 		const chosenSlot = new URL(firstSlotHref!, origin).searchParams.get('slot')!;
 
 		await page.goto(`${origin}/reservar/${prevBiz.slug}?${baseQuery}&date=${day366}`);
-		await expect(page.getByText('No hay horarios disponibles para los próximos días.')).toBeVisible();
+		await expect(page.getByText('No hay horarios para ese día. Probá con otro día.')).toBeVisible();
 
 		// 4. P10: interacción real, preservación de datos, error sin correo, teclado, tamaño, contraste y área táctil
 		const citaSuiteStep5 = `${origin}/reservar/${prevBiz.slug}?${baseQuery}&date=${day365}&slot=${encodeURIComponent(chosenSlot)}&modality=video`;
@@ -215,7 +215,7 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 
 		await page.setViewportSize({ width: 390, height: 850 });
 		await chooseTheme(page, 'light');
-		await page.goto(citaSuiteStep5);
+		await page.goto(citaSuiteStep5, { waitUntil: 'networkidle' });
 
 		const trigger = page.getByRole('button', { name: '¿No tenés correo?' });
 		await expect(trigger).toBeVisible();
@@ -249,9 +249,10 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 		const waLink = page.getByRole('link', { name: 'Pedir turno por WhatsApp' });
 		await expect(waLink).toBeVisible();
 		await expect(waLink).toHaveAttribute('target', '_blank');
-		const waHref = decodeURIComponent((await waLink.getAttribute('href')) ?? '');
-		expect(waHref).toContain('Marta Gómez');
-		expect(waHref).toContain('Virtual');
+		const waUrl = new URL((await waLink.getAttribute('href')) ?? 'https://invalid.test');
+		const waText = waUrl.searchParams.get('text') ?? '';
+		expect(waText).toContain('Marta Gómez');
+		expect(waText).toContain('Virtual');
 		await expect(page.locator('#patient-no-email-panel')).toContainText(/correo de un familiar/i);
 		await expect(page.locator('#patient-no-email-panel')).toContainText(/no queda reservado hasta que el consultorio/i);
 
@@ -275,19 +276,21 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 				for (const width of widths) {
 					await page.setViewportSize({ width, height: 850 });
 					const targetUrl = surface === 'cita-suite' ? citaSuiteStep5 : `${nataliaStep5}&color_mode=${theme}`;
-					await page.goto(targetUrl);
+					await page.goto(targetUrl, { waitUntil: 'networkidle' });
 					if (surface === 'cita-suite') await expectRenderedTheme(page, theme);
 					const btn = page.getByRole('button', { name: '¿No tenés correo?' });
 					await btn.click();
 					await expect(page.locator('#patient-no-email-panel')).toBeVisible();
 					expect((await contrastViolations(page)).violations).toEqual([]);
 					issues.push(...(await layoutIssues(page, 'main a:visible, main button:visible', 'main')));
-					await alignTaskForCapture(btn);
-					await page.screenshot({
-						path: info.outputPath(`p10-${surface}-${theme}-${width}.jpg`),
-						type: 'jpeg',
-						quality: 55
-					});
+					if (width === 320 || width === 390 || width === 768 || width === 1280) {
+						await alignTaskForCapture(btn);
+						await page.screenshot({
+							path: info.outputPath(`p10-${surface}-${theme}-${width}.jpg`),
+							type: 'jpeg',
+							quality: 60
+						});
+					}
 				}
 			}
 		}
