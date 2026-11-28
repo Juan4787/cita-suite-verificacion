@@ -102,8 +102,13 @@ begin
   where business_id in (v_biz, v_other_biz);
 
   update private.appointment_management_runtime
-  set reschedule_enabled = true, email_producer_enabled = true, email_producer_enabled_at = clock_timestamp() - interval '1 hour',
+  set reschedule_enabled = true, email_producer_enabled = true,
       email_daily_limit = 500, email_daily_reserve = 10, email_paused_until = null
+  where singleton;
+  -- El trigger stamp_email_producer_activation sella email_producer_enabled_at con clock_timestamp() al activar;
+  -- fijarlo luego en una segunda sentencia permite probar turnos creados en la misma transacción.
+  update private.appointment_management_runtime
+  set email_producer_enabled_at = now() - interval '1 hour'
   where singleton;
 
   update private.deposit_automation set enabled = true where singleton;
@@ -275,12 +280,12 @@ begin
   if not exists(
     select 1 from private.appointment_email_deliveries
     where appointment_id = v_a and purpose = 'deposit_expiring_reminder'
-      and state = 'discarded' and discard_reason = 'deposit_reminder_disabled'
+      and state = 'discarded' and discard_reason = 'expiring_reminder_disabled'
   ) then
     raise exception 'P1_NOT_DISCARDED_WHEN_DISABLED';
   end if;
 end $$;
-select extensions.pass('7. P1: si el consultorio desactiva el aviso antes del envío, se descarta con deposit_reminder_disabled');
+select extensions.pass('7. P1: si el consultorio desactiva el aviso antes del envío, se descarta con expiring_reminder_disabled');
 
 -- 8. Configuración leída al momento de enviar: si pasa de 48h a 24h antes de salir, espera a 24h y sale una sola vez
 do $$
@@ -451,7 +456,7 @@ begin
   if not exists(
     select 1 from private.appointment_email_deliveries
     where appointment_id = v_a and purpose = 'deposit_expiring_reminder'
-      and state = 'discarded' and discard_reason = 'payment_notice_registered'
+      and state = 'discarded' and discard_reason = 'payment_notice_recorded'
   ) then raise exception 'P1_NOTICE_NOT_DISCARDED'; end if;
 end $$;
 select extensions.pass('16. P1: si el paciente ya registró «Ya transferí», deposit_expiring_reminder se descarta');

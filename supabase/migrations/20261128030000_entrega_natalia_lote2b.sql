@@ -740,11 +740,11 @@ begin
     v_actual_paid := case when new.status = 'paid' then coalesce(new.applied_credit_amount, new.amount) else null end;
     insert into public.appointment_deposit_requirements(
       business_id, appointment_id, patient_id, status, amount, base_amount, actual_paid_amount,
-      allocation, terms_snapshot, projection_revision, recorded_by, recorded_at
+      allocation, terms_snapshot, projection_revision, recorded_by, recorded_at, created_at
     )
     values(
       new.business_id, new.appointment_id, a.patient_id, new.status, new.amount, new.amount, v_actual_paid, v_allocation, v_terms,
-      new.revision, new.recorded_by, new.recorded_at
+      new.revision, new.recorded_by, new.recorded_at, clock_timestamp()
     ) returning * into r;
     insert into public.appointment_deposit_events(business_id, appointment_id, requirement_id, event_type, metadata)
     values(r.business_id, r.appointment_id, r.id, 'requirement_created', jsonb_build_object('status', new.status));
@@ -2053,7 +2053,29 @@ begin
       v_ends_at := p_starts_at + make_interval(mins => s.duration_minutes);
       v_terms := private.appointment_reschedule_financial_terms(v_business, a.id, p_starts_at, v_now);
       if v_terms->>'unavailable_reason' is not null or v_terms->>'kind' = 'unavailable' then raise exception 'APPOINTMENT_RESCHEDULE_UNAVAILABLE'; end if;
-      if v_terms is distinct from p_financial_terms then raise exception 'APPOINTMENT_FINANCIAL_TERMS_CHANGED'; end if;
+      if p_financial_terms is null
+        or (select count(*) from jsonb_object_keys(p_financial_terms)) <> 23
+        or not (p_financial_terms ? 'due_at')
+        or not (p_financial_terms ? 'request_from')
+        or (v_terms - 'due_at' - 'request_from') is distinct from (p_financial_terms - 'due_at' - 'request_from') then
+        raise exception 'APPOINTMENT_FINANCIAL_TERMS_CHANGED';
+      end if;
+      if v_terms->'due_at' is distinct from p_financial_terms->'due_at'
+        or v_terms->'request_from' is distinct from p_financial_terms->'request_from' then
+        begin
+          if dp.late_booking_payment_hours is null
+            or v_terms->>'due_at' is null or p_financial_terms->>'due_at' is null
+            or v_terms->>'request_from' is null or p_financial_terms->>'request_from' is null
+            or (v_terms->>'due_at')::timestamptz < (p_financial_terms->>'due_at')::timestamptz
+            or (v_terms->>'due_at')::timestamptz > (p_financial_terms->>'due_at')::timestamptz + interval '15 minutes'
+            or (v_terms->>'request_from')::timestamptz < (p_financial_terms->>'request_from')::timestamptz
+            or (v_terms->>'request_from')::timestamptz > (p_financial_terms->>'request_from')::timestamptz + interval '15 minutes' then
+            raise exception 'APPOINTMENT_FINANCIAL_TERMS_CHANGED';
+          end if;
+        exception when invalid_text_representation or datetime_field_overflow then
+          raise exception 'APPOINTMENT_FINANCIAL_TERMS_CHANGED';
+        end;
+      end if;
       select * into d from public.appointment_deposits where business_id = v_business and appointment_id = a.id for update;
       v_has_projection := found;
       select * into r from public.appointment_deposit_requirements where business_id = v_business and appointment_id = a.id and is_current for update;
@@ -2131,8 +2153,8 @@ begin
           'late_booking_payment_hours', v_late_hours,
           'waived_reason', null
         );
-        insert into public.appointment_deposit_requirements(business_id, appointment_id, patient_id, status, amount, base_amount, allocation, terms_snapshot, projection_revision)
-        values(v_business, a.id, a.patient_id, 'pending', (v_terms->>'amount')::bigint, (v_terms->>'base_amount')::bigint, 'none', v_snapshot, v_projection_revision) returning id into v_requirement;
+        insert into public.appointment_deposit_requirements(business_id, appointment_id, patient_id, status, amount, base_amount, allocation, terms_snapshot, projection_revision, created_at)
+        values(v_business, a.id, a.patient_id, 'pending', (v_terms->>'amount')::bigint, (v_terms->>'base_amount')::bigint, 'none', v_snapshot, v_projection_revision, v_now) returning id into v_requirement;
         insert into public.appointment_deposit_events(business_id, appointment_id, requirement_id, event_type, metadata)
         values(v_business, a.id, v_requirement, 'requirement_created', jsonb_build_object('origin', 'patient', 'operation_id', p_operation_id));
         insert into public.appointment_deposits(
@@ -2402,7 +2424,7 @@ begin
             from public.appointment_deposit_requirements where business_id = p_business_id and appointment_id = a.id;
 
             insert into public.appointment_deposit_requirements(
-              business_id, appointment_id, patient_id, status, amount, base_amount, allocation, terms_snapshot, projection_revision
+              business_id, appointment_id, patient_id, status, amount, base_amount, allocation, terms_snapshot, projection_revision, created_at
             )
             values(
               p_business_id, a.id, a.patient_id, 'pending', (v_new_terms->>'amount')::bigint, (v_new_terms->>'amount')::bigint, 'none',
@@ -2419,7 +2441,7 @@ begin
                 'auto_cancel', v_eff_auto_cancel,
                 'waived_reason', null
               ),
-              v_proj_rev
+              v_proj_rev, v_now
             ) returning id into v_new_req_id;
 
             insert into public.appointment_deposit_events(business_id, appointment_id, requirement_id, event_type, actor_id, metadata)
@@ -2901,14 +2923,14 @@ begin
         perform private.discard_appointment_email(d.id, 'deposit_not_pending'); v_discarded := v_discarded + 1; continue;
       end if;
       if dep.patient_payment_notice_at is not null then
-        perform private.discard_appointment_email(d.id, 'payment_notice_registered'); v_discarded := v_discarded + 1; continue;
+        perform private.discard_appointment_email(d.id, 'payment_notice_recorded'); v_discarded := v_discarded + 1; continue;
       end if;
     end if;
 
     if d.purpose = 'deposit_expiring_reminder' then
       -- Configuración leída al momento de enviar (P1).
       if dp.business_id is null or dp.expiring_reminder_hours is null then
-        perform private.discard_appointment_email(d.id, 'deposit_reminder_disabled'); v_discarded := v_discarded + 1; continue;
+        perform private.discard_appointment_email(d.id, 'expiring_reminder_disabled'); v_discarded := v_discarded + 1; continue;
       end if;
       if dep.due_at <= v_now then
         perform private.discard_appointment_email(d.id, 'expired'); v_discarded := v_discarded + 1; continue;
