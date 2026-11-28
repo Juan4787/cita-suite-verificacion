@@ -374,9 +374,10 @@ textarea.patient-control {
 @media (max-width: 480px) {
   .patient-no-email-panel,
   .patient-no-email-error {
-    padding: 0.85rem;
+    padding: 0.85rem 0.7rem;
   }
   .patient-no-email-action {
     font-size: 0.875rem;
+    padding-inline: 0.55rem;
   }
 }

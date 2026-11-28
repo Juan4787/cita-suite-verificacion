@@ -275,11 +275,11 @@
 					{#if (modality !== 'video' && business?.address) || business?.phone || business?.email}
 						<p class="mt-2 text-sm text-fg-55 bk-muted">
 							{modality !== 'video' ? business.address ?? '' : ''}{modality !== 'video' && business.address && business.phone ? ' ·\u00a0' : ''}{business.phone ?? ''}
-							{#if business.email}
-								{(modality !== 'video' && business.address) || business.phone ? ' ·\u00a0' : ''}<a href={`mailto:${business.email}`} class="font-semibold text-fg-80 underline bk-muted">{business.email}</a>
-							{/if}
 							{#if modality !== 'video' && data.mapsLink && business.address}
 								·&nbsp;<a href={data.mapsLink} target="_blank" rel="noreferrer" class="font-bold text-fg-80 underline bk-muted">Cómo llegar</a>
+							{/if}
+							{#if business.email}
+								{#if (modality !== 'video' && business.address) || business.phone}<span class="hidden sm:inline" aria-hidden="true"> ·&nbsp;</span>{/if}<a href={`mailto:${business.email}`} class="mt-1 block break-all font-semibold text-fg-80 underline bk-muted sm:mt-0 sm:inline">{business.email}</a>
 							{/if}
 						</p>
 					{/if}

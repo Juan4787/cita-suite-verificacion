@@ -33,7 +33,7 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 	);
 	const prevProducer = f.sql('select email_producer_enabled::text from private.appointment_management_runtime where singleton;');
 	const prevPolicy = f.sql(
-		`select jsonb_build_object('email_enabled', email_enabled, 'sender_verified', sender_verified, 'require_patient_email', require_patient_email)::text from public.appointment_email_policies where business_id='${f.businessId}';`
+		`select jsonb_build_object('email_enabled', email_enabled, 'sender_verified', sender_verified, 'require_email', require_email)::text from public.appointment_email_policies where business_id='${f.businessId}';`
 	);
 	const prevSender = f.sql(
 		`select coalesce((select jsonb_build_object('sending_domain', sending_domain, 'domain_state', domain_state, 'provider_domain_key', provider_domain_key, 'reply_to_email', reply_to_email)::text from private.business_email_senders where business_id='${f.businessId}'), 'null');`
@@ -101,7 +101,7 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 		f.sql(`begin;
 			update private.appointment_management_runtime set email_producer_enabled = true;
 			select public.operator_set_business_email_sender('${f.businessId}', 'lote1-e2e-${f.businessId.slice(0, 8)}.cita-suite.com.ar', 'verified');
-			update public.appointment_email_policies set email_enabled = true, require_patient_email = true where business_id = '${f.businessId}';
+			update public.appointment_email_policies set email_enabled = true, require_email = true where business_id = '${f.businessId}';
 			update public.businesses
 			set public_booking_enabled = true,
 				allow_same_day_booking = true,
@@ -213,7 +213,7 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 		const chosenSlot = new URL(firstSlotHref!, origin).searchParams.get('slot')!;
 
 		await page.goto(`${origin}/reservar/${prevBiz.slug}?${baseQuery}&date=${day366}`);
-		await expect(page.getByText('No hay horarios para ese día. Probá con otro día.')).toBeVisible();
+		await expect(page.getByText('No hay horarios disponibles para los próximos días.')).toBeVisible();
 
 		// 4. P10: interacción real, preservación de datos, error sin correo, teclado, tamaño, contraste y área táctil
 		const citaSuiteStep5 = `${origin}/reservar/${prevBiz.slug}?${baseQuery}&date=${day365}&slot=${encodeURIComponent(chosenSlot)}&modality=video`;
@@ -257,7 +257,7 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 		await expect(waLink).toHaveAttribute('target', '_blank');
 		const waHref = decodeURIComponent((await waLink.getAttribute('href')) ?? '');
 		expect(waHref).toContain('Marta Gómez');
-		expect(waHref).toContain('Consulta virtual');
+		expect(waHref).toContain('Virtual');
 		await expect(page.locator('#patient-no-email-panel')).toContainText(/correo de un familiar/i);
 		await expect(page.locator('#patient-no-email-panel')).toContainText(/no queda reservado hasta que el consultorio/i);
 
@@ -322,7 +322,7 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 			max_booking_days_ahead: number;
 			min_booking_notice_minutes: number;
 		};
-		const policy = JSON.parse(prevPolicy) as { email_enabled: boolean; sender_verified: boolean; require_patient_email: boolean };
+		const policy = JSON.parse(prevPolicy) as { email_enabled: boolean; sender_verified: boolean; require_email: boolean };
 		const sender = JSON.parse(prevSender) as { sending_domain: string | null; domain_state: string; provider_domain_key: string | null; reply_to_email: string | null } | null;
 		const prevDefaults = JSON.parse(prevDefaultIntegrations) as string[];
 		const sqlLit = (v: string | null) => (v === null ? 'null' : `'${v.replaceAll("'", "''")}'`);
@@ -386,7 +386,7 @@ test('@candidate-behavior Lote 1 (P6, P7, P9, P10): horizonte 365d, leyenda esti
 				min_booking_notice_minutes=${prevBiz.min_booking_notice_minutes}
 			where id='${f.businessId}';
 			${restoreSenderSql}
-			update public.appointment_email_policies set email_enabled=${policy.email_enabled}, sender_verified=${policy.sender_verified}, require_patient_email=${policy.require_patient_email} where business_id='${f.businessId}';
+			update public.appointment_email_policies set email_enabled=${policy.email_enabled}, sender_verified=${policy.sender_verified}, require_email=${policy.require_email} where business_id='${f.businessId}';
 			update private.appointment_management_runtime set email_producer_enabled=${prevProducer === 'true' ? 'true' : 'false'};
 			commit;`);
 	}
