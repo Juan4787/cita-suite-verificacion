@@ -273,30 +273,34 @@
 					<div class="grid gap-3 md:grid-cols-2">
 						<div class="space-y-1">
 							<p class="text-xs font-semibold text-fg-n300">Teléfono</p>
-							<div class="flex items-center gap-2">
-								<p class={`min-w-0 flex-1 break-words text-supporting font-semibold ${patient.phone ? 'text-fg' : 'text-copy-subtle'}`}>
+							<div class="flex flex-wrap items-center justify-between gap-2">
+								<p class={`min-w-0 max-w-full break-words text-supporting font-semibold ${patient.phone ? 'text-fg' : 'text-copy-subtle'}`}>
 									{patient.phone ?? 'Sin registrar'}
 								</p>
-								{#if patient.phone}
-									<button disabled={!client.ready}
-										type="button"
-										class="grid h-8 w-8 place-items-center rounded-full border text-xs border-line-strong text-fg-n200"
-										onclick={() => copyToClipboard(patient.phone)}
-										aria-label="Copiar teléfono" data-tip="Copiar teléfono"
-									>
-										{@render copyIcon()}
-									</button>
-								{/if}
-								{#if whatsappHref}
-									<a
-										href={whatsappHref}
-										target="_blank"
-										rel="noreferrer"
-										class="grid h-8 w-8 shrink-0 place-items-center rounded-full border text-xs border-line-strong text-fg-n200"
-										aria-label="Abrir WhatsApp" data-tip="Abrir WhatsApp"
-									>
-										{@render chatIcon()}
-									</a>
+								{#if patient.phone || whatsappHref}
+									<div class="flex shrink-0 items-center gap-2">
+										{#if patient.phone}
+											<button disabled={!client.ready}
+												type="button"
+												class="grid h-8 w-8 shrink-0 place-items-center rounded-full border text-xs border-line-strong text-fg-n200"
+												onclick={() => copyToClipboard(patient.phone)}
+												aria-label="Copiar teléfono" data-tip="Copiar teléfono"
+											>
+												{@render copyIcon()}
+											</button>
+										{/if}
+										{#if whatsappHref}
+											<a
+												href={whatsappHref}
+												target="_blank"
+												rel="noreferrer"
+												class="grid h-8 w-8 shrink-0 place-items-center rounded-full border text-xs border-line-strong text-fg-n200"
+												aria-label="Abrir WhatsApp" data-tip="Abrir WhatsApp"
+											>
+												{@render chatIcon()}
+											</a>
+										{/if}
+									</div>
 								{/if}
 							</div>
 						</div>
