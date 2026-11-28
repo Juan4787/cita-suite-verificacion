@@ -9,7 +9,11 @@ export const loadPublicBookingPolicy = async (supabase: CitaSupabaseClient, busi
  const policy = await loadAppointmentEmailPolicy(supabase, businessId);
  const reschedulePolicy: BookingReschedulePolicy = { schema_version: 1, policy_revision: policy.revision,
   require_deposit_on_reschedule: policy.require_deposit_on_reschedule, previous_deposit_disposition: policy.previous_deposit_disposition };
- return { requireEmail: policy.require_email && policy.sender_verified, reschedulePolicy };
+ return {
+  requireEmail: policy.require_email && policy.sender_verified,
+  reschedulePolicy,
+  selfManagementCutoffHours: policy.self_management_cutoff_hours
+ };
 };
 
 /** Loaded only when opening a staff booking, never with the agenda's lists. */
@@ -36,9 +40,15 @@ const revision = (value: unknown) => {
  if (!Number.isSafeInteger(result) || result < 1) throw new Error('EMAIL_POLICY_INVALID');
  return result;
 };
+const readCutoffHours = (value: unknown): number | null => {
+ if (value === null || value === undefined) return null;
+ const parsed = readFiniteNumber(value, 'emailPolicy.self_management_cutoff_hours');
+ if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 720) throw new Error('EMAIL_POLICY_INVALID');
+ return parsed;
+};
 export const loadAppointmentEmailPolicy = async (supabase: CitaSupabaseClient, businessId: string): Promise<AppointmentEmailPolicy> => {
  const { data, error } = await supabase.from('appointment_email_policies')
-  .select('email_enabled, require_email, show_cancel, show_reschedule, require_deposit_on_reschedule, previous_deposit_disposition, revision, sender_verified')
+  .select('email_enabled, require_email, show_cancel, show_reschedule, require_deposit_on_reschedule, previous_deposit_disposition, self_management_cutoff_hours, revision, sender_verified')
   .eq('business_id', businessId).single();
  if (error) throw error;
  const row = readRecord(data, 'emailPolicy');
@@ -49,12 +59,13 @@ export const loadAppointmentEmailPolicy = async (supabase: CitaSupabaseClient, b
   show_reschedule: readBoolean(row.show_reschedule, 'emailPolicy.show_reschedule'),
   require_deposit_on_reschedule: readBoolean(row.require_deposit_on_reschedule, 'emailPolicy.require_deposit_on_reschedule'),
   previous_deposit_disposition: readChoice(row.previous_deposit_disposition, ['credit', 'forfeit'] as const, 'emailPolicy.previous_deposit_disposition'),
+  self_management_cutoff_hours: readCutoffHours(row.self_management_cutoff_hours),
   revision: revision(row.revision), sender_verified: readBoolean(row.sender_verified, 'emailPolicy.sender_verified')
  };
 };
 
 export const parseAppointmentEmailPolicyForm = (form: FormData): { settings: AppointmentEmailPreferences; expectedRevision: number } => {
- for (const key of [...EMAIL_POLICY_BOOLEAN_KEYS, 'previous_deposit_disposition', 'expected_revision']) {
+ for (const key of [...EMAIL_POLICY_BOOLEAN_KEYS, 'previous_deposit_disposition', 'self_management_cutoff_hours', 'expected_revision']) {
   if (form.getAll(key).length > 1) throw new Error('EMAIL_POLICY_INVALID');
  }
  const boolean = (key: (typeof EMAIL_POLICY_BOOLEAN_KEYS)[number]) => {
@@ -64,10 +75,23 @@ export const parseAppointmentEmailPolicyForm = (form: FormData): { settings: App
  };
  const rawRevision = form.get('expected_revision');
  if (typeof rawRevision !== 'string' || !/^[1-9]\d*$/.test(rawRevision)) throw new Error('EMAIL_POLICY_INVALID');
+ const rawCutoff = form.get('self_management_cutoff_hours');
+ let selfManagementCutoffHours: number | null = null;
+ if (rawCutoff !== null) {
+  if (typeof rawCutoff !== 'string') throw new Error('EMAIL_POLICY_INVALID');
+  const trimmed = rawCutoff.trim();
+  if (trimmed !== '') {
+   if (!/^[1-9]\d{0,2}$/.test(trimmed)) throw new Error('EMAIL_POLICY_INVALID');
+   const parsed = Number(trimmed);
+   if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 720) throw new Error('EMAIL_POLICY_INVALID');
+   selfManagementCutoffHours = parsed;
+  }
+ }
  return { expectedRevision: revision(Number(rawRevision)), settings: {
   email_enabled: boolean('email_enabled'), require_email: boolean('require_email'), show_cancel: boolean('show_cancel'),
   show_reschedule: boolean('show_reschedule'), require_deposit_on_reschedule: boolean('require_deposit_on_reschedule'),
-  previous_deposit_disposition: readChoice(form.get('previous_deposit_disposition'), ['credit', 'forfeit'] as const, 'emailPolicy.previous_deposit_disposition')
+  previous_deposit_disposition: readChoice(form.get('previous_deposit_disposition'), ['credit', 'forfeit'] as const, 'emailPolicy.previous_deposit_disposition'),
+  self_management_cutoff_hours: selfManagementCutoffHours
  } };
 };
 

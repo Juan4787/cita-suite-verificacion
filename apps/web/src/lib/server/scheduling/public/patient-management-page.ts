@@ -199,8 +199,23 @@ const load = async (event: RequestEvent) => {
 				logServerFailure('Error resolviendo dónde volver a reservar', rebookError);
 			}
 		}
+		const whatsAppNotices = appointment
+			? buildTurnWhatsAppNotices(appointment, { created })
+			: { depositWhatsApp: null, practiceWhatsApp: null };
+		const management = screen?.panel
+			? {
+					...screen.panel,
+					practiceWhatsApp: whatsAppNotices.practiceWhatsApp
+						? {
+								whatsappUrl: whatsAppNotices.practiceWhatsApp.whatsappUrl,
+								whatsappWebUrl: whatsAppNotices.practiceWhatsApp.whatsappWebUrl
+							}
+						: null,
+					device
+				}
+			: null;
 		return {
-   management: screen?.panel ?? null,
+   management,
 			appointment,
 			bookingInformationEnabled: bookingInformationEnabled() && screen?.view.canAddInformation === true,
    remindersEnabled,
@@ -211,7 +226,7 @@ const load = async (event: RequestEvent) => {
 			message: appointment ? (appointment.status === 'cancelled' ? 'Este turno ya fue cancelado.' : appointment.is_past ? 'Este turno ya no admite cambios online.' : appointment.status === 'confirmed' ? 'Tu turno está confirmado.' : appointment.status === 'reschedule_requested' ? 'Este turno tiene un pedido de reprogramación pendiente.' : 'Tu turno está reservado.') : 'El enlace no es válido o ya no está disponible.',
 			created,
 			informationSaved: appointment !== null && url.searchParams.get('informacion') === 'guardada',
-			...(appointment ? buildTurnWhatsAppNotices(appointment, { created }) : { depositWhatsApp: null, practiceWhatsApp: null }),
+			...whatsAppNotices,
 			rebookUrl,
 			suggestedAction: url.searchParams.get('accion') ?? '',
 			demo: false,

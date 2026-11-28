@@ -373,6 +373,41 @@
 						</div>
 					</div>
 				</div>
+
+				<div class="rounded-xl border p-4 border-line-strong bg-surface" data-patient-deposit-exemption>
+					<p class="text-caption font-bold uppercase tracking-wide text-fg-n300">Seña y cancelación automática</p>
+					<p class="mt-2 text-sm text-fg">
+						{#if patient.exempt_from_deposit_auto_cancel}
+							<strong>Activa:</strong> se le sigue pidiendo la seña, pero sus turnos no se cancelan solos si vence el plazo (quedan en «Vencidas sin cancelar: decidir»).
+						{:else}
+							Se aplica la regla general de señas del consultorio.
+						{/if}
+					</p>
+					{#if patient.exempt_from_deposit_auto_cancel_updated_at}
+						<p class="mt-1 text-xs text-fg-n300" data-exemption-audit>
+							Último cambio: {formatDateTime(patient.exempt_from_deposit_auto_cancel_updated_at, businessTimeZone)}
+							{#if patient.exempt_from_deposit_auto_cancel_updated_by_name}
+								·&nbsp;{patient.exempt_from_deposit_auto_cancel_updated_by_name}
+							{/if}
+						</p>
+					{/if}
+					{#if permissions.canManageDepositAutoCancelExemption}
+						<form method="post" action="?/set_deposit_exemption" class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+							<label class="ux-choice flex items-center gap-3 px-4 py-2.5">
+								<input
+									type="checkbox"
+									name="exempt_from_deposit_auto_cancel"
+									value="true"
+									checked={Boolean(patient.exempt_from_deposit_auto_cancel)}
+									disabled={demo}
+									class="accent-check-accent-600"
+								/>
+								<span class="text-sm font-semibold text-fg">No cancelar sus turnos por seña impaga</span>
+							</label>
+							<button type="submit" disabled={demo} class="ux-btn-secondary shrink-0">Guardar</button>
+						</form>
+					{/if}
+				</div>
 			</div>
 			{#if copyMessage}<p class="mt-3 text-sm text-fg-n200" role="status">{copyMessage}</p>{/if}
 			{#if loadingChangeEvents}

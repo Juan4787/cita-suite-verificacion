@@ -70,9 +70,25 @@
   </fieldset>
   <fieldset class="grid gap-4" disabled={saving || data.demo}>
    <legend class="ux-section-title mb-3">Botones en los correos</legend>
-   <p class="text-sm text-copy-subtle">Se muestran cuando el turno permite esa acción. El comprobante de cancelación no incluye ninguno de estos botones.</p>
+   <p class="text-sm text-copy-subtle">Se muestran cuando el turno permite esa acción y todavía está fuera del límite de autogestión. El comprobante de cancelación no incluye ninguno de estos botones.</p>
    <label class="ux-choice flex items-center gap-3 px-4 py-3"><input class="accent-check-accent-600" type="checkbox" name="show_cancel" value="true" checked={values.show_cancel} /><span>Mostrar Cancelar</span></label>
    <label class="ux-choice flex items-center gap-3 px-4 py-3"><input class="accent-check-accent-600" type="checkbox" name="show_reschedule" value="true" checked={values.show_reschedule} /><span>Mostrar Reprogramar</span></label>
+  </fieldset>
+  <fieldset class="grid gap-4" disabled={saving || data.demo}>
+   <legend class="ux-section-title mb-3">Límite para cancelar o reprogramar</legend>
+   <p class="text-sm text-copy-subtle">Definí hasta cuántas horas antes del turno el paciente puede cancelar o reprogramar por su cuenta. Confirmar asistencia y los cambios que hace el consultorio siguen disponibles siempre.</p>
+   <label class="grid gap-2">
+    <span class="ux-label">Horas antes del turno (opcional)</span>
+    <input
+     type="text"
+     inputmode="numeric"
+     name="self_management_cutoff_hours"
+     value={values.self_management_cutoff_hours ?? ''}
+     placeholder="48"
+     class="ux-input max-w-44"
+    />
+    <span class="text-xs text-copy-subtle">Entre 1 y 720&nbsp;horas. Si lo dejás vacío, el paciente puede cancelar o reprogramar hasta que empiece el turno.</span>
+   </label>
   </fieldset>
   <fieldset class="grid gap-4" disabled={saving || data.demo}>
    <legend class="ux-section-title mb-3">Seña al reprogramar</legend>

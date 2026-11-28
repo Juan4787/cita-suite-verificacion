@@ -100,4 +100,22 @@ describe('formulario de la configuración de señas', () => {
 			transferDetails: 'Alias natalia.frutos'
 		});
 	});
+
+	it('P2: valida el plazo opcional de reservas tardías (vacío = null, 1..168 válido, fuera de rango rechazado)', () => {
+		expect(parsePolicyForm(complete({ late_booking_payment_hours: '' }), services)).toMatchObject({
+			errors: {},
+			policy: { lateBookingPaymentHours: null },
+			values: { lateBookingPaymentHours: '' }
+		});
+		expect(parsePolicyForm(complete({ late_booking_payment_hours: '48' }), services)).toMatchObject({
+			errors: {},
+			policy: { lateBookingPaymentHours: 48 },
+			values: { lateBookingPaymentHours: '48' }
+		});
+		for (const bad of ['0', '169', '48,5', '-2', 'dos']) {
+			const res = parsePolicyForm(complete({ late_booking_payment_hours: bad }), services);
+			expect(res.errors.late_booking_payment_hours).toBeDefined();
+			expect(res.values.lateBookingPaymentHours).toBe(bad);
+		}
+	});
 });

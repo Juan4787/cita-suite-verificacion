@@ -29,6 +29,9 @@ export interface Patient {
 	insurance_plan?: string | null;
 	custom_fields?: Record<string, unknown> | null;
 	archived_at?: string | null;
+	exempt_from_deposit_auto_cancel?: boolean;
+	exempt_from_deposit_auto_cancel_updated_at?: string | null;
+	exempt_from_deposit_auto_cancel_updated_by_name?: string | null;
 	last_entry_at?: string | null;
 	created_at?: string | null;
 	updated_at?: string | null;

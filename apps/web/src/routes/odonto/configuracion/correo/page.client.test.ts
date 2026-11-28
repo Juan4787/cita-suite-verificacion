@@ -57,4 +57,11 @@ describe('estado del envío de correos', () => {
 		page({ needsReview: 2 });
 		expect(screen.getByText('Hay 2 correos en comprobación. Se revisa en el detalle de cada turno.')).toBeInTheDocument();
 	});
+
+	it('P5: ofrece configurar el límite de horas para cancelar o reprogramar online', () => {
+		const { container } = page({}, { self_management_cutoff_hours: 48 } as never);
+		const input = container.querySelector<HTMLInputElement>('input[name="self_management_cutoff_hours"]');
+		expect(input).not.toBeNull();
+		expect(input?.value).toBe('48');
+	});
 });

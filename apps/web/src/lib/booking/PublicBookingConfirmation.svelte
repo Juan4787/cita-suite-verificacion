@@ -9,7 +9,7 @@
  import { formatQuotedPrice, quotedPriceEstimateNotice } from './pricing';
  import { buildNoEmailWhatsAppLinks } from './no-email-assistance';
  import { buildDepositTermsNotice, DEPOSIT_TERMS_UNAVAILABLE_NOTICE } from '$lib/scheduling/deposits';
- import { bookingReschedulePolicyNotice } from '$lib/scheduling/email-policy';
+ import { bookingReschedulePolicyNotice, buildSelfManagementCutoffNotice } from '$lib/scheduling/email-policy';
  import { suggestEmailCorrection } from '$lib/booking/email-suggestion';
  import PublicBookingIntakeField from './PublicBookingIntakeField.svelte';
 
@@ -26,6 +26,17 @@
    : buildDepositTermsNotice(depositTerms, timezone, new Date())
  );
  const selectedProfessional = $derived({ id: confirmation.professionalId });
+ const selfManagementNotice = $derived(
+  selectedSlot?.starts_at
+   ? buildSelfManagementCutoffNotice({
+      startsAt: selectedSlot.starts_at,
+      cutoffHours: data.selfManagementCutoffHours ?? null,
+      timezone,
+      now: new Date(),
+      context: 'booking'
+     })
+   : null
+ );
  const informedReschedulePolicy = $derived(depositTerms === 'none' ? null : data.reschedulePolicy ?? null);
  const reschedulePolicyNotice = $derived(informedReschedulePolicy ? bookingReschedulePolicyNotice(informedReschedulePolicy) : null);
  const business = $derived(data.state.business);
@@ -298,6 +309,7 @@
 				        {priceEstimateNotice}
 				      </p>{/if}
 				    {#if depositNotice}<p class="patient-price-notice" data-deposit-notice>{depositNotice}</p>{/if}
+				    {#if selfManagementNotice}<p class="patient-price-notice" data-self-management-notice>{selfManagementNotice}</p>{/if}
 				    {#if reschedulePolicyNotice}<div class="patient-price-notice" data-reschedule-policy-notice>
 				        <p class="font-semibold">{depositTerms === 'unknown' ? 'Si este turno requiere seña y necesitás reprogramar' : 'Si necesitás reprogramar'}</p>
 				        <p class="mt-2">{reschedulePolicyNotice}</p>

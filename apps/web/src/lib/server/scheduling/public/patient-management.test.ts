@@ -179,4 +179,21 @@ describe('patient management snapshot boundary', () => {
   vi.mocked(getAvailabilitySelection).mockResolvedValue({ slots: [], configurationRevision: 4, availabilityRevision: null, durationMinutes: 45 });
   await expect(listPatientManagementSlots({} as never, parsePatientManagementView(fixture()), '2026-12-02', '2026-12-03')).rejects.toThrow();
  });
+ it('P5: traduce APPOINTMENT_SELF_MANAGEMENT_WINDOW_CLOSED y lee los metadatos de ventana del snapshot', () => {
+  const message = patientManagementErrorMessage(new Error('APPOINTMENT_SELF_MANAGEMENT_WINDOW_CLOSED'));
+  expect(message).toMatch(/límite.*cancelar o reprogramar/i);
+  expect(message).not.toContain('APPOINTMENT_');
+
+  const closedView = parsePatientManagementView({
+   ...fixture(),
+   can_cancel: false,
+   can_reschedule: false,
+   self_management_cutoff_hours: 48,
+   self_management_cutoff_at: '2026-11-29T12:00:00+00:00',
+   self_management_window_closed: true
+  });
+  expect(closedView.selfManagementCutoffHours).toBe(48);
+  expect(closedView.selfManagementCutoffAt).toBe('2026-11-29T12:00:00+00:00');
+  expect(closedView.selfManagementWindowClosed).toBe(true);
+ });
 });

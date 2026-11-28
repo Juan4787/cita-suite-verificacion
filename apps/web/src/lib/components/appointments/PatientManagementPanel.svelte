@@ -4,7 +4,10 @@
  import type { SubmitFunction } from '@sveltejs/kit';
  import { formatDateTime, formatDuration } from '$lib/utils/format';
  import { revealNotice } from '$lib/ui/reveal-notice';
+ import { describeDepositDeadline } from '$lib/scheduling/deposits';
+ import { buildSelfManagementCutoffNotice } from '$lib/scheduling/email-policy';
  import { formatDepositMoney } from '$lib/scheduling/reschedule-terms';
+ import { whatsappHrefFor } from '$lib/device';
  import type { PatientManagementPanelData, PatientManagementFeedback } from '$lib/scheduling/patient-management-page';
  let { context, feedback }: { context: PatientManagementPanelData; feedback?: PatientManagementFeedback | null } = $props();
  let busy = $state(false);
@@ -43,6 +46,50 @@
  const rescheduleUrl = $derived(`${context.url}?accion=reprogramar`);
  const slotUrl = (startsAt: string) => `${rescheduleUrl}&fecha=${encodeURIComponent(context.date)}&horario=${encodeURIComponent(startsAt)}`;
  const positive = (value: string) => BigInt(value) > 0n;
+ const cutoffClosedNotice = $derived(
+  context.selfManagementWindowClosed
+   ? buildSelfManagementCutoffNotice({
+      startsAt: context.startsAt,
+      cutoffHours: context.selfManagementCutoffHours ?? null,
+      timezone: context.timezone,
+      now: new Date(context.now),
+      context: 'window_closed',
+      hasWhatsApp: Boolean(context.practiceWhatsApp)
+     })
+   : null
+ );
+ const rescheduleTargetCutoffNotice = $derived(
+  context.selectedStart && context.selfManagementCutoffHours
+   ? buildSelfManagementCutoffNotice({
+      startsAt: context.selectedStart,
+      cutoffHours: context.selfManagementCutoffHours,
+      timezone: context.timezone,
+      now: new Date(context.now),
+      context: 'reschedule_target'
+     })
+   : null
+ );
+ const rescheduleDepositDeadline = $derived(
+  terms?.required && terms.amount && terms.due_at
+   ? describeDepositDeadline(
+      { amount: Number(terms.amount), dueAt: terms.due_at, autoCancel: terms.auto_cancel },
+      context.timezone,
+      new Date(context.now)
+     )
+   : null
+ );
+ const whatsappContactHref = $derived(
+  context.practiceWhatsApp
+   ? whatsappHrefFor(
+      context.device ?? 'unknown',
+      context.practiceWhatsApp.whatsappUrl,
+      context.practiceWhatsApp.whatsappWebUrl
+     )
+   : null
+ );
+ const practiceTelHref = $derived(
+  context.practicePhone ? `tel:${context.practicePhone.replace(/[^\d+]/g, '')}` : null
+ );
 </script>
 
 {#snippet hiddenFields(values: Record<string, string>)}
@@ -105,10 +152,13 @@
     {#if terms.required && terms.amount}
      <p class="mt-3 font-bold text-fg bk-text">{terms.kind === 'reuse_pending' ? 'La seña pendiente se conserva' : 'Nueva seña pendiente'}: {formatDepositMoney(terms.amount)}.</p>
      {#if terms.kind === 'reuse_pending'}<p class="mt-2 text-fg-65 bk-muted">No se suma otra deuda a la seña que todavía no pagaste.</p>{/if}
-     {#if terms.last_minute}<p class="mt-2 text-fg-65 bk-muted">El consultorio resolverá el plazo de pago. Este plazo no provocará una cancelación automática.</p>
-     {:else if terms.due_at}<p class="mt-2 text-fg-65 bk-muted">Plazo para transferir: {formatDateTime(terms.due_at, context.timezone)}.{terms.auto_cancel ? ' Si no se registra la seña, el turno se cancelará automáticamente.' : ''}</p>{/if}
+     {#if rescheduleDepositDeadline}
+      <p class="mt-2 text-fg-65 bk-muted">Plazo para transferir: antes del {rescheduleDepositDeadline.dueLabel}.{rescheduleDepositDeadline.autoCancelSentence ? ` ${rescheduleDepositDeadline.autoCancelSentence}` : ''}</p>
+      {#if terms.last_minute || !terms.auto_cancel}<p class="mt-2 text-fg-65 bk-muted">Este turno no se cancelará automáticamente por falta de seña; cualquier decisión la toma el consultorio.</p>{/if}
+     {:else if terms.last_minute}<p class="mt-2 text-fg-65 bk-muted">El consultorio resolverá el plazo de pago. Este plazo no provocará una cancelación automática.</p>{/if}
      <p class="mt-2 text-fg-65 bk-muted">El nuevo horario quedará reservado y pendiente de que el consultorio registre esa seña.</p>
     {:else}<p class="mt-3 text-fg-65 bk-muted">Este cambio no genera una nueva seña.</p>{/if}
+    {#if rescheduleTargetCutoffNotice}<p class="ux-alert ux-alert-warning mt-3" role="status">{rescheduleTargetCutoffNotice}</p>{/if}
     {#if terms.quote_amount === null}<p class="mt-3 text-sm text-fg-65 bk-muted">No hay un arancel registrado para calcular cuánto resta de la consulta. Podés consultarlo con el consultorio.</p>
     {:else if terms.quote_remainder !== null}<p class="mt-3 text-sm text-fg-65 bk-muted">Arancel registrado menos anticipos aplicables: {formatDepositMoney(terms.quote_remainder)}. Este cálculo sólo incluye los anticipos registrados en este turno.</p>{/if}
     <form method="POST" action="?/reschedule" class="mt-5" use:enhance={progressive}>
@@ -131,7 +181,16 @@
    {#if context.canReschedule}<a class="ux-btn-secondary" href={rescheduleUrl}>Reprogramar turno</a>{/if}
    {#if context.canCancel}<a class="ux-btn-secondary" href={cancelUrl}>Cancelar turno</a>{/if}
   </div>
-  {#if !context.canConfirm && !context.canCancel && !context.canReschedule}<p class="mt-3 text-fg-65 bk-muted">Este turno no admite cambios online. Si necesitás ayuda, contactá al consultorio.</p>
+  {#if context.selfManagementWindowClosed}
+   <p class="mt-3 text-fg-65 bk-muted" data-self-management-closed-notice>
+    {cutoffClosedNotice ?? 'Ya pasó el límite para cancelar o reprogramar este turno online. Escribile al consultorio para coordinar un cambio.'}
+   </p>
+   {#if whatsappContactHref}
+    <a href={whatsappContactHref} target="_blank" rel="noreferrer" class="ux-btn-secondary mt-3 inline-flex">Escribir al consultorio por WhatsApp</a>
+   {:else if context.practicePhone && practiceTelHref}
+    <p class="mt-2 text-sm text-fg-65 bk-muted">Teléfono del consultorio: <a class="ux-link whitespace-nowrap bk-accent-text" href={practiceTelHref}>{context.practicePhone}</a></p>
+   {/if}
+  {:else if !context.canConfirm && !context.canCancel && !context.canReschedule}<p class="mt-3 text-fg-65 bk-muted">Este turno no admite cambios online. Si necesitás ayuda, contactá al consultorio.</p>
   {:else if context.unavailableMessage}<p class="mt-3 text-fg-65 bk-muted">{context.unavailableMessage}</p>{/if}
  {/if}
  {#if positive(context.financialSummary.unresolvedAmount)}<p class="mt-5 text-fg-65 bk-muted">Hay {formatDepositMoney(context.financialSummary.unresolvedAmount)} de dinero registrado por resolver con el consultorio. Esto no confirma una devolución ni reactiva el turno.</p>{/if}

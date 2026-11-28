@@ -10,7 +10,7 @@ import {
 	readRecord,
 	readText
 } from '$lib/contracts/json';
-import { formatDepositAmount, parseAppointmentDeposit } from '$lib/scheduling/deposits';
+import { describeDepositDeadline, parseAppointmentDeposit } from '$lib/scheduling/deposits';
 import {
 	APPOINTMENT_EMAIL_PURPOSES,
 	resolveAppointmentEmailContext,
@@ -18,7 +18,9 @@ import {
 } from '$lib/scheduling/patient-action-context';
 import { tokens } from '$lib/theme/palette.js';
 import { formatInTimeZone } from '$lib/utils/format';
+import { normalizeArgentineWhatsAppPhone } from '$lib/utils/phone';
 import { splitTextWithHttpsLinks } from '$lib/utils/safe-links';
+import { buildWaMeUrl } from '$lib/utils/whatsapp';
 
 export type AppointmentEmailWork = {
 	deliveryId: string;
@@ -148,16 +150,37 @@ export const buildAppointmentEmail = (
 			: null;
 	const mapsUrl = typeof business.maps_url === 'string' && /^https:\/\//.test(business.maps_url) ? business.maps_url : null;
 	const logoUrl = typeof business.logo_url === 'string' && /^https:\/\//.test(business.logo_url) ? business.logo_url : null;
+	const whatsappPhone = normalizeArgentineWhatsAppPhone(
+		typeof business.whatsapp_contact_phone === 'string' ? business.whatsapp_contact_phone : null
+	);
 	const phone = typeof business.whatsapp_contact_phone === 'string' ? business.whatsapp_contact_phone
 		: typeof business.phone === 'string' ? business.phone : null;
 	const patientName = typeof snapshot.patient_name === 'string' ? snapshot.patient_name.trim().split(/\s+/)[0] ?? '' : '';
 	const cancelled = work.purpose === 'cancellation_receipt';
+	const cancelledByDepositExpiry =
+		cancelled && (snapshot.cancelled_by_deposit_expiry === true || deposit?.status === 'expired');
 	const depositPending = !cancelled && deposit?.status === 'pending';
 	const transferDetails = typeof snapshot.deposit_transfer_details === 'string' ? snapshot.deposit_transfer_details : null;
+	const selfManagementWindowClosed = !cancelled && snapshot.self_management_window_closed === true;
+	const selfManagementCutoffHours =
+		typeof snapshot.self_management_cutoff_hours === 'number' && Number.isSafeInteger(snapshot.self_management_cutoff_hours)
+			? snapshot.self_management_cutoff_hours
+			: null;
 
-	const stateLine = cancelled ? `El turno del ${when.full} quedó cancelado.`
-		: depositPending ? 'Tu turno está reservado. Se confirma cuando el consultorio registre la seña.'
-		: status === 'confirmed' ? 'Tu turno está confirmado.' : 'Tu turno está reservado.';
+	const cancelledDepositDueLabel =
+		cancelledByDepositExpiry && deposit ? formatInTimeZone(deposit.due_at, timezone).full : null;
+
+	const stateLine = cancelled
+		? cancelledDepositDueLabel
+			? `El turno del ${when.full} se canceló automáticamente porque no se registró la seña antes del ${cancelledDepositDueLabel}.`
+			: cancelledByDepositExpiry
+				? `El turno del ${when.full} se canceló automáticamente porque no se registró la seña dentro del plazo.`
+				: `El turno del ${when.full} quedó cancelado.`
+		: depositPending
+			? 'Tu turno está reservado. Se confirma cuando el consultorio registre la seña.'
+			: status === 'confirmed'
+				? 'Tu turno está confirmado.'
+				: 'Tu turno está reservado.';
 	const subject = headerText(
 		work.purpose === 'booking_receipt' ? `Tu turno en ${businessName}: ${when.full}`
 		: work.purpose === 'reschedule_receipt' ? `Tu turno cambió: ${when.full}`
@@ -179,6 +202,14 @@ export const buildAppointmentEmail = (
 		const path = integration?.is_active === true && typeof integration.public_key === 'string'
 			? `/embed/v1/${integration.public_key}` : slug ? `/reservar/${slug}` : null;
 		if (path) links.push({ label: 'Reservar otro turno', href: `${options.siteUrl}${path}`, primary: true });
+	}
+	if (cancelledByDepositExpiry && whatsappPhone) {
+		const whatsappMessage = `Hola, te escribo por mi turno del ${when.full} que se canceló por falta de seña.`;
+		links.push({
+			label: 'Escribir al consultorio por WhatsApp',
+			href: buildWaMeUrl(whatsappPhone, whatsappMessage),
+			primary: !links.some((link) => link.primary)
+		});
 	}
 	const calendarUrl = base && !cancelled ? `${base}/calendario.ics` : null;
 	const unsubscribeUrl = `${options.siteUrl}/correo/baja/${work.unsubscribeToken}`;
@@ -210,16 +241,54 @@ export const buildAppointmentEmail = (
 
 	const depositLines: string[] = [];
 	if (depositPending && deposit) {
-		const due = formatInTimeZone(deposit.due_at, timezone);
-		depositLines.push(`Seña: ${formatDepositAmount(deposit.amount)}, antes del ${due.full}.`);
+		const deadline = describeDepositDeadline(
+			{ amount: deposit.amount, dueAt: deposit.due_at, autoCancel: deposit.auto_cancel },
+			timezone,
+			options.now
+		);
+		depositLines.push(deadline.emailLine);
 		if (transferDetails) depositLines.push(`Datos para transferir:\n${transferDetails}`);
-		if (deposit.auto_cancel) depositLines.push('Si no se registra para esa fecha, el turno se cancela automáticamente y el horario se libera.');
+		if (deadline.autoCancelSentence) depositLines.push(deadline.autoCancelSentence);
 		depositLines.push('Esto no es un comprobante de pago: el consultorio registra la seña cuando recibe la transferencia.');
 	}
 	const closing: string[] = [];
+	const closingHtml: string[] = [];
+	if (selfManagementWindowClosed) {
+		const hoursText = selfManagementCutoffHours
+			? selfManagementCutoffHours === 1
+				? 'la última hora'
+				: `las últimas ${selfManagementCutoffHours}\u00a0horas`
+			: 'el límite previo';
+		if (whatsappPhone) {
+			const waUrl = buildWaMeUrl(whatsappPhone, `Hola, te escribo por mi turno del ${when.full}.`);
+			closing.push(
+				`Este turno está dentro de ${hoursText} antes de la consulta y no admite cambios ni cancelaciones online. Si necesitás coordinar un cambio, escribile al consultorio por WhatsApp: ${waUrl}`
+			);
+			closingHtml.push(
+				`<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${color('--text')};">${escapeHtml(`Este turno está dentro de ${hoursText} antes de la consulta y no admite cambios ni cancelaciones online. Si necesitás coordinar un cambio, `)}<a href="${escapeHtml(waUrl)}" style="color:${color('--accent-text')};text-decoration:underline;">escribile al consultorio por WhatsApp</a>.</p>`
+			);
+		} else {
+			const line = `Este turno está dentro de ${hoursText} antes de la consulta y no admite cambios ni cancelaciones online. Si necesitás coordinar un cambio, contactá al consultorio.`;
+			closing.push(line);
+			closingHtml.push(paragraph(line));
+		}
+	}
+	if (cancelledByDepositExpiry) {
+		const line = 'Si ya hiciste la transferencia o querés coordinar otro horario, escribile al consultorio.';
+		closing.push(line);
+		closingHtml.push(paragraph(line));
+	}
 	// Sólo el archivo queda viejo: quien conectó su cuenta Google no debe borrar un evento ya actualizado.
-	if (work.purpose === 'reschedule_receipt') closing.push('Si guardaste el archivo en tu calendario, borrá el evento anterior y guardá el nuevo. Si conectaste tu cuenta Google, ese evento se actualiza solo.');
-	if (cancelled) closing.push('Si guardaste el archivo en tu calendario, borralo desde ahí. Si conectaste tu cuenta Google, ese evento se quita solo.');
+	if (work.purpose === 'reschedule_receipt') {
+		const line = 'Si guardaste el archivo en tu calendario, borrá el evento anterior y guardá el nuevo. Si conectaste tu cuenta Google, ese evento se actualiza solo.';
+		closing.push(line);
+		closingHtml.push(paragraph(line));
+	}
+	if (cancelled) {
+		const line = 'Si guardaste el archivo en tu calendario, borralo desde ahí. Si conectaste tu cuenta Google, ese evento se quita solo.';
+		closing.push(line);
+		closingHtml.push(paragraph(line));
+	}
 
 	const footer = [
 		`Recibís este correo porque tenés un turno en ${businessName}.`,
@@ -261,7 +330,7 @@ export const buildAppointmentEmail = (
 		paragraph(stateLine) +
 		(detailsHtml.length ? `<div style="margin:16px 0;padding:14px 16px;background:${color('--surface-2')};border-radius:10px;">${detailsHtml.join('')}</div>` : '') +
 		(depositLines.length ? `<div style="margin:16px 0;padding:14px 16px;background:${color('--warning-soft')};border-radius:10px;">${depositLines.map(paragraph).join('')}</div>` : '') +
-		closing.map(paragraph).join('') +
+		closingHtml.join('') +
 		(links.length ? `<div style="margin:20px 0 8px;">${links.map((link) => button(link.href, link.label, link.primary)).join('')}</div>` : '') +
 		(calendarUrl ? `<p style="margin:8px 0;font-size:14px;"><a href="${escapeHtml(calendarUrl)}" style="color:${color('--accent-text')};">Agregar a mi calendario</a></p>` : '') +
 		(mapsUrl && !virtual && !cancelled ? `<p style="margin:8px 0;font-size:14px;"><a href="${escapeHtml(mapsUrl)}" style="color:${color('--accent-text')};">Cómo llegar</a></p>` : '') +

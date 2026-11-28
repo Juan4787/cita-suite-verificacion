@@ -1,12 +1,64 @@
 import { InvalidDataContractError, readArray, readBoolean, readChoice, readRecord, readText } from '$lib/contracts/json';
+import { formatInTimeZone } from '$lib/utils/format';
 
 export const EMAIL_POLICY_BOOLEAN_KEYS = ['email_enabled', 'require_email', 'show_cancel', 'show_reschedule', 'require_deposit_on_reschedule'] as const;
 export type AppointmentEmailPreferences = Record<(typeof EMAIL_POLICY_BOOLEAN_KEYS)[number], boolean> & {
  previous_deposit_disposition: 'credit' | 'forfeit';
+ self_management_cutoff_hours: number | null;
 };
 export const DEFAULT_APPOINTMENT_EMAIL_PREFERENCES: AppointmentEmailPreferences = {
  email_enabled: true, require_email: true, show_cancel: true, show_reschedule: true,
- require_deposit_on_reschedule: true, previous_deposit_disposition: 'forfeit'
+ require_deposit_on_reschedule: true, previous_deposit_disposition: 'forfeit',
+ self_management_cutoff_hours: null
+};
+
+export const SELF_MANAGEMENT_CUTOFF_MAX_HOURS = 720;
+
+export const computeSelfManagementCutoffAt = (startsAt: string, cutoffHours: number | null): Date | null => {
+ if (cutoffHours === null || !Number.isSafeInteger(cutoffHours) || cutoffHours < 1) return null;
+ const startMs = Date.parse(startsAt);
+ if (!Number.isFinite(startMs)) return null;
+ return new Date(startMs - cutoffHours * 3_600_000);
+};
+
+export const isSelfManagementWindowClosed = (startsAt: string, cutoffHours: number | null, now: Date): boolean => {
+ const cutoff = computeSelfManagementCutoffAt(startsAt, cutoffHours);
+ if (!cutoff) return false;
+ return now.getTime() > cutoff.getTime();
+};
+
+/** Single source of truth for P5 self-management cutoff notices across booking, turn page and reschedule. */
+export const buildSelfManagementCutoffNotice = (input: {
+ startsAt: string;
+ cutoffHours: number | null;
+ timezone: string;
+ now: Date;
+ context: 'booking' | 'confirmed' | 'reschedule_target' | 'window_closed';
+ hasWhatsApp?: boolean;
+}): string | null => {
+ if (input.cutoffHours === null || !Number.isSafeInteger(input.cutoffHours) || input.cutoffHours < 1) return null;
+ const cutoff = computeSelfManagementCutoffAt(input.startsAt, input.cutoffHours);
+ if (!cutoff) return null;
+ const closed = input.now.getTime() > cutoff.getTime();
+ const hoursLabel = input.cutoffHours === 1 ? '1\u00a0hora' : `${input.cutoffHours}\u00a0horas`;
+ const cutoffLabel = formatInTimeZone(cutoff, input.timezone).full;
+
+ if (input.context === 'window_closed') {
+  const channel = input.hasWhatsApp ? 'por WhatsApp' : 'directamente';
+  return `Los cambios y cancelaciones online se aceptan hasta ${hoursLabel} antes del turno (hasta el ${cutoffLabel}). Si necesitás cancelar o cambiar este turno, escribile al consultorio ${channel}.`;
+ }
+ if (input.context === 'reschedule_target') {
+  if (!closed) return null;
+  return `Si confirmás este horario, el turno quedará dentro de las últimas ${hoursLabel} antes de la consulta y ya no se podrá cancelar ni reprogramar online.`;
+ }
+ if (input.context === 'confirmed') {
+  return closed
+   ? `Este turno quedó dentro de las últimas ${hoursLabel} antes de la consulta y no se puede cancelar ni reprogramar online. Si necesitás un cambio, escribile al consultorio.`
+   : `Podés cancelar o reprogramar este turno online hasta el ${cutoffLabel} (${hoursLabel} antes de la consulta).`;
+ }
+ return closed
+  ? `Este turno está dentro de las últimas ${hoursLabel} antes de la consulta: una vez reservado no se podrá cancelar ni reprogramar online. Si necesitás un cambio, escribile al consultorio.`
+  : `Podés cancelar o reprogramar este turno online hasta el ${cutoffLabel} (${hoursLabel} antes de la consulta).`;
 };
 /** Initial disclosure, distinct from the quote for an actual future move. */
 export type BookingReschedulePolicy = {

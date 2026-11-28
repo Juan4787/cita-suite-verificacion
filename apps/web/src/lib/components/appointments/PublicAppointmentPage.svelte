@@ -10,7 +10,8 @@
 	import { formatDateTime, formatInTimeZone } from '$lib/utils/format';
 	import { isActiveAppointmentStatus } from '$lib/utils/appointment-visibility';
 	import type { DepositWhatsAppNotices, PracticeWhatsAppNotice } from '$lib/scheduling/contracts';
-	import { formatDepositAmount } from '$lib/scheduling/deposits';
+	import { describeDepositDeadline } from '$lib/scheduling/deposits';
+	import { buildSelfManagementCutoffNotice } from '$lib/scheduling/email-policy';
 	import {
 		refineDeviceClass,
 		whatsappHrefFor,
@@ -1324,17 +1325,17 @@
 {/snippet}
 
 {#snippet depositCard(current: PublicAppointmentView, deposit: NonNullable<PublicAppointmentView['deposit']>)}
-	<section class="ux-card">
+	{@const deadline = describeDepositDeadline(
+		{ amount: deposit.amount, dueAt: deposit.due_at, autoCancel: deposit.auto_cancel },
+		current.business.timezone,
+		new Date(data.management?.now ?? Date.now())
+	)}
+	<section class="ux-card" id="sena-del-turno" data-deposit-card>
 		<h2 class="ux-section-title">Seña del turno</h2>
 		<p class="mt-2 text-fg-65 bk-muted">Tu turno se confirma cuando el consultorio registra la seña.</p>
-		<p class="mt-2 text-fg-80 bk-muted">
-			Para confirmar tu turno, transferí la seña de <strong class="text-fg bk-text">{formatDepositAmount(deposit.amount)}</strong>
-			antes del {formatInTimeZone(deposit.due_at, current.business.timezone).full}.
-		</p>
-		{#if deposit.auto_cancel}
-			<p class="mt-2 text-sm text-fg-65 bk-muted">
-				Si no se registra para esa fecha, el turno se cancela automáticamente y el horario se libera.
-			</p>
+		<p class="mt-2 text-fg-80 bk-muted">{deadline.turnPageLine}</p>
+		{#if deadline.autoCancelSentence}
+			<p class="mt-2 text-sm text-fg-65 bk-muted">{deadline.autoCancelSentence}</p>
 		{/if}
 		{#if current.deposit_transfer_details}
 			<div class="ux-soft-card mt-4 p-4">
@@ -1500,6 +1501,11 @@
 {#snippet managementControls()}
 			{#if appointment && data.management}
     <PatientManagementPanel context={{ ...data.management,
+     device,
+     practiceWhatsApp: data.practiceWhatsApp
+      ? { whatsappUrl: data.practiceWhatsApp.whatsappUrl, whatsappWebUrl: data.practiceWhatsApp.whatsappWebUrl }
+      : data.management.practiceWhatsApp ?? null,
+     practicePhone: appointment.business.phone ?? data.management.practicePhone ?? null,
      canCancel: isActive && appointment.can_cancel && data.management.canCancel,
      canReschedule: isActive && appointment.can_request_reschedule && data.management.canReschedule,
      canConfirm: isActive && appointment.status === 'reserved' && appointment.can_confirm && data.management.canConfirm &&
@@ -1601,6 +1607,19 @@
 						<p class="mt-2 text-lg font-bold text-fg bk-text">{formatDateTime(appointment.starts_at, timezone)}</p>
 					</div>
 				</div>
+
+				{#if isActive && data.management?.selfManagementCutoffHours}
+					{@const cutoffSummary = buildSelfManagementCutoffNotice({
+						startsAt: appointment.starts_at,
+						cutoffHours: data.management.selfManagementCutoffHours,
+						timezone,
+						now: new Date(data.management.now),
+						context: 'confirmed'
+					})}
+					{#if cutoffSummary}
+						<p class="mt-4 text-sm text-fg-65 bk-muted" data-self-management-summary>{cutoffSummary}</p>
+					{/if}
+				{/if}
 
 				{#if appointment.business.cancellation_policy}
 					<p class="ux-empty mt-5">{appointment.business.cancellation_policy}</p>

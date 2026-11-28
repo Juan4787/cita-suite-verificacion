@@ -14,6 +14,8 @@ Costos y alertas controlados, compras de Juan y sin auto-recarga. Esta excepció
 
 *Actualización del 27 de noviembre de 2026 (Lote 0):* los tipos y condiciones vigentes de envío al paciente se centralizan en el [catálogo único de correos al paciente](correos-al-paciente.md). El Lote 0 (D1, D2, D3) no agrega correos nuevos por turno y evita crear filas muertas de recordatorio en la cola cuando el paciente no tiene correo válido o está dado de baja, sin aumentar el consumo sobre el crédito de Zoho ni el tope diario.
 
+*Actualización del 28 de noviembre de 2026 (Lote 2A — P5, P2, P3, migración #173):* no agrega ningún tipo de correo nuevo ni incrementa el consumo sobre el crédito de Zoho ni el tope diario (sólo enriquece el `cancellation_receipt` ya existente cuando la cancelación fue automática por seña impaga y omite botones dentro de la ventana de autogestión). En la ficha del paciente, `readPatientDetail` lee los campos de exención de P3 dentro de la misma consulta existente sobre `patients` (`0` subpedidos HTTP adicionales al Worker). Además, se documenta el criterio vigente de `private.expire_deposit_if_still_due` (`pg_cron` cada 5 minutos): omite deliberadamente vencimientos con más de 24 horas de atraso (`due_at <= p_now - interval '24 hours'`) como salvaguarda ante una caída prolongada para no disparar bajas sorpresivas en masa; esos turnos quedan visibles en `/odonto/senas` bajo «Vencidas sin cancelar: decidir».
+
 ## Decisión económica del usuario y aplicación
 
 Contexto aportado por el usuario: «me compraron la app con pago unico, no puedo pagar 25 usd al mes sin ingreso recurrente, es gasto».

@@ -5,7 +5,7 @@ import { isUuid } from '@cita-suite/shared/uuid';
 import type { DepositPolicy } from '$lib/server/scheduling/public/deposits';
 
 // Field-level reasons before asking the database, which validates everything again anyway.
-type FieldErrors = Partial<Record<'fixed_amount' | 'percentage' | 'request_days' | 'deadline_hours' | 'min_payment_hours' | 'transfer_details', string>>;
+type FieldErrors = Partial<Record<'fixed_amount' | 'percentage' | 'request_days' | 'deadline_hours' | 'min_payment_hours' | 'late_booking_payment_hours' | 'transfer_details', string>>;
 
 // Pesos as people write them: «40000» or «40.000». Never a decimal: the database refuses rounding.
 export const parseWholePesoInput = (raw: string) => {
@@ -22,6 +22,11 @@ const parsePercentage = (raw: string) => {
 	return Number(value.replace(',', '.'));
 };
 const parseWhole = (raw: string) => (/^\d{1,4}$/.test(raw.trim()) ? Number(raw.trim()) : Number.NaN);
+const parseOptionalWhole = (raw: string) => {
+	const value = raw.trim();
+	if (!value) return null;
+	return /^\d{1,4}$/.test(value) ? Number(value) : Number.NaN;
+};
 
 export const parsePolicyForm = (form: FormData, serviceIds: Set<string>) => {
 	const errors: FieldErrors = {};
@@ -31,6 +36,8 @@ export const parsePolicyForm = (form: FormData, serviceIds: Set<string>) => {
 	const requestDays = parseWhole(String(form.get('request_days') ?? ''));
 	const deadlineHours = parseWhole(String(form.get('deadline_hours') ?? ''));
 	const minPaymentHours = parseWhole(String(form.get('min_payment_hours') ?? ''));
+	const rawLateBookingPaymentHours = String(form.get('late_booking_payment_hours') ?? '');
+	const lateBookingPaymentHours = parseOptionalWhole(rawLateBookingPaymentHours);
 	const transferDetails = String(form.get('transfer_details') ?? '').trim();
 	// Checkboxes carry value="true", as the other settings pages: an unchecked one is absent, so «no».
 	const enabled = form.get('enabled') === 'true';
@@ -46,6 +53,9 @@ export const parsePolicyForm = (form: FormData, serviceIds: Set<string>) => {
 	if (!(requestDays >= 1 && requestDays <= 60)) errors.request_days = 'Entre 1 y 60 días.';
 	if (!(deadlineHours >= 1 && deadlineHours <= 720)) errors.deadline_hours = 'Entre 1 y 720 horas.';
 	if (!(minPaymentHours >= 0 && minPaymentHours <= 168)) errors.min_payment_hours = 'Entre 0 y 168 horas.';
+	if (lateBookingPaymentHours !== null && !(Number.isSafeInteger(lateBookingPaymentHours) && lateBookingPaymentHours >= 1 && lateBookingPaymentHours <= 168)) {
+		errors.late_booking_payment_hours = 'Entre 1 y 168 horas, o dejalo vacío.';
+	}
 	if (transferDetails.length > 500) errors.transfer_details = 'Hasta 500 caracteres.';
 
 	// Only services of this practice; an unknown identifier is dropped, never sent.
@@ -61,6 +71,7 @@ export const parsePolicyForm = (form: FormData, serviceIds: Set<string>) => {
 		requestDays,
 		deadlineHours,
 		minPaymentHours,
+		lateBookingPaymentHours: Number.isNaN(lateBookingPaymentHours) ? null : lateBookingPaymentHours,
 		transferDetails: transferDetails || null,
 		appliesToManual: form.get('applies_to_manual') === 'true',
 		excludedServiceIds
@@ -75,6 +86,7 @@ export const parsePolicyForm = (form: FormData, serviceIds: Set<string>) => {
 		requestDays: String(form.get('request_days') ?? ''),
 		deadlineHours: String(form.get('deadline_hours') ?? ''),
 		minPaymentHours: String(form.get('min_payment_hours') ?? ''),
+		lateBookingPaymentHours: rawLateBookingPaymentHours,
 		transferDetails,
 		appliesToManual: policy.appliesToManual,
 		excludedServiceIds

@@ -61,7 +61,7 @@ export async function readPatientDetail({
 		supabase
 			.from('patients')
 			.select(
-				'id, full_name, dni, phone, phone_raw, phone_e164, email, birth_date, address, insurance, insurance_plan, archived_at, created_at, updated_at'
+				'id, full_name, dni, phone, phone_raw, phone_e164, email, birth_date, address, insurance, insurance_plan, archived_at, exempt_from_deposit_auto_cancel, exempt_from_deposit_auto_cancel_updated_at, exempt_from_deposit_auto_cancel_updated_by_name, created_at, updated_at'
 			)
 			.eq('id', patientId)
 			.eq('business_id', context.business.id)
@@ -146,6 +146,9 @@ export async function readPatientDetail({
 	return {
 		patient: {
 			...patientData,
+			exempt_from_deposit_auto_cancel: Boolean(patient.exempt_from_deposit_auto_cancel),
+			exempt_from_deposit_auto_cancel_updated_at: patient.exempt_from_deposit_auto_cancel_updated_at ?? null,
+			exempt_from_deposit_auto_cancel_updated_by_name: patient.exempt_from_deposit_auto_cancel_updated_by_name ?? null,
 			phone: effectivePhone,
 			allergies: clinicalProfile?.allergies ?? null,
 			medication: clinicalProfile?.medication ?? null,

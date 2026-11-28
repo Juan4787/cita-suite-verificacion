@@ -31,7 +31,8 @@ const permissions: PatientPermissions = {
 	canUploadRadiographs: true,
 	canViewRadiographTrash: true,
 	canTrashRadiographs: true,
-	canExportPatientData: true
+	canExportPatientData: true,
+	canManageDepositAutoCancelExemption: true
 };
 const revision = '2026-01-01T12:00:00Z';
 const props = () => ({

@@ -17,6 +17,7 @@ export type PatientPermissions = {
 	canViewRadiographTrash: boolean;
 	canTrashRadiographs: boolean;
 	canExportPatientData: boolean;
+	canManageDepositAutoCancelExemption: boolean;
 };
 export type PatientHistoryEntry = {
 	id: string;

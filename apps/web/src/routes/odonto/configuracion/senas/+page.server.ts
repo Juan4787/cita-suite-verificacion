@@ -16,6 +16,8 @@ import {
 	saveDepositPolicy
 } from '$lib/server/scheduling/public/deposits';
 import { parsePolicyForm } from '$lib/server/scheduling/public/deposit-policy-form';
+import { buildSupportWhatsAppLinks } from '$lib/server/platform/support-whatsapp';
+import { classifyUserAgent } from '$lib/device';
 import { normalizeArgentineWhatsAppPhone } from '$lib/utils/phone';
 import type { CitaSupabaseClient } from '$lib/types/database';
 import type { Actions, PageServerLoad } from './$types';
@@ -51,8 +53,9 @@ const demoServices: ServiceView[] = [
 	{ id: 'demo-limpieza', name: 'Limpieza', fee: 'none' }
 ];
 
-export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
+export const load: PageServerLoad = async ({ locals, fetch, cookies, request }) => {
 	if (!locals.auth) throw redirect(303, '/login');
+	const device = classifyUserAgent(request?.headers?.get('user-agent') ?? null);
 	if (env.DEMO_MODE === 'true') {
 		return {
 			demo: true,
@@ -60,7 +63,10 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 			policy: { ...DEFAULT_DEPOSIT_POLICY, enabled: true, autoCancelEnabled: true, fixedAmount: 40000, transferDetails: 'Alias demo.consultorio' },
 			services: demoServices,
 			whatsappConfigured: true,
-			automationStopped: false
+			automationStopped: false,
+			supportWhatsApp: null,
+			timezone: 'America/Argentina/Cordoba',
+			device
 		};
 	}
 
@@ -96,7 +102,13 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies }) => {
 			services,
 			// Without the practice's WhatsApp the person's buttons do not appear (plan, section 4.7).
 			whatsappConfigured: Boolean(business?.whatsapp_contact_enabled && normalizeArgentineWhatsAppPhone(business.whatsapp_phone)),
-			automationStopped: automation ? !automation.enabled : null
+			automationStopped: automation ? !automation.enabled : null,
+			supportWhatsApp: buildSupportWhatsAppLinks({
+				businessName: context.business.name,
+				topic: 'la configuración de señas y sus plazos'
+			}),
+			timezone: context.business.timezone,
+			device
 		};
 	} catch (loadError) {
 		logServerFailure('Error cargando la configuración de señas', loadError);

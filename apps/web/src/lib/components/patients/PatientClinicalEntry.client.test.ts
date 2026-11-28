@@ -63,7 +63,8 @@ function patientData(): PatientDetailViewData {
 			canUploadRadiographs: false,
 			canViewRadiographTrash: false,
 			canTrashRadiographs: false,
-			canExportPatientData: false
+			canExportPatientData: false,
+			canManageDepositAutoCancelExemption: false
 		}
 	};
 }

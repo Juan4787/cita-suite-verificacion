@@ -43,6 +43,7 @@ type DepositRow = {
  managementRevision: string;
 	appointmentStatus: string;
 	hasPhone: boolean;
+	hasEmail: boolean;
  canPrepareDelivery: boolean;
 	reminder: { openedAt: string; openedBy: string } | null;
 	// Only for turns cancelled by the deposit: the agenda to give the slot again and, with a valid
@@ -69,6 +70,7 @@ const demoRows = (now: Date, timezone: string): DepositRow[] => {
   managementRevision: '0'.repeat(64),
 		appointmentStatus: 'reserved',
 		hasPhone: true,
+		hasEmail: true,
   canPrepareDelivery: true,
 		reminder: null,
 		cancellation: null,
@@ -208,6 +210,7 @@ export const load: PageServerLoad = async ({ locals, fetch, cookies, url }) => {
    managementRevision: item.appointment.managementRevision,
 			appointmentStatus: item.appointment.status,
 			hasPhone: Boolean(phone),
+			hasEmail: item.patient.email === undefined ? true : Boolean(item.patient.email?.trim()),
    canPrepareDelivery: !item.patient.blocked && item.patient.archivedAt === null,
 			reminder: openedAt
 				? { openedAt, openedBy: (item.reminderOpenedBy && userLabels.get(item.reminderOpenedBy)) || 'alguien del equipo' }

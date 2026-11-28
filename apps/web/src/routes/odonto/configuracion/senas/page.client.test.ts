@@ -120,6 +120,7 @@ describe('configuración de señas', () => {
 					requestDays: '7',
 					deadlineHours: '48',
 					minPaymentHours: '24',
+					lateBookingPaymentHours: '',
 					transferDetails: 'Alias nuevo',
 					appliesToManual: false,
 					excludedServiceIds: []
@@ -133,5 +134,38 @@ describe('configuración de señas', () => {
 		expect(fields.get('transfer_details')).toBe('Alias nuevo');
 		expect(fields.get('auto_cancel_enabled')).toBeNull();
 		expect(fields.get('applies_to_manual')).toBeNull();
+	});
+
+	it('P2: muestra el campo de reservas tardías, el acordeón dinámico con los tres ejemplos y el botón «¿Te quedan dudas?» sólo si soporte está configurado', () => {
+		const { unmount } = render(Page, {
+			data: data({
+				policy: policy({ deadlineHours: 168, lateBookingPaymentHours: 48, minPaymentHours: 24, autoCancelEnabled: true }),
+				supportWhatsApp: {
+					whatsappUrl: 'https://wa.me/5493415550199?text=Hola',
+					whatsappWebUrl: 'https://web.whatsapp.com/send?phone=5493415550199&text=Hola'
+				}
+			})
+		});
+		expect(new FormData(formOf()).get('late_booking_payment_hours')).toBe('48');
+		const accordion = document.querySelector('[data-deposit-examples-accordion]') as HTMLDetailsElement;
+		expect(accordion).not.toBeNull();
+		expect(accordion.textContent).toMatch(/más de una semana/i);
+		expect(accordion.textContent).toMatch(/entre 3 y 7 días/i);
+		expect(accordion.textContent).toMatch(/menos de 72 horas/i);
+		expect(accordion.textContent).toMatch(/no se cancela solo/i);
+		const helpLink = screen.getByRole('link', { name: '¿Te quedan dudas?' });
+		expect(helpLink).toHaveAttribute('href', expect.stringMatching(/wa\.me|web\.whatsapp\.com/));
+
+		unmount();
+
+		render(Page, {
+			data: data({
+				policy: policy({ deadlineHours: 48, lateBookingPaymentHours: null, minPaymentHours: 24, autoCancelEnabled: true }),
+				supportWhatsApp: null
+			})
+		});
+		expect(new FormData(formOf()).get('late_booking_payment_hours')).toBe('');
+		expect(document.querySelector('[data-deposit-examples-accordion]')).not.toBeNull();
+		expect(screen.queryByRole('link', { name: '¿Te quedan dudas?' })).toBeNull();
 	});
 });

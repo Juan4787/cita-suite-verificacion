@@ -43,6 +43,7 @@ Cada celda supone el estado `active` o `grace`. En `restricted`, la columna «Le
 | Ver pacientes | ✓ | ✓ | ✓ | Los de sus vínculos activos | ✓ | Dueño y admin | RLS de `patients` (`20261020020000`), `patient_read_set_based.sql` |
 | Crear pacientes | ✓ | ✓ | ✓ | ✓ | — | — | `loadPatientList`, `create_patient`, `get_patient_data_revision` (`AF1-019`) |
 | Editar datos del paciente | ✓ | ✓ | ✓ | ✓ | — | — | `canEditPatient` |
+| Eximir paciente de baja automática por seña impaga (P3) | ✓ | ✓ | ✓ | — | — | — | `canManagePatientDepositExemption`, `set_patient_deposit_auto_cancel_exemption` (`20261128020000`) |
 | Archivar / desarchivar paciente | Global | Global | — | Su vínculo | — | — | `canArchivePatient`, `patient_archive_actor_scope.sql`, `pacientes/+page.svelte` (`AF1-019`) |
 | Historia clínica: leer | ✓ | ✓ | — | ✓ | ✓ | Dueño y admin | `canReadClinicalHistory` |
 | Historia clínica: escribir | ✓ | ✓ | — | ✓ | — | — | `canCreateClinicalEntry`, `clinical_direct_write_guards.sql` |
@@ -171,3 +172,14 @@ Las tablas de correo están en `private` y nadie las lee directo: todo pasa por 
 | `operator_get_email_operations`, `operator_set_email_operations` | Sólo `service_role`; la página admite únicamente la cuenta maestra verificada | Crédito, cupo, interruptor y pausas |
 
 Un profesional o una lectura sola no ven la sección de correos del turno ni la cobertura de recordatorios por correo. El operador ve estados y conteos, nunca la dirección de un paciente. Pruebas: `appointment_email_delivery.sql` 1 y 31, `appointment_email_operations.sql` 1, `entrega_natalia_lote0.sql` 3 y 9–12, y las pruebas de servidor de cada ruta. Ver además el [catálogo único de correos al paciente](correos-al-paciente.md).
+
+## Lote 2A — ventana de autogestión, reservas tardías y exención de baja por seña (28 de noviembre, migración #173)
+
+| Acción | Autoridad | Fuente y límites |
+|---|---|---|
+| Configurar límite horario de autogestión (`self_management_cutoff_hours`, `1..720` h, P5) | Dueña y administración con operación comercial vigente | `public.save_appointment_email_policy` (admite 6 claves para compatibilidad de reversión con Lote 1 o 7 claves con el límite). Revalidación triple OP02. Recepción, profesional y sólo lectura son rechazados en SQL y redirigidos en la UI |
+| Configurar plazo de pago para reservas tardías (`late_booking_payment_hours`, `1..168` h, P2) | Dueña y administración con operación comercial vigente | `public.save_deposit_policy` (admite 11 claves para reversión o 12 claves). Revalidación triple OP02. El corte automático de `24 h` antes del turno rige en `private.deposit_schedule` |
+| Marcar o desmarcar «No cancelar sus turnos por seña impaga» en la ficha del paciente (P3) | Dueña, administración y recepción con operación comercial vigente | `public.set_patient_deposit_auto_cancel_exemption` (ejecutable sólo por `authenticated`; revocado de `PUBLIC` y `anon`). Revalidación triple OP02 (`patients` → `deposit_policies` → `appointments order by id` → `appointment_deposits`). Rechaza `professional`, `readonly`, consultorio restringido/archivado y otro consultorio; suprime o restaura selectivamente señas pendientes y registra auditoría en `audit_logs` y `patient_profile_change_events`. Defensa en profundidad en `expire_deposit_if_still_due` y `expire_unpaid_deposits`, más `private.merge_patient_deposit_exemption(boolean, boolean)` para futuras unificaciones |
+| Cancelar o reprogramar como paciente dentro de la ventana cerrada (P5) | Rechazado (`APPOINTMENT_SELF_MANAGEMENT_WINDOW_CLOSED`) | `public.apply_patient_appointment_management` toma `for share` sobre `appointment_email_policies` y evalúa `private.appointment_self_management_open`. Confirmar asistencia (`confirm`) y todas las acciones del personal quedan siempre habilitadas sin este límite |
+
+Pruebas: `supabase/tests/entrega_natalia_lote2a.sql` (42 aserciones incluyendo los 5 roles, estados restringido/archivado, otro consultorio, tabla de 6 filas y compatibilidad de reversión), `apps/web/src/lib/server/patients/public/patient-deposit-exemption.test.ts`, `apps/web/src/lib/server/scheduling/public/email-policy.test.ts`, `apps/web/src/lib/server/scheduling/public/deposit-policy-form.test.ts` y `apps/web/e2e/entrega-natalia-lote2a.spec.ts`.

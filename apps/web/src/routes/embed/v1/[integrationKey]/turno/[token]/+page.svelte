@@ -2,6 +2,8 @@
 	import type { PageProps } from './$types';
 
  import {formatQuotedPrice, quotedPriceEstimateNotice} from '$lib/booking/pricing';
+    import { describeDepositDeadline } from '$lib/scheduling/deposits';
+    import { buildSelfManagementCutoffNotice } from '$lib/scheduling/email-policy';
     import { splitTextWithHttpsLinks } from '$lib/utils/safe-links';
     import BookingAppearance from '$lib/booking/BookingAppearance.svelte';
     import BookingFrameBridge from '$lib/booking/BookingFrameBridge.svelte';
@@ -36,6 +38,38 @@
                 <p class="mt-3 text-sm text-fg-55 bk-muted">Abrí tu turno para consultar su estado y las opciones disponibles.</p>
             {#if data.newBookingAllowed}<a class="ux-btn-secondary mt-4 inline-flex" href={data.bookingStartUrl}>Reservar otra consulta</a>{/if}
             </section>
+            {#if appointment.status !== 'cancelled' && !appointment.is_past && appointment.deposit?.status === 'pending'}
+                {@const deadline = describeDepositDeadline(
+                    { amount: appointment.deposit.amount, dueAt: appointment.deposit.due_at, autoCancel: appointment.deposit.auto_cancel },
+                    appointment.business.timezone,
+                    new Date(data.now ?? Date.now())
+                )}
+                <section class="ux-card" data-embed-deposit-card>
+                    <h2 class="ux-section-title">Seña del turno</h2>
+                    <p class="mt-2">{deadline.turnPageLine}</p>
+                    {#if deadline.autoCancelSentence}
+                        <p class="mt-2 text-sm text-fg-70 bk-muted">{deadline.autoCancelSentence}</p>
+                    {/if}
+                    {#if appointment.deposit_transfer_details}
+                        <p class="mt-3 text-sm font-bold text-fg-55 bk-muted">Datos para transferir</p>
+                        <p class="mt-1 whitespace-pre-wrap break-words font-bold">{appointment.deposit_transfer_details}</p>
+                    {/if}
+                </section>
+            {/if}
+            {#if appointment.status !== 'cancelled' && !appointment.is_past && data.selfManagementCutoffHours}
+                {@const cutoffSummary = buildSelfManagementCutoffNotice({
+                    startsAt: appointment.starts_at,
+                    cutoffHours: data.selfManagementCutoffHours,
+                    timezone: appointment.business.timezone,
+                    now: new Date(data.now ?? Date.now()),
+                    context: 'confirmed'
+                })}
+                {#if cutoffSummary}
+                    <section class="ux-card" data-embed-self-management-card>
+                        <p class="text-sm text-fg-70 bk-muted">{cutoffSummary}</p>
+                    </section>
+                {/if}
+            {/if}
             {#if data.appointment.price_quote_snapshot}
                 {@const registeredPriceNotice = quotedPriceEstimateNotice(data.appointment.price_quote_snapshot, 'registered')}
                 <section class="ux-card">

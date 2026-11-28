@@ -29,6 +29,10 @@ export const loadPatientManagementScreen = async (client: CitaSupabaseClient, ac
   url: `/${access.legacy ? 'turno' : 'gestion'}/${access.token}`, revision: view.revision, operationId: randomUUID(), mode,
   startsAt: appointment.starts_at, timezone: appointment.business.timezone, now: view.now,
   canCancel: appointment.can_cancel, canConfirm: appointment.can_confirm, canReschedule: appointment.can_request_reschedule,
+  selfManagementCutoffHours: view.selfManagementCutoffHours ?? null,
+  selfManagementCutoffAt: view.selfManagementCutoffAt ?? null,
+  selfManagementWindowClosed: view.selfManagementWindowClosed === true,
+  practicePhone: appointment.business.phone ?? null,
   date, slots: [], selectedStart: null, availabilityRevision: null, integrationRevision: view.integration?.revision ?? null,
   durationMinutes: view.durationMinutes, financialTerms: view.financialTerms, financialSummary: view.financialSummary, unavailableMessage: null
  };

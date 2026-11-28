@@ -1,5 +1,10 @@
 import { setPatientArchived } from '$lib/server/patients/public/patient-archive';
 import {
+	PatientDepositExemptionError,
+	getPatientDepositExemptionErrorMessage,
+	setPatientDepositAutoCancelExemption
+} from '$lib/server/patients/public/patient-deposit-exemption';
+import {
 	updatePatientProfile,
 	parsePatientProfileUpdate,
 	type PatientProfileUpdate
@@ -188,7 +193,8 @@ export const load: PageServerLoad = async ({ params, locals, fetch, cookies, dep
 				canUploadRadiographs: true,
 				canViewRadiographTrash: true,
 				canTrashRadiographs: true,
-				canExportPatientData: false
+				canExportPatientData: false,
+				canManageDepositAutoCancelExemption: true
 			},
 			documentUploads: 'available' as const,
 			followUpParticipates: false,
@@ -358,6 +364,41 @@ export const actions: Actions = {
 	},
 	archive_patient: (event) => updatePatientArchive(event, true),
 	unarchive_patient: (event) => updatePatientArchive(event, false),
+	set_deposit_exemption: async ({ request, params, locals, fetch, cookies }) => {
+		if (!locals.auth) throw redirect(303, '/login');
+		const form = await request.formData();
+		const rawExempt = form.get('exempt_from_deposit_auto_cancel');
+		const exempt = rawExempt === 'true';
+		if (rawExempt !== null && rawExempt !== 'true' && rawExempt !== 'false') {
+			return fail(400, { message: getPatientDepositExemptionErrorMessage('PATIENT_DEPOSIT_EXEMPTION_INVALID') });
+		}
+		if (env.DEMO_MODE === 'true') {
+			return fail(400, { message: 'No disponible en modo demo.' });
+		}
+		const session = await resolveBusinessActionContext({ locals, fetch, cookies });
+		if (!session) {
+			return fail(401, { message: 'Sesión inválida. Volvé a iniciar sesión.' });
+		}
+		const permissions = resolvePatientPermissions(session.context);
+		if (!permissions.canManageDepositAutoCancelExemption) {
+			return fail(403, {
+				message: getPatientDepositExemptionErrorMessage('PATIENT_DEPOSIT_EXEMPTION_FORBIDDEN')
+			});
+		}
+		try {
+			await setPatientDepositAutoCancelExemption(session.supabase, {
+				businessId: session.context.business.id,
+				patientId: params.id,
+				exempt
+			});
+		} catch (cause) {
+			if (cause instanceof PatientDepositExemptionError) {
+				return fail(cause.status, { message: getPatientDepositExemptionErrorMessage(cause.code) });
+			}
+			throw cause;
+		}
+		throw redirect(303, patientDetailUrl(params.id, 'datos'));
+	},
 	delete_patient: async ({ params, locals, fetch, cookies }) => {
 		if (!locals.auth) throw redirect(303, '/login');
 		if (env.DEMO_MODE === 'true') {

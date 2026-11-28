@@ -173,6 +173,7 @@ export type DepositPolicy = {
 	requestDays: number;
 	deadlineHours: number;
 	minPaymentHours: number;
+	lateBookingPaymentHours: number | null;
 	transferDetails: string | null;
 	appliesToManual: boolean;
 	excludedServiceIds: string[];
@@ -189,6 +190,7 @@ export const DEFAULT_DEPOSIT_POLICY: DepositPolicy = {
 	requestDays: 7,
 	deadlineHours: 48,
 	minPaymentHours: 24,
+	lateBookingPaymentHours: null,
 	transferDetails: null,
 	appliesToManual: true,
 	excludedServiceIds: []
@@ -201,7 +203,7 @@ export const loadDepositPolicy = async (supabase: CitaSupabaseClient, businessId
 	const [policyResult, exclusionsResult] = await Promise.all([
 		supabase
 			.from('deposit_policies')
-			.select('enabled, auto_cancel_enabled, amount_mode, fixed_amount, percentage, request_days, deadline_hours, min_payment_hours, transfer_details, applies_to_manual, revision')
+			.select('enabled, auto_cancel_enabled, amount_mode, fixed_amount, percentage, request_days, deadline_hours, min_payment_hours, late_booking_payment_hours, transfer_details, applies_to_manual, revision')
 			.eq('business_id', businessId)
 			.maybeSingle(),
 		supabase.from('deposit_service_exclusions').select('service_id').eq('business_id', businessId)
@@ -223,6 +225,7 @@ export const loadDepositPolicy = async (supabase: CitaSupabaseClient, businessId
 		requestDays: readFiniteNumber(row.request_days, 'depositPolicy.requestDays'),
 		deadlineHours: readFiniteNumber(row.deadline_hours, 'depositPolicy.deadlineHours'),
 		minPaymentHours: readFiniteNumber(row.min_payment_hours, 'depositPolicy.minPaymentHours'),
+		lateBookingPaymentHours: readNullableNumber(row.late_booking_payment_hours, 'depositPolicy.lateBookingPaymentHours'),
 		transferDetails: readNullableText(row.transfer_details, 'depositPolicy.transferDetails'),
 		appliesToManual: readBoolean(row.applies_to_manual, 'depositPolicy.appliesToManual'),
 		excludedServiceIds
@@ -246,6 +249,7 @@ export const saveDepositPolicy = async (
 			request_days: policy.requestDays,
 			deadline_hours: policy.deadlineHours,
 			min_payment_hours: policy.minPaymentHours,
+			late_booking_payment_hours: policy.lateBookingPaymentHours ?? null,
 			transfer_details: policy.transferDetails ?? '',
 			applies_to_manual: policy.appliesToManual,
 			excluded_service_ids: policy.excludedServiceIds
@@ -319,7 +323,7 @@ export type DepositListItem = {
 	reminderOpenedBy: string | null;
 	section: DepositListSection;
 	appointment: { id: string; startsAt: string; status: string; managementRevision: string; professionalId: string; serviceId: string };
-	patient: { id: string; name: string; phoneE164: string | null; blocked: boolean; archivedAt: string | null };
+	patient: { id: string; name: string; phoneE164: string | null; email?: string | null; blocked: boolean; archivedAt: string | null };
 };
 
 // One practice holds few dozen pending deposits; past this bound the page says the list is
@@ -342,7 +346,7 @@ export const loadDepositList = async (
 	const query = supabase
 		.from('appointment_deposits')
 		.select(
-			'appointment_id, status, amount, currency, request_from, due_at, auto_cancel, waived_reason, recorded_at, reminder_opened_at, reminder_opened_by, expired_at, revision, appointments!inner(id, starts_at, status, appointment_management_revision, professional_id, service_id, patients!inner(id, full_name, phone_e164, blocked, archived_at))'
+			'appointment_id, status, amount, currency, request_from, due_at, auto_cancel, waived_reason, recorded_at, reminder_opened_at, reminder_opened_by, expired_at, revision, appointments!inner(id, starts_at, status, appointment_management_revision, professional_id, service_id, patients!inner(id, full_name, phone_e164, email, blocked, archived_at))'
 		)
 		.eq('business_id', businessId)
 		.gt('appointments.starts_at', now.toISOString())
@@ -381,8 +385,9 @@ export const loadDepositList = async (
 				id: readText(patient.id, 'depositList.patient.id'),
 				name: readText(patient.full_name, 'depositList.patient.name'),
 				phoneE164: readNullableText(patient.phone_e164, 'depositList.patient.phone'),
-    blocked: readBoolean(patient.blocked, 'depositList.patient.blocked'),
-    archivedAt: readNullableText(patient.archived_at, 'depositList.patient.archivedAt')
+				email: patient.email === undefined ? undefined : readNullableText(patient.email, 'depositList.patient.email'),
+				blocked: readBoolean(patient.blocked, 'depositList.patient.blocked'),
+				archivedAt: readNullableText(patient.archived_at, 'depositList.patient.archivedAt')
 			}
 		});
 	}

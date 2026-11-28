@@ -92,12 +92,27 @@ export const parsePatientManagementView = (value: unknown) => {
    whatsapp_contact_phone: normalizeArgentineWhatsAppPhone(readNullableText(business.whatsapp_contact_phone, 'appointment.management.whatsapp'))
   }
  };
+ const selfManagementCutoffHours =
+  row.self_management_cutoff_hours === null || row.self_management_cutoff_hours === undefined
+   ? null
+   : counter(row.self_management_cutoff_hours);
+ const selfManagementCutoffAt =
+  row.self_management_cutoff_at === null || row.self_management_cutoff_at === undefined
+   ? null
+   : instant(row.self_management_cutoff_at);
+ const selfManagementWindowClosed = row.self_management_window_closed === true;
+ const cancelledByDepositExpiry =
+  row.cancelled_by_deposit_expiry === true || (row.status === 'cancelled' && deposit?.status === 'expired');
  return {
   appointment, canAddInformation, canManageReminders, emailRemindersActive, revision: token(row.revision), generation: counter(row.generation), scheduleRevision: counter(row.schedule_revision),
   accessKind: row.access_kind === 'legacy' ? 'legacy' as const : 'capability' as const, now,
   serviceId: row.service_id === null ? null : uuid(row.service_id), professionalIds, durationMinutes, integration,
   newBookingAllowed: readBoolean(row.new_booking_allowed, 'appointment.management.newBooking'),
   rescheduleUnavailableReason: readNullableText(row.reschedule_unavailable_reason, 'appointment.management.reason'),
+  selfManagementCutoffHours,
+  selfManagementCutoffAt,
+  selfManagementWindowClosed,
+  cancelledByDepositExpiry,
   financialTerms: row.financial_terms === null ? null : parseRescheduleFinancialTerms(row.financial_terms),
   financialSummary: { appliedAmount: money(financial.applied_amount), forfeitedAmount: money(financial.forfeited_amount), unresolvedAmount: money(financial.unresolved_amount) }
  };
@@ -186,6 +201,8 @@ export const patientManagementErrorMessage = (error: unknown): string => {
   return 'El turno o sus condiciones cambiaron. Revisá la información actualizada antes de confirmar.';
  if (raw.includes('APPOINTMENT_AVAILABILITY_CHANGED') || raw.includes('APPOINTMENT_SLOT_UNAVAILABLE') || candidate.code === '23P01')
   return 'Ese horario cambió o dejó de estar disponible. Tu turno anterior se conserva; elegí otro horario.';
+ if (raw.includes('APPOINTMENT_SELF_MANAGEMENT_WINDOW_CLOSED'))
+  return 'Ya pasó el límite para cancelar o reprogramar este turno online. Escribile al consultorio para coordinar un cambio.';
  if (raw.includes('APPOINTMENT_RESCHEDULE_UNAVAILABLE') || raw.includes('APPOINTMENT_CANNOT_RESCHEDULE'))
   return 'No se puede reprogramar este turno online ahora. Tu turno se conserva; podés contactar al consultorio.';
  if (raw.includes('APPOINTMENT_CANNOT_CANCEL')) return 'Este turno ya no admite cancelación online. Revisá su estado y, si necesitás ayuda, contactá al consultorio.';

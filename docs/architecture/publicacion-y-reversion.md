@@ -1,10 +1,37 @@
 # Publicación y reversión
 
-## Último estado comprobado — lote 0 de la entrega a Natalia (D1, D2, D3): 27 de noviembre de 2026, 20:29 hora argentina (23:29 UTC)
+## Último estado comprobado — lote 1 de la entrega a Natalia (P6, P7, P9, P10): 28 de noviembre de 2026, 03:53 hora argentina (06:53 UTC)
 
 **La única vuelta atrás vigente es la de este apartado.** Las de los apartados siguientes son historia.
 
-**Producción sirve** la instantánea `3bad70e896e382fc3ca98fe3d76de9f328555d4c` en `main`, Worker `app`, versión de Cloudflare **`7a4648b2-11ff-405f-8d5f-df4406e7d6ab`**. **171 migraciones:** la última es `20261127010000_entrega_natalia_lote0.sql` (`sha256` `6a522572ca6bc2b05eb03ad1550728df749423c0a9dc6a1c349bc8f6d5fa1268`). Programador `cita-suite-scheduler` reinstalado en versión **`843f7426-ef36-4d28-88b2-196de8acd5a6`** con los mismos cinco cron (`*/5`, `1-59/5`, `2-59/5`, `3-59/5`, `17 */3`).
+**Producción sirve** la instantánea `268b3b1cc93575d4d7112b2a3dbaa47fa69fdcab` en `main`, Worker `app`, versión de Cloudflare **`aaec6637-eb68-479f-b580-71e3a5068790`**. **172 migraciones:** la última es `20261128010000_entrega_natalia_lote1.sql` (`sha256` `244a60d33ba16b15a711f9ac8be267019a1f5c08bfd26d7fe12561b16fdbf8f9`). Programador `cita-suite-scheduler` reinstalado en versión **`24f7ceef-d9c1-48c4-b886-5fb7125554a1`** con los mismos cinco cron (`*/5`, `1-59/5`, `2-59/5`, `3-59/5`, `17 */3`).
+
+**Qué trae** ([plan, bitácora y evidencia del lote 1](../plans/entrega-natalia-implementacion.md#lote-1-mejoras-chicas)):
+- **P6:** horizonte configurable hasta `365` días («Hasta un año» en Reserva online, restricción `businesses_max_booking_days_ahead_check` `1..365` y validación en días calendario locales en `apply_patient_appointment_management`) preservando tramos fijos de 15 días, más leyenda única de valor estimado cuando `price_quote.adjusted = true` en pasos 4 y 5, `/turno/[token]`, `/gestion/[token]`, vista embebida y detalle interno.
+- **P7:** resolución viva de `booking_integrations.video_instructions` (con respaldo en `video_instructions_snapshot`) para turnos virtuales en `private.appointment_management_snapshot` y `loadAppointmentBookingContext`; enlaces `https://` clicables seguros sin `{@html}` (escapando HTML e ignorando `http://`/`javascript:`/`data:`) en correos virtuales, página del turno y vista embebida, más aclaración de enlace vigente en los correos virtuales no cancelados.
+- **P9:** validación de formato de correo en `/odonto/configuracion/negocio` (HTTP 400 si es inválido), exposición condicional de `contact.email` en `get_public_practice_contact` y `get_public_booking_catalogue` sólo cuando `public_contact_enabled = true`, y enlace `mailto:` responsivo en la cabecera de la reserva pública.
+- **P10:** ayuda sobria y subrayada «¿No tenés correo?» en confirmación de reserva (14–16 px, área táctil >= 44×44 px, sin fondo verde) que despliega sugerencia de familiar y «Pedir turno por WhatsApp» con borrador armado sin perder datos (más alerta `#patient-email-missing-error` con las mismas dos salidas si se envía vacío).
+
+Juan autorizó la publicación el 28 de noviembre a las 03:48 hora argentina («publicalo»).
+
+**Verificación sobre la revisión exacta (`268b3b1c`):**
+- local (`pnpm verify:fast` + TDD rojo/verde + *break-proof* 6/6): tipos sin errores ni advertencias, 2.295 pruebas de servidor, 384 de componentes y 197 guardias;
+- GitHub SQL `46103796129` (4m10s): 172 migraciones, 125 suites SQL (`entrega_natalia_lote1.sql` 13/13), concurrencia y tipos exactos byte a byte;
+- GitHub completa `46110017393` (19m33s): `verify:fast`, LibreOffice, Natalia, 172 migraciones, 125 suites SQL + concurrencia, tipos exactos, Chromium 86/86, demo 3/3 y reserva nativa de Natalia;
+- paquete `46111629145` (`bundleSha256=4f289ef7e60e305fca7eadcf317dc457cbbc26e6a49cfe921730358bc1102d9a`), Chromium sobre paquete `46111733581` (86/86), Firefox sobre paquete `46114155114` (86/86) y WebKit sobre paquete `46115593778` (84/86 + 2 omitidas declaradas de WebKit en Linux);
+- `verify-production-release.mjs` aprobado a las 06:53:28 UTC: 154 archivos idénticos y 78 relaciones sin exposición anónima; ambos `/_app/version.json` dicen `268b3b1cc93575d4d7112b2a3dbaa47fa69fdcab`;
+- comprobación en vivo en producción sobre el consultorio de prueba **«Dra. Natalia Frutos — PRUEBA»** (`c121c69c-f90b-4248-89a9-cd6e5bed6163`, `natalia-frutos-prueba`, remitente `turnos@prueba-correo.cita-suite.com.ar`): **P6** (horizonte 365 días guardado, latencia medida en producción mediana `224 ms` en día 365 y `288 ms` en tramo cercano, leyenda estimada sólo con ajuste y día 366 con `0` horarios), **P7** (correo virtual real en bandeja principal de `citasuite@gmail.com` ID `1a220fc307e13647`, `SPF/DKIM/DMARC pass`, sin `Reply-To`, enlaces 200, Meet clicable y aviso de enlace vigente, sin dirección física; actualización instantánea del enlace Meet en `/turno/[token]` con escape XSS y sin enlazar `http://`), **P9** (rechazo 400 de correo inválido, contacto ON/OFF y `mailto:` en 320 px sin desborde), **P10** («¿No tenés correo?» y respaldo de error en 320 px/1280 px); datos temporales del Lote 1 limpiados (`0` turnos/pacientes/entregas/políticas/reglas domingo, configuración restaurada) y consultorio real de Natalia intacto (huella `75bb96cd…` y turnero `24/24`).
+
+**Publicación:**
+- ensayo (`rehearse-production-migrations.mjs`) a las 06:50 UTC: `applied: 171`, `pending: 1`, `failures: 0`;
+- respaldo `~/.local/share/cita-suite/backups/production-2026-11-28T06-50-45-064Z`: 129 tablas, 4.930 filas, 171 migraciones, 26 objetos, `objectFailures: 0`;
+- programador sin cron (`aa763f95-99c9-4d47-88aa-35a7042d0fdf`); migración 172 a las 06:52:55 UTC en 1,04 s; Worker `app` (`aaec6637-eb68-479f-b580-71e3a5068790`) desde el paquete exacto `46111629145`; verificación `verify-production-release.mjs`; programador con cron (`24f7ceef-d9c1-48c4-b886-5fb7125554a1`, preflight `401/410` aprobado).
+
+**Vuelta atrás:** `NODE_OPTIONS=--max-old-space-size=192 pnpm --filter web exec wrangler rollback 7a4648b2-11ff-405f-8d5f-df4406e7d6ab --name app --message "<motivo>" --yes`, la versión del 27 de noviembre a las 20:29 (lote 0). Es compatible con la migración 172 porque ésta conserva todas las firmas, tablas y columnas existentes; la restricción `1..365` admite todos los valores previos (`1..90`) y el campo adicional `contact.email` es ignorado sin falla por `parsePublicContact` del lote 0. Después, los dos `/_app/version.json` deben decir `3bad70e896e382fc3ca98fe3d76de9f328555d4c`. La migración no se revierte. Nunca una versión anterior a E.
+
+## Estado anterior — lote 0 de la entrega a Natalia (D1, D2, D3): 27 de noviembre de 2026, 20:29 hora argentina (23:29 UTC)
+
+**Sirvió hasta el 28 de noviembre a las 03:53 hora argentina** la instantánea `3bad70e896e382fc3ca98fe3d76de9f328555d4c` en `main`, Worker `app`, versión de Cloudflare **`7a4648b2-11ff-405f-8d5f-df4406e7d6ab`**. **171 migraciones:** la última es `20261127010000_entrega_natalia_lote0.sql` (`sha256` `6a522572ca6bc2b05eb03ad1550728df749423c0a9dc6a1c349bc8f6d5fa1268`). Programador `cita-suite-scheduler` reinstalado en versión **`843f7426-ef36-4d28-88b2-196de8acd5a6`** con los mismos cinco cron (`*/5`, `1-59/5`, `2-59/5`, `3-59/5`, `17 */3`).
 
 **Qué trae** ([plan, bitácora y evidencia del lote 0](../plans/entrega-natalia-implementacion.md#lote-0-defectos)):
 - **D1:** los correos de turnos virtuales ya no muestran dirección, indicaciones para llegar ni enlace al mapa (ni en `private.appointment_management_snapshot` ni en `appointment-email-content.ts`), y muestran «Modalidad: virtual» junto a las indicaciones para la consulta online; los presenciales conservan dirección, indicaciones para llegar y mapa sin texto online.

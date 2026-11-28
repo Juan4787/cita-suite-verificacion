@@ -20,7 +20,8 @@ const permissions: PatientPermissions = {
 	canUploadRadiographs: true,
 	canViewRadiographTrash: true,
 	canTrashRadiographs: true,
-	canExportPatientData: true
+	canExportPatientData: true,
+	canManageDepositAutoCancelExemption: true
 };
 const event = {
 	id: 'event-one',
@@ -182,5 +183,44 @@ describe('contacto por WhatsApp desde la ficha', () => {
 	it('sin teléfono no muestra el botón', () => {
 		renderWith({ phone: null, phone_e164: null }, ANDROID);
 		expect(screen.queryByRole('link', { name: 'Abrir WhatsApp' })).toBeNull();
+	});
+});
+
+describe('P3: marca «No cancelar sus turnos por seña impaga» en ficha del paciente', () => {
+	it('muestra la casilla y el historial de quién y cuándo para dueño, administración y recepción', () => {
+		const { container } = render(PatientProfilePanel, {
+			...props(),
+			active: true,
+			deferred: false,
+			businessTimeZone: 'America/Argentina/Buenos_Aires',
+			patient: {
+				...props().patient,
+				exempt_from_deposit_auto_cancel: true,
+				exempt_from_deposit_auto_cancel_updated_at: '2026-11-28T13:00:00.000Z',
+				exempt_from_deposit_auto_cancel_updated_by_name: 'recepcion@consultorio.test'
+			},
+			permissions: { ...permissions, canManageDepositAutoCancelExemption: true }
+		});
+
+		const checkbox = screen.getByRole('checkbox', { name: 'No cancelar sus turnos por seña impaga' });
+		expect(checkbox).toBeChecked();
+		expect(container.querySelector('form[action="?/set_deposit_exemption"]')).not.toBeNull();
+		expect(container.querySelector('[data-exemption-audit]')?.textContent).toContain('recepcion@consultorio.test');
+		expect(screen.getByText(/se le sigue pidiendo la seña/i)).toBeInTheDocument();
+	});
+
+	it('oculta el formulario de cambio para roles sin permiso (profesional o sólo lectura)', () => {
+		const { container } = render(PatientProfilePanel, {
+			...props(),
+			active: true,
+			deferred: false,
+			businessTimeZone: 'America/Argentina/Buenos_Aires',
+			patient: { ...props().patient, exempt_from_deposit_auto_cancel: false },
+			permissions: { ...permissions, canManageDepositAutoCancelExemption: false }
+		});
+
+		expect(screen.queryByRole('checkbox', { name: 'No cancelar sus turnos por seña impaga' })).toBeNull();
+		expect(container.querySelector('form[action="?/set_deposit_exemption"]')).toBeNull();
+		expect(screen.getByText(/Se aplica la regla general de señas del consultorio/i)).toBeInTheDocument();
 	});
 });

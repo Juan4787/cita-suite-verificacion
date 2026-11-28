@@ -426,12 +426,14 @@ export type Database = {
           amount: number
           appointment_id: string
           auto_cancel: boolean
+          auto_cancel_suppressed_by_patient_exemption: boolean
           business_id: string
           created_at: string
           currency: string
           deadline_hours: number
           due_at: string
           expired_at: string | null
+          late_booking_payment_hours: number | null
           min_payment_hours: number
           note: string | null
           percentage: number | null
@@ -452,12 +454,14 @@ export type Database = {
           amount: number
           appointment_id: string
           auto_cancel: boolean
+          auto_cancel_suppressed_by_patient_exemption?: boolean
           business_id: string
           created_at?: string
           currency?: string
           deadline_hours: number
           due_at: string
           expired_at?: string | null
+          late_booking_payment_hours?: number | null
           min_payment_hours: number
           note?: string | null
           percentage?: number | null
@@ -478,12 +482,14 @@ export type Database = {
           amount?: number
           appointment_id?: string
           auto_cancel?: boolean
+          auto_cancel_suppressed_by_patient_exemption?: boolean
           business_id?: string
           created_at?: string
           currency?: string
           deadline_hours?: number
           due_at?: string
           expired_at?: string | null
+          late_booking_payment_hours?: number | null
           min_payment_hours?: number
           note?: string | null
           percentage?: number | null
@@ -518,6 +524,7 @@ export type Database = {
           require_deposit_on_reschedule: boolean
           require_email: boolean
           revision: number
+          self_management_cutoff_hours: number | null
           sender_verified: boolean
           show_cancel: boolean
           show_reschedule: boolean
@@ -531,6 +538,7 @@ export type Database = {
           require_deposit_on_reschedule?: boolean
           require_email?: boolean
           revision?: number
+          self_management_cutoff_hours?: number | null
           sender_verified?: boolean
           show_cancel?: boolean
           show_reschedule?: boolean
@@ -544,6 +552,7 @@ export type Database = {
           require_deposit_on_reschedule?: boolean
           require_email?: boolean
           revision?: number
+          self_management_cutoff_hours?: number | null
           sender_verified?: boolean
           show_cancel?: boolean
           show_reschedule?: boolean
@@ -2089,6 +2098,7 @@ export type Database = {
           deadline_hours: number
           enabled: boolean
           fixed_amount: number | null
+          late_booking_payment_hours: number | null
           min_payment_hours: number
           percentage: number | null
           request_days: number
@@ -2105,6 +2115,7 @@ export type Database = {
           deadline_hours?: number
           enabled?: boolean
           fixed_amount?: number | null
+          late_booking_payment_hours?: number | null
           min_payment_hours?: number
           percentage?: number | null
           request_days?: number
@@ -2121,6 +2132,7 @@ export type Database = {
           deadline_hours?: number
           enabled?: boolean
           fixed_amount?: number | null
+          late_booking_payment_hours?: number | null
           min_payment_hours?: number
           percentage?: number | null
           request_days?: number
@@ -3322,6 +3334,10 @@ export type Database = {
           drive_folder_id: string | null
           email: string | null
           email_contact_revision: number
+          exempt_from_deposit_auto_cancel: boolean
+          exempt_from_deposit_auto_cancel_updated_at: string | null
+          exempt_from_deposit_auto_cancel_updated_by: string | null
+          exempt_from_deposit_auto_cancel_updated_by_name: string | null
           full_name: string
           id: string
           insurance: string | null
@@ -3354,6 +3370,10 @@ export type Database = {
           drive_folder_id?: string | null
           email?: string | null
           email_contact_revision?: number
+          exempt_from_deposit_auto_cancel?: boolean
+          exempt_from_deposit_auto_cancel_updated_at?: string | null
+          exempt_from_deposit_auto_cancel_updated_by?: string | null
+          exempt_from_deposit_auto_cancel_updated_by_name?: string | null
           full_name: string
           id?: string
           insurance?: string | null
@@ -3386,6 +3406,10 @@ export type Database = {
           drive_folder_id?: string | null
           email?: string | null
           email_contact_revision?: number
+          exempt_from_deposit_auto_cancel?: boolean
+          exempt_from_deposit_auto_cancel_updated_at?: string | null
+          exempt_from_deposit_auto_cancel_updated_by?: string | null
+          exempt_from_deposit_auto_cancel_updated_by_name?: string | null
           full_name?: string
           id?: string
           insurance?: string | null
@@ -6155,6 +6179,14 @@ export type Database = {
           p_patient_id: string
         }
         Returns: undefined
+      }
+      set_patient_deposit_auto_cancel_exemption: {
+        Args: {
+          p_business_id: string
+          p_exempt: boolean
+          p_patient_id: string
+        }
+        Returns: Json
       }
       set_patient_drive_folder_safely: {
         Args: {

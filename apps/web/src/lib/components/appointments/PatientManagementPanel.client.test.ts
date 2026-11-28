@@ -94,4 +94,44 @@ describe('contextual patient management panel', () => {
   expect(screen.getByRole('alert')).not.toHaveTextContent(/network unavailable|no se guardó/i);
   expect(screen.getByRole('alert')).toHaveFocus();
  });
+ it('P5: dentro de la ventana de autogestión oculta Cancelar y Reprogramar, mantiene Confirmar y muestra el aviso con WhatsApp', () => {
+  renderPanel({
+   context: context({
+    canCancel: false,
+    canReschedule: false,
+    canConfirm: true,
+    selfManagementCutoffHours: 48,
+    selfManagementCutoffAt: '2026-11-29T12:00:00Z',
+    selfManagementWindowClosed: true,
+    practiceWhatsApp: {
+     whatsappUrl: 'https://wa.me/5493415550123?text=Hola',
+     whatsappWebUrl: 'https://web.whatsapp.com/send?phone=5493415550123&text=Hola'
+    }
+   })
+  });
+  expect(screen.getByRole('button', { name: 'Confirmo que voy' })).toBeVisible();
+  expect(screen.queryByRole('link', { name: 'Cancelar turno' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Reprogramar turno' })).not.toBeInTheDocument();
+  expect(screen.getByText(/48\s*horas antes/i)).toBeVisible();
+  expect(screen.getByRole('link', { name: /WhatsApp/i })).toHaveAttribute('href', expect.stringMatching(/wa\.me|web\.whatsapp\.com/));
+ });
+ it('P5: al elegir un nuevo horario dentro de la ventana de autogestión avisa antes de confirmar que ya no podrá cambiarse online', () => {
+  renderPanel({
+   context: context({
+    mode: 'reschedule',
+    now: '2026-12-01T14:00:00Z',
+    selectedStart: '2026-12-02T12:00:00Z',
+    selfManagementCutoffHours: 48,
+    slots: [{ starts_at: '2026-12-02T12:00:00Z', ends_at: '2026-12-02T12:45:00Z' }],
+    financialTerms: {
+     kind: 'none', unavailable_reason: null, required: false, amount: null, base_amount: null, currency: 'ARS',
+     previous_applicable_payment_amount: '0', previous_payment_disposition: 'none', forfeit_amount: '0', credit_amount: '0',
+     quote_amount: null, quote_remainder: null, request_from: null, due_at: null, auto_cancel: false, last_minute: false,
+     terms_informed: false, current_deposit_status: null, current_deposit_amount: null, current_payment_allocation: null,
+     request_days: null, deadline_hours: null, min_payment_hours: null
+    }
+   })
+  });
+  expect(screen.getByText(/ya no se podrá cancelar ni reprogramar online/i)).toBeVisible();
+ });
 });

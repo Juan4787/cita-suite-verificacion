@@ -270,6 +270,81 @@ describe('modality-specific instructions (D1)', () => {
 	});
 });
 
+describe('P5 y P2: ventana de autogestión, vencimiento consistente y motivo en cancelación automática', () => {
+	const dueAt = '2026-11-18T15:00:00.000Z';
+	const pendingDeposit = (autoCancel: boolean) => ({
+		appointment_id: 'appointment-1',
+		status: 'pending',
+		amount: 40000,
+		currency: 'ARS',
+		request_from: '2026-11-10T12:00:00.000Z',
+		due_at: dueAt,
+		auto_cancel: autoCancel,
+		waived_reason: null,
+		recorded_at: null,
+		reminder_opened_at: null,
+		expired_at: null,
+		revision: 1
+	});
+
+	it('P5: en correos enviados dentro de la ventana de autogestión omite Cancelar/Reprogramar y guía hacia WhatsApp', () => {
+		const built = build(
+			work('reminder_24h', {}, {
+				can_cancel: false,
+				can_reschedule: false,
+				self_management_cutoff_hours: 48,
+				self_management_cutoff_at: '2026-11-18T15:00:00.000Z',
+				self_management_window_closed: true,
+				business: { ...snapshot().business, whatsapp_contact_phone: '+5493415550123' }
+			})
+		);
+		expect(built.links.map((l) => l.label)).toEqual(['Ver mi turno']);
+		expect(built.html).not.toContain('accion=cancelar');
+		expect(built.html).not.toContain('accion=reprogramar');
+		expect(built.text).toMatch(/48\s*horas/i);
+		expect(built.text).toContain('wa.me/5493415550123');
+		expect(built.html).toContain('wa.me/5493415550123');
+	});
+
+	it('P2/P3: cuando auto_cancel es false muestra la fecha/hora límite exacta y nunca promete cancelación automática', () => {
+		const built = build(
+			work('booking_receipt', {}, {
+				deposit: pendingDeposit(false),
+				deposit_transfer_details: 'Alias prueba.sena'
+			})
+		);
+		expect(built.text).toContain('18 de noviembre a las 12:00');
+		expect(built.text).not.toMatch(/se cancela automáticamente/i);
+		expect(built.html).not.toMatch(/se cancela automáticamente/i);
+	});
+
+	it('P2: el correo de cancelación automática por seña impaga explica el motivo con fecha/hora exacta e incluye WhatsApp del consultorio y enlace para volver a reservar', () => {
+		const expiredDeposit = {
+			...pendingDeposit(false),
+			status: 'expired',
+			expired_at: '2026-11-18T15:05:00.000Z'
+		};
+		const built = build(
+			work('cancellation_receipt', {}, {
+				status: 'cancelled',
+				can_cancel: false,
+				can_reschedule: false,
+				new_booking_allowed: true,
+				cancelled_by_deposit_expiry: true,
+				deposit: expiredDeposit,
+				business: { ...snapshot().business, whatsapp_contact_phone: '+5493415550123' }
+			})
+		);
+		expect(built.text).toContain('se canceló automáticamente porque no se registró la seña antes del');
+		expect(built.text).toContain('18 de noviembre a las 12:00');
+		expect(built.html).toContain('se canceló automáticamente porque no se registró la seña antes del');
+		expect(built.links.map((l) => l.label)).toEqual(['Reservar otro turno', 'Escribir al consultorio por WhatsApp']);
+		expect(built.html).toContain('wa.me/5493415550123');
+		expect(built.html).not.toContain('accion=cancelar');
+		expect(built.html).not.toContain('accion=reprogramar');
+	});
+});
+
 describe('parseAppointmentEmailWork', () => {
 	it('refuses an unknown purpose', () => {
 		expect(() => parseAppointmentEmailWork({ delivery_id: 'd', lease_token: 'l', purpose: 'promotion', recipient: 'x', token: null, unsubscribe_token: 'u', sender: { from_address: 'a', reply_to: 'b' }, preferences: { show_cancel: true, show_reschedule: true }, snapshot: {} })).toThrow();

@@ -192,6 +192,56 @@ export const classifyDeposit = (
 	return Date.parse(deposit.request_from) <= nowMs ? 'to_request' : 'later';
 };
 
+export type DepositDeadlineDescription = {
+	amountLabel: string;
+	dueLabel: string;
+	overdue: boolean;
+	autoCancel: boolean;
+	bookingNotice: string;
+	turnPageLine: string;
+	emailLine: string;
+	autoCancelSentence: string | null;
+};
+
+/**
+ * Single source of truth for deposit deadline formatting across every patient surface
+ * (pre-booking summary, confirmation, turn page, embedded confirmation, emails and reschedule).
+ * Never promises automatic cancellation when `autoCancel` is false or the deadline already passed.
+ */
+export const describeDepositDeadline = (
+	terms: { amount: number; dueAt: string; autoCancel: boolean },
+	timezone: string,
+	now: Date
+): DepositDeadlineDescription => {
+	const amountLabel = formatDepositAmount(terms.amount);
+	const due = formatInTimeZone(terms.dueAt, timezone);
+	const overdue = Date.parse(terms.dueAt) <= now.getTime();
+	const willAutoCancel = terms.autoCancel && !overdue;
+	const autoCancelSentence = willAutoCancel
+		? 'Si no se registra para esa fecha, el turno se cancela automáticamente y el horario se libera.'
+		: null;
+	const bookingNotice = overdue
+		? `Este turno requiere una seña de ${amountLabel}. Transferila apenas reserves: el consultorio confirma el turno cuando la recibe.`
+		: willAutoCancel
+			? `Este turno requiere una seña de ${amountLabel}. Tenés tiempo hasta el ${due.full} para transferirla. Si no se registra, el turno se cancela automáticamente.`
+			: `Este turno requiere una seña de ${amountLabel}. Tenés tiempo hasta el ${due.full} para transferirla.`;
+	const turnPageLine = overdue
+		? `Para confirmar tu turno, transferí la seña de ${amountLabel} cuanto antes y coordiná el pago con el consultorio.`
+		: `Para confirmar tu turno, transferí la seña de ${amountLabel} antes del ${due.full}.`;
+	const emailLine = `Seña: ${amountLabel}, antes del ${due.full}.`;
+
+	return {
+		amountLabel,
+		dueLabel: due.full,
+		overdue,
+		autoCancel: willAutoCancel,
+		bookingNotice,
+		turnPageLine,
+		emailLine,
+		autoCancelSentence
+	};
+};
+
 /**
  * What the booking confirmation says about the deposit before booking (plan, section 4.9). The
  * automatic cancellation is promised only when this slot has it; a due date already past asks to
@@ -201,15 +251,7 @@ export const buildDepositTermsNotice = (
 	terms: { amount: number; dueAt: string; autoCancel: boolean },
 	timezone: string,
 	now: Date
-): string => {
-	const amount = formatDepositAmount(terms.amount);
-	if (Date.parse(terms.dueAt) <= now.getTime()) {
-		return `Este turno requiere una seña de ${amount}. Transferila apenas reserves: el consultorio confirma el turno cuando la recibe.`;
-	}
-	const due = formatInTimeZone(terms.dueAt, timezone);
-	const notice = `Este turno requiere una seña de ${amount}. Tenés tiempo hasta el ${due.dateLabel} a las ${due.timeLabel} para transferirla.`;
-	return terms.autoCancel ? `${notice} Si no se registra, el turno se cancela automáticamente.` : notice;
-};
+): string => describeDepositDeadline(terms, timezone, now).bookingNotice;
 
 /** When the server could not compute the terms: the booking goes on and the turn's page shows them. */
 export const DEPOSIT_TERMS_UNAVAILABLE_NOTICE =

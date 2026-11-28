@@ -1,6 +1,9 @@
 <script lang="ts">
 	import BackLink from '$lib/components/BackLink.svelte';
 	import { formatDepositAmount } from '$lib/scheduling/deposits';
+	import { buildDepositRuleExamples } from '$lib/scheduling/deposit-examples';
+	import { classifyUserAgent, refineDeviceClass, whatsappHrefFor, type DeviceClass } from '$lib/device';
+	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 
 	type FormValues = {
@@ -12,6 +15,7 @@
 		requestDays: string;
 		deadlineHours: string;
 		minPaymentHours: string;
+		lateBookingPaymentHours: string;
 		transferDetails: string;
 		appliesToManual: boolean;
 		excludedServiceIds: string[];
@@ -33,6 +37,10 @@
 		requestDays: String(data.policy.requestDays),
 		deadlineHours: String(data.policy.deadlineHours),
 		minPaymentHours: String(data.policy.minPaymentHours),
+		lateBookingPaymentHours:
+			data.policy.lateBookingPaymentHours === null || data.policy.lateBookingPaymentHours === undefined
+				? ''
+				: String(data.policy.lateBookingPaymentHours),
 		transferDetails: data.policy.transferDetails ?? '',
 		appliesToManual: data.policy.appliesToManual,
 		excludedServiceIds: data.policy.excludedServiceIds
@@ -43,9 +51,47 @@
 	let fixedAmount = $state(initial.fixedAmount);
 	// Kept while the other form is chosen: switching back and forth never loses what was written.
 	let percentage = $state(initial.percentage);
+	let deadlineHours = $state(initial.deadlineHours);
+	let minPaymentHours = $state(initial.minPaymentHours);
+	let lateBookingPaymentHours = $state(initial.lateBookingPaymentHours ?? '');
 	let excluded = $state<string[]>([...initial.excludedServiceIds]);
+	let refinedDevice = $state<DeviceClass | null>(null);
+	onMount(() => {
+		refinedDevice = refineDeviceClass(data.device ?? classifyUserAgent(navigator.userAgent), navigator);
+	});
+	const device = $derived(refinedDevice ?? data.device ?? 'unknown');
 	const canSave = $derived(!data.demo);
 	const errors = $derived(form?.errors ?? {});
+
+	const parseHoursInRange = (raw: string | undefined, min: number, max: number, fallback: number): number => {
+		const trimmed = String(raw ?? '').trim();
+		if (!/^\d{1,4}$/.test(trimmed)) return fallback;
+		const parsed = Number(trimmed);
+		return parsed >= min && parsed <= max ? parsed : fallback;
+	};
+	const parseOptionalHoursInRange = (raw: string | undefined, min: number, max: number): number | null => {
+		const trimmed = String(raw ?? '').trim();
+		if (!trimmed) return null;
+		if (!/^\d{1,4}$/.test(trimmed)) return null;
+		const parsed = Number(trimmed);
+		return parsed >= min && parsed <= max ? parsed : null;
+	};
+
+	const ruleExamples = $derived(
+		buildDepositRuleExamples({
+			enabled,
+			autoCancelEnabled,
+			deadlineHours: parseHoursInRange(deadlineHours, 1, 720, data.policy.deadlineHours),
+			minPaymentHours: parseHoursInRange(minPaymentHours, 0, 168, data.policy.minPaymentHours),
+			lateBookingPaymentHours: parseOptionalHoursInRange(lateBookingPaymentHours, 1, 168),
+			timezone: data.timezone ?? 'America/Argentina/Buenos_Aires'
+		})
+	);
+	const supportWhatsAppHref = $derived(
+		data.supportWhatsApp
+			? whatsappHrefFor(device, data.supportWhatsApp.whatsappUrl, data.supportWhatsApp.whatsappWebUrl)
+			: null
+	);
 
 	// With a percentage, a service without a fee for every professional asks the fixed amount, or nothing
 	// when there is none (plan, section 4.3).
@@ -145,8 +191,8 @@
 			{/if}
 		</fieldset>
 
-		<fieldset class="grid gap-4 sm:grid-cols-3">
-			<legend class="ux-section-title sm:col-span-3">Plazos</legend>
+		<fieldset class="grid gap-4 sm:grid-cols-2">
+			<legend class="ux-section-title sm:col-span-2">Plazos</legend>
 			<label>
 				<span class="ux-label">Días antes del turno para pedirla</span>
 				<input name="request_days" inputmode="numeric" value={initial.requestDays} disabled={!canSave} class="ux-input" />
@@ -154,13 +200,28 @@
 			</label>
 			<label>
 				<span class="ux-label">Horas antes del turno en que vence</span>
-				<input name="deadline_hours" inputmode="numeric" value={initial.deadlineHours} disabled={!canSave} class="ux-input" />
+				<input name="deadline_hours" inputmode="numeric" bind:value={deadlineHours} disabled={!canSave} class="ux-input" />
 				{#if errors.deadline_hours}<span class="mt-1 block text-sm text-warning-300">{errors.deadline_hours}</span>{/if}
 			</label>
 			<label>
 				<span class="ux-label">Plazo mínimo para pagar, en horas</span>
-				<input name="min_payment_hours" inputmode="numeric" value={initial.minPaymentHours} disabled={!canSave} class="ux-input" />
+				<input name="min_payment_hours" inputmode="numeric" bind:value={minPaymentHours} disabled={!canSave} class="ux-input" />
 				{#if errors.min_payment_hours}<span class="mt-1 block text-sm text-warning-300">{errors.min_payment_hours}</span>{/if}
+			</label>
+			<label>
+				<span class="ux-label">Plazo para reservas tardías, en horas (opcional)</span>
+				<input
+					name="late_booking_payment_hours"
+					inputmode="numeric"
+					bind:value={lateBookingPaymentHours}
+					disabled={!canSave}
+					class="ux-input"
+					placeholder="48"
+				/>
+				<span class="mt-1 block text-xs text-copy-subtle">
+					Si reservan después del plazo normal, tienen estas horas para pagar. Si el vencimiento queda a menos de 24&nbsp;horas del turno, no se cancela solo. Vacío, se usa sólo el plazo normal.
+				</span>
+				{#if errors.late_booking_payment_hours}<span class="mt-1 block text-sm text-warning-300">{errors.late_booking_payment_hours}</span>{/if}
 			</label>
 		</fieldset>
 
@@ -170,11 +231,49 @@
 				<span class="font-bold text-fg">Cancelar solo el turno si la seña no llega a tiempo</span>
 			</label>
 			<p class="text-sm text-fg-55">
-				Al vencer, el turno se cancela y el horario vuelve a estar disponible. Nunca cancela un turno reservado
-				con menos del plazo mínimo para pagar, uno con un pedido de reprogramación ni una seña vencida hace
-				más de 24&nbsp;horas: esos quedan en la lista para decidir a mano.
+				Al vencer, el turno se cancela y el horario vuelve a estar disponible. Si el plazo queda muy cerca del
+				turno (menos de 24&nbsp;horas con reservas tardías, o menos del plazo mínimo para pagar), si el paciente
+				está exceptuado en su ficha, si pidió reprogramar o si la seña venció hace más de 24&nbsp;horas, no se
+				cancela solo y queda en la lista para decidir a mano.
 			</p>
 		</div>
+
+		<details class="ux-soft-card p-4" data-deposit-examples-accordion>
+			<summary class="cursor-pointer font-bold text-fg">
+				¿Cómo funcionan los plazos y la cancelación automática? Ver ejemplos
+			</summary>
+			<div class="mt-4 grid gap-4 border-t border-line pt-4 text-sm text-fg-70">
+				<p>
+					Estos ejemplos se calculan con los valores actuales de esta pantalla para que puedas verificar cuándo vence
+					la seña y cuándo se cancela solo un turno:
+				</p>
+				<div class="grid gap-3">
+					{#each ruleExamples as example (example.id)}
+						<div class="rounded-xl border border-line bg-surface p-4">
+							<p class="font-bold text-fg">{example.title}</p>
+							<p class="mt-1 text-fg-65">{example.scenario}</p>
+							<p class="mt-2 text-fg">{example.summary}</p>
+							<p class="mt-1 text-fg-65">{example.outcome}</p>
+						</div>
+					{/each}
+				</div>
+				{#if supportWhatsAppHref}
+					<div class="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
+						<p class="text-fg-70">
+							Si querés revisar cómo conviene configurar los plazos para tu consultorio, escribinos.
+						</p>
+						<a
+							href={supportWhatsAppHref}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="ux-btn-secondary shrink-0"
+						>
+							¿Te quedan dudas?
+						</a>
+					</div>
+				{/if}
+			</div>
+		</details>
 
 		<label>
 			<span class="ux-label">Datos para transferir</span>

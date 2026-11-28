@@ -6,6 +6,7 @@ import {
 	DEPOSIT_STATUS_LABELS,
 	DEPOSIT_TERMS_UNAVAILABLE_NOTICE,
 	describeDepositAutomation,
+	describeDepositDeadline,
 	formatElapsed,
 	classifyDeposit,
 	buildDepositCancellationMessage,
@@ -317,5 +318,27 @@ describe('página de señas', () => {
 		expect(describeDepositAutomation({ practiceAutoCancel: true, status: { enabled: true, lastRunFinishedAt: null }, now }).text).toMatch(
 			/todavía no corrió/
 		);
+	});
+});
+
+describe('P2: fuente única describeDepositDeadline para consistencia de fecha y hora exacta', () => {
+	const now = new Date('2026-11-10T12:00:00.000Z');
+	const due = formatInTimeZone(DUE_AT, PRACTICE_TIMEZONE);
+
+	it('produce la misma fecha y hora exactas en zona del consultorio y sólo promete cancelación automática cuando autoCancel=true', () => {
+		const withAuto = describeDepositDeadline({ amount: 40000, dueAt: DUE_AT, autoCancel: true }, PRACTICE_TIMEZONE, now);
+		expect(withAuto.dueLabel).toBe(due.full);
+		expect(withAuto.overdue).toBe(false);
+		expect(withAuto.bookingNotice).toContain(due.full);
+		expect(withAuto.bookingNotice).toContain('se cancela automáticamente');
+		expect(withAuto.turnPageLine).toContain(due.full);
+		expect(withAuto.emailLine).toContain(due.full);
+		expect(withAuto.autoCancelSentence).toContain('cancela automáticamente');
+
+		const withoutAuto = describeDepositDeadline({ amount: 40000, dueAt: DUE_AT, autoCancel: false }, PRACTICE_TIMEZONE, now);
+		expect(withoutAuto.dueLabel).toBe(due.full);
+		expect(withoutAuto.bookingNotice).toContain(due.full);
+		expect(withoutAuto.bookingNotice).not.toMatch(/cancela/);
+		expect(withoutAuto.autoCancelSentence).toBeNull();
 	});
 });

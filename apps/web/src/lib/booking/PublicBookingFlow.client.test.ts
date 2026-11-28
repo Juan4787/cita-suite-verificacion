@@ -661,3 +661,28 @@ it("P10: al fallar por correo vacío muestra las mismas salidas asociadas al cam
   render(PublicBookingFlow, { data: optionalData });
   expect(screen.queryByRole("button", { name: "¿No tenés correo?" })).not.toBeInTheDocument();
 });
+
+it("P2 + P5: el paso previo a reservar muestra a la vez el vencimiento exacto de la seña y el límite de autogestión", () => {
+  const data = bookingFixture(["in_person"]);
+  Object.assign(data, {
+    selfManagementCutoffHours: 48,
+    depositTerms: {
+      "2026-11-02T09:00:00.000Z": {
+        amount: 40000,
+        dueAt: "2026-10-26T09:00:00.000Z",
+        autoCancel: true,
+      },
+    },
+  });
+  // Freeze time well before the slot so both deposit and cutoff are in the future
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-10-20T12:00:00.000Z"));
+  try {
+    render(PublicBookingFlow, { data });
+    expect(document.querySelector("[data-deposit-notice]")?.textContent).toContain("26 de octubre a las 09:00");
+    expect(document.querySelector("[data-self-management-notice]")?.textContent).toMatch(/48\s*horas antes/i);
+    expect(document.querySelector("[data-self-management-notice]")?.textContent).toContain("31 de octubre a las 09:00");
+  } finally {
+    vi.useRealTimers();
+  }
+});

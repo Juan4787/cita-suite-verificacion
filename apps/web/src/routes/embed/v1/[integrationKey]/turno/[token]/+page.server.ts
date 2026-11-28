@@ -23,5 +23,14 @@ export const load: PageServerLoad = async (event) => {
     }
     const start = new URLSearchParams();
     for (const key of ['parent_origin', 'instance_id']) { const value = url.searchParams.get(key); if (value) start.set(key, value); }
-    return { newBookingAllowed: view.newBookingAllowed, bookingStartUrl: '/embed/v1/' + integration.publicKey + '?' + start, recovered: url.searchParams.get('recuperado') === '1', appointment, theme: appointment.booking_context?.theme ?? integration.theme, publicKey: integration.publicKey };
+    return {
+        newBookingAllowed: view.newBookingAllowed,
+        selfManagementCutoffHours: view.selfManagementCutoffHours,
+        now: view.now,
+        bookingStartUrl: '/embed/v1/' + integration.publicKey + '?' + start,
+        recovered: url.searchParams.get('recuperado') === '1',
+        appointment,
+        theme: appointment.booking_context?.theme ?? integration.theme,
+        publicKey: integration.publicKey
+    };
 };

@@ -189,4 +189,23 @@ describe('página de señas', () => {
 		expect(screen.getByText(/acceso comercial del consultorio está restringido/)).toBeInTheDocument();
 		expect(screen.queryByRole('button')).toBeNull();
 	});
+
+	it('P2: en canceladas por falta de seña sin correo marca explícitamente avisar por WhatsApp', () => {
+		render(
+			Page,
+			{
+				data: data([
+					row({
+						appointmentId: '00000000-0000-4000-8000-0000000000a9',
+						section: 'cancelled',
+						appointmentStatus: 'cancelled',
+						hasEmail: false,
+						cancellation: { rebookHref: '/odonto/agenda', canNotify: true }
+					})
+				])
+			}
+		);
+		expect(screen.getByText(/Sin correo: avisar por WhatsApp/i)).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Avisar a la persona' })).toBeInTheDocument();
+	});
 });

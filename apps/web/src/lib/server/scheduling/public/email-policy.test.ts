@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_APPOINTMENT_EMAIL_PREFERENCES } from '$lib/scheduling/email-policy';
+import { DEFAULT_APPOINTMENT_EMAIL_PREFERENCES, buildSelfManagementCutoffNotice } from '$lib/scheduling/email-policy';
 import { loadAppointmentEmailPolicy, loadPublicBookingPolicy, loadManualBookingReschedulePolicy, parseManualBookingRescheduleAttestation, parseAppointmentEmailPolicyForm, saveAppointmentEmailPolicy } from './email-policy';
 
 const deposits = vi.hoisted(() => ({ loadDepositPolicy: vi.fn(), loadDepositAutomationStatus: vi.fn() }));
@@ -54,14 +54,16 @@ describe('appointment email preferences', () => {
  it('projects only required contact when sender is ready and the versioned economic rules to public booking', async () => {
   const unreadyQuery = { select: () => unreadyQuery, eq: () => unreadyQuery, single: async () => ({ data: policy, error: null }) };
   expect(await loadPublicBookingPolicy({ from: () => unreadyQuery } as never, businessId)).toEqual({ requireEmail: false,
-   reschedulePolicy: { schema_version: 1, policy_revision: 7, require_deposit_on_reschedule: true, previous_deposit_disposition: 'forfeit' }
+   reschedulePolicy: { schema_version: 1, policy_revision: 7, require_deposit_on_reschedule: true, previous_deposit_disposition: 'forfeit' },
+   selfManagementCutoffHours: null
   });
-  const readyQuery = { select: () => readyQuery, eq: () => readyQuery, single: async () => ({ data: { ...policy, sender_verified: true }, error: null }) };
+  const readyQuery = { select: () => readyQuery, eq: () => readyQuery, single: async () => ({ data: { ...policy, sender_verified: true, self_management_cutoff_hours: 48 }, error: null }) };
   expect(await loadPublicBookingPolicy({ from: () => readyQuery } as never, businessId)).toEqual({ requireEmail: true,
-   reschedulePolicy: { schema_version: 1, policy_revision: 7, require_deposit_on_reschedule: true, previous_deposit_disposition: 'forfeit' }
+   reschedulePolicy: { schema_version: 1, policy_revision: 7, require_deposit_on_reschedule: true, previous_deposit_disposition: 'forfeit' },
+   selfManagementCutoffHours: 48
   });
  });
- it.each([null, { ...policy, require_email: 'false' }, { ...policy, revision: 0 }, { ...policy, sender_verified: undefined }])('rejects an incomplete policy instead of enabling or disabling preferences by fallback', async data => {
+ it.each([null, { ...policy, require_email: 'false' }, { ...policy, revision: 0 }, { ...policy, sender_verified: undefined }, { ...policy, self_management_cutoff_hours: 0 }, { ...policy, self_management_cutoff_hours: 721 }, { ...policy, self_management_cutoff_hours: 1.5 }, { ...policy, self_management_cutoff_hours: '48' }])('rejects an incomplete policy instead of enabling or disabling preferences by fallback', async data => {
   const query = { select: () => query, eq: () => query, single: async () => ({ data, error: null }) };
   await expect(loadAppointmentEmailPolicy({ from: () => query } as never, businessId)).rejects.toBeInstanceOf(Error);
  });
@@ -87,5 +89,28 @@ describe('appointment email preferences', () => {
  });
  it.each([null, '8', 0, 1.5])('does not treat a malformed acknowledgment as a saved preference: %j', async data => {
   await expect(saveAppointmentEmailPolicy({ rpc: async () => ({ data, error: null }) } as never, businessId, parseAppointmentEmailPolicyForm(form()))).rejects.toThrow();
+ });
+ it('P5: acepta self_management_cutoff_hours vacío (null) o entre 1 y 720 y rechaza valores inválidos', () => {
+  const blank = form(); blank.set('self_management_cutoff_hours', '');
+  expect(parseAppointmentEmailPolicyForm(blank).settings.self_management_cutoff_hours).toBeNull();
+  const valid = form(); valid.set('self_management_cutoff_hours', '48');
+  expect(parseAppointmentEmailPolicyForm(valid).settings.self_management_cutoff_hours).toBe(48);
+  for (const invalid of ['0', '721', '-1', '48.5', 'cuarenta']) {
+   const bad = form(); bad.set('self_management_cutoff_hours', invalid);
+   expect(() => parseAppointmentEmailPolicyForm(bad)).toThrow('EMAIL_POLICY_INVALID');
+  }
+ });
+ it('P5: arma avisos claros de límite de autogestión fuera y dentro de la ventana', () => {
+  const tz = 'America/Argentina/Buenos_Aires';
+  const startsAt = '2026-12-20T13:00:00.000Z'; // 10:00 AR
+  expect(buildSelfManagementCutoffNotice({ startsAt, cutoffHours: null, timezone: tz, now: new Date('2026-12-10T13:00:00.000Z'), context: 'booking' })).toBeNull();
+  const outside = buildSelfManagementCutoffNotice({ startsAt, cutoffHours: 48, timezone: tz, now: new Date('2026-12-15T13:00:00.000Z'), context: 'booking' });
+  expect(outside).toContain('48');
+  expect(outside).toContain('18 de diciembre');
+  expect(outside).toContain('10:00');
+  const inside = buildSelfManagementCutoffNotice({ startsAt, cutoffHours: 48, timezone: tz, now: new Date('2026-12-19T13:00:00.000Z'), context: 'booking' });
+  expect(inside).toMatch(/no se podrá cancelar ni reprogramar online/i);
+  const rescheduleInside = buildSelfManagementCutoffNotice({ startsAt, cutoffHours: 48, timezone: tz, now: new Date('2026-12-19T13:00:00.000Z'), context: 'reschedule_target' });
+  expect(rescheduleInside).toMatch(/ya no se podrá cancelar ni reprogramar online/i);
  });
 });

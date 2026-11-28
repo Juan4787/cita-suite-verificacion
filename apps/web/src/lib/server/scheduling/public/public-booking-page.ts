@@ -247,7 +247,7 @@ export const loadPublicBookingPage = async ({ params, fetch, url, request, setHe
             : state;
         return {
             priceQuote,
-            ...(state.business ? await loadPublicBookingPolicy(supabase, state.business.id) : { requireEmail: true, reschedulePolicy: null }),
+            ...(state.business ? await loadPublicBookingPolicy(supabase, state.business.id) : { requireEmail: true, reschedulePolicy: null, selfManagementCutoffHours: null }),
             depositTerms,
             patientFields,
 			device,

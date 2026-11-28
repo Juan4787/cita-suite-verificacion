@@ -12,7 +12,7 @@
 			<BackLink href="/login" label="Volver al ingreso" />
 			<h1 class="mt-2 text-2xl font-semibold">Política de privacidad</h1>
 			<p class="mt-1 text-xs text-fg-n300">
-				Última actualización: 2026-11-05
+				Última actualización: 2026-11-28
 			</p>
 
 			<section class="mt-6 space-y-3 text-sm leading-relaxed text-fg-n200">
@@ -45,9 +45,9 @@
 					<li>Registrar acciones relevantes, como cargas, accesos a originales, envíos a la papelera y restauraciones.</li>
 					<li>Preparar exportaciones Excel solicitadas por el dueño o un administrador autorizado.</li>
 					<li>
-						Enviar al paciente, con la identidad del consultorio, el comprobante de su turno, los cambios, los pedidos de
-						seña y los recordatorios por correo, y los recordatorios del navegador si los activó. Cada correo permite
-						dejar de recibir los de ese consultorio.
+						Enviar al paciente, con la identidad del consultorio, el comprobante de su turno, los cambios, las
+						cancelaciones, los pedidos de seña y los recordatorios por correo, y los recordatorios del navegador si los
+						activó. Cada correo permite dejar de recibir los de ese consultorio.
 					</li>
 					<li>Mejorar estabilidad y soporte técnico.</li>
 				</ul>

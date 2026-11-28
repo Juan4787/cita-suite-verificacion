@@ -45,6 +45,8 @@ export const resolvePatientPermissions = (context: BusinessContext): PatientPerm
 			isOwnerOrAdmin && capabilities.canViewExistingClinicalNotes && context.access.canEnterApp,
 		canTrashRadiographs:
 			isOwnerOrAdmin && capabilities.canManagePatientFiles && context.access.canUseBusiness,
-		canExportPatientData: canExportPatientData(context)
+		canExportPatientData: canExportPatientData(context),
+		canManageDepositAutoCancelExemption:
+			(role === 'owner' || role === 'admin' || role === 'reception') && context.access.canUseBusiness
 	};
 };

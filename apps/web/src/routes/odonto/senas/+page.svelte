@@ -124,6 +124,9 @@
 					<p class="mt-2 text-sm font-bold text-warning-300">
 						Se canceló porque no se registró la seña de {row.amountLabel} antes del {row.dueLabel}.
 					</p>
+					{#if row.hasEmail === false}
+						<span class="ux-badge ux-badge-warning mt-2 inline-block">Sin correo: avisar por WhatsApp</span>
+					{/if}
 				{:else}
 					<p class="mt-2 text-sm font-bold text-fg">Seña de {row.amountLabel}, vence el {row.dueLabel}</p>
 					{#if row.appointmentStatus === 'reschedule_requested'}
