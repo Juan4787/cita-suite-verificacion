@@ -264,7 +264,8 @@ test('@candidate-behavior Lote 2B (P1 y P4): aviso de seña por vencer, «Ya tra
 		const apt2Row = page.locator(`[data-deposit-row="${apt2Id}"]`);
 		await expect(apt2Row).toBeVisible();
 		await expect(apt2Row).toContainText(/Tiene 1 seña a cuenta/i);
-		await expect(apt2Row).toContainText(/Falta cobrar \$[\s\u00a0]*10\.000 de diferencia/i);
+		await expect(apt2Row).toContainText(/Si la aplicás, falta cobrar \$[\s\u00a0]*10\.000 de diferencia/i);
+		await expect(apt2Row).not.toContainText(/Se aplicó la seña a cuenta/i);
 		await auditAndCapture('p4-senas-aplicar', [320, 1280], ['light', 'dark'], {
 			pageUrl: origin + '/odonto/senas',
 			anchor: () => page.locator(`[data-deposit-row="${apt2Id}"]`)

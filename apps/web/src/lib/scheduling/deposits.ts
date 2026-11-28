@@ -155,18 +155,24 @@ export const parseCancellationDepositOutcome = (value: unknown): CancellationDep
 export const describeCreditDifference = (
 	paidAmount: number,
 	targetAmount: number,
-	context: 'credit_applied' | 'rescheduled' = 'credit_applied'
+	context: 'preview' | 'credit_applied' | 'rescheduled' = 'credit_applied'
 ): string | null => {
 	if (!Number.isSafeInteger(paidAmount) || !Number.isSafeInteger(targetAmount) || paidAmount === targetAmount) return null;
 	const paidLabel = formatDepositAmount(paidAmount);
 	const targetLabel = formatDepositAmount(targetAmount);
 	if (targetAmount > paidAmount) {
 		const diffLabel = formatDepositAmount(targetAmount - paidAmount);
+		if (context === 'preview') {
+			return `Si la aplicás, falta cobrar ${diffLabel} de diferencia.`;
+		}
 		return context === 'rescheduled'
 			? `Se conserva la seña pagada de ${paidLabel}. Como el monto vigente es ${targetLabel}, falta cobrar ${diffLabel} de diferencia.`
 			: `Se aplicó la seña a cuenta de ${paidLabel}. Falta cobrar ${diffLabel} de diferencia.`;
 	}
 	const diffLabel = formatDepositAmount(paidAmount - targetAmount);
+	if (context === 'preview') {
+		return `Si la aplicás, queda ${diffLabel} de saldo a favor.`;
+	}
 	return context === 'rescheduled'
 		? `Se conserva la seña pagada de ${paidLabel}. Como el monto vigente es ${targetLabel}, queda ${diffLabel} de saldo a favor.`
 		: `Se aplicó la seña a cuenta de ${paidLabel}. Queda ${diffLabel} de saldo a favor.`;

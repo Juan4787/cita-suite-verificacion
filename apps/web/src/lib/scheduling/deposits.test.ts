@@ -5,6 +5,7 @@ import {
 	DEPOSIT_SECTIONS,
 	DEPOSIT_STATUS_LABELS,
 	DEPOSIT_TERMS_UNAVAILABLE_NOTICE,
+	describeCreditDifference,
 	describeDepositAutomation,
 	describeDepositDeadline,
 	formatElapsed,
@@ -341,5 +342,28 @@ describe('P2: fuente única describeDepositDeadline para consistencia de fecha y
 		expect(withoutAuto.bookingNotice).toContain(due.full);
 		expect(withoutAuto.bookingNotice).not.toMatch(/cancela/);
 		expect(withoutAuto.autoCancelSentence).toBeNull();
+	});
+});
+
+describe('P4: describeCreditDifference distingue vista previa antes de aplicar de nota registrada', () => {
+	it('en vista previa (antes de tocar «Aplicar») nunca afirma que la seña ya se aplicó', () => {
+		const missing = describeCreditDifference(40000, 50000, 'preview');
+		expect(missing).toBe(`Si la aplicás, falta cobrar ${formatDepositAmount(10000)} de diferencia.`);
+		expect(missing).not.toMatch(/Se aplicó/i);
+
+		const surplus = describeCreditDifference(50000, 40000, 'preview');
+		expect(surplus).toBe(`Si la aplicás, queda ${formatDepositAmount(10000)} de saldo a favor.`);
+		expect(surplus).not.toMatch(/Se aplicó/i);
+
+		expect(describeCreditDifference(40000, 40000, 'preview')).toBeNull();
+	});
+
+	it('en nota aplicada y reprogramada conserva el texto de evento registrado', () => {
+		expect(describeCreditDifference(40000, 50000, 'credit_applied')).toBe(
+			`Se aplicó la seña a cuenta de ${formatDepositAmount(40000)}. Falta cobrar ${formatDepositAmount(10000)} de diferencia.`
+		);
+		expect(describeCreditDifference(40000, 50000, 'rescheduled')).toBe(
+			`Se conserva la seña pagada de ${formatDepositAmount(40000)}. Como el monto vigente es ${formatDepositAmount(50000)}, falta cobrar ${formatDepositAmount(10000)} de diferencia.`
+		);
 	});
 });

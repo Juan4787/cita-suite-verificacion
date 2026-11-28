@@ -46,7 +46,7 @@
 {#snippet openDeposit(row: Row, reopen = false)}
  <form method="POST" action={openHref(row, reopen)} target="_blank" rel="noopener">
   <input type="hidden" name="expected_revision" value={row.managementRevision} />
-  <button class={reopen ? 'ux-btn-secondary' : 'ux-btn-primary px-3 sm:px-5'}>{reopen ? 'Abrir de todos modos' : 'Pedir seña por WhatsApp'}</button>
+  <button class={reopen ? 'ux-btn-secondary w-full sm:w-auto' : 'ux-btn-primary w-full px-3 sm:w-auto sm:px-5'}>{reopen ? 'Abrir de todos modos' : 'Pedir seña por WhatsApp'}</button>
  </form>
 {/snippet}
 
@@ -60,7 +60,7 @@
 				<button class="ux-btn-primary w-full" disabled={data.demo}>Registrar pago</button>
 			</form>
 			<details class="w-full sm:w-auto">
-				<summary class="ux-btn-secondary cursor-pointer list-none">No llegó el pago</summary>
+				<summary class="ux-btn-secondary w-full cursor-pointer list-none sm:w-auto">No llegó el pago</summary>
 				<form method="POST" action="?/clear_payment_notice" class="mt-2 flex flex-col gap-2 sm:items-end">
 					<p class="max-w-60 text-xs text-fg-55 sm:text-right">
 						Se quita el aviso y el turno vuelve al circuito normal (decidir o cancelación automática si todavía corresponde).
@@ -112,7 +112,7 @@
 			</form>
 		{/if}
 		<details class="w-full sm:w-auto">
-			<summary class="ux-btn-secondary cursor-pointer list-none">Exceptuar</summary>
+			<summary class="ux-btn-secondary w-full cursor-pointer list-none sm:w-auto">Exceptuar</summary>
 			<form method="POST" action="?/deposit" class="mt-2 flex flex-col gap-2 sm:items-end">
 				<p class="max-w-60 text-xs text-fg-55 sm:text-right">
 					El turno queda Confirmado sin seña. Queda registrado como decisión del consultorio.
@@ -175,7 +175,7 @@
 					{/if}
 					{#if row.availableCredits && row.availableCredits.length > 0}
 						{@const credit = row.availableCredits[0]}
-						{@const diffNote = describeCreditDifference(credit.amount, row.amount, 'credit_applied')}
+						{@const diffNote = describeCreditDifference(credit.amount, row.amount, 'preview')}
 						<div class="mt-3 rounded-xl border border-accent-300-30 bg-accent-400-10 p-3 text-sm" data-available-credit={credit.id}>
 							<p class="font-semibold text-fg">
 								Tiene {row.availableCredits.length === 1 ? '1 seña a cuenta' : `${row.availableCredits.length} señas a cuenta`} disponible{row.availableCredits.length === 1 ? '' : 's'} ({formatDepositAmount(credit.amount)}).

@@ -113,7 +113,8 @@ describe('Lote 2B — pantallas P1 y P4', () => {
 		expect(screen.getByText('No llegó el pago')).toBeInTheDocument();
 
 		expect(screen.getByText(/Tiene 1 seña a cuenta/i)).toBeInTheDocument();
-		expect(screen.getByText(/Falta cobrar \$ 10\.000 de diferencia/i)).toBeInTheDocument();
+		expect(screen.getByText(/Si la aplicás, falta cobrar \$[\s\u00a0]*10\.000 de diferencia/i)).toBeInTheDocument();
+		expect(screen.queryByText(/Se aplicó la seña a cuenta/i)).not.toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Aplicar' })).toBeInTheDocument();
 	});
 

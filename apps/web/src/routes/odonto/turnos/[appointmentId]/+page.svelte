@@ -866,7 +866,7 @@ import { BOOKING_MODALITY_LABELS, type BookingModality } from '@cita-suite/share
 				{#if depositActionsAvailable && data.deposit.status === 'pending' && (data.availableDepositCredits ?? []).length > 0}
 					{@const availableCredits = data.availableDepositCredits ?? []}
 					{@const credit = availableCredits[0]}
-					{@const diffNote = describeCreditDifference(credit.amount, data.deposit.amount, 'credit_applied')}
+					{@const diffNote = describeCreditDifference(credit.amount, data.deposit.amount, 'preview')}
 					<div class="ux-soft-card mt-3 border border-accent-300-30 bg-accent-400-10 p-4 text-sm" data-deposit-available-credit>
 						<p class="font-semibold text-fg">
 							Tiene {availableCredits.length === 1 ? '1 seña a cuenta' : `${availableCredits.length} señas a cuenta`} disponible{availableCredits.length === 1 ? '' : 's'} ({formatDepositAmount(credit.amount)}).
